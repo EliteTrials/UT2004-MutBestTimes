@@ -229,12 +229,12 @@ replication
 		ClientSendChallenge,
 		ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
 		ClientSendItem, ClientSendCategory,
-		ClientSendItemsCompleted;
+		ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
 
 	// unreliable
 	reliable if( Role == ROLE_Authority )
 		ClientSendText, ClientCleanText,
-		ClientSetSFMSG, ClientSendItemMeta;
+		ClientSetSFMSG;
 
 	unreliable if( Role < ROLE_Authority )
 		ServerSetClientFlags;
@@ -679,22 +679,27 @@ final static function int CompressStoreData( int cost, bool bBought, bool bEnabl
  	return data;
 }
 
+final static function DecompressStoreData( int data, out int price, out byte bBought, out byte bEnabled )
+{
+ 	price = data & 0x0000FFFF;
+ 	bBought = byte((((data & 0xFFFF0000) >> 16) & 0x00000001) != 0);
+ 	bEnabled = byte((((data & 0xFFFF0000) >> 16) & 0x00000002) != 0);
+}
+
 //int cost, bool bBought, bool bEnabled
 simulated final function ClientSendItem( string itemName, string id, int data )
 {
-	local bool bBought, bEnabled;
+	local byte bBought, bEnabled;
  	local int cost;
 
- 	cost = data & 0x0000FFFF;
- 	bBought = (((data & 0xFFFF0000) >> 16) & 0x00000001) != 0;
- 	bEnabled = (((data & 0xFFFF0000) >> 16) & 0x00000002) != 0;
+	DecompressStoreData( data, cost, bBought, bEnabled );
 
 	Items.Insert( 0, 1 );
 	Items[0].Name = itemName;
 	Items[0].ID = id;
 	Items[0].Cost = cost;
-	Items[0].bBought = bBought;
-	Items[0].bEnabled = bEnabled;
+	Items[0].bBought = bBought > 0;
+	Items[0].bEnabled = bEnabled > 0;
 }
 
 simulated final function ClientSendItemMeta( string id, string desc, Material image )
@@ -712,6 +717,23 @@ simulated final function ClientSendItemMeta( string id, string desc, Material im
 			break;
 		}
 	}	
+}
+
+simulated final function ClientSendItemData( string id, int data )
+{
+	local int i;
+	local byte bBought, bEnabled;
+	
+	for( i = 0; i< Items.Length; ++ i )
+	{
+		if( Items[i].id == id )
+		{
+			DecompressStoreData( data, Items[i].Cost, bBought, bEnabled  );
+			Items[i].bBought = bool(bBought);
+			Items[i].bEnabled = bool(bEnabled);
+			break;
+		}
+	}		
 }
 
 simulated final function ClientSendCategory( string categoryName )
