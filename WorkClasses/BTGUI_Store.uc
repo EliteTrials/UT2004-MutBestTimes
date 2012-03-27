@@ -14,6 +14,7 @@ var() editinline protected BTClient_ClientReplication ClientData;
 var protected bool bWaitingForResponse;
 
 var int lastSelectedItemIndex;
+var transient int ItemsNum;
 
 event Free()
 {
@@ -47,6 +48,7 @@ function LoadData()
 
 	if( !bWaitingForResponse && PlayerOwner().Level.TimeSeconds > 5 )
 	{
+		ItemsNum = ClientData.Items.Length;
 		ClientData.Items.Length = 0;
 		PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), ClientData.Options.StoreFilter ) );
 
@@ -162,7 +164,7 @@ final function bool BuySelectedItem()
 		}
 
 		PlayerOwner().ConsoleCommand( "Store Buy" @ ClientData.Items[i].ID );
-		LoadData();
+		//LoadData();
 		return true;
 	}
 	return false;
@@ -179,7 +181,7 @@ final function bool ToggleSelectedItem()
 			return false;
 
 		PlayerOwner().ConsoleCommand( "Store ToggleItem" @ ClientData.Items[i].ID );
-		LoadData();
+		//LoadData();
 		return true;
 	}
 	return false;
@@ -196,7 +198,7 @@ final function bool SellSelectedItem()
 			return false;
 
 		PlayerOwner().ConsoleCommand( "Store Sell" @ ClientData.Items[i].ID );
-		LoadData();
+		//LoadData();
 		return true;
 	}
 	return false;
@@ -268,15 +270,31 @@ function bool InternalOnDraw( Canvas C )
 	i = lb_ItemsListBox.List.CurrentListId();
 	if( i == -1 )
 		return true;
+		
+	if( i > ClientData.Items.Length-1 )
+		return true;
+	
+	// Update the list length dynamically 
+	if( ClientData.Items.Length != ItemsNum )
+	{
+		ItemsNum = ClientData.Items.Length;
+		BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
+		return true;
+	}
 
 	if( i != lastSelectedItemIndex || lastSelectedItemIndex == -1 )
 	{
-		if( !ClientData.Items[i].bHasMeta && ClientData.bItemsTransferComplete )
+		if( !ClientData.Items[i].bHasMeta && !bWaitingForResponse )
 		{
 			//Log( "Requesting item meta data for:" @ ClientData.Items[i].ID );
 			PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItemMeta" @ ClientData.Items[i].ID );
 		}
 		lastSelectedItemIndex = i;
+		
+		if( ClientData.Items[i].bHasMeta )
+		{
+			UpdateItemDescription( i );
+		}
 	}
 
 	C.SetPos( i_ItemIcon.ActualLeft(), i_ItemIcon.ActualTop()-16 );
