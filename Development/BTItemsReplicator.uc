@@ -5,14 +5,8 @@ var private int repIndex;
 var protected BTClient_ClientReplication CR;
 var protected MutBestTimes P;
 
-struct sRepItem
-{
-	var string Name;
-	var string ID;
-	var int Data;
-};
-
-var array<sRepItem> RepData;
+var string Filter;
+var bool bIsAdmin;
 
 final function Initialize( BTClient_ClientReplication client )
 {
@@ -23,17 +17,6 @@ final function Initialize( BTClient_ClientReplication client )
 	P = MutBestTimes(Owner);
 }
 
-final function AddData( string name, string ID, int data )
-{
-	local int j;
-
-	j = RepData.Length;
-	RepData.Length = j+1;
-	RepData[j].Name = name;
-	RepData[j].ID = ID;
-	RepData[j].Data = data;
-}
-
 final function BeginReplication()
 {
 	GotoState( 'Replicate' );
@@ -42,21 +25,50 @@ final function BeginReplication()
 final private function SendRepData( int index )
 {
 	CR.ClientSendItem( 
-		RepData[index].Name,
-		RepData[index].ID,
-		RepData[index].Data
+		P.Store.Items[index].Name,
+		P.Store.Items[index].ID,
+		class'BTClient_ClientReplication'.static.CompressStoreData( 
+			P.Store.Items[index].Cost, 
+			P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[index].ID ), 
+			P.PDat.ItemEnabled( CR.myPlayerSlot, P.Store.Items[index].ID ) 
+		)
 	);
 }
 
 state Replicate
 {
 Begin:
-	for( repIndex = 0; repIndex < RepData.Length; ++ repIndex )
+	for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
 	{
-		SendRepData( repIndex );
-		if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+		if( !P.Store.Items[repIndex].bAdminGiven || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
 		{
-			Sleep( 0.1 );
+			continue;
+		}
+		
+		if( bIsAdmin || P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[repIndex].ID ) )
+		{
+			SendRepData( repIndex );
+			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+			{
+				Sleep( 0.1 );
+			}
+		}
+	}
+	
+	if( !(filter ~= "Admin") )
+	{	
+		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+		{
+			if( P.Store.Items[repIndex].bAdminGiven || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+			{
+				continue;
+			}
+	
+			SendRepData( repIndex );
+			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+			{
+				Sleep( 0.1 );
+			}	
 		}
 	}
 	ReplicationFinished();
