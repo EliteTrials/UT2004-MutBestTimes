@@ -6,6 +6,9 @@ var automated GUIEditBox eb_TradePlayer, eb_TradeAmount;
 var automated GUIButton b_GhostFollow;
 var automated GUIEditBox eb_GhostPlayer;
 
+var automated GUIButton b_ActivateKey;
+var automated GUIEditBox eb_Key;
+
 function bool InternalOnClick( GUIComponent sender )
 {
 	PlayerOwner().ConsoleCommand( "CloseDialog" );
@@ -41,6 +44,17 @@ function bool InternalOnClick( GUIComponent sender )
 		}
 
 		PlayerOwner().ConsoleCommand( "GhostFollow" @ eb_GhostPlayer.GetText() );
+		return true;
+	}
+	else if( sender == b_ActivateKey )
+	{
+		if( eb_Key.GetText() == "" )
+		{
+			PlayerOwner().ClientMessage( "Please input a valid key." );
+			return false;
+		}
+
+		PlayerOwner().ConsoleCommand( "ActivateKey" @ eb_Key.GetText() );
 		return true;
 	}
 	return false;
@@ -103,4 +117,27 @@ defaultproperties
 		Hint="Player Name"
 	End Object
 	eb_GhostPlayer=oGhostPlayer
+	
+	// ActivateKey
+	Begin Object class=GUIButton name=oActivateKey
+		Caption="Activate Key"
+		WinTop=0.89
+		WinLeft=0.0
+		WinWidth=0.25
+		WinHeight=0.05
+		OnClick=InternalOnClick
+		Hint="Activate a BestTimes key"
+	End Object
+	b_ActivateKey=oActivateKey
+
+	Begin Object class=GUIEditBox name=oKey
+		bScaleToParent=True
+		bBoundToParent=True
+		WinTop=0.89
+		WinLeft=0.26
+		WinWidth=0.74
+		WinHeight=0.05
+		Hint="A BestTimes key"
+	End Object
+	eb_Key=oKey
 }
