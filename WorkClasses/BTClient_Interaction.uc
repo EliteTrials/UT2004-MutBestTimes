@@ -165,6 +165,11 @@ exec function TradeCurrency( string playerName, int amount )
 	BT( "TradeCurrency" @ playerName @ amount );
 }
 
+exec function ActivateKey( string key )
+{
+	BT( "ActivateKey" @ key );
+}
+
 exec Function BTCommands()
 {
 	if( ViewportOwner.Actor.PlayerReplicationInfo.bAdmin )
@@ -2743,8 +2748,6 @@ function DrawRecordWidget( Canvas C )
 	local string S, timeLeftF, bestTimeF;
 	local float XL1, XL2, XL3, XL4;
 	local float YL, YL2, YL3, YL4;
-
-	local float BoxXL, BoxYL;
 	local float YP;
 
 	C.Font = GetScreenFont( C );
