@@ -4,8 +4,6 @@
 class BTServer_HttpNotificator extends Object within MutBestTimes
 	config(MutBestTimes);
 
-#exec obj load file="LibHTTP4.u" Package="ServerBTimes"
-
 const TrialMode = "TM";
 const TrialMapName = "TMN";
 const TrialMapTime = "TMT";
