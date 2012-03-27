@@ -53,5 +53,5 @@ defaultproperties
 	ModeName="Group"
 	ModePrefix="GTR"
 
-	ExperienceBonus=15
+	ExperienceBonus=20
 }

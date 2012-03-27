@@ -14,5 +14,5 @@ defaultproperties
 	ModeName="Regular"
 	ModePrefix="RTR"
 
-	ExperienceBonus=10
+	ExperienceBonus=25
 }
