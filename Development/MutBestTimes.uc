@@ -7,7 +7,8 @@ class MutBestTimes extends Mutator
 	DependsOn(BTServer_RecordsData)
 	Dependson(BTServer_RewardsTable)
 	dependson(BTAchievements)
-	dependson(BTChallenges);
+	dependson(BTChallenges)
+	dependson(BTActivateKey);
 
 //#exec obj load file="..\System\ClientBTimesV3K.u"
 //#exec obj load file="..\System\ClientBTimesV4C.u"
@@ -22,7 +23,7 @@ class MutBestTimes extends Mutator
 //	Minor Version  // minor new features
 //	Build Number // compile/test count, resets??
 //	Revision // quick fix
-const BTVersion 						= "2.99.18.0";
+const BTVersion 						= "2.99.20.0";
 const MaxPlayers						= 3;									// Note: Setting this higher than 4 will cause the extra players to not receive any points for the record!.
 const MaxRecentRecords 					= 15;									// The max recent records that is saved.
 const MaxPlayerRecentRecords			= 5;									// The max recent records that are saved per player.
@@ -32,14 +33,14 @@ const BTCredits 						= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";		/
 const BTAuthor 							= "2e216ede3cf7a275764b04b5ccdd005d";	// Author guid, gives access to some admin commands...
 
 // Points Related.
-const PointsPerObjective				= 0.20f;
+const PointsPerObjective				= 0.25f;
 const DefaultPoints						= 5.0f;
 
-const EXP_ImprovedRecord				= 15;
-const EXP_FirstRecord					= 20;
-const EXP_TiedRecord					= 20;
-const EXP_FailRecord					= 2;
-const EXP_Objective 					= 2;
+const EXP_ImprovedRecord				= 25;
+const EXP_FirstRecord					= 40;
+const EXP_TiedRecord					= 30;
+const EXP_FailRecord					= 3;
+const EXP_Objective 					= 4;
 
 const META_DECOMPILER_VAR_AUTHOR			= "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT			= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
@@ -629,7 +630,7 @@ final function NotifyLevelUp( int playerSlot, int BTLevel )
  	NotifyPlayers( PC,
 	 PC.GetHumanReadableName() @ "is now level" @ class'HUD'.default.GreenColor $ BTLevel,
 	 "You are now level" @ class'HUD'.default.GreenColor $ BTLevel $ "." $ class'HUD'.default.WhiteColor
-	 	@ "You also earned" @ class'HUD'.default.GreenColor $ PointsPerLevel @ class'HUD'.default.WhiteColor $ "currency points." );
+	 	@ "You also earned" @ class'HUD'.default.GreenColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "currency points." );
 }
 
 final function NotifyLevelDown( int playerSlot, int BTLevel )
@@ -648,7 +649,7 @@ final function NotifyLevelDown( int playerSlot, int BTLevel )
  	NotifyPlayers( PC,
 	 PC.GetHumanReadableName() @ "became level" @ class'HUD'.default.RedColor $ BTLevel,
 	 "You became level" @ class'HUD'.default.RedColor $ BTLevel $ "." $ class'HUD'.default.WhiteColor
-	 	@ "You also lost" @ class'HUD'.default.RedColor $ PointsPerLevel @ class'HUD'.default.WhiteColor $ "currency points." );
+	 	@ "You also lost" @ class'HUD'.default.RedColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "currency points." );
 }
 
 final function NotifyCheckPointChange( Controller C )
@@ -661,12 +662,14 @@ final function AchievementEarned( int playerSlot, name id )
 	local BTClient_ClientReplication rep;
 	local PlayerController PC;
 	local BTAchievements.sAchievement ach;
+	local int earntAchievements;
 
+	earntAchievements = PDat.CountEarnedAchievements( playerSlot );
 	// Above PC == none because currency should always be given even for offline players!.
 	ach = AchievementsManager.GetAchievementByID( id );
-	PDat.GiveCurrencyPoints( playerSlot, ach.Points );
+	PDat.GiveCurrencyPoints( playerSlot, ach.Points + earntAchievements );
 
-	if( PDat.FindAchievementByID( playerSlot, 'ach_0' ) == -1 && PDat.CountEarnedAchievements( playerSlot ) >= 30 )
+	if( PDat.FindAchievementByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
 	{
 		PDat.ProgressAchievementByID( playerSlot, 'ach_0' );
 	}
@@ -875,14 +878,7 @@ final function SendStoreItems( PlayerController requester, string filter )
 	if( Rep == none )
 		return;
 
-	bIsAdmin = IsAdmin( requester.PlayerReplicationInfo );
-	if( filter ~= "Admin" )
-	{
-		//filter = "All";
-		bIsAdmin = true;
-	}
-
-	if( !Rep.bReceivedCategories )
+	if( !Rep.bReceivedCategories || filter == "" )
 	{
 		for( i = 0; i < Store.Categories.Length; ++ i )
 		{
@@ -899,54 +895,11 @@ final function SendStoreItems( PlayerController requester, string filter )
 
 	replicator = Spawn( class'BTItemsReplicator', self );
 	replicator.Initialize( rep );
-	// Admin items
-	for( i = 0; i < Store.Items.Length; ++ i )
-	{
-		if( !Store.items[i].bAdminGiven || !Store.ItemIsInCategory( Store.items[i].Type, filter ) )
-		{
-			continue;
-		}
-
-		if( bIsAdmin || PDat.HasItem( Rep.myPlayerSlot, Store.Items[i].ID ) )
-		{
-			replicator.AddData( 
-				Store.Items[i].Name, 
-				Store.Items[i].ID, 
-				class'BTClient_ClientReplication'.static.CompressStoreData( 
-					Store.Items[i].Cost, 
-					PDat.HasItem( Rep.myPlayerSlot, Store.Items[i].ID ), 
-					PDat.ItemEnabled( Rep.myPlayerSlot, Store.Items[i].ID ) 
-				)
-			);
-		}
-	}
-
-	if( filter ~= "Admin" )
-		goto 'finish';
-
-	// Non admin items
-	for( i = 0; i < Store.Items.Length; ++ i )
-	{
-		if( Store.items[i].bAdminGiven || !Store.ItemIsInCategory( Store.items[i].Type, filter ) || (Store.items[i].ID == "Map-Unlock_1" && !bBlockSake) )
-		{
-			continue;
-		}
-
-		replicator.AddData( 
-			Store.Items[i].Name, 
-			Store.Items[i].ID, 
-			class'BTClient_ClientReplication'.static.CompressStoreData( 
-				Store.Items[i].Cost, 
-				PDat.HasItem( Rep.myPlayerSlot, Store.Items[i].ID ), 
-				PDat.ItemEnabled( Rep.myPlayerSlot, Store.Items[i].ID ) 
-			)
-		);
-	}
-
-	finish:
+	replicator.Filter = filter;
+	replicator.bIsAdmin = IsAdmin( requester.PlayerReplicationInfo ) || filter ~= "Admin";
 
 	replicator.BeginReplication();
-
+	
 	// Store discovery
 	PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
 }
@@ -1236,7 +1189,12 @@ final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
 	//FullLog( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
 	if( Store.Items[itemSlot].ItemClass != "" )
 	{
-		itemClass = class<Actor>(DynamicLoadObject( Store.Items[itemSlot].ItemClass, class'Class', true ));
+		if( Store.Items[itemSlot].CachedClass == none )
+		{
+			Store.Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Store.Items[itemSlot].ItemClass, class'Class', true ));
+		}
+		
+		itemClass = Store.Items[itemSlot].CachedClass;
 		if( itemClass == none )
 		{
 			FullLog( "Failed to load ItemClass for" @ Store.Items[itemSlot].ID );
@@ -1344,6 +1302,7 @@ event PreBeginPlay()
 	MRI.AddToPackageMap();  // Temporary ServerPackage
 
 	Store = class'BTStore'.static.Load();
+	Store.Cache();
 	// Dangerous code
 	/*for( i = 0; i < Store.Items.Length; ++ i )
 	{
@@ -2141,6 +2100,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 	local bool bCondition;
 	local array<string> output, output2;
 	local bool b2;
+	local byte byteOne, byteTwo;
 
 	switch( command )
 	{
@@ -2852,6 +2812,14 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
 				NotifyItemBought( Rep.myPlayerSlot );
 		   		PDat.GiveItem( Rep.myPlayerSlot, s );
+		   		// bBought, bEnabled
+				Rep.ClientSendItemData( Store.Items[i].ID,
+					class'BTClient_ClientReplication'.static.CompressStoreData( 
+						Store.Items[i].Cost, 
+						true, 
+						true 
+					)
+				);
 
 				if( Store.Items[i].bAdminGiven || Store.Items[i].Cost <= 0 )
 				{
@@ -2904,6 +2872,15 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		   			{
 		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost * 0.75 );
 		   			}
+		   			
+		   			// bBought, bEnabled
+					Rep.ClientSendItemData( Store.Items[i].ID,
+						class'BTClient_ClientReplication'.static.CompressStoreData( 
+							Store.Items[i].Cost, 
+							false, 
+							false 
+						)
+					);
 		   		}
 		   		else
 		   		{
@@ -2933,7 +2910,17 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			i = Store.FindItemByID( s );
 			if( i != -1 )
 			{
-				PDat.ToggleItem( Rep.myPlayerSlot, s );
+				PDat.ToggleItem( Rep.myPlayerSlot, Store.Items[i].ID );
+				
+				// bBought, bEnabled
+				PDat.GetItemState( Rep.myPlayerSlot, Store.Items[i].ID, byteOne, byteTwo ); 
+				Rep.ClientSendItemData( Store.Items[i].ID,
+					class'BTClient_ClientReplication'.static.CompressStoreData( 
+						Store.Items[i].Cost, 
+						bool(byteOne), 
+						bool(byteTwo) 
+					)
+				);
 			}
 			break;
 
@@ -3037,12 +3024,163 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 				}
 			}
 			break;
+			
+		case "activatekey":
+			ActivateKey( sender, params[0] );
+			break;	
 
 		default:
 			return (CurMode != None && CurMode.ClientExecuted( sender, command, params ));
 			break;
 	}
 	return true;
+}
+
+final function ActivateKey( PlayerController sender, string serial )
+{
+	local BTActivateKey keyHandler;
+	
+	keyHandler = Spawn( class'BTActivateKey', self );
+	keyHandler.Requester = sender;
+	keyHandler.VerifySerial( serial );
+	
+	SendSucceedMessage( keyHandler.Requester, "Verifying key" @ serial );
+}
+
+final function KeyVerified( BTActivateKey handler )
+{
+	local BTClient_ClientReplication Rep;
+	local int itemStoreSlot;
+	
+	if( !handler.Serial.Valid )
+	{
+		SendErrorMessage( handler.Requester, "Invalid key!" );
+		handler.Destroy();
+		return;
+	}
+	
+	if( handler.Serial.bConsumed )
+	{
+		SendErrorMessage( handler.Requester, "Key was already consumed!" );
+		handler.Destroy();
+		return;	
+	}
+	
+	SendSucceedMessage( handler.Requester, "Key was successfully verified!" );
+	
+	Rep = GetRep( handler.Requester );
+	if( Rep == none )
+	{
+		SendErrorMessage( handler.Requester, "Couldn't find the replication instance! Consumption aborted!" );
+		handler.Destroy();
+		return;
+	}
+		
+	// Let's make sure that we don't consume keys that might be useless for the requester.
+	switch( handler.Serial.Type )
+	{
+		// Key was generated for the purpose of giving items!
+		case "item":
+			itemStoreSlot = Store.FindItemByID( handler.Serial.Code );
+			if( itemStoreSlot == -1 )
+			{
+				SendErrorMessage( handler.Requester, "The reward of this key does not exist on this server! Consumption aborted!" );
+				handler.Destroy();
+				break;
+			}
+			
+			if( PDat.HasItem( Rep.myPlayerSlot, handler.Serial.Code ) )
+			{
+				SendErrorMessage( handler.Requester, "Cannot use this key because you already own the reward! Consumption aborted!" );
+				handler.Destroy();
+				break;
+			} 
+			// All seems fine, let's use the key(We don't want to consume a key that might fail to be rewarded).
+			handler.ConsumeSerial();
+			break;
+			
+		case "curr":
+		case "exp":
+			handler.ConsumeSerial();
+			break;		
+			
+		default:
+			SendErrorMessage( handler.Requester, "Unknown key type! Consumption aborted!" );
+			handler.Destroy();
+			break;
+	}
+}
+
+final function KeyConsumed( BTActivateKey handler, string message )
+{
+	switch( message )
+	{
+		// No authentication given
+		case "invalid":
+			SendErrorMessage( handler.Requester, "Failed to authenticate the key" );
+			break;
+			
+		// First consumption
+		case "success":
+			SendSucceedMessage( handler.Requester, "Key successfully authenticated and consumed!" );
+			ConsumeKey( handler );
+			break;
+			
+		// Already consumed
+		case "true":
+			SendErrorMessage( handler.Requester, "Key was already consumed!" );
+			break;
+			
+		// Doesn't exist
+		case "false":
+			SendErrorMessage( handler.Requester, "Key could'nt be consumed!" );
+			break;
+	}	
+	handler.Destroy();
+}
+
+private final function ConsumeKey( BTActivateKey handler )
+{
+	local BTClient_ClientReplication Rep;
+	local int itemStoreSlot;
+	
+	Rep = GetRep( handler.Requester );
+	if( Rep == none )
+	{
+		SendErrorMessage( handler.Requester, "Couldn't find the replication instance! Consumption aborted!" );
+		return;
+	}
+		
+	switch( handler.Serial.Type )
+	{
+		// Key was generated for the purpose of giving items!
+		case "item":
+			itemStoreSlot = Store.FindItemByID( handler.Serial.Code );
+			if( itemStoreSlot == -1 )
+			{
+				SendErrorMessage( handler.Requester, "The reward of this key does not exist on this server!" );
+				break;
+			}
+			
+			if( PDat.HasItem( Rep.myPlayerSlot, handler.Serial.Code ) )
+			{
+				SendErrorMessage( handler.Requester, "Cannot use this key because you already own the reward!" );
+				break;
+			} 
+			PDat.GiveItem( Rep.myPlayerSlot, handler.Serial.Code );
+			SendSucceedMessage( handler.Requester, "You were given the following item" @ Store.items[itemStoreSlot].Name );
+			break;
+			
+		case "curr":
+			PDat.GiveCurrencyPoints( Rep.myPlayerSlot, int(handler.Serial.Code) );
+			SendSucceedMessage( handler.Requester, "You were given Currency!" );
+			break;
+			
+		case "exp":
+			PDat.AddExperience( Rep.myPlayerSlot, int(handler.Serial.Code) );
+			SendSucceedMessage( handler.Requester, "You were given Experience!" );
+			break;
+	}
 }
 
 final private function bool AdminExecuted( PlayerController sender, string command, optional array<string> params )
@@ -5234,7 +5372,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 					UpdateEndMsg( "* New Speed Record( TIME:"$TimeToStr( CurrentPlaySeconds )@") *" );
 					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.WhickedSick' );
 
-					PDat.AddExperienceList( contributors, EXP_FirstRecord + numObjectives );
+					PDat.AddExperienceList( contributors, EXP_FirstRecord + numObjectives + 30 );
 				}
 				else														// Improved record.
 				{
@@ -5260,7 +5398,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 						PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].RecentLostRecords[j] = "Map:"$CurrentMapName@"BOOST:"$TimeToStr( TimeBoost );
 					}
 
-					PDat.AddExperienceList( contributors, EXP_ImprovedRecord + numObjectives );
+					PDat.AddExperienceList( contributors, EXP_ImprovedRecord + numObjectives + (30 * (BestPlaySeconds/CurrentPlaySeconds)) );
 				}
 				BroadcastConsoleMessage( Class'HUD'.Default.GoldColor $ EndMsg );
 
@@ -5333,7 +5471,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 			   		UpdateEndMsg( "* Tied( TIME:"$TimeToStr( CurrentPlaySeconds )@") *" );
 					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Invulnerable' );
 
-					PDat.AddExperienceList( contributors, EXP_TiedRecord + numObjectives );
+					PDat.AddExperienceList( contributors, EXP_TiedRecord + numObjectives + 30 );
 
 					/*for( i = 0; i < contributors.Length; ++ i )
 					{
@@ -5348,7 +5486,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Totalled' );
 					else BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Denied' );
 
-					PDat.AddExperienceList( contributors, EXP_FailRecord + numObjectives );
+					PDat.AddExperienceList( contributors, EXP_FailRecord + numObjectives + (30 * (BestPlaySeconds/CurrentPlaySeconds)) );
 				}
 				BroadcastConsoleMessage( Class'HUD'.Default.RedColor $ EndMsg );
 			}
@@ -6294,7 +6432,7 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 					{
 						++ NumRecords[PSlot];
 
-						Points[PSlot] += (PPoints.PlayerPoints[RecPlayers-1].PPlayer[CurPlayer]+RDat.Rec[CurMap].Objs[CurPlayer])*PointsScaling;
+						Points[PSlot] += (PPoints.PlayerPoints[RecPlayers-1].PPlayer[CurPlayer]+((RDat.Rec[CurMap].Objs[CurPlayer]*PointsPerObjective)*2))*PointsScaling;
 					}
 				}
 			}
