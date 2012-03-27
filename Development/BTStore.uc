@@ -18,6 +18,8 @@ struct sItem
 	var() string Conditions;
 
 	var transient Material CachedIMG;
+	var transient string CachedCategory;
+	var transient class<Actor> CachedClass;
 };
 
 var() array<sItem> Items;
@@ -121,13 +123,27 @@ final static function BTStore Load()
 			Log( i @ this.Items[i].Name );
 		}*/
 	}
-
-	for( i = 0; i < this.Items.Length; ++ i )
-	{
-		this.Items[i].CachedIMG = Material(DynamicLoadObject( this.Items[i].IMG, class'Material', true ));
-	}
-
 	return this;
+}
+
+final function Cache()
+{
+	local int i, j;
+	local string outCategoryName;
+	
+	for( i = 0; i < Items.Length; ++ i )
+	{
+		Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
+		// Cache the cateogry in which each item resists.(This operation is quite expensive, takes about 100ms per request(300+ items).
+		for( j = 0; j < Categories.Length; ++ j )
+		{
+			outCategoryName = Categories[j].Name; 
+			if( ItemIsInCategory( Items[i].Type, outCategoryName ) )
+			{				
+				Items[i].CachedCategory $= "&"$Categories[j].Name;
+			}			
+		}		
+	}	
 }
 
 final function int FindCategory( string categoryName )
@@ -144,7 +160,7 @@ final function int FindCategory( string categoryName )
 	return -1;
 }
 
-final function bool ItemIsInCategory( string itemType, string categoryName )
+final function bool ItemIsInCategory( string itemType, out string categoryName )
 {
 	local int categoryIndex, i;
 	local int asterik;
@@ -152,10 +168,16 @@ final function bool ItemIsInCategory( string itemType, string categoryName )
 	categoryIndex = FindCategory( categoryName );
 	if( categoryIndex == -1 )
 		return false;
-
-	if( categoryName == "" || (categoryName ~= "All" || categoryName ~= "Admin")
-	|| ((itemType == "" || !HasCategory( itemType )) && categoryName ~= "Other") )
+		
+	if( categoryName == "" || (categoryName ~= "All" || categoryName ~= "Admin") )
+	{
 		return true;
+	}
+	else if( ((itemType == "" || !HasCategory( itemType )) && categoryName ~= "Other") )
+	{
+		categoryName = "Other";
+		return true;
+	}
 
 	for( i = 0; i < Categories[categoryIndex].Types.Length; ++ i )
 	{
