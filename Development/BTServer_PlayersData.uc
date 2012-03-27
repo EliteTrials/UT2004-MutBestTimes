@@ -338,6 +338,17 @@ final function bool ItemEnabled( int playerSlot, string id )
 	return false;
 }
 
+final function GetItemState( int playerSlot, string id, out byte bBought, out byte bEnabled )
+{
+	local int i;
+
+	if( HasItem( playerSlot, id, i ) )
+	{
+		bBought = 1;
+		bEnabled = byte(Player[playerSlot].Inventory.BoughtItems[i].bEnabled);
+	}
+}
+
 final function bool HasCurrencyPoints( int playerSlot, int amount )
 {
 	return Player[playerSlot].LevelData.BTPoints >= amount;
@@ -414,7 +425,7 @@ final function AddExperience( int playerSlot, int experience )
 	postLevel = GetLevel( playerSlot );
 	if( postLevel > preLevel )
 	{
-		Player[playerSlot].LevelData.BTPoints += (BT.PointsPerLevel * (postLevel - preLevel));
+		Player[playerSlot].LevelData.BTPoints += (BT.PointsPerLevel * (postLevel - preLevel)) * postLevel;
 
 		BT.NotifyLevelUp( playerSlot, postLevel );
 	}
