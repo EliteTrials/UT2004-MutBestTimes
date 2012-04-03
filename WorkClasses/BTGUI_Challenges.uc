@@ -79,7 +79,5 @@ function bool OnKeyEvent( out byte Key, out byte State, float delta )
 
 defaultproperties
 {
-	SummaryText="Below here are challenges that you can complete."
-
 	OnKeyEvent=OnKeyEvent
 }

@@ -150,8 +150,6 @@ function bool OnKeyEvent( out byte Key, out byte State, float delta )
 
 defaultproperties
 {
-	SummaryText="Below here are trophies that you have earned by completing challenges."
-
 	OnKeyEvent=OnKeyEvent
 
 	TrophyIcon=Texture'trophyIcon'

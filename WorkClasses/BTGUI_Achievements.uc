@@ -168,7 +168,5 @@ function bool OnKeyEvent( out byte Key, out byte State, float delta )
 
 defaultproperties
 {
-	SummaryText="Green colored icons indicates achievement accomplished."
-
 	OnKeyEvent=OnKeyEvent
 }
