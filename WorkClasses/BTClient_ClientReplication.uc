@@ -108,6 +108,15 @@ struct sCategoryClient
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;	// SERVER and LOCAL
 
+struct sPerkState
+{
+	var string Name;
+	var float Points;
+	var string Description;
+	var Texture Icon;
+	var bool bActive;
+};
+
 //==============================================================================
 
 //==============================================================================
@@ -135,6 +144,10 @@ var sTrophyClient LastTrophyEvent;
 /** The availabe items for sale and bought. */
 var(DEBUG) array<sItemClient> Items;
 
+/** Available perks. */
+var(DEBUG) array<sPerkState> Perks;
+
+
 // --NOT REPLICATED
 var(DEBUG) transient bool bItemsTransferComplete;
 
@@ -161,6 +174,7 @@ var private Pawn DeadPawn;
 // #endif
 
 var int BTLevel;
+// Not to be confused with actual Ranking Points!
 var int BTPoints;
 
 var Color PreferedColor;
@@ -193,6 +207,7 @@ var BTClient_MutatorReplicationInfo MRI;
 // SERVERSIDE VARIABLES
 var int myPlayerSlot;				// Cached slot of the PDat.Player list for this player
 var bool bReceivedRankings;
+var bool bAutoPress;
 
 replication
 {
@@ -227,6 +242,7 @@ replication
 		// Stats
 		ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
 		ClientSendChallenge,
+		ClientSendPerk,
 		ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
 		ClientSendItem, ClientSendCategory,
 		ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
@@ -590,6 +606,16 @@ simulated final function ClientSendChallenge( string title, string description, 
 	Challenges[0].Points = points;
 }
 
+simulated final function ClientSendPerk( string name, string description, int points, Texture icon, bool bActive )
+{
+	Perks.Insert( 0, 1 );
+	Perks[0].Name = name;
+	Perks[0].Description = description;
+	Perks[0].Points = points;
+	Perks[0].Icon = icon;
+	Perks[0].bActive = bActive;
+}
+
 simulated final function ClientSendTrophy( string title )
 {
 	Trophies.Insert( 0, 1 );
@@ -645,20 +671,6 @@ simulated final function ClientAchievementAccomplished( string title, optional s
 simulated final function ClientCleanAchievements()
 {
 	AchievementsStates.Length = 0;
-}
-
-function int SumUp (string In)
-{
-	local int jdx,lgt,sum;
-
-	lgt=Len(In);
-	jdx=0;
-	While( jdx < lgt )
-	{
-		sum += Asc(Mid(In,jdx,1));
-		jdx++;
-	}
-	return sum;
 }
 
 /** Merges all three variables into one chunk. */
@@ -745,6 +757,22 @@ simulated final function ClientSendCategory( string categoryName )
 simulated final function ClientSendItemsCompleted()
 {
 	bItemsTransferComplete = true;
+}
+
+event Tick( float deltaTime )
+{
+	local UseObjective objective;
+	
+	if( PlayerController(Owner).Pawn != none && bAutoPress )
+	{
+		foreach PlayerController(Owner).Pawn.TouchingActors( class'UseObjective', objective )
+		{
+			if( objective.bDisabled )
+				continue;
+				
+			PlayerController(Owner).ServerUse();
+		}		
+	}
 }
 
 DefaultProperties

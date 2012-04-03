@@ -58,12 +58,13 @@ defaultproperties
 	WinLeft=0.100000
 	WinTop=0.100000
 
-	BTTabs(6)=(Caption="Store",TabClass=class'BTGUI_Store',Hint="Buy nice visual items for your character!")
+	BTTabs(7)=(Caption="Store",TabClass=class'BTGUI_Store',Hint="Buy nice visual items for your character!")
 	BTTabs(0)=(Caption="Account",TabClass=class'BTGUI_Account',Hint="")
 	BTTabs(1)=(Caption="Settings",TabClass=class'BTGUI_Settings',Hint="Edit your BestTimes settings!")
 	BTTabs(3)=(Caption="Achievements",TabClass=class'BTGUI_Achievements',Hint="View your BestTimes achievements!")
 	BTTabs(4)=(Caption="Trophies",TabClass=class'BTGUI_Trophies',Hint="View your earned BestTimes trophies!")
 	BTTabs(5)=(Caption="Challenges",TabClass=class'BTGUI_Challenges',Hint="View available BestTimes challenges!")
+	BTTabs(6)=(Caption="Perks",TabClass=class'BTGUI_Perks',Hint="View available BestTimes perks!")
 	BTTabs(2)=(Caption="Commands",TabClass=class'BTGUI_Commands',Hint="Execute useful BestTimes commands!")
 
 	Begin Object class=GUITabControl name=oPageTabs
