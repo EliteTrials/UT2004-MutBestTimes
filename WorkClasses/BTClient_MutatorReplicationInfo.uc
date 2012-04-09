@@ -129,6 +129,7 @@ simulated function InitializeClient()
 		{
 			Inter.MRI = Self;
 			Inter.HU = HUD_Assault(PC.myHud);
+			Inter.myHUD = PC.myHud;
 			Inter.ObjectsInitialized();
 
 			if( CR == none )

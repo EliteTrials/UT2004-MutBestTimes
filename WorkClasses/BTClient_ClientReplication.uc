@@ -103,6 +103,7 @@ struct sItemClient
 struct sCategoryClient
 {
 	var string Name;
+	var array<sItemClient> CachedItems;
 };
 
 var(DEBUG) array<sCategoryClient> Categories;
@@ -121,6 +122,8 @@ struct sPerkState
 
 //==============================================================================
 // REPLICATED VARIABLES
+var bool bAllowDodgePerk;
+
 var(DEBUG) array<sGlobalPacket> OverallTop;
 var(DEBUG) array<sDailyPacket> DailyTop;
 var(DEBUG) array<sQuarterlyPacket> QuarterlyTop;
@@ -164,6 +167,7 @@ var(DEBUG) string Title;
 
 // Pawn of this user
 var Pawn myPawn;
+var Pawn LastPawn;
 var private Pawn DeadPawn;
 
 // #ifdef bSoloMap
@@ -216,6 +220,9 @@ replication
 		Rank, ClientFlags, SoloRank,
 		BTLevel, BTExperience, BTPoints,
 		PreferedColor;
+		
+	reliable if( bNetDirty && bNetOwner )
+		bAllowDodgePerk;
 
 	unreliable if( bNetInitial && bNetOwner && bNetDirty )
 		UserState;
@@ -762,6 +769,12 @@ simulated final function ClientSendItemsCompleted()
 event Tick( float deltaTime )
 {
 	local UseObjective objective;
+	
+	if( PlayerController(Owner) == none )
+	{
+		Destroy();
+		return;
+	}
 	
 	if( PlayerController(Owner).Pawn != none && bAutoPress )
 	{

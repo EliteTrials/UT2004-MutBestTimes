@@ -11,6 +11,10 @@ class BTClient_Interaction extends Interaction;
 #Exec obj load file="MenuSounds.uax"
 #Exec obj load file="Content/ClientBTimes.utx" package="ClientBTimesV4C"
 
+const META_DECOMPILER_VAR_AUTHOR				= "Eliot Van Uytfanghe";
+const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_EVENT_ONLOAD_MESSAGE		= "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
+
 struct LongBuggyCompilerStruct
 {
 	var int LongBuggyCompilerStruct;
@@ -53,6 +57,7 @@ var string
 
 var BTClient_MutatorReplicationInfo 		MRI;								// Set by BTClient_MutatorReplicationInfo
 var HUD_Assault 							HU;									// Set by BTClient_MutatorReplicationInfo
+var HUD										myHUD;
 var BTClient_Config 						Options;							// Object to Config, set on Initialized()
 var BTClient_ClientReplication 				SpectatedClient;					// Set by PostRender(), used for showing the record timer of other players...
 
@@ -95,6 +100,15 @@ var const
 	AlphaLayer,
 	Layer,
 	RankBeacon;
+	
+// DODGEPERK DATA
+var Actor.EPhysics LastPhysicsState;
+var Actor.EDoubleClickDir LastDoubleClickDir;
+var float LastDodgeTime;
+var float LastLandedTime;
+var bool bPerformedDodge;
+var bool bPreDodgeReady;
+var bool bDodgeReady;
 
 Final Function SendConsoleMessage( string Msg )
 {
@@ -809,7 +823,7 @@ Exec Function StopTimer()
 	LastTickTime = 0;
 }
 
-Function Tick( float DeltaTime )
+event Tick( float DeltaTime )
 {
 	local Console C;
 	local DefaultPhysicsVolume DPV;
@@ -825,6 +839,11 @@ Function Tick( float DeltaTime )
 			++ ElapsedTime;
 			LastTickTime = MRI.Level.TimeSeconds + 1.0;
 		}
+	}
+			
+	if( MRI.CR.bAllowDodgePerk )
+	{
+		PerformDodgePerk();
 	}
 
 	/* Anti-ShowAll */
@@ -858,6 +877,83 @@ Function Tick( float DeltaTime )
 		}
 		LastShowAllCheck = ViewportOwner.Actor.Level.TimeSeconds+1.0;
 	}
+}
+
+function PerformDodgePerk()
+{
+	local Pawn p;
+	local bool bDodgePossible;
+	local Actor.EPhysics phy;
+	local Actor.EDoubleClickDir dir;
+	
+	p = ViewportOwner.Actor.Pawn;
+	if( p == none )
+		return;
+		
+	if( MRI.CR.LastPawn != p )
+	{
+		bPerformedDodge = false;
+		LastLandedTime = ViewportOwner.Actor.Level.TimeSeconds;
+		LastDodgeTime = ViewportOwner.Actor.Level.TimeSeconds;
+		LastDoubleClickDir = DClick_None;
+		LastPhysicsState = PHYS_None;
+		bPreDodgeReady = true;
+		bDodgeReady = true;
+	}
+		
+	phy = p.Physics;
+	dir = xPawn(p).CurrentDir;
+	
+	if( Options != none && Options.bShowDodgeReady )
+	{
+		bDodgePossible = ((phy == PHYS_Falling && p.bCanWallDodge) || phy == PHYS_Walking) && !p.bIsCrouched && !p.bWantsToCrouch;
+		bPreDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.10 && !bPerformedDodge && bDodgePossible;
+		bDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.35 && !bPerformedDodge && bDodgePossible;
+	}
+	
+	if( LastPhysicsState != PHYS_Walking && phy == PHYS_Walking )
+	{
+		//ViewportOwner.Actor.ClientMessage( "Land!" );	
+		PerformedLanding( p );	
+	}
+	
+	if( dir > DCLICK_None )
+	{
+		//ViewportOwner.Actor.ClientMessage( "Dodge!" );
+		PerformedDodge( p );	
+		xPawn(p).CurrentDir = DCLICK_None;	 
+	}
+
+	LastPhysicsState = phy;
+	
+	MRI.CR.LastPawn = p;
+}
+
+function PerformedDodge( Pawn other )
+{
+	local float diff;
+	
+	bPerformedDodge = true;
+	if( Options.bShowDodgeDelay )
+	{
+		diff = ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime;
+		if( diff > 0.1f )
+		{
+			ViewportOwner.Actor.ClientMessage( "DodgeDelay:" $ diff );	
+		}
+	}
+	LastDodgeTime = ViewportOwner.Actor.Level.TimeSeconds;
+}
+
+function PerformedLanding( Pawn other )
+{
+	if( bPerformedDodge )
+	{
+		LastLandedTime = ViewportOwner.Actor.Level.TimeSeconds;
+		bPerformedDodge = false;
+	}
+	
+	LastDoubleClickDir = DCLICK_None;
 }
 
 Event Initialized()
@@ -970,8 +1066,10 @@ Final Function ModifyMenu()
 
 event NotifyLevelChange()
 {
+	super.NotifyLevelChange();
 	MRI = none;
 	HU = none;
+	myHUD = none;
 	if( Options != none )
 	{
 		Options.OldResult = none;
@@ -1074,7 +1172,7 @@ Final Function RenderZoneActors( Canvas C )
 							if( Dist <= 1000 )
 							{
 								Scre2 = C.WorldToScreen( NextTP.Location );
-								Class'HUD'.Static.StaticDrawCanvasLine( C, Scre.X, Scre.Y, Scre2.X, Scre2.Y, HU.BlueColor );
+								Class'HUD'.Static.StaticDrawCanvasLine( C, Scre.X, Scre.Y, Scre2.X, Scre2.Y, myHUD.BlueColor );
 
 								C.StrLen( "End", XL, YL );
 								C.SetPos( Scre2.X - (XL*0.5), Scre2.Y - (YL*1.2) );
@@ -1197,7 +1295,7 @@ Final Function RenderRankIcon( Canvas C )
 			Scale = FClamp( 0.28 * (ScaleDist - Dist) / ScaleDist, 0.1, 0.25 );
 
 			C.SetPos( (Scre.X - 0.125 * (RankBeacon.USize*0.5f)), (Scre.Y - (0.125 * RankBeacon.VSize) - 72) );
-			C.DrawColor = HU.WhiteColor;
+			C.DrawColor = myHUD.WhiteColor;
 			C.DrawTile( RankBeacon, RankBeacon.USize * Scale, RankBeacon.VSize * Scale, 0.0, 0.0, RankBeacon.USize, RankBeacon.VSize );
 
 			C.SetPos( (Scre.X - 0.120 * (RankBeacon.USize*0.5f)) + XL*0.5, (Scre.Y - (0.120 * RankBeacon.VSize) - 72+(YL*0.5)) );
@@ -1447,7 +1545,7 @@ function RenderCompetitiveLayer( Canvas C )
 	local string S;
 
 	// Simulate the CurrentObjective widget position!
-	C.Font = HU.GetMediumFont( C.ClipX * HU.HUDScale );
+	C.Font = myHUD.GetMediumFont( C.ClipX * myHUD.HUDScale );
 	C.TextSize( "Team Balance", XL, YL );
 
 	SizeX = Max( C.ClipX * 0.15f, XL );
@@ -1455,7 +1553,7 @@ function RenderCompetitiveLayer( Canvas C )
 	StartY = YL + YL;
 
 	C.Style = 1;
-	C.DrawColor = HU.GreenColor;
+	C.DrawColor = myHUD.GreenColor;
 	C.SetPos( StartX, StartY );
 	C.DrawTile( AlphaLayer, SizeX, YL, 0, 0, 256, 256 );
 
@@ -1494,7 +1592,7 @@ function RenderCompetitiveLayer( Canvas C )
 	S = "Team Balance";
 	C.TextSize( S, XL, YL );
 	C.SetPos( StartX + SizeX * 0.5 - XL * 0.5, StartY );
-	C.DrawColor = HU.WhiteColor;
+	C.DrawColor = myHUD.WhiteColor;
 	C.DrawText( S );
 
 	// Draw border
@@ -1506,6 +1604,26 @@ function RenderCompetitiveLayer( Canvas C )
 	C.CurY -= 2;
 	Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX, YL+4 );
 	Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX+SizeX, YL+4 );
+}
+
+function RenderDodgeReady( Canvas C )
+{
+	local string s;
+	local float XL, YL;
+	
+	if( Options != none && Options.bShowDodgeReady && bPreDodgeReady )
+	{
+		s = "Dodge: Ready";
+		C.StrLen( s, XL, YL );
+		C.SetPos( C.ClipX * 0.5 - XL * 0.5, C.ClipY * 0.85 );
+		if( bDodgeReady )
+		{
+			C.DrawColor = class'HUD'.default.GreenColor;
+		}
+		else C.DrawColor = Orange;
+		C.Style = 1;
+		C.DrawText( s );
+	}
 }
 
 function PostRender( Canvas C )
@@ -1570,6 +1688,11 @@ function PostRender( Canvas C )
 
 	if( MRI.CR == None )
 		return;
+		
+	if( ViewportOwner.Actor.Pawn != none )
+	{
+		RenderDodgeReady( C );
+	}
 
 	// See if client is spectating someone!
 	if( MRI.bSoloMap )
@@ -1788,7 +1911,7 @@ function PostRender( Canvas C )
 				S $= "!";
 				C.TextSize( S, XL, YL );
 				C.SetPos( TableOffset + ((TableXL * 0.5) - (XL * 0.5)), FLength + FYL );
-				C.DrawColor = HU.RedColor;
+				C.DrawColor = myHUD.RedColor;
 				C.DrawText( S, True );
 			}
 		 	else
@@ -1845,7 +1968,7 @@ function PostRender( Canvas C )
 					// Rank
 					S = string( i+1 );
 					C.SetPos( XP1, FLength + YP );
-					C.DrawColor = HU.WhiteColor;
+					C.DrawColor = myHUD.WhiteColor;
 					C.DrawText( S, True );
 
 					if( Options.GlobalSort == 0 )
@@ -1947,7 +2070,7 @@ function PostRender( Canvas C )
 					// Rank
 					S = string( MRI.CR.Rank );
 					C.SetPos( XP1, FLength + YP );
-					C.DrawColor = HU.WhiteColor;
+					C.DrawColor = myHUD.WhiteColor;
 					C.DrawText( S, True );
 
 					// Player Name
@@ -1982,7 +2105,7 @@ function PostRender( Canvas C )
 
 				/*if( MRI.CR.UserState[0] != "" )
 				{
-					C.Font = HU.GetMediumFont( -1 );
+					C.Font = myHUD.GetMediumFont( -1 );
 
 					C.DrawColor = Class'HUD'.Default.TurqColor;
 					YP += FYL*2;
@@ -2257,7 +2380,7 @@ function PostRender( Canvas C )
 					//C.SetPos( TableOffset + (TableXL * 0.5) - (CR.Level.Screenshot.MaterialUSize() * 0.5), FLength + (FYL * 0.5) - (CR.Level.Screenshot.MaterialVSize() * 0.5) );
 					C.SetPos( TableOffset - 2, FLength + YL );
 					C.Style = 1;
-	   				C.DrawColor = HU.WhiteColor;
+	   				C.DrawColor = myHUD.WhiteColor;
 					C.DrawTileJustified( MRI.Level.Screenshot, 0, TableXL - 2, YLength - YL );
 
 					/*C.SetPos( TableOffset - 2, FLength + YL );
@@ -2323,7 +2446,7 @@ function PostRender( Canvas C )
 
 			if( bTestRun )
 			{
-				C.Font = HU.GetMediumFont( C.ClipX * (HU.HUDScale*0.75) );
+				C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
 
 				if( bPauseTest )
 					C.DrawColor = C.Default.DrawColor;
@@ -2353,7 +2476,7 @@ function PostRender( Canvas C )
 						C.DrawColor = class'HUD'.default.RedColor;
 					else C.DrawColor = class'HUD'.default.WhiteColor;
 
-					C.Font = HU.GetMediumFont( C.ClipX * (HU.HUDScale*0.75) );
+					C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
 					DrawTextWithBackground( C, FormatTime( DrawnTimer ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
 					return;
 				}
@@ -2361,7 +2484,7 @@ function PostRender( Canvas C )
 
 			// Draw record information!.
 			// Don't render anything when the objectives board is displayed.
-			if( !HU.ShouldShowObjectiveBoard() )
+			if( HU == none || !HU.ShouldShowObjectiveBoard() )
 			{
 				DrawRecordWidget( C );
 			}
@@ -2519,7 +2642,7 @@ function PostRender( Canvas C )
 		{
 			case RS_Succeed:
 				//RenderRecordDetails( C );
-				C.Font = HU.LoadFont( 8 );
+				C.Font = myHUD.LoadFont( 8 );
 				//C.Font = HU.GetFontSizeIndex( C, Options.DrawFontSize );
 
 				// Draw Ghost stuff
@@ -2580,7 +2703,7 @@ function PostRender( Canvas C )
  				//C.Style = 3;
 
 				C.SetPos( (C.ClipX*0.5)-(XL*0.5), ((C.Clipy*(YOffsetScale+0.05))+(YLength*0.5))-(YL*0.5) );
-				C.DrawColor = HU.WhiteColor;
+				C.DrawColor = myHUD.WhiteColor;
 				C.DrawText( MRI.PlayersBestTimes );
 
 				// Draw Info
@@ -2638,12 +2761,12 @@ function PostRender( Canvas C )
  				//C.Style = 3;
 
 				C.SetPos( (C.ClipX*0.5)-(XL*0.5), ((C.Clipy*(YOffsetScale+0.15))+(YLength*0.5))-(YL*0.5) );
-				C.DrawColor = HU.WhiteColor;
+				C.DrawColor = myHUD.WhiteColor;
 				C.DrawText( MRI.PointsReward );
 				break;
 
 			case RS_Failure:
-				C.Font = HU.GetFontSizeIndex( C, Options.DrawFontSize );
+				C.Font = myHUD.GetFontSizeIndex( C, Options.DrawFontSize );
 
 				C.StrLen( MRI.EndMsg, XL, YL );
 				YLength = YL*3;
@@ -2671,40 +2794,40 @@ function PostRender( Canvas C )
  				//C.Style = 3;
 
 				C.SetPos( (C.ClipX*0.5)-(XL*0.5), ((C.Clipy*(YOffsetScale+0.15))+(YLength*0.5))-(YL*0.5) );
-				C.DrawColor = GetFadingColor( HU.RedColor );
+				C.DrawColor = GetFadingColor( myHUD.RedColor );
 				C.DrawText( MRI.EndMsg );
 				break;
 
 			case RS_QuickStart:
-				C.Font = HU.GetFontSizeIndex( C, Options.DrawFontSize );
+				C.Font = myHUD.GetFontSizeIndex( C, Options.DrawFontSize );
 
 				C.StrLen( MRI.EndMsg, XL, YL );
 				YLength = YL*3;
-				C.SetPos( (C.ClipX*0.5)-((XL + (64 * HU.ResScaleX))*0.5), (C.ClipY*(YOffsetScale+0.15)) );
+				C.SetPos( (C.ClipX*0.5)-((XL + (64 * myHUD.ResScaleX))*0.5), (C.ClipY*(YOffsetScale+0.15)) );
 				C.DrawColor = Options.CTable;
 				C.Style = 1;
-				C.DrawTile( AlphaLayer, (XL + (64 * HU.ResScaleX)), YLength, 0, 0, 256, 256 );
+				C.DrawTile( AlphaLayer, (XL + (64 * myHUD.ResScaleX)), YLength, 0, 0, 256, 256 );
 
 				// Border
 				C.DrawColor = Class'HUD'.Default.GrayColor;
 				C.DrawColor.A = 100;
 
-				C.CurX = (C.ClipX*0.5)-((XL + (64 * HU.ResScaleX))*0.5);
+				C.CurX = (C.ClipX*0.5)-((XL + (64 * myHUD.ResScaleX))*0.5);
 				C.CurY = (C.ClipY*(YOffsetScale+0.15));
 				// Parms: CurY, XLength
-				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY-2 /* Start 2pixels before */, (XL + (64 * HU.ResScaleX)) );
- 				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY+YLength, (XL + (64 * HU.ResScaleX)) );
+				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY-2 /* Start 2pixels before */, (XL + (64 * myHUD.ResScaleX)) );
+ 				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY+YLength, (XL + (64 * myHUD.ResScaleX)) );
 
  				C.CurY -= 2;
 				// Parms: CurX, YLength
  				Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX-2, YLength+4 );
- 				Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX+(XL + (64 * HU.ResScaleX)), YLength+4 );
+ 				Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX+(XL + (64 * myHUD.ResScaleX)), YLength+4 );
  				// ...
 
  				//C.Style = 3;
 
 				C.SetPos( (C.ClipX*0.5)-(XL*0.5), ((C.Clipy*(YOffsetScale+0.15))+(YLength*0.5))-(YL*0.5) );
-				C.DrawColor = GetFadingColor( HU.TurqColor );
+				C.DrawColor = GetFadingColor( myHUD.TurqColor );
 				C.DrawText( MRI.EndMsg );
 				break;
 		}
@@ -2737,7 +2860,7 @@ function PostRender( Canvas C )
 			//C.Style = 3;
 
 			C.SetPos( C.ClipX * 0.5f - XL * 0.5f, C.Clipy * 0.25f );
-			C.DrawColor = HU.GreenColor;
+			C.DrawColor = myHUD.GreenColor;
 			C.DrawText( MRI.ADMessage );
 		}
 	}
@@ -2971,7 +3094,7 @@ function DrawRecordWidget( Canvas C )
 
 		C.Style = 3;
 
-		C.DrawColor = HU.WhiteColor;
+		C.DrawColor = myHUD.WhiteColor;
 		C.SetPos( C.ClipX-4-XL1, YP );
 		C.DrawText( RecordEmptyMsg );
 
@@ -3112,8 +3235,8 @@ Final Function DrawTextWithBackground( Canvas C, String Text, Color TextColor, f
 
 	C.StrLen( Text, XL, YL );
 
-	XL2	= XL + 64 * HU.ResScaleX;
-	YL2	= YL +  8 * HU.ResScaleY;
+	XL2	= XL + 64 * myHUD.ResScaleX;
+	YL2	= YL +  8 * myHUD.ResScaleY;
 
 	C.DrawColor = Options.CTable;
 	C.SetPos( XO - XL2*0.5, YO - YL2*0.5 );

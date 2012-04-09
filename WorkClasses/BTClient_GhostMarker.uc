@@ -14,7 +14,7 @@ defaultproperties
 	bStatic=false
 	bNoDelete=false
 	Texture=none
-	bAlwaysRelevant=false
+	bAlwaysRelevant=true
 	bReplicateMovement=true
 
 	NetUpdateFrequency=1

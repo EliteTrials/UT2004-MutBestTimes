@@ -17,7 +17,9 @@ var automated moCheckBox
 	cb_DFT,
 	cb_RGOD,
     cb_PM,
-    cb_ABV;
+    cb_ABV,
+    cb_DodgeDelay,
+    cb_DodgeReady;
 
 var automated GUIEditBox
 	eb_TickSound,
@@ -69,6 +71,8 @@ function CopyOptions()
 	cb_RGOD.Checked( Options.bResetGhostOnDead );
 	cb_PM.Checked( Options.bProfesionalMode );
 	cb_ABV.Checked( Options.bAutoBehindView );
+	cb_DodgeDelay.Checked( Options.bShowDodgeDelay );
+	cb_DodgeReady.Checked( Options.bShowDodgeReady );
 
 	eb_TickSound.SetText( string(Options.TickSound) );
 	eb_LastTickSound.SetText( string(Options.LastTickSound) );
@@ -119,6 +123,8 @@ function SaveData()
 	Options.bResetGhostOnDead = cb_RGOD.IsChecked();
 	Options.bProfesionalMode = cb_PM.IsChecked();
 	Options.bAutoBehindView = cb_ABV.IsChecked();
+	Options.bShowDodgeDelay = cb_DodgeDelay.IsChecked();
+	Options.bShowDodgeReady = cb_DodgeReady.IsChecked();
 
 	Options.TickSound = Sound(DynamicLoadObject( eb_TickSound.GetText(), Class'Sound', True ));
 	Options.LastTickSound = Sound(DynamicLoadObject( eb_LastTickSound.GetText(), Class'Sound', True ));
@@ -154,7 +160,7 @@ defaultproperties
 		WinTop		=	0.100000
 		WinLeft		=	0.050000
 		WinWidth	=	0.4200000
-		WinHeight	=	0.078125
+		WinHeight	=	0.048125
 		Caption="Use Alternative Timer"
 		Hint="If Checked: The record timer will be displayed at bottom center of your screen"
 		bAutoSizeCaption=True
@@ -163,10 +169,10 @@ defaultproperties
 	cb_UseAltTimer=UseAltTimer
 
 	Begin Object class=moCheckBox name=ShowZoneActors
-		WinTop=0.175000
+		WinTop=0.172000
 		WinLeft=0.050000
 		WinWidth=0.4200000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Show Zone Actors"
 		Hint="If Checked: Common invisible actors within your zone will be drawn in wireframe or just an icon if no mesh is available"
 		bAutoSizeCaption=True
@@ -175,10 +181,10 @@ defaultproperties
 	cb_ShowZoneActors=ShowZoneActors
 
 	Begin Object class=moCheckBox name=FadeTextColors
-		WinTop=0.250000
+		WinTop=0.244000
 		WinLeft=0.050000
 		WinWidth=0.4200000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Fade Text Colors"
 		Hint="If Checked: Text colors will fade between white and their default Color"
 		bAutoSizeCaption=True
@@ -187,10 +193,10 @@ defaultproperties
 	cb_FadeTextColors=FadeTextColors
 
 	Begin Object class=moCheckBox name=DCM
-		WinTop=0.325000
+		WinTop=0.316000
 		WinLeft=0.050000
 		WinWidth=0.4200000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Display Completing Messages"
 		Hint="If Checked: Completing messages will be displayed(Solo Only)"
 		bAutoSizeCaption=True
@@ -199,10 +205,10 @@ defaultproperties
 	cb_DCM=DCM
 
 	Begin Object class=moCheckBox name=OIF
-		WinTop=0.400000
+		WinTop=0.3880000
 		WinLeft=0.100000
 		WinWidth=0.370000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Failed"
 		Hint="If Checked: Failures will be displayed(Solo Only)"
 		bAutoSizeCaption=True
@@ -211,10 +217,10 @@ defaultproperties
 	cb_OIF=OIF
 
 	Begin Object class=moCheckBox name=OIN
-		WinTop=0.475000
+		WinTop=0.460000
 		WinLeft=0.100000
 		WinWidth=0.370000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Succeed"
 		Hint="If Checked: Succeeds will be displayed(Solo Only)"
 		bAutoSizeCaption=True
@@ -223,10 +229,10 @@ defaultproperties
 	cb_OIN=OIN
 
 	Begin Object class=moCheckBox name=PCS
-		WinTop=0.550000
+		WinTop=0.532
 		WinLeft=0.100000
 		WinWidth=0.370000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Play Sounds"
 		Hint="If Checked: Completing messages will also play a sound(Solo Only)"
 		bAutoSizeCaption=True
@@ -237,7 +243,7 @@ defaultproperties
 	Begin Object class=GUIEditBox name=FailSound
 		bScaleToParent=True
 		bBoundToParent=True
-		WinTop=0.625000
+		WinTop=0.594000
 		WinLeft=0.050000
 		WinWidth=0.420000
 		WinHeight=0.050000
@@ -249,7 +255,7 @@ defaultproperties
 	Begin Object class=GUIEditBox name=SucceedSound
 		bScaleToParent=True
 		bBoundToParent=True
-		WinTop=0.700000
+		WinTop=0.666
 		WinLeft=0.050000
 		WinWidth=0.420000
 		WinHeight=0.050000
@@ -264,7 +270,7 @@ defaultproperties
 		WinTop=0.100000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Personal Timer"
 		Hint="If Checked: Record timer will be based on your Personal Time(Solo Only)"
 		bAutoSizeCaption=True
@@ -273,10 +279,10 @@ defaultproperties
 	cb_PT=PT
 
 	Begin Object class=moCheckBox name=DFT
-		WinTop=0.175000
+		WinTop=0.172000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Display Full Time"
 		Hint="If UnChecked: Record timer will show (e.g. 00:00:10.41) only those who have actually a value, will be drawn (e.g. 10.41)"
 		bAutoSizeCaption=True
@@ -285,10 +291,10 @@ defaultproperties
 	cb_DFT=DFT
 
 	Begin Object class=moCheckBox name=RGOD
-		WinTop=0.250000
+		WinTop=0.244000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Reset Ghost"
 		Hint="If Checked: Ghost will restart to the start whenever you respawn(Solo only and if alone)"
 		bAutoSizeCaption=True
@@ -299,7 +305,7 @@ defaultproperties
 	Begin Object class=GUIEditBox name=ToggleKey
 		bScaleToParent=True
 		bBoundToParent=True
-		WinTop=0.325000
+		WinTop=0.316000
 		WinLeft=0.530000
 		WinWidth=0.425000
 		WinHeight=0.050000
@@ -309,10 +315,10 @@ defaultproperties
 	eb_ToggleKey=ToggleKey
 
 	Begin Object class=moCheckBox name=PM
-		WinTop=0.400000
+		WinTop=0.388000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Profesional Mode"
 		Hint="If Checked: All players will be invisible and make no sound(Online and Solo only)"
 		bAutoSizeCaption=True
@@ -321,10 +327,10 @@ defaultproperties
 	cb_PM=PM
 
 	Begin Object class=moCheckBox name=ABV
-		WinTop=0.475000
+		WinTop=0.460000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Auto BehindView"
 		Hint="If Checked: BehindView will be automatic enabled on spawn(Online and Solo only)"
 		bAutoSizeCaption=True
@@ -333,10 +339,10 @@ defaultproperties
 	cb_ABV=ABV
 
 	Begin Object class=moCheckBox name=PTS
-		WinTop=0.550000
+		WinTop=0.532000
 		WinLeft=0.530000
 		WinWidth=0.425000
-		WinHeight=0.078125
+		WinHeight=0.048125
 		Caption="Play Tick Sounds"
 		Hint="If Checked: Tick sounds are played"
 		bAutoSizeCaption=True
@@ -347,7 +353,7 @@ defaultproperties
 	Begin Object class=GUIEditBox name=TickSound
 		bScaleToParent=True
 		bBoundToParent=True
-		WinTop=0.625000
+		WinTop=0.594000
 		WinLeft=0.530000
 		WinWidth=0.425000
 		WinHeight=0.050000
@@ -359,7 +365,7 @@ defaultproperties
 	Begin Object class=GUIEditBox name=LastTickSound
 		bScaleToParent=True
 		bBoundToParent=True
-		WinTop=0.700000
+		WinTop=0.656000
 		WinLeft=0.530000
 		WinWidth=0.425000
 		WinHeight=0.050000
@@ -367,6 +373,34 @@ defaultproperties
 		OnChange=InternalOnChange
 	End Object
 	eb_LastTickSound=LastTickSound
+	
+	Begin Object class=moCheckBox name=oDodgeReady
+		bScaleToParent=True
+		bBoundToParent=True
+		WinTop=0.728
+		WinLeft=0.530000
+		WinWidth=0.195000
+		WinHeight=0.050000
+		Caption="Dodge Ready"
+		Hint="(Dodge Perk)Shows when you are able to dodge to again!"
+		bAutoSizeCaption=True
+		OnChange=InternalOnChange
+	End Object
+	cb_DodgeReady=oDodgeReady
+	
+	Begin Object class=moCheckBox name=oDodgeDelay
+		bScaleToParent=True
+		bBoundToParent=True
+		WinTop=0.728
+		WinLeft=0.760000
+		WinWidth=0.195000
+		WinHeight=0.050000
+		Caption="Dodge Delay"
+		Hint="(Dodge Perk)Helps you research your dodge timing!"
+		bAutoSizeCaption=True
+		OnChange=InternalOnChange
+	End Object
+	cb_DodgeDelay=oDodgeDelay
 
 	// bottom
 

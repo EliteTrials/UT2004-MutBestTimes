@@ -44,12 +44,19 @@ function ShowPanel( bool bShow )
 
 function LoadData()
 {
-	//BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
+	// No need to request the items for this category, because we've got it cached!
+	if( LoadCachedCategory( ClientData.Options.StoreFilter ) )
+	{
+		ItemsNum = ClientData.Items.Length;
+		BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
+		return;
+	}
 
 	if( !bWaitingForResponse && PlayerOwner().Level.TimeSeconds > 5 )
 	{
 		ItemsNum = ClientData.Items.Length;
 		ClientData.Items.Length = 0;
+
 		PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), ClientData.Options.StoreFilter ) );
 
 		DisableComponent( cb_Filter );
@@ -328,9 +335,42 @@ final function UpdateItemDescription( int itemIndex )
 function FilterChanged( GUIComponent sender )
 {
 	cb_Filter.MyComboBox.ItemChanged( sender );
+	CacheCategory( ClientData.Options.StoreFilter );
 	ClientData.Options.StoreFilter = cb_Filter.GetText();
 	ClientData.Options.SaveConfig();
 	LoadData();
+}
+
+final function CacheCategory( string categoryName )
+{
+	local int i;
+	
+	for( i = 0; i < ClientData.Categories.Length; ++ i )
+	{
+		if( ClientData.Categories[i].Name ~= categoryName )
+		{
+			ClientData.Categories[i].CachedItems = ClientData.Items;
+			break;	
+		}
+	}
+}
+
+final function bool LoadCachedCategory( string categoryName )
+{
+	local int i;
+	
+	for( i = 0; i < ClientData.Categories.Length; ++ i )
+	{
+		if( ClientData.Categories[i].Name ~= categoryName )
+		{
+			if( ClientData.Categories[i].CachedItems.Length == 0 )
+				return false;
+				
+			ClientData.Items = ClientData.Categories[i].CachedItems;
+			return true;
+		}
+	}
+	return false;
 }
 
 defaultproperties

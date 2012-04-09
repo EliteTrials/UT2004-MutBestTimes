@@ -35,7 +35,9 @@ var() globalconfig
 	bResetGhostOnDead,
 	bProfesionalMode,
 	bAutoBehindView,
-	bNoTrailers;
+	bNoTrailers,
+	bShowDodgeDelay,
+	bShowDodgeReady;
 
 var() globalconfig
 	sound
@@ -151,6 +153,8 @@ DefaultProperties
 	bShowZoneActors=False
 	bFadeTextColors=True
 	bDisplayFullTime=True
+	bShowDodgeDelay=true
+	bShowDodgeReady=true
 
 	bDisplayCompletingMessages=True
 		bDisplayFail=True
