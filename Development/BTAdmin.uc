@@ -17,6 +17,12 @@ var string Title;
 
 var MutBestTimes BT;
 
+function CleanupApp()
+{
+	BT = none;
+	super.CleanupApp();
+}
+
 event Query( WebRequest request, WebResponse response )
 {
 	local int i;
