@@ -106,7 +106,7 @@ event Destroyed()
 defaultproperties
 {	
 	//Host="http://localhost/eliot/apps/%ACTION%"
-	Host="http://eliot.pwc-networks.com/apps/%ACTION%"
+	Host="http://eliotvu.com/apps/%ACTION%"
 	VerifySerialAction="verifyserial/%SERIAL%"
 	ConsumeSerialAction="consumeserial/%ID%/%TOKEN%/%GUID%"
 }
