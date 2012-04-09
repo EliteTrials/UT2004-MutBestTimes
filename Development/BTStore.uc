@@ -16,6 +16,7 @@ struct sItem
 	var() bool bAdminGiven;
 	var() bool bPassive;
 	var() string Conditions;
+	var() array<string> Vars;
 
 	var transient Material CachedIMG;
 	var transient string CachedCategory;
@@ -241,4 +242,8 @@ defaultproperties
 	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=30,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE")
 	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",bAdminGiven=true,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2")
 	Items(4)=(Name="+100% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",bAdminGiven=true,Desc="Get +100% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE")
+	
+	Items(5)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=100,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+	Items(6)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=150,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+	Items(7)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=200,Desc="Official Wire Skin D",img="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 }
