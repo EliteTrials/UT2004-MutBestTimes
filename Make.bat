@@ -27,7 +27,7 @@ echo Obfuscating classes
 echo.
 cd Development
 for %%F in (*.uc) do (
-    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc ( 
+    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  ( 
         echo Obfusctating class %%F
         ..\..\System\Gema\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
     )
