@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2011 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2012 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
 	config(MutBestTimes)
@@ -23,7 +23,7 @@ class MutBestTimes extends Mutator
 //	Minor Version  // minor new features
 //	Build Number // compile/test count, resets??
 //	Revision // quick fix
-const BTVersion 						= "2.99.20.0";
+const BTVersion 						= "3.1.1.0";
 const MaxPlayers						= 3;									// Note: Setting this higher than 4 will cause the extra players to not receive any points for the record!.
 const MaxRecentRecords 					= 15;									// The max recent records that is saved.
 const MaxPlayerRecentRecords			= 5;									// The max recent records that are saved per player.
@@ -42,8 +42,8 @@ const EXP_TiedRecord					= 30;
 const EXP_FailRecord					= 3;
 const EXP_Objective 					= 4;
 
-const META_DECOMPILER_VAR_AUTHOR			= "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT			= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_VAR_AUTHOR				= "Eliot Van Uytfanghe";
+const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE		= "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 // Rewards related.
@@ -185,6 +185,7 @@ var private BTServer_RewardsTable					RewardsTable;
 var BTAchievements									AchievementsManager;
 var BTChallenges									ChallengesManager;
 var BTStore											Store;
+var BTPerks											Perks;
 
 var bool
 	bPracticeRound,																// Asssault is in Practice Round																// Obsolete?
@@ -846,6 +847,18 @@ final function SendChallenges( PlayerController requester )
 	}
 }
 
+final function SendPerks( PlayerController requester )
+{
+	local BTClient_ClientReplication Rep;
+
+	//FullLog( "Sending perks to:" @ requester.GetHumanReadableName() );
+	Rep = GetRep( requester );
+	if( Rep == none )
+		return;
+
+	Perks.SendPerks( Rep );
+}
+
 final function SendItemMeta( PlayerController requester, string id )
 {
 	local int i;
@@ -929,6 +942,20 @@ final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
 	return true;
 }
 
+final function int GetRankSlot( int myPlayerSlot )
+{
+	local int i;
+	
+	for( i = 0; i < SortedOverallTop.Length; ++ i )
+	{
+		if( SortedOverallTop[i].PLSlot == myPlayerSlot )
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
 /** Reset Time, add ranked stuff, handle client spawn and checkpoints! */
 function ModifyPlayer( Pawn Other )
 {
@@ -936,7 +963,7 @@ function ModifyPlayer( Pawn Other )
 	local int i;
 	local LinkedReplicationInfo LRI;
 	local BTClient_ClientReplication CRI;
-	local BTServer_AntiAutoPress AAP;
+	//local BTServer_AntiAutoPress AAP;
 	local bool bTrailerRegistered;
 
 	super.ModifyPlayer( Other );
@@ -996,6 +1023,11 @@ function ModifyPlayer( Pawn Other )
 			Other.Destroy();
 			return;
 		}
+	}
+	
+	if( Perks != none )
+	{
+		Perks.CheckPlayer( CRI, Other );
 	}
 
 	if( IsTrials() )
@@ -1132,13 +1164,6 @@ function ModifyPlayer( Pawn Other )
 				}
 			}
 		}
-
-		// AUTO-PRESS spam detector.
-		AAP = Spawn( Class'BTServer_AntiAutoPress', Other );
-		if( AAP != None )
-		{
-			AAP.SetCollisionSize( Other.CollisionRadius, Other.CollisionHeight );
-		}
 	}
 }
 
@@ -1185,6 +1210,7 @@ final function AddBoughtItems( Pawn other, int playerSlot )
 final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
 {
 	local class<Actor> itemClass;
+	local Actor itemObject;
 
 	//FullLog( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
 	if( Store.Items[itemSlot].ItemClass != "" )
@@ -1197,11 +1223,46 @@ final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
 		itemClass = Store.Items[itemSlot].CachedClass;
 		if( itemClass == none )
 		{
-			FullLog( "Failed to load ItemClass for" @ Store.Items[itemSlot].ID );
+			FullLog( "Failed to load ItemClass" @ Store.Items[itemSlot].ItemClass @ "for" @ Store.Items[itemSlot].ID );
 			return;
 		}
-		//FullLog( Store.Items[itemSlot].ItemClass @ itemClass );
-		Spawn( itemClass, other,, other.Location, other.Rotation );
+		
+		// Apply the vars on the pawn's instance if the item's class is a pawn(HACK)
+		if( itemClass == class'Pawn' )
+		{
+			itemObject = other;
+		}
+		else
+		{
+			itemObject = Spawn( itemClass, other,, other.Location, other.Rotation );
+			// Failed to spawn or it destroyed itself in BeginPlay.
+			if( itemObject == none )
+			{
+				return;
+			}
+		}
+		SetVarsFor( itemObject, itemSlot );
+	}
+}
+
+final function SetVarsFor( Actor other, int itemSlot )
+{
+	local array<string> s;
+	local int i;
+	
+	for( i = 0; i < Store.Items[itemSlot].Vars.Length; ++ i )
+	{
+		Split( Store.Items[itemSlot].Vars[i], ":", s );	
+		switch( Locs(s[0]) )
+		{
+			case "overlaymat":
+				other.SetOverlayMaterial( Material(DynamicLoadObject( s[1], class'Material', true )), 9999.00, true );
+				break;
+				
+			default:
+				other.SetPropertyText( s[0], s[1] );
+				break;
+		}	
 	}
 }
 
@@ -1286,9 +1347,13 @@ event PreBeginPlay()
 		// Replace some classes
 		if( AssaultGame.VotingHandlerClass == None || AssaultGame.VotingHandlerClass == class'xVotingHandler' )
 			AssaultGame.VotingHandlerClass = Class'BTServer_VotingHandler';
-
-		AssaultGame.ScoreBoardType = string( Class'BTClient_TrialScoreBoard' );
+		
 		AssaultGame.bPlayersBalanceTeams = false;
+	}
+	
+	if( !Level.Game.IsA('Invasion') )
+	{
+		Level.Game.ScoreBoardType = string( Class'BTClient_TrialScoreBoard' );
 	}
 
 	// Get currentmapname by looking at this class FullName i.e Map.Package.Class
@@ -1303,6 +1368,9 @@ event PreBeginPlay()
 
 	Store = class'BTStore'.static.Load();
 	Store.Cache();
+	
+	Perks = class'BTPerks'.static.Load( self );
+	AddToPackageMap( "TextureBTimes" );
 	// Dangerous code
 	/*for( i = 0; i < Store.Items.Length; ++ i )
 	{
@@ -1329,27 +1397,30 @@ event PreBeginPlay()
 	MRI.TotalItemsBought = PDat.TotalItemsBought;
 
 	// Get a list of all the objectives, for ClientSpawn performance
-	if( IsTrials() )
+	if( AssaultGame != none )
 	{
 		foreach AllActors( class'GameObjective', Obj )
 			Objectives[Objectives.Length] = Obj;
-
-		for( i = 0; i < TrialModes.Length; ++ i )
-		{
-			if( TrialModes[i].static.DetectMode( self ) )
-			{
-				CurMode = TrialModes[i].static.NewInstance( self );
-				FullLog( "BTimes Mode: " $ CurMode.ModeName );
-				break;
-			}
-		}
-
+		
 		AssaultGame.DrawGameSound = '';//GameSounds.Fanfares.UT2K3Fanfare01;
 		AssaultGame.AttackerWinRound[0] = AssaultGame.DrawGameSound;
 		AssaultGame.AttackerWinRound[1] = AssaultGame.DrawGameSound;
 		AssaultGame.DefenderWinRound[0] = AssaultGame.DrawGameSound;
 		AssaultGame.DefenderWinRound[1] = AssaultGame.DrawGameSound;
-
+	}
+	
+	for( i = 0; i < TrialModes.Length; ++ i )
+	{
+		if( TrialModes[i].static.DetectMode( self ) )
+		{
+			CurMode = TrialModes[i].static.NewInstance( self );
+			FullLog( "BTimes Mode: " $ CurMode.ModeName );
+			break;
+		}
+	}
+		
+	if( IsTrials() || CurMode.IsA('BTServer_BunnyMode') )
+	{
 		// Initialize TMRating for all maps
 		for( i = 0; i < RDat.Rec.Length; ++ i )
 		{
@@ -1670,19 +1741,19 @@ event PostBeginPlay()
 		{
 			CheckPointHandler = Spawn( CheckPointHandlerClass, self );
 		}
-
-		if( NotifyClass.default.Host != "" )
-		{
-			Notify = new(self) NotifyClass;
-			Notify.Connect();
-		}
+	}
+	
+	if( NotifyClass.default.Host != "" )
+	{
+		Notify = new(self) NotifyClass;
+		Notify.Connect();
 	}
 
 	AchievementsManager = class'BTAchievements'.static.Load();
 	ChallengesManager = class'BTChallenges'.static.Load();
 	ChallengesManager.GenerateTodayChallenges( Level, RDat );
 
-	if( IsTrials() && bShowRankings )
+	if( bShowRankings )
 	{
 		/*Class'GameInfo'.Static.LoadMapList( "AS", Maps );
 		if( Maps.Length > 0 )
@@ -3780,6 +3851,11 @@ function Mutate( string MutateString, PlayerController Sender )
 		SendChallenges( Sender );
 		return;
 	}
+	else if( MutateString == "BTClient_RequestPerks" )
+	{
+		SendPerks( Sender );
+		return;
+	}
 	else if( Left( MutateString, Len("BTClient_RequestStoreItems") ) == "BTClient_RequestStoreItems" )
 	{
 		SendStoreItems( Sender, Mid( MutateString, Len("BTClient_RequestStoreItems")+1 ) );
@@ -4346,7 +4422,7 @@ function ServerTraveling( string URL, bool bItems )
 
 	FullLog( "*** ServerTraveling ***" );
 
-	if( IsTrials() )
+	if( UsedSlot != -1 )
 	{
 		RDat.Rec[UsedSlot].PlayHours += (Level.TimeSeconds / 60) / 60;
 
@@ -4365,10 +4441,28 @@ function ServerTraveling( string URL, bool bItems )
 
 private final function Clear()
 {
+	local int i;
+	
 	if( Notify != none )
 	{
 		Notify.Disconnect();
 		Notify = none;
+	}
+	
+	if( PDat != none )
+	{
+		PDat.BT = none;
+	}
+	
+	if( GhostManager != none )
+	{
+		for( i = 0; i < GhostManager.Ghosts.Length; ++ i )
+		{
+			if( GhostManager.Ghosts[i].GhostData != none && GhostManager.Ghosts[i].GhostData.Ghost != none )
+			{
+				GhostManager.Ghosts[i].GhostData.Ghost = none;
+			}
+		}
 	}
 }
 
@@ -4417,8 +4511,19 @@ function BalanceTeams()
 function MatchStarting()
 {
 	FullLog( "*** MatchStarting ***" );	
+	
+	if( UsedSlot != -1 )
+	{
+		++ RDat.Rec[UsedSlot].Played;
+		
+		if( bRecordChecked && !bSoloMap && RDat.Rec[UsedSlot].PLs[0] > 0 )
+		{
+			MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, MaxPlayers );
+			bRecordChecked = false;
+		}
+	}
 
-	if( IsTrials() )
+	if( AssaultGame != none )
 	{
 		if( MRI.bCompetitiveMode )
 		{
@@ -4427,24 +4532,19 @@ function MatchStarting()
 		}
 
 		ASGameReplicationInfo(Level.GRI).bStopCountDown = false;
-
-		++ RDat.Rec[UsedSlot].Played;
+	}
 
 	//	RDat.Rec[UsedSlot].ObjCompT.Length = ASGameReplicationInfo(AssaultGame.GameReplicationInfo).MaxObjectivePriority+1;
 	//	ObjCompT.Length = RDat.Rec[UsedSlot].ObjCompT.Length;
 	//	ObjCompT = RDat.Rec[UsedSlot].ObjCompT;
 
-		if( bRecordChecked && !bSoloMap && RDat.Rec[UsedSlot].PLs[0] > 0 )
-		{
-			MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, MaxPlayers );
-			bRecordChecked = false;
-		}
+	CurrentPlaySeconds = 0;
+	MRI.ObjectiveTotalTime = 0;
+	MRI.RecordState = RS_Active;
+	UpdateEndMsg( "" );   // Erase
 
-		CurrentPlaySeconds = 0;
-		MRI.ObjectiveTotalTime = 0;
-		MRI.RecordState = RS_Active;
-		UpdateEndMsg( "" );   // Erase
-
+	if( AssaultGame != none )
+	{
 		if( !AssaultGame.IsPracticeRound() )
 		{
 			SetMatchStartingTime( Level.TimeSeconds );
@@ -4630,7 +4730,14 @@ final function RewardWinningTeam()
 
 function GameEnd( ASGameInfo.ERER_Reason roundEndReason, Pawn instigator, string reason )
 {
-	AssaultGame.EndRound( roundEndReason, instigator, reason );
+	if( AssaultGame != none )
+	{
+		AssaultGame.EndRound( roundEndReason, instigator, reason );
+	}
+	else if( BTServer_BunnyMode(CurMode) != none )
+	{
+		Level.Game.EndGame( instigator.Controller.PlayerReplicationInfo, "timelimit" );
+	}
 }
 
 function NotifyGameEnd( Actor other, Pawn eventInstigator )
@@ -4911,6 +5018,16 @@ final function MapFinishedBy( int playerSlot )
 	}
 }
 
+// BunnyMode
+final function BunnyScored( PlayerController PC, CTFFlag flag )
+{
+	UnrealMPGameInfo(Level.Game).ScoreGameObject( PC, flag );
+	TriggerEvent( flag.HomeBase.Event, flag.HomeBase, PC.Pawn );
+	
+	SoloEndWrp( PC );
+}
+
+// Solo/Group/Bunny mode
 final private function SoloEndWrp( PlayerController PC )
 {
 	local int i, groupindex, xp;
@@ -4974,7 +5091,7 @@ final private function SoloEndWrp( PlayerController PC )
 				}
 			}
 
-			if( bSuccess )
+			if( bSuccess && GhostManager != none )
 			{
 				// Clear
 				NewGhostsQue.Length = GroupMembers.Length;
@@ -4991,7 +5108,7 @@ final private function SoloEndWrp( PlayerController PC )
 	{
 		CurrentPlaySeconds = GetFixedTime( Level.TimeSeconds - CR.LastSpawnTime );
 
-		if( SoloEndGrpFx( PC, CR ) )
+		if( SoloEndGrpFx( PC, CR ) && GhostManager != none )
 		{
 			NewGhostsQue.Length = 1;
 			NewGhostsQue[0] = CR.myPlayerSlot;
@@ -5286,7 +5403,10 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 		}
 	}
 
-	CheckPointHandler.RemoveSavedCheckPoint( PC );
+	if( CheckPointHandler != none )
+	{
+		CheckPointHandler.RemoveSavedCheckPoint( PC );
+	}
 
 	// Kill player?
 	P = PC.Pawn;
@@ -5300,9 +5420,12 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
 	if( !bRecursive )
 	{
-		AssaultGame.LastDisabledObjective.Reset();
-		AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
-		AssaultGame.LastDisabledObjective = None;
+		if( AssaultGame != none )
+		{
+			AssaultGame.LastDisabledObjective.Reset();
+			AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
+			AssaultGame.LastDisabledObjective = None;
+		}
 	}
 	return false;
 }
@@ -5705,7 +5828,27 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
 			}
 		}
 	}
+	else if( CTFFlag(Other) != none )
+	{
+		ResembleFlag( CTFFlag(Other ) );
+	}
 	return true;
+}
+
+// BunyMode
+final function ResembleFlag( CTFFlag flag )
+{
+	local BTFlagResemblance resemblance;
+	
+	FullLog( "Resembling flag:" @ flag );
+	if( BTBunny_FlagRed(flag) != none || BTBunny_FlagBlue(flag) != none )
+		return;
+	
+	// The original flag shall not be touchable.
+	flag.SetCollision( false, false, false );
+	resemblance = Spawn( class'BTFlagResemblance', self,, flag.Location, flag.Rotation );
+	resemblance.ResemblantFlag = flag;
+	resemblance.SetCollisionSize( flag.CollisionRadius, flag.CollisionHeight );
 }
 
 //==============================================================================
@@ -5757,13 +5900,13 @@ Function NotifyLogout( Controller Exiting )											// .:..:, Eliot
 
 		if( !Level.bLevelChange )
 		{
-			if( IsTrials() )
+			for( i = 0; i < KeepScoreTable.Length; ++ i )
 			{
-				for( i = 0; i < KeepScoreTable.Length; ++ i )
+				if( KeepScoreTable[i].ClientFlesh == Exiting )
 				{
-					if( KeepScoreTable[i].ClientFlesh == Exiting )
+					KeepScoreTable[i].Score = Exiting.PlayerReplicationInfo.Score;
+					if( AssaultGame != none )
 					{
-						KeepScoreTable[i].Score = Exiting.PlayerReplicationInfo.Score;
 						if( !bKeyMap && !bGroupMap )
 						{
 							KeepScoreTable[i].Objectives = ASPlayerReplicationInfo(Exiting.PlayerReplicationInfo).DisabledObjectivesCount;
@@ -5772,9 +5915,8 @@ Function NotifyLogout( Controller Exiting )											// .:..:, Eliot
 
 						if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo) != None )
 							KeepScoreTable[i].LeftOnRound = ASGameReplicationInfo(AssaultGame.GameReplicationInfo).CurrentRound;
-
-						break;
 					}
+					break;
 				}
 			}
 
@@ -5802,32 +5944,34 @@ final function RetrieveScore( PlayerController Other, string ClientID, int Slot 
 {
 	local int i, j;
 
-	if( IsTrials() )
+	j = KeepScoreTable.Length;
+	for( i = 0; i < j; ++ i )
 	{
-		j = KeepScoreTable.Length;
-		for( i = 0; i < j; ++ i )
+		if( KeepScoreTable[i].ClientID == ClientID )
 		{
-			if( KeepScoreTable[i].ClientID == ClientID )
+			//FullLog("Loaded"@Other.PlayerReplicationInfo.PlayerName$"'s score from slot "@i);
+			if( AssaultGame == none 
+				|| (ASGameReplicationInfo(AssaultGame.GameReplicationInfo) != None 
+					&& ASGameReplicationInfo(AssaultGame.GameReplicationInfo).CurrentRound == KeepScoreTable[i].LeftOnRound) )
 			{
-				//FullLog("Loaded"@Other.PlayerReplicationInfo.PlayerName$"'s score from slot "@i);
-				if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo) != None && ASGameReplicationInfo(AssaultGame.GameReplicationInfo).CurrentRound == KeepScoreTable[i].LeftOnRound )
+				Other.PlayerReplicationInfo.Score = KeepScoreTable[i].Score;
+				if( AssaultGame != none )
 				{
-					Other.PlayerReplicationInfo.Score = KeepScoreTable[i].Score;
 					if( !bKeyMap && !bGroupMap )
 					{
 						ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = KeepScoreTable[i].Objectives;
 						ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = KeepScoreTable[i].FinalObjectives;
 					}
 				}
-				KeepScoreTable.Remove( i, 1 );
-				return;
 			}
+			KeepScoreTable.Remove( i, 1 );
+			return;
 		}
-
-		KeepScoreTable.Length = j+1;
-		KeepScoreTable[j].ClientID = ClientID;
-		KeepScoreTable[j].ClientFlesh = Other;
 	}
+
+	KeepScoreTable.Length = j+1;
+	KeepScoreTable[j].ClientID = ClientID;
+	KeepScoreTable[j].ClientFlesh = Other;
 }
 
 //==============================================================================
@@ -6721,7 +6865,7 @@ Function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 	if( j == 0 )
 		return;
 
-	if( IsTrials() && bSpawnGhost && GhostManager != None )
+	if( bSpawnGhost && GhostManager != None )
 	{
 		for( i = 0; i < j; ++ i )
 		{
@@ -6754,7 +6898,7 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 	Super.GetServerDetails(ServerState);
 
 	Level.Game.AddServerDetail( ServerState, "BTimes", "Version:"@BTVersion );
-	if( IsTrials() )
+	if( IsTrials() || CurMode.IsA('BTServer_BunnyMode') )
 	{
 		Level.Game.AddServerDetail( ServerState, "BTimes", "Ghost Enabled:"@bSpawnGhost );
 		Level.Game.AddServerDetail( ServerState, "BTimes", "Rankings Enabled:"@bShowRankings );
@@ -6874,13 +7018,28 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
 	if( CR == None )
 		return;
-
+	
 	CR.myPlayerSlot = Slot;
 
 	CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
 	CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
 
 	CR.Title = class'BTDonators'.static.GetTitleFor( ss );
+	
+	if( Perks != none )
+	{
+		FullLog( "Checking perks..." );
+		if( Perks.HasPerk( CR, 'auto_press', i ) )
+		{
+			CR.bAutoPress = true;
+		}
+		
+		if( Perks.HasPerk( CR, 'dodge_assist', i ) )
+		{
+			FullLog( "Dodge assist!" );
+			CR.bAllowDodgePerk = true;
+		}
+	}
 
 	// Check whether user lost some records since he logged off
 	PacketNum = PDat.Player[Slot].RecentLostRecords.Length;
@@ -6956,7 +7115,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 		CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
 	}
 
-	if( bShowRankings && IsTrials() )
+	if( bShowRankings && (IsTrials() || CurMode.IsA('BTServer_BunnyMode')) )
 	{
 		RR = StartReplicatorFor( CR );
 		RR.BeginReplication();
@@ -7861,6 +8020,7 @@ event Destroyed()
 
 DefaultProperties
 {
+	UsedSlot=-1
 	CheckPointHandlerClass=Class'BTServer_CheckPoint'
 	CheckPointNavigationClass=Class'BTServer_CheckPointNavigation'
 	TrailerInfoClass=Class'BTClient_TrailerInfo'
@@ -7922,9 +8082,11 @@ DefaultProperties
 	MaxLevel=100
 	ObjectivesEXPDelay=10
 
-	TrialModes(0)=Class'BTServer_RegularMode'
-	TrialModes(1)=Class'BTServer_GroupMode'
-	TrialModes(2)=Class'BTServer_SoloMode'
+	TrialModes(0)=Class'BTServer_InvasionMode'
+	TrialModes(1)=Class'BTServer_BunnyMode'
+	TrialModes(2)=Class'BTServer_RegularMode'
+	TrialModes(3)=Class'BTServer_GroupMode'
+	TrialModes(4)=Class'BTServer_SoloMode'
 
 	TrustedProtocols(0)="80.86.82.139"
 	TrustedProtocols(1)="85.14.228.186"
