@@ -1,78 +1,82 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_TrialMode extends Object within MutBestTimes
-	abstract
-	hidedropdown;
+class BTServer_TrialMode extends BTServer_Mode;
 
-/** The human friendly name for this mode. */
-var editconst const noexport string ModeName;
+var() float MinRecordTime;
+var() float MaxRecordTime;
+var() float PointsPenalty;
 
-/** The Server-MapName state mapprefix to use for this mode. */
-var editconst const noexport string ModePrefix;
-
-/** Reference to the owner that spawned this TrialMode instance. */
-//var editconst noexport MutBestTimes Master;
-
-var() int ExperienceBonus;
-
-static function bool DetectMode( MutBestTimes M )
+function ModeReset()
 {
-	return False;
+	super.ModeReset();
+	RecordByTeam = RT_None;
 }
 
-protected function InitializeMode()
+function ModePostBeginPlay()
 {
+	RDat.Rec[UsedSlot].AverageRecordTIme = GetAverageRecordTime( UsedSlot );
 }
 
-function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
+function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
-	local string S, Color;
+	super.ModeModifyPlayer( other, c, CRI );
+	
+	other.SetCollision( true, false, false );
+}
 
-	if( InStr( ServerState.MapName, "AS-" ) != -1 )
+function bool ChatCommandExecuted( PlayerController sender, string command )
+{
+	local bool bmissed;
+	
+	switch( command )
 	{
-		// Catch color.
-		Color = Left( ServerState.MapName, InStr( ServerState.MapName, "AS-" ) );
-		// MapName without prefix.
-		S = Mid( ServerState.MapName, InStr( ServerState.MapName, "-" ) );
-
-		ServerState.MapName = Color $ ModePrefix $ S;
+		case "cp":
+			Mutate( "clientspawn", sender );
+			break;
+			
+		case "revote":
+			Mutate( "votemap" @ CurrentMapName, sender );
+			break;
+			
+		case "vote":
+			sender.ConsoleCommand( "ShowVoteMenu" );
+			break;
+			
+		case "spec":
+			if( !sender.PlayerReplicationInfo.bOnlySpectator )
+				sender.BecomeSpectator();
+				
+			break;
+			
+		case "join":
+			if( sender.PlayerReplicationInfo.bOnlySpectator )
+				sender.BecomeActivePlayer();
+				
+			break;
+			
+		case "red":
+			sender.ServerChangeTeam( 0 );
+			break;
+			
+		case "blue":
+			sender.ServerChangeTeam( 1 );
+			break;
+	
+		default:
+			bmissed = true;
+			break;
 	}
-}
-
-function bool ClientExecuted( PlayerController sender, string command, optional array<string> params )
-{
-	return false;
-}
-
-function bool AdminExecuted( PlayerController sender, string command, optional array<string> params )
-{
-	return false;
-}
-
-function FinalObjectiveCompleted( PlayerController PC )
-{
-}
-
-final static function BTServer_TrialMode NewInstance( MutBestTimes M )
-{
-	local BTServer_TrialMode Mode;
-
-	Mode = new(M) default.class;
-	//Mode = M.Spawn( default.class, M );
-	//Mode.Master = M;
-	Mode.InitializeMode();
-	return Mode;
-}
-
-function Free()
-{
+	
+	if( !bmissed )
+		return true;
+		
+	return super.ChatCommandExecuted( sender, command );
 }
 
 defaultproperties
 {
 	ModeName="Normal"
 	ModePrefix="NTR"
-
-	ExperienceBonus=0
+	PointsPenalty=0.25
 }

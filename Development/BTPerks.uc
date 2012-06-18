@@ -120,6 +120,6 @@ final function int GetPerkSlotById( name perkId )
 
 defaultproperties
 {
-	Perks(0)=(Name="AutoPress",ID=auto_press,Points=100,Description="This perks gives you AutoPress",Icon="TextureBTimes.PerkIcons.trollface")
-	Perks(1)=(Name="Dodge Perks",ID=dodge_assist,Points=25,Description="This perk assists you with dodging(configurable)",Icon="TextureBTimes.PerkIcons.matrix")
+	Perks(0)=(Name="AutoPress",ID=auto_press,Points=25,Description="This perks gives you AutoPress",Icon="TextureBTimes.PerkIcons.trollface")
+	Perks(1)=(Name="Dodge Perks",ID=dodge_assist,Points=50,Description="This perk assists you with dodging(configurable)",Icon="TextureBTimes.PerkIcons.matrix")
 }

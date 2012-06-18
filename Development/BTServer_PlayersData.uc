@@ -4,7 +4,7 @@
 class BTServer_PlayersData extends Object
 	hidedropdown;
 
-#exec obj load file="..\System\ClientBTimesV4C.u"
+#exec obj load file="..\System\ClientBTimesV4D.u"
 
 struct sBTPlayerInfo
 {
@@ -93,6 +93,8 @@ var array<sBTPlayerInfo> Player;
 
 var int TotalCurrencySpent;
 var int TotalItemsBought;
+
+var int DayTest;
 
 var transient MutBestTimes BT;
 
@@ -679,4 +681,9 @@ final function int FindPlayerByID( string playerID )
 		}
 	}
 	return -1;
+}
+
+defaultproperties
+{
+	DayTest=-1
 }

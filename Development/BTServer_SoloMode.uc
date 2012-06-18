@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_SoloMode extends BTServer_TrialMode;
+class BTServer_SoloMode extends BTServer_ASMode;
 
 static function bool DetectMode( MutBestTimes M )
 {
@@ -32,6 +32,15 @@ protected function InitializeMode()
 	}
 }
 
+function ModePostBeginPlay()
+{
+	super.ModePostBeginPlay();
+	if( CheckPointHandlerClass != none )
+	{
+		CheckPointHandler = Spawn( CheckPointHandlerClass, Outer );
+	}
+}
+
 function bool ClientExecuted( PlayerController sender, string command, array<string> params )
 {
 	switch( command )
@@ -57,4 +66,9 @@ defaultproperties
 	ModePrefix="STR"
 
 	ExperienceBonus=5
+	
+	// 45 Seconds
+	MinRecordTime=60.00
+	// 5 Minutes
+	MaxRecordTIme=300.00
 }

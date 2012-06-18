@@ -4,9 +4,9 @@
 class BTActivateKey extends Info	
 	config(MutBestTimes);
 
-var() globalconfig string Host;
-var() globalconfig string VerifySerialAction;
-var() globalconfig string ConsumeSerialAction;
+var() const string Host;
+var() const string VerifySerialAction;
+var() const string ConsumeSerialAction;
 var PlayerController Requester;
 
 var transient string PerformedGet;
@@ -65,7 +65,7 @@ function OnGetComplete( HttpSock sender )
 	local string result;		
 	
 	//Level.Game.Broadcast( self, "OnGetComplete" );
-	result = FixReturnData();
+	result = FixReturnData( sender );
 	//Level.Game.Broadcast( self, "Result:"@result );
 	switch( PerformedGet )
 	{
@@ -82,14 +82,14 @@ function OnGetComplete( HttpSock sender )
 	}
 }
 
-final function string FixReturnData()
+final static function string FixReturnData( HttpSock socket )
 {
 	local int i;
 	local string result;
 	
-	for( i = 0; i < Sock.ReturnData.Length; ++ i )
+	for( i = 0; i < socket.ReturnData.Length; ++ i )
 	{
-		result $= Sock.ReturnData[i];
+		result $= socket.ReturnData[i];
 	}
 	return result;
 }
@@ -105,7 +105,7 @@ event Destroyed()
 
 defaultproperties
 {	
-	//Host="http://localhost/eliot/apps/%ACTION%"
+	//Host="http://localhost/Eliot/apps/%ACTION%"
 	Host="http://eliotvu.com/apps/%ACTION%"
 	VerifySerialAction="verifyserial/%SERIAL%"
 	ConsumeSerialAction="consumeserial/%ID%/%TOKEN%/%GUID%"

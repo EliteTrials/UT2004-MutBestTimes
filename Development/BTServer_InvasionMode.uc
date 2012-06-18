@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005-2012 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_InvasionMode extends BTServer_TrialMode;
+class BTServer_InvasionMode extends BTServer_Mode;
 
 static function bool DetectMode( MutBestTimes M )
 {

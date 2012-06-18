@@ -15,6 +15,47 @@ protected function InitializeMode()
 	MRI.bSoloMap = true;
 }
 
+function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
+{
+	super.ModeModifyPlayer( other, c, CRI );
+	
+	if( CRI.bPermitBoosting )
+	{
+		CRI.ProhibitedCappingPawn = Other;
+	}
+}
+
+function bool ChatCommandExecuted( PlayerController sender, string command )
+{
+	local bool bmissed;
+	local BTClient_ClientReplication CRI;
+	
+	switch( command )
+	{
+		case "boost":
+			CRI = GetRep( sender );
+			if( CRI != none )
+			{
+				CRI.bPermitBoosting = !CRI.bPermitBoosting;
+				if( CRI.bPermitBoosting )
+				{
+					CRI.ProhibitedCappingPawn = sender.Pawn;
+				}
+				sender.ClientMessage( "Boosting on:" @ CRI.bPermitBoosting );
+			}	
+			break;
+			
+		default:
+			bmissed = true;
+			break;
+	}
+		
+	if( !bmissed )
+		return true;
+		
+	return super.ChatCommandExecuted( sender, command );
+}
+
 defaultproperties
 {
 	ModeName="BT"

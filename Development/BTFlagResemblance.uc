@@ -6,12 +6,19 @@ var CTFFlag ResemblantFlag;
 
 var class<CTFFlag> TeamFlagClasses[2];
 
+event PostBeginPlay()
+{
+	super.PostBeginPlay();
+	BT = MutBestTimes(Owner);
+}
+
 event Touch( Actor other )
 {
 	local Pawn pawn;
 	local CTFFlag flag;
 	local PlayerController PC;
 	local PlayerReplicationInfo PRI;
+	local BTClient_ClientReplication CRI;
 	
 	pawn = Pawn(other);
 	if( pawn == none )
@@ -25,6 +32,16 @@ event Touch( Actor other )
 	if( PC == none )
 		return;
 		
+	CRI = BT.GetRep( PC );
+	if( CRI == none )
+		return;
+		
+	if( pawn.LastStartSpot.IsA( 'BTServer_ClientStartPoint' ) )
+	{
+		PC.ClientMessage( "You cannot cap flags. Please turn off ClientSpawn and suicide!" );
+		return;
+	}
+		
 	Level.Game.Broadcast( self, "Flag touched!" );
 	
 	flag = HasFlag( pawn.PlayerReplicationInfo );
@@ -34,20 +51,21 @@ event Touch( Actor other )
 		{
 			return;
 		}
-		Level.Game.Broadcast( self, "Taking flag..." @ flag );
+		//Level.Game.Broadcast( self, "Taking flag..." @ flag );
 		
 		// Take the flag
 		Level.GRI.FlagState[flag.TeamNum] = FLAG_Home;
+		ResemblantFlag.bHidden = true;
 		flag.ClearHolder();
 		flag.BroadcastLocalizedMessage( flag.MessageClass, 3, none, none, flag.Team );
 		
-		MutBestTimes(Owner).BunnyScored( PC, flag );
+		MutBestTimes(Owner).BunnyScored( CRI, PC, flag );
 		
 		flag.Destroy();
 	}
 	else if( pawn.GetTeamNum() != ResemblantFlag.TeamNum )
 	{
-		Level.Game.Broadcast( self, "Giving flag..." );
+		//Level.Game.Broadcast( self, "Giving flag..." );
 		// Give a flag
 		ResembleFlag( PC, ResemblantFlag ); 
 	}
@@ -62,8 +80,13 @@ final function ResembleFlag( PlayerController PC, CTFFlag flag )
 	newFlag.TeamNum = flag.TeamNum;
 	newFlag.HomeBase = flag.HomeBase;
 	newFlag.SetHolder( PC );
-	newFlag.HomeBase.bHidden = true;
+	if( newFlag.HomeBase != none )
+	{
+		newFlag.HomeBase.bHidden = true;
+	}
 	Level.GRI.FlagState[flag.TeamNum] = FLAG_Home;
+	
+	flag.bHidden = false;
 }
 
 final function CTFFlag HasFlag( PlayerReplicationInfo PRI )

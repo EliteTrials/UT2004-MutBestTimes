@@ -266,55 +266,71 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
 {
 	//local Pawn Clone;
 	local int i, j;
+	local BTClient_ClientReplication CRI;
 
 	// Skip monsters...
 	if( Monster(injured) != None || Monster(instigatedBy) != None )
 		return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
 
-	// Enemies never should deal damage in Trials
-	if( BT.IsTrials() )
+	if( BT.ModeIsTrials() )
 	{
-		if( instigatedBy != None && injured != None && Instigatedby.GetTeam() != injured.GetTeam() )
+		if( instigatedBy != None && injured != None )
 		{
-			if( !BT.IsCompetitive() )
+			if( Instigatedby.GetTeam() != injured.GetTeam() )
 			{
-				instigatedBy.TakeDamage( Damage, instigatedBy, HitLocation, vect(0,0,0), damageType );
-			}
-
-			Damage = 0;
-			Momentum = vect(0,0,0);
-			return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
-		}
-
-		if( injured != instigatedBy && instigatedBy != None && (instigatedBy.GetTeam() == injured.GetTeam()) )
-		{
-			if( BT.bSoloMap )
-				return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
-
-			//Log( "Team Naded | ShockBeam", Name );
-			if( DamageType == Class'DamTypeShockBeam' || DamageType == Class'DamTypeONSGrenade')
-			{
-				// Scan all hits and remove all clones.
-				j = Injureds.Length;
-				for( i = 0; i < j; ++ i )
+				if( !BT.IsCompetitive() )
 				{
-					if( Injureds[i] == injured.Controller )
-					{
-						Injureds.Remove( i, 1 );
-						LastHitsBy.Remove( i, 1 );
-						-- j;
-						-- i;
-					}
+					instigatedBy.TakeDamage( Damage, instigatedBy, HitLocation, vect(0,0,0), damageType );
 				}
 
-				j = LastHitsBy.Length;
-				//Log( "TRUE", Name );
-				LastHitsBy.Length = j + 1;
-				LastHitsBy[j] = instigatedBy.Controller;
+				Damage = 0;
+			}
+			
+			CRI = BT.GetRep( injured.Controller );
+			if( CRI != none && CRI.bPermitBoosting )
+			{
+				// Do nothing :D
+			}
+			else if( injured != instigatedBy )
+			{
+				Momentum = vect(0,0,0);
+			}
+			return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
+		}
+		
+		// Enemies never should deal damage in Trials
+		if( BT.IsTrials() )
+		{
+			if( injured != instigatedBy && instigatedBy != None && (instigatedBy.GetTeam() == injured.GetTeam()) )
+			{
+				if( BT.bSoloMap )
+					return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
 
-				j = Injureds.Length;
-				Injureds.Length = j + 1;
-				Injureds[j] = injured.Controller;
+				//Log( "Team Naded | ShockBeam", Name );
+				if( DamageType == Class'DamTypeShockBeam' || DamageType == Class'DamTypeONSGrenade')
+				{
+					// Scan all hits and remove all clones.
+					j = Injureds.Length;
+					for( i = 0; i < j; ++ i )
+					{
+						if( Injureds[i] == injured.Controller )
+						{
+							Injureds.Remove( i, 1 );
+							LastHitsBy.Remove( i, 1 );
+							-- j;
+							-- i;
+						}
+					}
+
+					j = LastHitsBy.Length;
+					//Log( "TRUE", Name );
+					LastHitsBy.Length = j + 1;
+					LastHitsBy[j] = instigatedBy.Controller;
+
+					j = Injureds.Length;
+					Injureds.Length = j + 1;
+					Injureds[j] = injured.Controller;
+				}
 			}
 		}
 	}
@@ -330,26 +346,30 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
 	local int i, j;
 	local string newPawn;
 
-	if( BT.IsTrials() && Player != None && Player.PlayerReplicationInfo != None && Player.PlayerReplicationInfo.Team != None )
+	if( BT.ModeIsTrials() && Player != None && Player.PlayerReplicationInfo != None && Player.PlayerReplicationInfo.Team != None )
 	{
-		foreach DynamicActors( class'BTServer_TeamPlayerStart', X )
+		if( ASGameInfo(Level.Game) != none )
 		{
-			if( X.MyTeam == Player.PlayerReplicationInfo.Team.TeamIndex )
+			foreach DynamicActors( class'BTServer_TeamPlayerStart', X )
 			{
-				AVS.Length = i+1;
-				AVS[i++] = X;
+				if( X.MyTeam == Player.PlayerReplicationInfo.Team.TeamIndex )
+				{
+					AVS.Length = i+1;
+					AVS[i++] = X;
+				}
 			}
+			if( i > 0 )
+				return AVS[Rand(i)];
 		}
-		if( i > 0 )
-			return AVS[Rand(i)];
 
+		BT.FindClientSpawn( Player, CS );
+		if( CS != None )
+			return CS;
+				
 		// Only attackers! aka the red team
-		if( Player.PlayerReplicationInfo.Team.TeamIndex == ASGameInfo(Level.Game).CurrentAttackingTeam )
+		if( ASGameInfo(Level.Game) != none 
+			&& Player.PlayerReplicationInfo.Team.TeamIndex == ASGameInfo(Level.Game).CurrentAttackingTeam )
 		{
-			BT.FindClientSpawn( Player, CS );
-			if( CS != None )
-				return CS;
-
 			// Always check after client so that client still functions even when user has a checkpoint!
 			if( BT.CheckPointHandler != None )
 			{
@@ -366,25 +386,36 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
 				if( S.bEnabled && !S.IsA( 'BTServer_ClientStartPoint' ) && !S.IsA( 'BTServer_CheckPointNavigation' ) )
 				{
 					Player.Event = '';
-					j = ASGameInfo(Level.Game).SpawnManagers.Length;
-					if( j > 0 )
+					if( ASGameInfo(Level.Game) != none )
 					{
-						for( i = 0; i < j; ++ i )
+						j = ASGameInfo(Level.Game).SpawnManagers.Length;
+						if( j > 0 )
 						{
-							if( ASGameInfo(Level.Game).SpawnManagers[i] == None )
-								continue;
-
-							if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( S, Player.PlayerReplicationInfo.Team.TeamIndex, Player ) )
+							for( i = 0; i < j; ++ i )
 							{
-								newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( Player, S, Player.PlayerReplicationInfo.Team.TeamIndex );
-								if( newPawn != "" )
-									ASPlayerReplicationInfo(Player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
+								if( ASGameInfo(Level.Game).SpawnManagers[i] == None )
+									continue;
 
-								return S;
+								if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( S, Player.PlayerReplicationInfo.Team.TeamIndex, Player ) )
+								{
+									newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( Player, S, Player.PlayerReplicationInfo.Team.TeamIndex );
+									if( newPawn != "" )
+										ASPlayerReplicationInfo(Player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
+
+									return S;
+								}
 							}
+							continue;
+						}
+						else return S;
+					}
+					else
+					{
+						if( S.TeamNumber == Player.PlayerReplicationInfo.Team.TeamIndex )
+						{
+							return s;
 						}
 					}
-					else return S;
 				}
 			}
 		}

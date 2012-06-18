@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_RegularMode extends BTServer_TrialMode;
+class BTServer_RegularMode extends BTServer_ASMode;
 
 static function bool DetectMode( MutBestTimes M )
 {
@@ -15,4 +15,9 @@ defaultproperties
 	ModePrefix="RTR"
 
 	ExperienceBonus=25
+	
+	// 60 Seconds
+	MinRecordTime=60.00
+	// Obsolete
+	MaxRecordTIme=0.00
 }

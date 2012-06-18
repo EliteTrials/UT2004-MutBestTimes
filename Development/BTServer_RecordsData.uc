@@ -96,6 +96,9 @@ struct long sBTRecordInfo
 
 	/** Various booleans for this record. */
 	var int RecordFlags;
+	
+	// A cached average of record times.
+	var float AverageRecordTIme;
 };
 
 /** The list of all records made on this server. */

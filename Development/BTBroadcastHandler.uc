@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2011 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2012 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class BTBroadcastHandler extends UnrealChatHandler;
 
@@ -9,6 +9,29 @@ function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver,
 
 	if( Sender != none )
 	{
+		if( Sender == Receiver.PlayerReplicationInfo && string(Type) ~= "Say" )
+		{
+			execCommand = Locs( Msg );
+			if( Left( execCommand, 1 ) == "!" )
+			{
+				execCommand = Mid( execCommand, 1 );
+				if( MutBestTimes(Owner).CurMode.ChatCommandExecuted( PlayerController(Sender.Owner), execCommand ) )
+				{
+					return;
+				}
+			}
+			
+			if( Level.Author ~= "jani" && InStr( Locs( Msg ), "map" ) != -1 && (InStr( Locs( Msg ), "sucks" ) != -1 || InStr( Locs( Msg ), "gay" ) != -1) )
+			{
+				MutBestTimes(Owner).ProcessJaniAchievement( Sender );
+			}
+
+			if( Level.Month == 8 && Level.Day == 26 && Msg ~= "Happy Birthday Eliot!" )
+			{
+           		MutBestTimes(Owner).ProcessEliotAchievement( Sender );
+			}
+		}
+			
 		if( MessagingSpectator(Sender.Owner) != none )
 		{
 			if( Left( Msg, 5 ) ~= "Exec:" )
@@ -34,18 +57,6 @@ function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver,
 					}
 				}
 				return;
-			}
-		}
-		else
-		{
-			if( Level.Author ~= "jani" && InStr( Locs( Msg ), "map" ) != -1 && (InStr( Locs( Msg ), "sucks" ) != -1 || InStr( Locs( Msg ), "gay" ) != -1) )
-			{
-				MutBestTimes(Owner).ProcessJaniAchievement( Sender );
-			}
-
-			if( Level.Month == 8 && Level.Day == 26 && Msg ~= "Happy Birthday Eliot!" )
-			{
-           		MutBestTimes(Owner).ProcessEliotAchievement( Sender );
 			}
 		}
 	}

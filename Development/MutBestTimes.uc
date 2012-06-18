@@ -3,15 +3,13 @@
 //=============================================================================
 class MutBestTimes extends Mutator
 	config(MutBestTimes)
-	DependsOn(BTServer_PlayersData)
-	DependsOn(BTServer_RecordsData)
-	Dependson(BTServer_RewardsTable)
+	dependson(BTServer_PlayersData)
+	dependson(BTServer_RecordsData)
+	dependson(BTServer_RewardsTable)
 	dependson(BTAchievements)
 	dependson(BTChallenges)
 	dependson(BTActivateKey);
 
-//#exec obj load file="..\System\ClientBTimesV3K.u"
-//#exec obj load file="..\System\ClientBTimesV4C.u"
 #exec obj load file="..\System\TrialGroup.u"
 #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
 
@@ -94,6 +92,7 @@ struct KeepScoreSE                                                              
 
 struct sClientSpawn																// structure holding a player his own playerstart
 {
+	var int TeamIndex;
 	var int
 		PHealth,
 		PShield;
@@ -141,7 +140,7 @@ var array<sClientSpawn> 							ClientPlayerStarts;			// Current playerstarts in 
 var const float 									RPScale[10];				// List of points scaling values
 var private const array<sCmdInfo>					Commands;
 var const array<int>								ObjectiveLevels;
-var const array<class<BTServer_TrialMode> >			TrialModes;
+var const array<class<BTServer_Mode> >				TrialModes;
 var array<sRacer>									Racers;
 var BTServer_CheckPoint 							CheckPointHandler;
 
@@ -178,7 +177,7 @@ var bool											bGhostWasAdminAwarded;
 // External
 var GroupManager									GroupManager;
 
-var BTServer_TrialMode								CurMode;
+var BTServer_Mode									CurMode;
 var private BTGameRules								ModeRules;
 var BTServer_HttpNotificator						Notify;
 var private BTServer_RewardsTable					RewardsTable;
@@ -278,7 +277,8 @@ var() globalconfig
 	bClientSpawnPlayersCanCompleteMap,
 	bSavePreviousGhost,
 	bAddGhostTimerPaths,
-	bAllowCompetitiveMode;
+	bAllowCompetitiveMode,
+	bDontEndGameOnRecord;
 
 var() globalconfig
 	string
@@ -312,7 +312,9 @@ var() localized editconst const
 	lzCS_Set, 					lzCS_Deleted, 		lzCS_NotAllowed, 			lzCS_Failed,
 	lzCS_ObjAndTrigger, 		lzCS_Obj, 			lzCS_AllowComplete,
 	lzCS_NoPawn, 				lzCS_NotEnabled, 	lzCS_NoQuickStartDelete,
-	lzRandomPick;
+	lzRandomPick, lzClientSpawn;
+	
+var const string InvalidAccessMessage;
 
 var private editconst const color cDarkGray;
 var private editconst const color BlackColor;
@@ -884,7 +886,6 @@ final function SendStoreItems( PlayerController requester, string filter )
 {
 	local int i;
 	local BTClient_ClientReplication Rep;
-	local bool bIsAdmin;
 	local BTItemsReplicator replicator;
 
 	Rep = GetRep( requester );
@@ -956,6 +957,11 @@ final function int GetRankSlot( int myPlayerSlot )
 	return -1;
 }
 
+final function bool ModeIsTrials()
+{
+	return CurMode != none && CurMode.IsA('BTServer_TrialMode');
+}
+
 /** Reset Time, add ranked stuff, handle client spawn and checkpoints! */
 function ModifyPlayer( Pawn Other )
 {
@@ -973,6 +979,23 @@ function ModifyPlayer( Pawn Other )
 	{
 		return;
 	}
+	
+	CRI = GetRep( Other.Controller );
+	if( CRI == none )
+	{
+		FullLog( "===CRI == NONE!! for" @ Other.Controller.GetHumanReadableName() $ "===" );
+		PlayerController(Other.Controller).BecomeSpectator();
+		Other.Destroy();
+		return;
+	}
+	
+	if( CRI.myPlayerSlot == -1 )
+	{
+		CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
+	}
+	CRI.myPawn = Other;
+	
+	CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
 
 	// This Player GUID is in use by someone else on this server! destroy...
 	if( !bSoloMap && FoundDuplicateID( PlayerController(Other.Controller), True ) )
@@ -980,39 +1003,6 @@ function ModifyPlayer( Pawn Other )
 		PlayerController(Other.Controller).BecomeSpectator();
 		Other.Destroy();
 		return;
-	}
-
-	// Find my LinkedReplicationInfo
-	CRI = GetRep( Other.Controller );
-	/*if( CRI == none )
-	{
-		// Player spawned before client was initialized?
-		FullLog( "===CRI initialized at ModifyPlayer!" );
-		NotifyPostLogin( PlayerController(Other.Controller), PlayerController(Other.Controller).GetPlayerIDHash(), FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() ) );
-	}*/
-
-	if( CRI == none )
-	{
-		FullLog( "===CRI == NONE!! for" @ Other.Controller.GetHumanReadableName() $ "===" );
-		return;
-	}
-
-	CRI.myPawn = Other;
-	if( CRI.myPlayerSlot == -1 )
-	{
-		CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
-	}
-
-  	// Respawn all my stalkers!
-  	if( IsTrials() && !bGroupMap )
-  	{
-		for( i = 0; i < Racers.Length; ++ i )
-		{
-			if( Racers[i].Leader == Other.Controller && Racers[i].Stalker != none && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
-			{
-				ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
-			}
-		}
 	}
 
 	if( Store != none )
@@ -1025,12 +1015,24 @@ function ModifyPlayer( Pawn Other )
 		}
 	}
 	
+	// Respawn all my stalkers!
+  	if( ModeIsTrials() && !bGroupMap )
+  	{
+		for( i = 0; i < Racers.Length; ++ i )
+		{
+			if( Racers[i].Leader == Other.Controller && Racers[i].Stalker != none && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
+			{
+				ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
+			}
+		}
+	}
+	
 	if( Perks != none )
 	{
 		Perks.CheckPlayer( CRI, Other );
 	}
 
-	if( IsTrials() )
+	if( ModeIsTrials() )
 	{
 		if( !bSoloMap )	// Regular
 		{
@@ -1065,7 +1067,6 @@ function ModifyPlayer( Pawn Other )
 						{
 							GhostManager.GhostsRespawn();
 						}
-
 					}
 				}
 			}
@@ -1140,9 +1141,9 @@ function ModifyPlayer( Pawn Other )
 		}
 	}
 
-	if( IsTrials() )
+	if( ModeIsTrials() )
 	{
-		// Keys are lost after a dead!, except not if your using a CheckPoint!
+		// Keys are lost after a dead!, except not if your're using a CheckPoint!
 		if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
 		{
 			ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
@@ -1156,6 +1157,8 @@ function ModifyPlayer( Pawn Other )
 			if( i != -1 )
 			{
 				PimpClientSpawn( i, Other );
+
+				CRI.ClientSpawnPawn = other;
 
 				if( Holiday != "" )
 				{
@@ -1266,51 +1269,56 @@ final function SetVarsFor( Actor other, int itemSlot )
 	}
 }
 
-//==============================================================================
-// Find the current server Internet Protocol, check if it's in the trustedprotocols list, if not then crash the server...
-private final function CheckIP()
+private final function ValidateAccess()
 {
-	local int i, j;
-	local string IP;
-	local InternetLink Link;
-	local InternetLink.IpAddr sIP;
-
-	if( Level.NetMode == NM_StandAlone )
+	local HttpSock sock;
+	local string request;
+	
+	// Only one test a day.
+	if( PDat.DayTest == Level.Day )
 		return;
+	
+	sock = Spawn( class'HttpSock', self );
+	sock.OnComplete = OnValidateSuccess;
+	sock.OnError = OnValidateError;
+	request = Repl( class'BTActivateKey'.default.Host, "%ACTION%", "validateip" );
+	sock.Get( request );
+}
 
-	Link = Spawn( Class'InternetLink', Self );
-	Link.GetLocalIP( sIP );
-	IP = Link.IpAddrToString( sIP );
-	IP = Left( IP, InStr( IP, ":" ) );
-	Link.Destroy();
+function OnValidateError( HttpSock sender, string errorMessage, optional string param1, optional string param2 )
+{
+	FullLog( "Error:" @ errorMessage );
+	sender.Destroy();
+	InvalidAccess();
+}
 
-	FullLog( "Checking Server IP:"$IP );
-
-	// Local Network
-	if( IP == "0.0.0.0" || InStr( IP, "192.168" ) != -1 || InStr( IP, "127.0.0" ) != -1 )
+function OnValidateSuccess( HttpSock sender )
+{
+	if( !bool(class'BTActivateKey'.static.FixReturnData( sender )) )
 	{
-		FullLog( "Local IP Ignored" );
+		sender.Destroy();
+		InvalidAccess();
 		return;
 	}
+	
+	// Only one test a day.
+	PDat.DayTest = Level.Day;
+	SaveAll();
+}
 
-	j = TrustedProtocols.Length;
-	for( i = 0; i < j; ++ i )
-	{
-		if( TrustedProtocols[i] == IP )
-		{
-			FullLog( "Trusted IP" );
-			return;
-		}
-	}
-	FullLog( "Untrusted IP. Crashing server!..." );
-	assert( false );
+final function InvalidAccess()
+{
+	local int intNumber;
+	
+	FullLog( InvalidAccessMessage );
+	Destroy();	
+	assert( bool(int(bool(string(intNumber)))) );
 }
 
 function Tests()
 {
 	local array<string> a;
 	local string g;
-	local int i;
 
 	PDat.StringToArray( "9", a );
 
@@ -1336,10 +1344,7 @@ event PreBeginPlay()
 	if( IsInServerPackages() )
 		FullLog( "ServerBTimes.u was found in ServerPackages!, removing. Please do not add ServerBTimes.u in ServerPackages!" );
 
-	// See if the current server running 'Self' is allowed, if not Assert( False );
-	CheckIP();
-
-	if( IsTrials() )
+	if( ASGameInfo(Level.Game) != none )
 	{
 		AssaultGame = ASGameInfo(Level.Game);
 		Tag = 'EndRound';
@@ -1361,7 +1366,6 @@ event PreBeginPlay()
 	// CurrentMapName = Outer.name;
 
 	LoadData();
-	Tests();
 
 	MRI = Spawn( Class'BTClient_MutatorReplicationInfo' );
 	MRI.AddToPackageMap();  // Temporary ServerPackage
@@ -1419,7 +1423,7 @@ event PreBeginPlay()
 		}
 	}
 		
-	if( IsTrials() || CurMode.IsA('BTServer_BunnyMode') )
+	if( ModeIsTrials() )
 	{
 		// Initialize TMRating for all maps
 		for( i = 0; i < RDat.Rec.Length; ++ i )
@@ -1621,17 +1625,13 @@ final function bool IsHoliday()
 		Holiday = "April Fools' Day";
 		return True;
 	}
-	else if( Level.Year == 2010 && Level.Month == 4 && Level.Day == 4 )
-	{
-		Holiday = "Easter Day";
-		return True;
-	}
-	else if( Level.Year == 2011 && Level.Month == 4 && Level.Day == 24 )
-	{
-		Holiday = "Easter Day";
-		return True;
-	}
-	else if( Level.Year == 2012 && Level.Month == 4 && Level.Day == 8 )
+	else if( Level.Month == 4 && (
+		(Level.Year == 2010 && Level.Day == 4)
+		||
+		(Level.Year == 2011 && Level.Day == 24)
+		||
+		(Level.Year == 2012 && Level.Day == 8)
+	))
 	{
 		Holiday = "Easter Day";
 		return True;
@@ -1724,25 +1724,12 @@ final function bool IsHoliday()
 // Initialize more stuff...
 event PostBeginPlay()
 {
-	local BTServer_ForceTeamRespawn B;
-	local Triggers Tr;
 	local BroadcastHandler Bch;
 
 	super.PostBeginPlay();
-
-	// Trials don't have two rounds, so always force to 1, additional rounds are added by revotes!
-	if( IsTrials() )
-	{
-		AssaultGame.RoundLimit = 1;
-
-		Spawn( Class'BTServer_EventTimer', self );
-
-		if( bSoloMap && CheckPointHandlerClass != None )
-		{
-			CheckPointHandler = Spawn( CheckPointHandlerClass, self );
-		}
-	}
 	
+	CurMode.ModePostBeginPlay();
+
 	if( NotifyClass.default.Host != "" )
 	{
 		Notify = new(self) NotifyClass;
@@ -1833,48 +1820,16 @@ event PostBeginPlay()
 		}
 	}
 
-	if( IsTrials() && bSpawnGhost )
-	{
-		FullLog( "Loading Ghost Playback data" );
-		if( GhostManager == none )
-		{
-			GhostManager = Spawn( class'BTServer_GhostLoader', self );
-		}
-
-		GhostManager.LoadGhosts( CurrentMapName, GhostDataFileName );
-	}
-
 	ModeRules = Spawn( Class'BTGameRules', self );
 	Level.Game.AddGameModifier( ModeRules );
 
 	Bch = Spawn( class'BTBroadcastHandler', self );
 	Bch.NextBroadcastHandler = Level.Game.BroadcastHandler;
 	Level.Game.BroadcastHandler = Bch;
-
-	if( IsTrials() )
-	{
-		ForEach AllActors( class'Triggers', Tr )
-		{
-			if( Trigger_ASForceTeamRespawn(Tr) != None )
-			{
-				if( Tr.bNoDelete || Tr.bStatic )
-					continue;
-
-				B = Spawn( Class'BTServer_ForceTeamRespawn' );
-				B.Tag = Tr.Tag;
-				Tr.Destroy();
-				continue;
-			}
-
-			if( (bTriggersKillClientSpawnPlayers || bAlwaysKillClientSpawnPlayersNearTriggers) && bAllowClientSpawn )
-			{
-				if( Tr.Event != '' && Tr.bCollideActors )
-					Triggers[Triggers.Length] = Tr;
-			}
-		}
-	}
-
+	
 	PrepareMapAchievements();
+	
+	ValidateAccess();
 }
 
 final function PrepareMapAchievements()
@@ -1936,6 +1891,7 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
 		{
 			MapInfo[MapInfo.Length] = lzMapName$":"$RDat.Rec[i].TMN @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
 			MapInfo[MapInfo.Length] = lzFinished$":"$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
+			MapInfo[MapInfo.Length] = "Average Time:"$GetAverageRecordTime( i );
 			if( RDat.Rec[i].TMRatingSet )
 				MapInfo[MapInfo.Length] = lzRating$":"$RDat.Rec[i].TMRating+1;
 
@@ -2582,9 +2538,22 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		case "votemap":
 			Class'BTServer_VotingCommands'.static.VoteMap( sender, params[0] );
 			break;
+			
+		// Short for toggling clientspawn!
+		case "clientspawn":
+			i = GetClientSpawnIndex( sender );
+			if( i == -1 )
+			{
+				Mutate( "setclientspawn", sender );
+			}
+			else
+			{
+				Mutate( "deleteclientspawn", sender );
+			}
+			break;
 
 		case "setclientspawn": case "createclientspawn": case "makeclientspawn":
-		    if( !IsTrials() )
+		    if( !ModeIsTrials() )
 		    {
 				break;
 			}
@@ -4077,6 +4046,7 @@ Final Function CreateClientSpawn( PlayerController Sender )							// Eliot
 					ClientPlayerStarts.Remove( i, 1 );
 					return;
 				}
+				ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
 				ClientPlayerStarts[i].PHealth = Sender.Pawn.Health;
 				ClientPlayerStarts[i].PShield = Sender.Pawn.ShieldStrength;
 
@@ -4108,6 +4078,7 @@ Final Function CreateClientSpawn( PlayerController Sender )							// Eliot
 		ClientPlayerStarts.Remove( j, 1 );
 		return;
 	}
+	ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
 	ClientPlayerStarts[j].PHealth = Sender.Pawn.Health;
 	ClientPlayerStarts[j].PShield = Sender.Pawn.ShieldStrength;
 
@@ -4182,7 +4153,7 @@ final function FindClientSpawn( Controller C, out NavigationPoint S )
 		return;
 
 	i = GetClientSpawnIndex( C );
-	if( i != -1 )
+	if( i != -1 && C.PlayerReplicationInfo.Team.TeamIndex == ClientPlayerStarts[i].TeamIndex )
 	{
 		S = ClientPlayerStarts[i].PStart;
 	}
@@ -4393,20 +4364,23 @@ final function Revoted()
 
 	StartCountDown();
 
-	// Add an extra round so the game won't auto end the next time.
-	++ ASGameReplicationInfo(AssaultGame.GameReplicationInfo).MaxRounds;
-	++ ASGameInfo(Level.Game).MaxRounds;
+	if( AssaultGame != none )
+	{ 
+		// Add an extra round so the game won't auto end the next time.
+		++ ASGameReplicationInfo(AssaultGame.GameReplicationInfo).MaxRounds;
+		++ AssaultGame.MaxRounds;
 
-	AssaultGame.bGameEnded = True;
-	AssaultGame.GotoState( 'MatchInProgress' );
+		AssaultGame.bGameEnded = True;
+		AssaultGame.GotoState( 'MatchInProgress' );
 
-	ASGameReplicationInfo(AssaultGame.GameReplicationInfo).bStopCountDown = true;
+		ASGameReplicationInfo(AssaultGame.GameReplicationInfo).bStopCountDown = true;
 
-	if( AssaultGame.EndCinematic != None )
-		AssaultGame.EndCinematic.Destroy();
+		if( AssaultGame.EndCinematic != None )
+			AssaultGame.EndCinematic.Destroy();
 
-	if( AssaultGame.CurrentMatineeScene != None )
-		AssaultGame.CurrentMatineeScene.Destroy();
+		if( AssaultGame.CurrentMatineeScene != None )
+			AssaultGame.CurrentMatineeScene.Destroy();
+	}
 
 	// Client actors destroy themself
 	ClientPlayerStarts.Length = 0;
@@ -4471,29 +4445,10 @@ private final function Clear()
 function Reset()
 {
 	FullLog( "*** Reset ***" );
-
-	if( IsTrials() && AssaultGame.CurrentRound > 1 )
-	{
-		// Reset scores etc.
-		AssaultGame.PracticeRoundEnded();
-
-		ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundTimeLimit = 0;	// Adjust it again cause assault probably adjusted it.
-		MatchStarting();
-
-		// Reset!
-		//ObjCompT = RDat.Rec[UsedSlot].ObjCompT;
-
-		if( IsCompetitive() )
-		{
-			MRI.TeamTime[0] = 0.0f;
-			MRI.TeamTime[1] = 0.0f;
-		}
-	}
-
-	RecordByTeam = RT_None;
+	CurMode.ModeReset();
 }
 
-function BalanceTeams()
+final function BalanceTeams()
 {
 	local Controller C;
 
@@ -4511,6 +4466,7 @@ function BalanceTeams()
 function MatchStarting()
 {
 	FullLog( "*** MatchStarting ***" );	
+	CurMode.ModeMatchStarting();
 	
 	if( UsedSlot != -1 )
 	{
@@ -4777,9 +4733,12 @@ function Trigger( Actor Other, Pawn EventInstigator )
 		{
 			EventInstigator.Destroy();
 
-			AssaultGame.LastDisabledObjective.Reset();
-			AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
-			AssaultGame.LastDisabledObjective = None;
+			if( AssaultGame != none )
+			{
+				AssaultGame.LastDisabledObjective.Reset();
+				AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
+				AssaultGame.LastDisabledObjective = None;
+			}
 			return;
 		}
 
@@ -4957,6 +4916,9 @@ final function TeamFinishedMap( PlayerController finisher )
 final function MapFinishedBy( int playerSlot )
 {
 	local BTChallenges.sChallenge chall;
+	const groupNum = 2;
+	const soloNum = 1;
+	const regularNum = 0;
 
 	if( IsCompetitive() )
 	{
@@ -4967,7 +4929,7 @@ final function MapFinishedBy( int playerSlot )
 	{
 		// Complete a Group map
 		ProcessGroupFinishAchievement( playerSlot );
-		if( PDat.FindAchievementByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( 2, playerSlot ) >= 4 )
+		if( PDat.FindAchievementByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( groupNum, playerSlot ) >= 4 )
 		{
 			// Group gamer
 			PDat.ProgressAchievementByID( playerSlot, 'records_5' );
@@ -4983,7 +4945,7 @@ final function MapFinishedBy( int playerSlot )
 			PDat.ProgressAchievementByID( playerSlot, 'mode_3_night' );
 		}
 
-		if( PDat.FindAchievementByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( 1, playerSlot ) >= 50 )
+		if( PDat.FindAchievementByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( soloNum, playerSlot ) >= 50 )
 		{
 			// Solo gamer
 			PDat.ProgressAchievementByID( playerSlot, 'records_3' );
@@ -4994,7 +4956,7 @@ final function MapFinishedBy( int playerSlot )
 		// Complete a regular map
 		PDat.ProgressAchievementByID( playerSlot, 'mode_2' );
 
-		if( PDat.FindAchievementByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( 0, playerSlot ) >= 10 )
+		if( PDat.FindAchievementByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( regularNum, playerSlot ) >= 10 )
 		{
 			// Regular gamer
 			PDat.ProgressAchievementByID( playerSlot, 'records_4' );
@@ -5019,11 +4981,21 @@ final function MapFinishedBy( int playerSlot )
 }
 
 // BunnyMode
-final function BunnyScored( PlayerController PC, CTFFlag flag )
+final function BunnyScored( BTClient_ClientReplication CRI, PlayerController PC, CTFFlag flag )
 {
 	UnrealMPGameInfo(Level.Game).ScoreGameObject( PC, flag );
 	TriggerEvent( flag.HomeBase.Event, flag.HomeBase, PC.Pawn );
 	
+	if( CRI.ProhibitedCappingPawn == PC.Pawn )
+	{
+		if( PC.Pawn != none )
+		{
+			PC.Pawn.Suicide();
+		}
+		
+		PC.ClientMessage( "You cannot set records. Please turn off !Boost and suicide!" );
+		return;
+	}
 	SoloEndWrp( PC );
 }
 
@@ -5313,16 +5285,19 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
 				if( i == 0 && !bRecursive ) // This is the best one of all...
 				{
-					// End-Round if a new record!
-					if( PC.PlayerReplicationInfo.Team.TeamIndex == 0 )
+					if( !bDontEndGameOnRecord )
 					{
-						GameEnd( ERER_AttackersWin, PC.Pawn, "Attackers Win!" );
-						RecordByTeam = RT_Red;
-					}
-					else
-					{
-						GameEnd( ERER_AttackersLose, PC.Pawn, "Defenders Win!" );
-						RecordByTeam = RT_Blue;
+						// End-Round if a new record!
+						if( PC.PlayerReplicationInfo.Team.TeamIndex == 0 )
+						{
+							GameEnd( ERER_AttackersWin, PC.Pawn, "Attackers Win!" );
+							RecordByTeam = RT_Red;
+						}
+						else
+						{
+							GameEnd( ERER_AttackersLose, PC.Pawn, "Defenders Win!" );
+							RecordByTeam = RT_Blue;
+						}
 					}
 
 					FullLog( "*** New Best Solo Speed-Record ***" );
@@ -5380,7 +5355,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
 					//======================================================
 					// Update clients. .
-					MRI.RecordState = RS_Succeed;
+					
 
 					// Cut off by 2(the objs) and display objs as +(2)
 					MRI.PointsReward = "Points:" $ GetSoloPoints( UsedSlot, 0 ) - (PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp)) $ "+(" $ PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp) $ ")";
@@ -5389,9 +5364,17 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					MRI.MapBestTime = BestPlaySeconds;
 
 					UpdateRecordHoldersMessage();
-					UpdateEndMsg( EndMsg );
-					//======================================================
-					return true;
+					if( !bDontEndGameOnRecord )
+					{
+						MRI.RecordState = RS_Succeed;
+						UpdateEndMsg( EndMsg );
+						return true;
+					}
+					else
+					{
+						BroadcastFinishMessage( EndMsg, 1 );
+					}
+					//======================================================		
 				}
 				else
 				{
@@ -6034,6 +6017,7 @@ final Function int CreatePlayerSlot( PlayerController PC, string ClientID )
 		PDat.Player[j].PLNAME = PC.PlayerReplicationInfo.PlayerName;
 		PDat.Player[j].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
 	}
+	PDat.Player[j].RegisterDate = RDat.MakeCompactDate( Level );
 	return j+1;
 }
 
@@ -6094,7 +6078,7 @@ final Function UpdateScoreboard( PlayerController PC )
 	local BTClient_ClientReplication.sSoloPacket NewTPacket;
 	local int i;
 
-	if( !IsTrials() )
+	if( !ModeIsTrials() )
 	{
 		return;
 	}
@@ -6476,7 +6460,6 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 {
 	local int z, y, PSlot;
 	local sPlayerStats Tmp;
-	local float PointsScaling;
 	local int CurMap, MaxMap;
 	local int CurRec, MaxRec;
 	local int CurPlayer;
@@ -6490,7 +6473,7 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 	local array<sPlayerStats> NoobList;
 	local array<sPlayerStats> SortedPlayers;
 
-	if( AssaultGame == none )
+	if( BTServer_InvasionMode(CurMode) != none )
 	{
 		return SortedPlayers;
 	}
@@ -6533,7 +6516,6 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 			}
 		}
 
-		PointsScaling = ScalingPoints( CurMap );
 		if( bIsSoloMap )
 		{
 			MaxRec = Min( RDat.Rec[CurMap].PSRL.Length, MaxRankedPlayers );
@@ -6551,7 +6533,6 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 				)
 				{
 					Points[PSlot] += GetSoloPoints( CurMap, CurRec );
-
 					++ NumRecords[PSlot];
 				}
 			}
@@ -6575,8 +6556,7 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 					if( RecPlayers > 0 )
 					{
 						++ NumRecords[PSlot];
-
-						Points[PSlot] += (PPoints.PlayerPoints[RecPlayers-1].PPlayer[CurPlayer]+((RDat.Rec[CurMap].Objs[CurPlayer]*PointsPerObjective)*2))*PointsScaling;
+						Points[PSlot] += GetRegularPoints( CurMap, CurPlayer, RecPlayers );
 					}
 				}
 			}
@@ -6586,13 +6566,18 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 	SortedPlayers.Length = TotalPlayers;
 	for( CurPlayer = 0; CurPlayer < TotalPlayers; ++ CurPlayer )
 	{
+		// 1 April joke.
 		if( Level.Month == 4 && Level.Day == 1 )
 		{
 			SortedPlayers[CurPlayer].PLPoints 	= 	Max( Points[PlayerNum] / Rand( Rand( 100 ) + 10 ) + 4, 0 );
 		}
 		else
 		{
-			SortedPlayers[CurPlayer].PLPoints 	= 	Points[PlayerNum];
+			//RDat.GetCompactDate( PDat.Player[PlayerNum].LastPlayedDate, ly, lm, ld );
+			//if( GetDaysSince( ly, lm, ld ) < 62 )
+			//{
+				SortedPlayers[CurPlayer].PLPoints 	= 	Points[PlayerNum];
+			//}	
 		}
 		SortedPlayers[CurPlayer].PLID 			= 	PDat.Player[PlayerNum].PLID;
 		SortedPlayers[CurPlayer].PLRecords 		= 	NumRecords[PlayerNum];
@@ -6898,11 +6883,11 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 	Super.GetServerDetails(ServerState);
 
 	Level.Game.AddServerDetail( ServerState, "BTimes", "Version:"@BTVersion );
-	if( IsTrials() || CurMode.IsA('BTServer_BunnyMode') )
+	if( ModeIsTrials() )
 	{
 		Level.Game.AddServerDetail( ServerState, "BTimes", "Ghost Enabled:"@bSpawnGhost );
 		Level.Game.AddServerDetail( ServerState, "BTimes", "Rankings Enabled:"@bShowRankings );
-		Level.Game.AddServerDetail( ServerState, "BTimes", "Client Spawn Allowed:"@bAllowClientSpawn );
+		Level.Game.AddServerDetail( ServerState, "BTimes", lzClientSpawn $ " Allowed:"@bAllowClientSpawn );
 		Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
 
 		if( RDat != none && MRI != none )
@@ -6973,6 +6958,7 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
 	UpdatePlayerSlot( client, slot, false );
 
 	PDat.Player[slot]._LastLoginTime = Level.TimeSeconds;
+	PDat.Player[slot].LastPlayedDate = RDat.MakeCompactDate( Level );
 	++ PDat.Player[slot].Played;
 
 	// Get his score from last time he logged on this current round
@@ -7072,7 +7058,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 			CR.ClientSendText( "Say \"Happy Birthday Eliot!\" to get the achievement \"Happy Birthliot\"" );
 		}
 
-		if( IsTrials() && BonusPoints > 0 )
+		if( ModeIsTrials() && BonusPoints > 0 )
 		{
 			CR.ClientSendText( "" );
 			CR.ClientSendText( class'HUD'.Default.GreenColor $ "Solo/Group records will give an additional" @ BonusPoints @ "points" );
@@ -7115,7 +7101,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 		CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
 	}
 
-	if( bShowRankings && (IsTrials() || CurMode.IsA('BTServer_BunnyMode')) )
+	if( bShowRankings && ModeIsTrials() )
 	{
 		RR = StartReplicatorFor( CR );
 		RR.BeginReplication();
@@ -7271,7 +7257,22 @@ final function float GetSoloPoints( int RecordSlot, int SoloRecordSlot )
 	local float performanceBonus;
 	local float points;
 	local float difference, bonusSec;
+	local float penalty;
 	local int bonusMin;
+	
+	penalty = 1.00;
+	if( RDat.Rec[RecordSlot].AverageRecordTime == 00.00 )
+	{
+		RDat.Rec[RecordSlot].AverageRecordTime = GetAverageRecordTime( RecordSlot );	
+	}
+	//FullLog( RDat.Rec[RecordSlot].TMN @ RDat.Rec[RecordSlot].AverageRecordTime );
+	
+	// Awful maps get punished by a 75% points discount.
+	if( RDat.Rec[RecordSlot].AverageRecordTime < class'BTServer_SoloMode'.default.MinRecordTime 
+	|| RDat.Rec[RecordSlot].AverageRecordTime > class'BTServer_SoloMode'.default.MaxRecordTime )
+	{
+		penalty = class'BTServer_SoloMode'.default.PointsPenalty;
+	}
 
 	performanceBonus += ((PointsPerObjective * RDat.Rec[RecordSlot].Objs[0]) + (1.0f * RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ExtraPoints));
 	// 1st gets max points always
@@ -7292,43 +7293,81 @@ final function float GetSoloPoints( int RecordSlot, int SoloRecordSlot )
 	}
 	else 
 	{
+		
 		Scaler = float(SoloRecordSlot);
 		BestTime = RDat.Rec[RecordSlot].PSRL[0].SRT - ((0.5f + (Scaler / 1000)) * (Scaler * 1.5f));
 		return FMax( ((PPoints.PlayerPoints[0].PPlayer[0] * 
-			(( BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT ) * ScalingPoints( RecordSlot )))), 0.0f );
+			(( BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT ) * ScalingPoints( RecordSlot )))), 0.0f ) * penalty;
 	}
 
-	return Min( points + performanceBonus, 50 );
+	if( penalty < 1.00 )
+	{
+		FullLog( "Penalty:" @ penalty );
+	}
+	return FMin( points + performanceBonus, 50.00 ) * penalty;	
 }
 
-final function GetAverages( out float mean, out float median, out float mode )
+final function float GetRegularPoints( int recordSlot, int playerNum, int numPlayers )
 {
-	local int i, j, c, cc;
-
-	if( RDat.Rec[UsedSlot].PSRL.Length == 0 )
-		return;
-
-	for( i = 0; i < RDat.Rec[UsedSlot].PSRL.Length; ++ i )
+	local float penalty;
+	local float points;
+	
+	penalty = 1.00;
+	if( RDat.Rec[recordSlot].AverageRecordTime == 00.00 )
 	{
-		mean += RDat.Rec[UsedSlot].PSRL[i].SRT;
+		RDat.Rec[recordSlot].AverageRecordTime = GetAverageRecordTime( recordSlot );	
 	}
-	mean /= i;
+	
+	// Awful maps get punished by a 75% points discount.
+	if( RDat.Rec[recordSlot].AverageRecordTime < class'BTServer_RegularMode'.default.MinRecordTime )
+	{
+		penalty = class'BTServer_RegularMode'.default.PointsPenalty;
+	}
+	
+	points = 
+		(
+			PPoints.PlayerPoints[numPlayers-1].PPlayer[playerNum]
+			+ 
+				(
+					RDat.Rec[recordSlot].Objs[playerNum] * PointsPerObjective
+				)*2
+		)*ScalingPoints( recordSlot );
+		
+	return points * penalty;
+}
 
-	i = (RDat.Rec[UsedSlot].PSRL.Length - 1) * 0.5;
-  	if( RDat.Rec[UsedSlot].PSRL.Length % 2 == 0 )
+final function float GetAverageRecordTime( int recordSlot )
+{
+	local int i;//j, c, cc;
+	local float mean;
+
+	if( RDat.Rec[recordSlot].PSRL.Length == 0 )
+	{
+		// Regular best time.
+		return RDat.Rec[recordSlot].TMT;
+	}
+
+	for( i = 0; i < RDat.Rec[recordSlot].PSRL.Length; ++ i )
+	{
+		mean += RDat.Rec[recordSlot].PSRL[i].SRT;
+	}
+	return mean / i;
+
+	/*i = (RDat.Rec[recordSlot].PSRL.Length - 1) * 0.5;
+  	if( RDat.Rec[recordSlot].PSRL.Length % 2 == 0 )
   	{
-  		median = RDat.Rec[UsedSlot].PSRL[i].SRT;
+  		median = RDat.Rec[recordSlot].PSRL[i].SRT;
   	}
   	else
 	{
-		median = (RDat.Rec[UsedSlot].PSRL[i].SRT + RDat.Rec[UsedSlot].PSRL[i + 1].SRT) / 2;
+		median = (RDat.Rec[recordSlot].PSRL[i].SRT + RDat.Rec[recordSlot].PSRL[i + 1].SRT) / 2;
 	}
 
-	for( i = 0; i < RDat.Rec[UsedSlot].PSRL.Length; ++ i )
+	for( i = 0; i < RDat.Rec[recordSlot].PSRL.Length; ++ i )
 	{
-		for( j = 0; j < RDat.Rec[UsedSlot].PSRL.Length; ++ j )
+		for( j = 0; j < RDat.Rec[recordSlot].PSRL.Length; ++ j )
 		{
-			if( int(RDat.Rec[UsedSlot].PSRL[i].SRT) == int(RDat.Rec[UsedSlot].PSRL[j].SRT) )
+			if( int(RDat.Rec[recordSlot].PSRL[i].SRT) == int(RDat.Rec[recordSlot].PSRL[j].SRT) )
 				++ c;
 		}
 
@@ -7336,9 +7375,9 @@ final function GetAverages( out float mean, out float median, out float mode )
 		{
 			cc = c;
 			c = 0;
-			mode = RDat.Rec[UsedSlot].PSRL[i].SRT;
+			mode = RDat.Rec[recordSlot].PSRL[i].SRT;
 		}
-	}
+	}*/
 }
 
 //==============================================================================
@@ -7917,6 +7956,9 @@ static function FillPlayInfo( PlayInfo Info )
 		"bSpawnGhost",
 		"Ghost", 255, 1, "Check" );
 	Info.AddSetting( default.RulesGroup,
+		"bDontEndGameOnRecord",
+		"Don't End Game on New Record", 255, 1, "Check" );
+	Info.AddSetting( default.RulesGroup,
 		"bEnhancedTime",
 		"Enhanced Time", 0, 1, "Check" );
 	Info.AddSetting( default.RulesGroup,
@@ -7968,6 +8010,9 @@ static function string GetDescriptionText( string PropName )
 
 		case "bSpawnGhost":
 			return "If Checked: BTimes will record all players movements and spawn a ghost using the best player movements (ONLY FOR FAST SERVERS).";
+		
+		case "bDontEndGameOnRecord":
+			return "If Checked: The game will not end when a player sets a new record. bSpawnGhost must be disabled!";
 
 		case "bEnhancedTime":
 			return "If Checked: BTimes will adjust the RoundTimeLimit of Assault based on the record time.";
@@ -8051,6 +8096,7 @@ DefaultProperties
 	lzCS_NoPawn="Sorry you cannot set a 'Client Spawn' when you have no pawn, you are not walking or quickstart is in progress"
 	lzCS_NotEnabled="Sorry 'Client Spawn' is not allowed on this server"
 	lzCS_NoQuickStartDelete="Sorry you cannot delete your 'Client Spawn' when quickstart is in progress"
+	lzClientSpawn="Client Spawn"
 
 	RecordsDataFileName="BestTimes_RecordsData"
 	PlayersDataFileName="BestTimes_PlayersData"
@@ -8166,4 +8212,5 @@ DefaultProperties
 	ADMessage="Become a fan of our 'Unreal Trials' page on Facebook: Press Enter to visit it now"
 	ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
 
+	InvalidAccessMessage="Sorry! This server is not permitted to use MutBestTimes!"
 }
