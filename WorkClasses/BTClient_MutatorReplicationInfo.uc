@@ -168,9 +168,12 @@ function Reset()
 }
 
 // Moved to here for the color operators
-static function Color GetFadingColor( HUD_Assault HU, Color FadingColor )
+final simulated function Color GetFadingColor( Color FadingColor )
 {
-	return FadingColor * (1.f - HU.fPulse) + HU.WhiteColor * HU.fPulse;
+	local float pulse;
+	
+	pulse = 1.0 - (Level.TimeSeconds % 1.0);
+	return FadingColor * (1.0 - pulse) + class'HUD'.default.WhiteColor * pulse;
 }
 
 defaultproperties

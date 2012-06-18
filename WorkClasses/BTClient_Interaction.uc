@@ -9,7 +9,7 @@ class BTClient_Interaction extends Interaction;
 
 #Exec obj load file="UT2003Fonts.utx"
 #Exec obj load file="MenuSounds.uax"
-#Exec obj load file="Content/ClientBTimes.utx" package="ClientBTimesV4C"
+#Exec obj load file="Content/ClientBTimes.utx" package="ClientBTimesV4D"
 
 const META_DECOMPILER_VAR_AUTHOR				= "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
@@ -845,7 +845,7 @@ event Tick( float DeltaTime )
 	{
 		PerformDodgePerk();
 	}
-
+	
 	/* Anti-ShowAll */
 	C = ViewportOwner.Actor.Player.Console;
 	if( C != None )
@@ -1051,7 +1051,7 @@ Final Function ModifyMenu()
 		Menu.WinLeft = 0.175;
 		Menu.WinTop = 0.075;*/
 
-		myMenu = BTClient_Menu(Menu.c_Main.AddTab( "BestTimes Panel", string(Class'BTClient_Menu'),, "View the BestTimes panel" ));
+		myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
 		if( myMenu != None )
 		{
 			myMenu.MyInteraction = self;
@@ -1083,7 +1083,7 @@ event NotifyLevelChange()
 Final Function Color GetFadingColor( color FadingColor )
 {
 	if( Options.bFadeTextColors )
-		return MRI.GetFadingColor( HU, FadingColor );
+		return MRI.GetFadingColor( FadingColor );
 
 	return FadingColor;
 }
@@ -1375,7 +1375,10 @@ Final Function RenderKeys( Canvas C )
 			{
 				C.Style = ViewportOwner.Actor.ERenderStyle.STY_Alpha;
 				C.DrawColor = Class'HUD'.Default.GoldColor;
-				HUD_Assault(ViewportOwner.Actor.myHUD).Draw_2DCollisionBox( C, KeyPickupsList[i], C.WorldToScreen( KeyPickupsList[i].Location ), KeyName, KeyPickupsList[i].DrawScale, True );
+				if( HU != none )
+				{
+					HUD_Assault(ViewportOwner.Actor.myHUD).Draw_2DCollisionBox( C, KeyPickupsList[i], C.WorldToScreen( KeyPickupsList[i].Location ), KeyName, KeyPickupsList[i].DrawScale, True );
+				}
 				continue;
 			}
 		}
@@ -1654,13 +1657,13 @@ function PostRender( Canvas C )
 	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) && bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) && bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
 	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) && bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) && bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
 	F:
-
+	
 	if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
 		return;
 
 	C.Font = Font'UT2003Fonts.jFontSmallText800x600';
 
-	if( HU != none )
+	if( myHUD != none )
 	{
 		if( Options.bShowZoneActors )
 			RenderZoneActors( C );
@@ -1770,7 +1773,7 @@ function PostRender( Canvas C )
 	// Ranking table code
 	else if( Options.bShowRankingTable )
 	{
-	    if( ASGameReplicationInfo(ViewportOwner.Actor.Level.GRI) != none )
+	    if( ViewportOwner.Actor.Level.GRI != none )
 	    {
 			RenderRankIcon( C );
 
@@ -2425,11 +2428,18 @@ function PostRender( Canvas C )
 		S = RankingKeyMsg @ RankingHideMsg;
 		C.StrLen( S, XL, YL );
 
-		C.SetPos( C.ClipX - XL - 4 , C.ClipY - (YL * 2) ); // Upper
+		C.SetPos( C.ClipX - XL - 4, C.ClipY - (YL * 2) ); // Upper
+		C.DrawText( S, true );
+
+		S = "eliotvu.com";
+		C.StrLen( S, XL, YL );
+
+		C.SetPos( C.ClipX - XL - 4, C.ClipY - YL ); // Bottom
 		C.DrawText( S, true );
 
 		// Credits
 		C.StrLen( class'GUIComponent'.static.StripColorCodes( MRI.Credits ), XL, YL );
+		// Center Bottom
 		C.SetPos( (C.ClipX * 0.5) - (XL * 0.5), C.ClipY - YL );
 		C.DrawText( MRI.Credits, true );
 
@@ -2440,10 +2450,14 @@ function PostRender( Canvas C )
 
 	if( MRI.RecordState == RS_Active )
 	{
-	    if( ASGameReplicationInfo(ViewportOwner.Actor.Level.GRI) != none )
+	    if( InvasionGameReplicationInfo(ViewportOwner.Actor.Level.GRI) == none )
 	    {
-			bTimerPaused = (ViewportOwner.Actor.IsInState( 'GameEnded' ) || ViewportOwner.Actor.IsInState( 'RoundEnded' ) || ((ViewportOwner.Actor.IsInState( 'Dead' ) || ViewportOwner.Actor.ViewTarget == none)));
-
+			bTimerPaused = (ViewportOwner.Actor.IsInState( 'GameEnded' ) 
+				|| ViewportOwner.Actor.IsInState( 'RoundEnded' ) 
+				|| ((ViewportOwner.Actor.IsInState( 'Dead' ) 
+				|| ViewportOwner.Actor.ViewTarget == none))
+			);
+			
 			if( bTestRun )
 			{
 				C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
@@ -2491,8 +2505,77 @@ function PostRender( Canvas C )
 		}
 		// Solo Rank
 		if( !Options.bShowRankingTable && MRI.CR.Text.Length == 0 )
-		{
+		{	
 			YP = (C.ClipY * 0.5);
+			if( MRI.CR.ClientSpawnPawn != none )
+			{
+				C.DrawColor = class'HUDBase'.default.GoldColor;
+				C.Style = 1;
+
+				if( MRI.Level.GRI != none && MRI.Level.GRI.GameName == "Capture the Flag" )
+				{
+					S = "CheckPoint";
+				}
+				else
+				{
+					S = "ClientSpawn";
+				}
+				C.StrLen( S, XL, YL );
+
+				C.SetPos( 0, YP - (YL * 0.5) );
+				C.DrawTile( AlphaLayer, XL + 12, YL, 0, 0, 256, 256 );
+
+				C.CurX = 6;
+				C.DrawColor = Class'HUD'.default.WhiteColor;
+				C.Style = 1;//3;
+				C.DrawText( S );
+
+				// Border
+				C.Style = 1;
+				C.DrawColor = Class'HUD'.default.GrayColor;
+				C.DrawColor.A = 100;
+
+				C.CurX = 0;
+
+				Class'BTClient_SoloFinish'.static.DrawHorizontal( C, YP - (YL * 0.5) - 2/*border width*/, XL + 12 );
+ 				Class'BTClient_SoloFinish'.static.DrawHorizontal( C, YP - (YL * 0.5) + YL, XL + 12 );
+
+ 				C.CurY = YP - (YL * 0.5) - 2;
+ 				Class'BTClient_SoloFinish'.static.DrawVertical( C, XL + 12, YL + 4 );
+ 				YP += YL * 1.8;
+			}
+			
+			if( MRI.CR.ProhibitedCappingPawn != none )
+			{
+				C.DrawColor = class'HUDBase'.default.GoldColor;
+				C.Style = 1;
+
+				S = "Boost";
+				C.StrLen( S, XL, YL );
+
+				C.SetPos( 0, YP - (YL * 0.5) );
+				C.DrawTile( AlphaLayer, XL + 12, YL, 0, 0, 256, 256 );
+
+				C.CurX = 6;
+				C.DrawColor = Class'HUD'.default.WhiteColor;
+				C.Style = 1;//3;
+				C.DrawText( S );
+
+				// Border
+				C.Style = 1;
+				C.DrawColor = Class'HUD'.default.GrayColor;
+				C.DrawColor.A = 100;
+
+				C.CurX = 0;
+
+				Class'BTClient_SoloFinish'.static.DrawHorizontal( C, YP - (YL * 0.5) - 2/*border width*/, XL + 12 );
+ 				Class'BTClient_SoloFinish'.static.DrawHorizontal( C, YP - (YL * 0.5) + YL, XL + 12 );
+
+ 				C.CurY = YP - (YL * 0.5) - 2;
+ 				Class'BTClient_SoloFinish'.static.DrawVertical( C, XL + 12, YL + 4 );
+ 				YP += YL * 1.8;	
+			}
+			
 			if( MRI.CR.SoloTop.Length > 0 )
 			{
 				C.DrawColor = Options.CTable;
@@ -2506,7 +2589,7 @@ function PostRender( Canvas C )
 
 				C.CurX = 6;
 				C.DrawColor = Class'HUD'.default.WhiteColor;
-				C.Style = 3;
+				C.Style = 1;//3;
 				C.DrawText( S );
 
 				// Border
@@ -2563,7 +2646,7 @@ function PostRender( Canvas C )
 
 			C.CurX = (TableXL * 0.5f) - (XL * 0.5f);
 			C.DrawColor = Class'HUD'.default.WhiteColor;
-			C.Style = 3;
+			C.Style = 1;//3;
 			C.DrawText( S );
 
 			if( SpectatedClient.Level.TimeSeconds - SpectatedClient.BTExperienceChangeTime <= 1.5f && SpectatedClient.BTExperienceDiff != 0f )
@@ -2611,7 +2694,7 @@ function PostRender( Canvas C )
 
 			C.CurX = (TableXL * 0.5f) - (XL * 0.5f);
 			C.DrawColor = Class'HUD'.default.WhiteColor;
-			C.Style = 3;
+			C.Style = 1;//3;
 			C.DrawText( S );
 
 			// Border
@@ -2642,7 +2725,7 @@ function PostRender( Canvas C )
 		{
 			case RS_Succeed:
 				//RenderRecordDetails( C );
-				C.Font = myHUD.LoadFont( 8 );
+				C.Font = myHUD.LoadFont( 7 );
 				//C.Font = HU.GetFontSizeIndex( C, Options.DrawFontSize );
 
 				// Draw Ghost stuff
@@ -2651,7 +2734,7 @@ function PostRender( Canvas C )
 				else S = "Ghost Saved Percent:"$MRI.GhostPercent$"%";
 
 				C.StrLen( S, XL, YL );
-				YLength = YL*3;
+				YLength = YL + 16;
 
 				if( MRI.GhostPercent > 0.00f )
 				{
@@ -2878,6 +2961,10 @@ function DrawRecordWidget( Canvas C )
 		S = RecordEmptyMsg;
 
 	YP = 7;
+	if( myHUD.bShowPersonalInfo && ASGameReplicationInfo(ViewportOwner.Actor.Level.GRI) == none )
+	{
+		YP += 50 * myHUD.HUDScale;
+	}
 
 	if( S != RecordEmptyMsg )
 	{

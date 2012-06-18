@@ -200,6 +200,10 @@ const CFCLIENTSPAWN 	= 0x00000002;
 const CFCHECKPOINT		= 0x00000004;
 
 var private int ClientFlags;
+
+var Pawn ProhibitedCappingPawn;
+var Pawn ClientSpawnPawn;
+
 //==============================================================================
 
 //==============================================================================
@@ -212,6 +216,7 @@ var BTClient_MutatorReplicationInfo MRI;
 var int myPlayerSlot;				// Cached slot of the PDat.Player list for this player
 var bool bReceivedRankings;
 var bool bAutoPress;
+var bool bPermitBoosting;
 
 replication
 {
@@ -222,7 +227,7 @@ replication
 		PreferedColor;
 		
 	reliable if( bNetDirty && bNetOwner )
-		bAllowDodgePerk;
+		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
 
 	unreliable if( bNetInitial && bNetOwner && bNetDirty )
 		UserState;

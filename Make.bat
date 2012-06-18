@@ -4,16 +4,16 @@ title ClientBTimes
 cd..
 cd system
 echo (X)
-echo Deleting Compiled ClientBTimesV4C
+echo Deleting Compiled ClientBTimesV4D
 echo ----------------------------------------------------
-del ClientBTimesV4C.u
-del ClientBTimesV4C.ucl
+del ClientBTimesV4D.u
+del ClientBTimesV4D.ucl
 echo ----------------------------------------------------
 echo (X)
 echo Copying WorkClasses to Classes
 echo ----------------------------------------------------
 cd..
-cd ClientBTimesV4C
+cd ClientBTimesV4D
 xcopy WorkClasses Classes /Y /Q  
 echo ----------------------------------------------------
 echo (X)
@@ -51,9 +51,9 @@ echo Compiling...
 echo ----------------------------------------------------
 cd..
 cd system
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 ClientBTimesV4C
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 ClientBTimesV4D
 ucc.exe MakeCommandlet -exportcache -DEBUG -SHOWDEP
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ClientBTimesV4C
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ClientBTimesV4D
 echo Compiled!
 echo ----------------------------------------------------
 echo (X)
@@ -62,7 +62,7 @@ echo ----------------------------------------------------
 pause
 echo Stripping Source!
 ren ClientBTimes.ini ClientBTimes_bak.ini
-UCC.exe editor.stripsourcecommandlet ClientBTimesV4C.u
+UCC.exe editor.stripsourcecommandlet ClientBTimesV4D.u
 ren ClientBTimes_bak.ini ClientBTimes.ini
 echo ----------------------------------------------------
 pause

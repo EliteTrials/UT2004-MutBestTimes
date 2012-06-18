@@ -19,12 +19,20 @@ struct sBTTab
 	var() string Caption;
 	var() class<BTGUI_TabBase> TabClass;
 	var() string Hint;
+	var() GUIStyles Style;
 };
 
 var array<sBTTab> BTTabs;
 
 event Free()
 {
+	local int i;
+	
+	for( i = 0; i < BTTabs.Length; ++ i )
+	{
+		BTTabs[i].Style = none;
+	}
+	
 	MyInteraction = none;
 	super.Free();
 }
@@ -41,6 +49,12 @@ function PostInitPanel()
 		tab = BTGUI_TabBase(c_Tabs.AddTab( BTTabs[i].Caption, string(BTTabs[i].TabClass),, BTTabs[i].Hint, true ));
 		tab.MyMenu = self;
 		tab.PostInitPanel();
+		
+		//if( BTTabs[i].Style != none )
+		//{
+			//BTTabs[i].Style.Initialize();
+			//tab.MyButton.Style = BTTabs[i].Style;
+		//} 
 	}
 }
 
@@ -57,15 +71,19 @@ defaultproperties
 	WinHeight=1.000000
 	WinLeft=0.100000
 	WinTop=0.100000
+	
+	begin object name=oStoreStyle class=STY2TabButton
+		ImgColors(0)=(R=255,G=255,B=0,A=255)
+		ImgColors(1)=(R=255,G=255,B=0,A=255)
+		ImgColors(2)=(R=255,G=255,B=0,A=255)
+		ImgColors(3)=(R=255,G=255,B=0,A=255)
+	end object
 
-	BTTabs(7)=(Caption="Store",TabClass=class'BTGUI_Store',Hint="Buy nice visual items for your character!")
 	BTTabs(0)=(Caption="Account",TabClass=class'BTGUI_Account',Hint="")
 	BTTabs(1)=(Caption="Settings",TabClass=class'BTGUI_Settings',Hint="Edit your BestTimes settings!")
-	BTTabs(3)=(Caption="Achievements",TabClass=class'BTGUI_Achievements',Hint="View your BestTimes achievements!")
-	BTTabs(4)=(Caption="Trophies",TabClass=class'BTGUI_Trophies',Hint="View your earned BestTimes trophies!")
-	BTTabs(5)=(Caption="Challenges",TabClass=class'BTGUI_Challenges',Hint="View available BestTimes challenges!")
-	BTTabs(6)=(Caption="Perks",TabClass=class'BTGUI_Perks',Hint="View available BestTimes perks!")
 	BTTabs(2)=(Caption="Commands",TabClass=class'BTGUI_Commands',Hint="Execute useful BestTimes commands!")
+	BTTabs(3)=(Caption="Store",TabClass=class'BTGUI_Store',Hint="Buy nice visual items for your character!",Style=oStoreStyle)
+	BTTabs(4)=(Caption="Gimmicks",TabClass=class'BTGUI_Gimmicks',Hint="View achievements, challenges, trophies and perks!")
 
 	Begin Object class=GUITabControl name=oPageTabs
 		WinWidth=0.98
@@ -73,8 +91,8 @@ defaultproperties
 		WinTop=0.01
 		WinHeight=0.05
 		TabHeight=0.04
-		//RenderWeight=0.49
-		bFillSpace=false
+		bFillBackground=true
+		bFillSpace=true
 		bAcceptsInput=true
 		bDockPanels=true
 		OnChange=InternalOnChange
