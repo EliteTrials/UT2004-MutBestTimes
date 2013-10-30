@@ -93,6 +93,7 @@ struct sItemClient
  	var int Cost;
  	var bool bBought;
  	var bool bEnabled;
+ 	var byte Access;
  	var string Desc;
  	var Material IconTexture;
 
@@ -686,26 +687,36 @@ simulated final function ClientCleanAchievements()
 }
 
 /** Merges all three variables into one chunk. */
-final static function int CompressStoreData( int cost, bool bBought, bool bEnabled )
+final static function int CompressStoreData( int cost, bool bBought, bool bEnabled, byte access )
 {
 	local int data;
 
- 	data = cost;
+ 	data = cost & 0x0000FFFF;
  	if( bBought )
  	{
- 		data = data | (0x00000001 << 16);
+ 		data = data | 0x10000;
  	}
 
  	if( bEnabled )
  	{
- 		data = data | (0x00000002 << 16);
+ 		data = data | 0x20000;
  	}
+ 	
+ 	data = data | (access << 24);
  	return data;
 }
 
-final static function DecompressStoreData( int data, out int price, out byte bBought, out byte bEnabled )
+final static function DecompressStoreData( int data, out int price, out byte bBought, out byte bEnabled, out byte access )
 {
+	local int acc;
+	
+	// Separately handled due implicit compiler casting to byte.
+	acc = data & 0x0F000000;
+	access = acc >> 24;
+	
  	price = data & 0x0000FFFF;
+ 	//bBought = ((data & 0x10000) >> 16);
+ 	//bEnabled = ((data & 0x20000) >> 16);
  	bBought = byte((((data & 0xFFFF0000) >> 16) & 0x00000001) != 0);
  	bEnabled = byte((((data & 0xFFFF0000) >> 16) & 0x00000002) != 0);
 }
@@ -713,17 +724,18 @@ final static function DecompressStoreData( int data, out int price, out byte bBo
 //int cost, bool bBought, bool bEnabled
 simulated final function ClientSendItem( string itemName, string id, int data )
 {
-	local byte bBought, bEnabled;
+	local byte bBought, bEnabled, access;
  	local int cost;
 
-	DecompressStoreData( data, cost, bBought, bEnabled );
-
 	Items.Insert( 0, 1 );
+	DecompressStoreData( data, cost, bBought, bEnabled, access );
+
 	Items[0].Name = itemName;
 	Items[0].ID = id;
 	Items[0].Cost = cost;
 	Items[0].bBought = bBought > 0;
 	Items[0].bEnabled = bEnabled > 0;
+	Items[0].Access = access;
 }
 
 simulated final function ClientSendItemMeta( string id, string desc, Material image )
@@ -746,13 +758,13 @@ simulated final function ClientSendItemMeta( string id, string desc, Material im
 simulated final function ClientSendItemData( string id, int data )
 {
 	local int i;
-	local byte bBought, bEnabled;
+	local byte bBought, bEnabled, access;
 	
 	for( i = 0; i< Items.Length; ++ i )
 	{
 		if( Items[i].id == id )
 		{
-			DecompressStoreData( data, Items[i].Cost, bBought, bEnabled  );
+			DecompressStoreData( data, Items[i].Cost, bBought, bEnabled, access );
 			Items[i].bBought = bool(bBought);
 			Items[i].bEnabled = bool(bEnabled);
 			break;
