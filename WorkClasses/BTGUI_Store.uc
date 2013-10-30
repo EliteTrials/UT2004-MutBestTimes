@@ -157,7 +157,8 @@ final function bool BuySelectedItem()
 
        	if( !PlayerOwner().PlayerReplicationInfo.bAdmin )
        	{
-			if( ClientData.Items[i].Cost <= 0 )
+			// 2 = Admin, 4 = Private
+			if( ClientData.Items[i].Access == 2 || ClientData.Items[i].Access == 4 )
 			{
 				if( PlayerOwner().Level.NetMode == NM_Client )
 				{

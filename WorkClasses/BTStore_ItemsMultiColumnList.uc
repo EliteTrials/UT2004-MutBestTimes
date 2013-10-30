@@ -32,8 +32,8 @@ function UpdateList()
 function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, bool bSelected, bool bPending )
 {
 	local float CellLeft, CellWidth;
-	local eMenuState MState;
 	local GUIStyles DrawStyle;
+	local string price;
 
 	if( CRI == none )
 		return;
@@ -48,10 +48,45 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 		DrawStyle = SelectedStyle;
 	}
 	else DrawStyle = Style;
-
-	MState = MenuState;
-
+	
+	Canvas.Style = 3;
+	
 	GetCellLeftWidth( 0, CellLeft, CellWidth );
+	switch( CRI.Items[SortData[i].SortItem].Access )
+	{
+		case 0:
+			price = string(CRI.Items[SortData[i].SortItem].Cost);
+			break;
+			
+		case 1:
+			price = "€Free";
+			Canvas.SetDrawColor( 30, 45, 30, 40 );
+			Canvas.SetPos( CellLeft+2, Y+2 );
+			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
+			break;
+		
+		case 2:
+			price = "€Admin";
+			Canvas.SetDrawColor( 45, 30, 30, 40 );
+			Canvas.SetPos( CellLeft+2, Y+2 );
+			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
+			break;
+			
+		case 3:
+			price = "€€Premium";
+			Canvas.SetDrawColor( 30, 45, 45, 40 );
+			Canvas.SetPos( CellLeft+2, Y+2 );
+			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
+			break;
+			
+		case 4:
+			price = "€€€Private";
+			Canvas.SetDrawColor( 30, 30, 45, 40 );
+			Canvas.SetPos( CellLeft+2, Y+2 );
+			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
+			break;
+	}
+
 	if( CRI.Items[SortData[i].SortItem].bBought )
 	{
 		Canvas.SetPos( CellLeft, Y );
@@ -61,20 +96,18 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 		Canvas.Style = 3;
 		CellLeft += H + 4;
 	}
-	DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		CRI.Items[SortData[i].SortItem].Name, FontScale );
 
+	DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
+		CRI.Items[SortData[i].SortItem].Name, FontScale );
+		
 	GetCellLeftWidth( 1, CellLeft, CellWidth );
-	DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		Eval( CRI.Items[SortData[i].SortItem].Cost > 0, string(CRI.Items[SortData[i].SortItem].Cost), "ÿAdmin" ), FontScale );
+	DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, price, FontScale );
 
 	GetCellLeftWidth( 2, CellLeft, CellWidth );
-	DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+	DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
 		Eval( CRI.Items[SortData[i].SortItem].bEnabled, "Yes", "No" ), FontScale );
-
-	/*GetCellLeftWidth( 3, CellLeft, CellWidth );
-	DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		CRI.Items[SortData[i].SortItem].Desc, FontScale );*/
+		
+	Canvas.SetPos( X, Y );
 }
 
 function bool InternalOnRightClick( GUIComponent sender )
@@ -86,6 +119,7 @@ event Free()
 {
 	super.Free();
 	CRI = none;
+	PositiveIcon = none;
 }
 
 defaultproperties
@@ -97,17 +131,14 @@ defaultproperties
 	ColumnHeadings(0)="Item"
 	ColumnHeadings(1)="Price"
 	ColumnHeadings(2)="Active"
-	//ColumnHeadings(3)="Desc"
 
-	InitColumnPerc(0)=0.75
-	InitColumnPerc(1)=0.10
+	InitColumnPerc(0)=0.70
+	InitColumnPerc(1)=0.15
 	InitColumnPerc(2)=0.15
-	//InitColumnPerc(3)=0.5
 
 	ColumnHeadingHints(0)="ID of the item"
 	ColumnHeadingHints(1)="Price of the item"
-	ColumnHeadingHints(2)="Whether the item is activated"
-	//ColumnHeadingHints(3)="Description for item"
+	ColumnHeadingHints(2)="Whether the item is active"
 
 	SortColumn=0
 	SortDescending=true
