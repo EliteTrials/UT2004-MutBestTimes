@@ -26,6 +26,18 @@ replication
 		Orange;
 }
 
+struct sTableColumn
+{
+	var string Title;
+	var string Format;
+	var name id;
+};
+
+struct sCanvasColumn
+{
+	var float W, H;
+};
+
 /*const BorderSize = 2;
 const ExTileWidth = 10;
 const ExTextOffset = 1;*/
@@ -50,6 +62,9 @@ var const
 	Table_Time,
 	RankingToggleMsg,
 	RankingHideMsg;
+
+var const array<sTableColumn> PlayersRankingColumns;
+var const array<sTableColumn> RecordsRankingColumns;
 
 var string
 	RankingKeyMsg,
@@ -109,6 +124,52 @@ var float LastLandedTime;
 var bool bPerformedDodge;
 var bool bPreDodgeReady;
 var bool bDodgeReady;
+
+/** Returns int A as a color tag. */
+static final preoperator string $( int A )
+{
+	return Chr( 0x1B ) $ (Chr( Max(byte(A >> 16), 1)  ) $ Chr( Max(byte(A >> 8), 1) ) $ Chr( Max(byte(A & 0xFF), 1) ));
+}
+
+/** Returns color A as a color tag. */
+static final preoperator string $( Color A )
+{
+	return (Chr( 0x1B ) $ (Chr( Max( A.R, 1 )  ) $ Chr( Max( A.G, 1 ) ) $ Chr( Max( A.B, 1 ) )));
+}
+
+final static preoperator Color #( int rgbInt )
+{
+	local Color c;
+	
+	c.R = rgbInt >> 24;	
+	c.G = rgbInt >> 16;	
+	c.B = rgbInt >> 8;	
+	c.A = (rgbInt & 255);	
+	return c;
+}
+
+final static function Color MakeColor( optional byte r, optional byte g, optional byte b, optional byte a )
+{
+	local Color c;
+
+	c.r = r;
+	c.g = g;
+	c.b = b;
+	c.a = a;
+	return c;
+}
+
+final static function Color Darken( Color c, float pct )
+{
+	pct = 1.0 - pct/100.0f;
+	return MakeColor( c.R*pct, c.G*pct, c.B*pct, c.A );
+}
+
+final static function Color Lighten( Color c, float pct )
+{
+	pct = 1.0 + pct/100.0f;
+	return MakeColor( c.R*pct, c.G*pct, c.B*pct, c.A );
+}
 
 Final Function SendConsoleMessage( string Msg )
 {
@@ -1629,6 +1690,454 @@ function RenderDodgeReady( Canvas C )
 	}
 }
 
+function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> columns, optional out float totalWidth, optional out float totalHeight )
+{
+	local int i;
+	local float xl, yl, titleXL, titleYL;
+	local array<sCanvasColumn> canvasColumns;
+
+	canvasColumns.Length = columns.Length;
+	for( i = 0; i < columns.Length; ++ i )
+	{
+		C.StrLen( columns[i].Format, xl, yl );
+		C.StrLen( columns[i].Title, titleXL, titleYL );
+		if( titleXL > xl )
+		{
+			xl = titleXL;
+		}
+
+		if( titleYL > yl )
+		{
+			yl = titleYL;
+		}		
+
+		canvasColumns[i].W = xl + COLUMN_PADDING_X*2;
+		canvasColumns[i].H = yl + COLUMN_PADDING_Y*2;
+
+		totalWidth += canvasColumns[i].W;
+		if( canvasColumns[i].H > totalHeight )
+		{
+			totalHeight = canvasColumns[i].H;
+		}
+
+	}
+	return canvasColumns;
+}
+
+final function RenderTables( Canvas C )
+{
+	RenderRankingsTable( C );
+	RenderRecordsTable( C );
+}
+
+// Top players count
+final function int GetRankingsCount()
+{
+	if( Options.GlobalSort == 0 )
+	{
+		return MRI.CR.OverallTop.Length;
+	}
+	else if( Options.GlobalSort == 1 )
+	{
+		return MRI.CR.QuarterlyTop.Length;
+	}
+	else if( Options.GlobalSort == 2 )
+	{
+		return MRI.CR.DailyTop.Length;
+	}	
+}
+
+// Top records count
+final function int GetRecordsCount()
+{
+	return MRI.CR.SoloTop.Length;
+}
+
+final function bool IsSelectedTable( int index )
+{
+	return SelectedTable == index;
+}
+
+final function bool IsSelectedRow( int index )
+{
+	return Selectedindex == index;
+}
+
+const TABLE_PADDING = 4;
+const TAB_GUTTER = 4;
+const HEADER_GUTTER = 2;
+const COLUMN_MARGIN = 2;
+const COLUMN_PADDING_X = 4;
+const COLUMN_PADDING_Y = 2;
+const ROW_MARGIN = 2;
+
+final function DrawLayer( Canvas C, float x, float y, float width, float height )
+{
+	C.SetPos( x, y );
+	C.DrawTile( AlphaLayer, width, height, 0, 0, 256, 256 );
+	C.SetPos( x, y ); // Reset pushment from DrawTile
+}
+
+final function DrawHeaderTile( Canvas C, float x, float y, float width, float height )
+{
+	C.DrawColor = #0x99990066;
+	DrawLayer( C, x, y, width, height );
+}
+
+final function DrawHeaderText( Canvas C, float x, float y, string title )
+{
+	C.SetPos( x + COLUMN_PADDING_X, y + COLUMN_PADDING_Y );
+	C.DrawColor = #0xFFFFFFFF;
+	C.DrawText( title, false );
+	C.SetPos( x, y ); // Reset pushment from DrawText
+}
+
+final function DrawColumnTile( Canvas C, float x, float y, float width, float height )
+{
+	DrawLayer( C, x, y, width, height );
+}
+
+final function DrawColumnText( Canvas C, float x, float y, string title )
+{
+	C.SetPos( x + COLUMN_MARGIN, y + COLUMN_MARGIN );
+	C.DrawText( title, false );
+	C.SetPos( x, y ); // Reset pushment from DrawText
+}
+
+final function RenderRankingsTable( Canvas C )
+{
+	// PRE-RENDERED
+	local int totalRows, itemsCount;
+	local array<sCanvasColumn> columns;
+	local float headerWidth, headerHeight;
+	local float tableX, tableY;
+	local float drawX, drawY;
+	local float tableWidth, tableHeight;
+	local float fontXL, fontYL;
+
+	// Temporary string measures.
+	local float xl, yl;
+	local string s;
+
+	// FLOW
+	local int columnIdx;
+	local int i;
+	local string value;
+	local bool isFocused, isRowSelected;
+
+	// PRE-RENDERING
+	C.Font = GetScreenFont( C );
+	C.StrLen( "T", fontXL, fontYL );
+
+	isFocused = IsSelectedTable( 0 );
+	itemsCount = GetRankingsCount();	
+	totalRows = itemsCount + 1; // +1 TABS ROW	
+	if( isFocused || itemsCount == 0 )
+	{
+		++ totalRows; // Inlined tooltip
+	}
+
+	columns = CreateColumns( C, PlayersRankingColumns, headerWidth, headerHeight );
+
+	tableWidth = headerWidth;
+	tableHeight = (headerHeight + ROW_MARGIN)*(totalRows + 1) + ROW_MARGIN + HEADER_GUTTER;
+
+	tableX = 0;
+	tableY = C.ClipY*0.5 - tableHeight*0.5;	// Centered;
+
+	// Progressing render position, starting from the absolute table's position.
+	drawX = tableX;
+	drawY = tableY;
+
+	// STYLING
+	C.DrawColor = #0xFFFFFF;
+
+	if( !isFocused )
+	{
+		C.bForceAlpha = true;
+		C.ForcedAlpha = 0.5;
+	}
+
+	// POST-RENDERING
+	// Draw body
+	C.DrawColor = Options.CTable;
+	DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth + TABLE_PADDING*2, tableHeight + TABLE_PADDING*2 );
+	drawX += TABLE_PADDING;
+	tableX = drawX;
+	tableY = drawY;
+
+	C.DrawColor = #0xEDEDED88;
+	DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+	DrawHeaderText( C, drawX, drawY, 
+		Eval(Options.GlobalSort == 0, "Top Players - All Time", 
+			Eval(Options.GlobalSort == 1, "Top Players - Monthly", 
+				Eval(Options.GlobalSort == 2, "Top Players - Daily", "")
+			) 
+		)
+	);
+	drawY += headerHeight + ROW_MARGIN*2;
+
+	// Draw headers
+	for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
+	{
+		DrawHeaderTile( C, drawX + COLUMN_MARGIN, drawY, columns[columnIdx].W - COLUMN_MARGIN*2, columns[columnIdx].H );
+		DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, PlayersRankingColumns[columnIdx].Title );
+		drawX += columns[columnIdx].W;
+	}
+	drawX = tableX;
+	drawY += headerHeight + HEADER_GUTTER;
+
+	if( itemsCount == 0 )
+	{
+		C.DrawColor = #0x666666EE;
+		s = "No data found, please try again later...";
+		DrawColumnText( C, drawX, drawY, s );
+	}
+
+	for( i = 0; i < itemsCount; ++ i )
+	{
+		isRowSelected = isFocused && IsSelectedRow( i );	
+		drawY += ROW_MARGIN;
+		if( isRowSelected)
+		{
+			C.DrawColor = #0x222222FF;
+		}
+		else
+		{
+			C.DrawColor = #0x22222244;
+		}
+		DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+		for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
+		{
+			value = "---";
+			switch( columnIdx )
+			{
+				case 0: // "Rank (Any)"
+					C.DrawColor = #0x666666FF;
+					value = string(i + 1);
+					break;
+
+				case 5: // "Tasks (Overall)"
+					C.DrawColor = #0x555555FF;
+					if( Options.GlobalSort == 0 )
+						value = string(MRI.CR.OverallTop[i].Objectives);
+					break;	
+
+				case 2: // "Player (All)"
+					C.DrawColor = #0xFFFFFFFF;
+					if( Options.GlobalSort == 0 )
+						value = MRI.CR.OverallTop[i].Name;
+					if( Options.GlobalSort == 1 )
+						value = MRI.CR.QuarterlyTop[i].Name;
+					if( Options.GlobalSort == 2 )
+						value = MRI.CR.DailyTop[i].Name;
+					break;				
+
+				case 1: // "Score (All)"
+					C.DrawColor = #0xFFFFF0FF;
+					if( Options.GlobalSort == 0 )
+						value = string(int(MRI.CR.OverallTop[i].Points));
+					if( Options.GlobalSort == 1 )
+						value = string(int(MRI.CR.QuarterlyTop[i].Points));
+					if( Options.GlobalSort == 2 )
+						value = string(int(MRI.CR.DailyTop[i].Points));
+					break;				
+
+				case 3: // "Records (All)"
+					C.DrawColor = #0xAAAAAAFF;
+					if( Options.GlobalSort == 0 )
+						value = string(MRI.CR.OverallTop[i].Hijacks & 0x0000FFFF);
+					if( Options.GlobalSort == 1 )
+						value = string(MRI.CR.QuarterlyTop[i].Records);
+					if( Options.GlobalSort == 2 )
+						value = string(MRI.CR.DailyTop[i].Records);
+					break;
+
+				case 4: // "Hijacks (Overall)"
+					C.DrawColor = #0xAAAAAAFF;
+					if( Options.GlobalSort == 0 )
+						value = string(MRI.CR.OverallTop[i].Hijacks >> 16);
+					break;
+			}
+
+			if( isRowSelected )
+			{
+				C.DrawColor = Lighten( C.DrawColor, 50F );
+			}
+			DrawColumnText( C, drawX, drawY, value );
+			drawX += columns[columnIdx].W;
+		}	
+
+		// Tooltip
+		if( isRowSelected )
+		{
+			drawX = tableX;
+			drawY += headerHeight + ROW_MARGIN;
+
+			C.DrawColor = #0x666666EE;
+			s = "Press " $ $class'HUD'.default.GoldColor $ "Enter" $ $C.DrawColor $ " to see more statistics of this player ...";
+			DrawColumnText( C, drawX, drawY, s );
+		}
+
+		drawX = tableX;
+		drawY += headerHeight;
+	}
+	C.bForceAlpha = false;
+}
+
+final function RenderRecordsTable( Canvas C )
+{
+// PRE-RENDERED
+	local int totalRows, itemsCount;
+	local array<sCanvasColumn> columns;
+	local float headerWidth, headerHeight;
+	local float tableX, tableY;
+	local float drawX, drawY;
+	local float tableWidth, tableHeight;
+	local float fontXL, fontYL;
+
+	// Temporary string measures.
+	local float xl, yl;
+	local string s;
+
+	// FLOW
+	local int columnIdx;
+	local int i;
+	local string value;
+	local bool isFocused, isRowSelected;
+
+	// PRE-RENDERING
+	C.Font = GetScreenFont( C );
+	C.StrLen( "T", fontXL, fontYL );
+
+	isFocused = IsSelectedTable( 1 );
+
+	itemsCount = GetRecordsCount();	
+	totalRows = itemsCount + 1; // +1 TABS ROW	
+	if( isFocused || itemsCount == 0 )
+	{
+		++ totalRows; // Inlined tooltip
+	}
+	columns = CreateColumns( C, RecordsRankingColumns, headerWidth, headerHeight );
+
+	tableWidth = headerWidth;
+	tableHeight = (headerHeight + ROW_MARGIN)*(totalRows + 1) + ROW_MARGIN + HEADER_GUTTER;
+
+	tableX = C.ClipX - tableWidth - TABLE_PADDING;
+	tableY = C.ClipY*0.5 - tableHeight*0.5;	// Centered;
+
+	// Progressing render position, starting from the absolute table's position.
+	drawX = tableX;
+	drawY = tableY;
+
+	// STYLING
+	C.DrawColor = #0xFFFFFF;
+
+	if( !isFocused )
+	{
+		C.bForceAlpha = true;
+		C.ForcedAlpha = 0.5;
+	}
+
+	// POST-RENDERING
+	// Draw body
+	C.DrawColor = Options.CTable;
+	DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth + TABLE_PADDING*2, tableHeight + TABLE_PADDING*2 );
+	drawX += TABLE_PADDING;
+	// drawY += TABLE_PADDING;
+	tableX = drawX;
+	tableY = drawY;
+
+	C.DrawColor = #0xEDEDED88;
+	DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+	DrawHeaderText( C, drawX, drawY, "Top Records" );
+	drawY += headerHeight + ROW_MARGIN*2;
+
+	// Draw headers
+	for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
+	{
+		DrawHeaderTile( C, drawX + COLUMN_MARGIN, drawY, columns[columnIdx].W - COLUMN_MARGIN*2, columns[columnIdx].H );
+		DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, RecordsRankingColumns[columnIdx].Title );
+		drawX += columns[columnIdx].W;
+	}
+	drawX = tableX;
+	drawY += headerHeight + HEADER_GUTTER;
+
+	if( itemsCount == 0 )
+	{
+		C.DrawColor = #0x666666EE;
+		s = "No data found, please try again later...";
+		DrawColumnText( C, drawX, drawY, s );
+	}
+
+	for( i = 0; i < itemsCount; ++ i )
+	{
+		isRowSelected = isFocused && IsSelectedRow( i );
+		drawY += ROW_MARGIN;
+		if( isRowSelected )
+		{
+			C.DrawColor = #0x222222FF;
+		}
+		else
+		{
+			C.DrawColor = #0x22222244;
+		}
+		DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+		for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
+		{
+			switch( columnIdx )
+			{
+				case 0: // "Rank"
+					C.DrawColor = #0x666666FF;
+					value = string(i + 1);
+					break;
+
+				case 1: // "Score"
+					C.DrawColor = #0xFFFFF0FF;
+					value = string(int(MRI.CR.SoloTop[i].Points));
+					break;				
+
+				case 2: // "Player"
+					C.DrawColor = #0xFFFFFFFF;
+					value = MRI.CR.SoloTop[i].Name;
+					break;				
+
+				case 3: // "Time"
+					C.DrawColor = #0xAAAAAAFF;
+					value = FormatTimeCompact(MRI.CR.SoloTop[i].Time);
+					break;
+
+				case 4: // "Date"
+					C.DrawColor = #0xAAAAAAFF;
+					value = MRI.CR.SoloTop[i].Date;
+					break;
+			}
+
+			if( isRowSelected )
+			{
+				C.DrawColor = Lighten( C.DrawColor, 50F );
+			}
+			DrawColumnText( C, drawX, drawY, value );
+			drawX += columns[columnIdx].W;
+		}	
+
+		// Tooltip
+		if( isRowSelected )
+		{
+			drawX = tableX;
+			drawY += headerHeight + ROW_MARGIN;
+
+			C.DrawColor = #0x666666EE;
+			s = "Press " $ $class'HUD'.default.GoldColor $ "Enter" $ $C.DrawColor $ " to see more statistics of this player ...";
+			DrawColumnText( C, drawX, drawY, s );
+		}
+
+		drawX = tableX;
+		drawY += headerHeight;
+	}
+	C.bForceAlpha = false;
+}
+
 function PostRender( Canvas C )
 {
 	local string S;
@@ -1776,623 +2285,7 @@ function PostRender( Canvas C )
 	    if( ViewportOwner.Actor.Level.GRI != none )
 	    {
 			RenderRankIcon( C );
-
-			if( Options.GlobalSort == 0 )
-			{
-				j = MRI.CR.OverallTop.Length;
-			}
-			else if( Options.GlobalSort == 1 )
-			{
-				j = MRI.CR.QuarterlyTop.Length;
-			}
-			else if( Options.GlobalSort == 2 )
-			{
-				j = MRI.CR.DailyTop.Length;
-			}
-
-			C.Font = GetScreenFont( C );
-			C.StrLen( "T", FXL, FYL );
-
-			// Prediction
-			/*if( MRI.CR.UserState[0] != "" )
-				ExYL = FYL*4;
-			else*/ ExYL = FYL;
-
-			if( Options.GlobalSort == 0 && MRI.CR.Rank > j )
-				ExYL += FYL*2;
-
-			YLength = (FYL * (j+2))+ExYL;
-			FLength = ((C.ClipY*0.5)-(YLength*0.5));
-
-			// Begin Columns
-			XP = 4;
-			C.TextSize( Table_Rank, XPL, YPL );
-			XP1 = XP;
-
-			XP += XPL+6;
-			C.TextSize( Table_PlayerName, XPL, YPL );
-			XP2 = XP;
-
-			XP += XPL+74;
-			C.TextSize( Table_Points, XPL, YPL );
-			XP3 = XP;
-
-			if( Options.GlobalSort == 0 )
-			{
-				XP += XPL+24;
-				C.TextSize( Table_Objectives, XPL, YPL );
-				XP4 = XP;
-			}
-
-			XP += XPL+24;
-			C.TextSize( Table_Records, XPL, YPL );
-			XP5 = XP;
-			// End Columns
-
-			// Begin Table
-			TableXL = XP5 + XPL + 16;
-			C.SetPos( TableOffset, FLength );
-
-			C.Style = 1;
-			C.DrawColor = Options.CTable;
-			C.DrawTile( AlphaLayer, TableXL, YLength, 0, 0, 256, 256 );
-
-			// Draw border
-			C.CurX = TableOffset;
-			C.DrawColor = Class'HUD'.Default.GrayColor;
-			C.DrawColor.A = 100;
-			class'BTClient_SoloFinish'.Static.DrawHorizontal( C, FLength-2, TableXL );
-			Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, FLength+YLength, TableXL );
-			C.CurY -= 2;
-			Class'BTClient_SoloFinish'.Static.DrawVertical( C, TableOffset, YLength+4 );
-			Class'BTClient_SoloFinish'.Static.DrawVertical( C, TableOffset+TableXL, YLength+4 );
-			// ...
-			// End Table
-
-			// Begin Data
-			C.TextSize( "T", XL, YL );
-			C.SetPos( TableOffset, FLength + YL );
-			C.DrawColor = class'HUD'.default.WhiteColor;
-			class'BTClient_SoloFinish'.static.DrawHorizontal( C, (FLength-2) + YL, TableXL );
-
-			rXL = TableOffset + 4;
-			C.SetPos( rXL, FLength );
-			S = "Tab: ";
-			C.TextSize( S, XL, YL );
-			C.DrawColor = Orange;
-			C.DrawText( S, true );
-
-			rXL = XL + 8;
-			C.SetPos( rXL, FLength );
-			S = "All Time";
-			C.TextSize( S, XL, YL );
-			C.DrawColor = class'HUD'.default.WhiteColor;
-			if( Options.GlobalSort == 0 )
-			{
-		  		C.DrawColor = class'HUD'.default.GoldColor;
-		  	}
-			C.DrawText( S, true );
-
-			rXL += XL + 8;
-			C.SetPos( rXL, FLength );
-			S = "Quarterly";
-			C.TextSize( S, XL, YL );
-			C.DrawColor = class'HUD'.default.WhiteColor;
-			if( Options.GlobalSort == 1 )
-			{
-		  		C.DrawColor = class'HUD'.default.GoldColor;
-		  	}
-			C.DrawText( S, true );
-
-			rXL += XL + 8;
-			C.SetPos( rXL, FLength );
-			S = "Daily";
-			C.DrawColor = class'HUD'.default.WhiteColor;
-			if( Options.GlobalSort == 2 )
-			{
-		  		C.DrawColor = class'HUD'.default.GoldColor;
-		  	}
-			C.DrawText( S, true );
-
-			if( j == 0 )
-			{
-				S = "There are no ranked players in ";
-				switch( Options.GlobalSort )
-				{
-					case 0:
-						S $= "All Time";
-						break;
-
-					case 1:
-						S $= "Quarterly";
-						break;
-
-					case 2:
-						S $= "Daily";
-						break;
-				}
-				S $= "!";
-				C.TextSize( S, XL, YL );
-				C.SetPos( TableOffset + ((TableXL * 0.5) - (XL * 0.5)), FLength + FYL );
-				C.DrawColor = myHUD.RedColor;
-				C.DrawText( S, True );
-			}
-		 	else
-		 	{
-		 		C.DrawColor = class'HUD'.default.WhiteColor;
-
-		 		// Begin Rank, PlayerName, Points, Objectives and Records columns
-				YP = FYL*2;
-				C.SetPos( XP1, FLength + YP );
-				C.DrawText( Table_Rank, True );
-
-				C.SetPos( XP2, FLength + YP );
-				C.DrawText( Table_PlayerName, True );
-
-				C.SetPos( XP3, FLength + YP );
-				C.DrawText( Table_Points, True );
-
-				if( Options.GlobalSort == 0 )
-				{
-					C.SetPos( XP4, FLength + YP );
-					C.DrawText( Table_Objectives, True );
-				}
-
-				C.SetPos( XP5, FLength + YP );
-				C.DrawText( Table_Records, True );
-
-				// Draw Players info!
-				for( i = 0; i < j; ++ i )
-				{
-					YP += FYL;
-
-					// Background
-					// 0 = NOT RANKED
-					if( Options.GlobalSort == 0 && MRI.CR.Rank > 0 && MRI.CR.Rank-1 == i )
-					{
-						// Draw background
-						C.DrawColor = C.MakeColor( 128, 128, 0, Options.CTable.A );
-
-		                //C.Style = 1;
-		                C.SetPos( TableOffset, FLength + YP );
-						C.DrawTile( AlphaLayer, TableXL, FYL-2, 0, 0, 256, 256 );
-					}
-
-					if( SelectedTable == 0 && i == SelectedIndex )
-					{
-						// Draw background
-						C.DrawColor = C.MakeColor( 255, 255, 255, Options.CTable.A );
-
-		                //C.Style = 1;
-		                C.SetPos( TableOffset, FLength + YP );
-						C.DrawTile( AlphaLayer, TableXL, FYL-2, 0, 0, 256, 256 );
-					}
-
-					// Rank
-					S = string( i+1 );
-					C.SetPos( XP1, FLength + YP );
-					C.DrawColor = myHUD.WhiteColor;
-					C.DrawText( S, True );
-
-					if( Options.GlobalSort == 0 )
-					{
-						// Player Name
-						S = MRI.CR.OverallTop[i].Name;
-						test:
-						C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-						if( nXP >= (XP3-XP2) )
-						{
-							S = Left( S, Len( S )-1 );
-							goto 'test';
-						}
-						C.SetPos( XP2, FLength + YP );
-						C.DrawColor = C.MakeColor( 100, 100, 100 );
-						C.DrawText( S, True );
-
-						// Points
-						S = string( int( MRI.CR.OverallTop[i].Points ) );
-						C.SetPos( XP3, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Obj's
-						S = string( MRI.CR.OverallTop[i].Objectives );
-						C.SetPos( XP4, FLength + YP );
-						C.DrawText( S, True );
-
-						// Rec's
-						S = MRI.CR.OverallTop[i].Hijacks & 0x0000FFFF $ "/" $ MRI.CR.OverallTop[i].Hijacks >> 16;
-						C.SetPos( XP5, FLength + YP );
-						C.DrawText( S, true );
-					}
-					else if( Options.GlobalSort == 1 )
-					{
-						// Player Name
-						S = MRI.CR.QuarterlyTop[i].name;
-						testQuarterly:
-						C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-						if( nXP >= (XP3-XP2) )
-						{
-							S = Left( S, Len( S )-1 );
-							goto 'testQuarterly';
-						}
-						C.SetPos( XP2, FLength + YP );
-						C.DrawColor = C.MakeColor( 100, 100, 100 );
-						C.DrawText( S, True );
-
-						// Points
-						S = string( int( MRI.CR.QuarterlyTop[i].Points ) );
-						C.SetPos( XP3, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Rec's
-						S = string( MRI.CR.QuarterlyTop[i].Records );
-						C.SetPos( XP5, FLength + YP );
-						C.DrawText( S, true );
-					}
-					else if( Options.GlobalSort == 2 )
-					{
-						// Player Name
-						S = MRI.CR.DailyTop[i].name;
-						testDaily:
-						C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-						if( nXP >= (XP3-XP2) )
-						{
-							S = Left( S, Len( S )-1 );
-							goto 'testDaily';
-						}
-						C.SetPos( XP2, FLength + YP );
-						C.DrawColor = C.MakeColor( 100, 100, 100 );
-						C.DrawText( S, True );
-
-						// Points
-						S = string( int( MRI.CR.DailyTop[i].Points ) );
-						C.SetPos( XP3, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Rec's
-						S = string( MRI.CR.DailyTop[i].Records );
-						C.SetPos( XP5, FLength + YP );
-						C.DrawText( S, true );
-					}
-				}
-
-				if( Options.GlobalSort == 0 && MRI.CR.Rank > j )
-				{
-					YP += FYL*2;
-
-					// Draw background
-					C.DrawColor = C.MakeColor( 128, 128, 0, Options.CTable.A );
-
-					//C.Style = 1;
-					C.SetPos( TableOffset, FLength + YP );
-					C.DrawTile( AlphaLayer, TableXL, FYL-2, 0, 0, 256, 256 );
-
-					// Rank
-					S = string( MRI.CR.Rank );
-					C.SetPos( XP1, FLength + YP );
-					C.DrawColor = myHUD.WhiteColor;
-					C.DrawText( S, True );
-
-					// Player Name
-					S = MRI.CR.MyOverallTop.Name;
-					testx:
-					C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-					if( nXP >= (XP3-XP2) )
-					{
-						S = Left( S, Len( S )-1 );
-						goto 'testx';
-					}
-					C.SetPos( XP2, FLength + YP );
-					C.DrawColor = C.MakeColor( 100, 100, 100 );
-					C.DrawText( S, True );
-
-					// Points
-					S = string( int( MRI.CR.MyOverallTop.Points ) );
-					C.SetPos( XP3, FLength + YP );
-					C.DrawColor = Options.CGoldText;
-					C.DrawText( S, True );
-
-					// Obj's
-					S = string( MRI.CR.MyOverallTop.Objectives );
-					C.SetPos( XP4, FLength + YP );
-					C.DrawText( S, True );
-
-					// Rec's
-					S = MRI.CR.MyOverallTop.Hijacks & 0x0000FFFF $ "/" $ MRI.CR.MyOverallTop.Hijacks >> 16;
-					C.SetPos( XP5, FLength + YP );
-					C.DrawText( S, True );
-				}
-
-				/*if( MRI.CR.UserState[0] != "" )
-				{
-					C.Font = myHUD.GetMediumFont( -1 );
-
-					C.DrawColor = Class'HUD'.Default.TurqColor;
-					YP += FYL*2;
-					C.SetPos( TableOffset + 4, FLength + YP );
-					C.DrawText( MRI.CR.UserState[0], True );
-					YP += FYL;
-					C.SetPos( TableOffset + 4, FLength + YP );
-					C.DrawText( MRI.CR.UserState[1], True );
-				}*/
-			}
-
-			// Top 25 records table!
-			j = MRI.CR.SoloTop.Length;
-			if( j > 0 )
-			{
-				C.Font = GetScreenFont( C );
-				C.StrLen( "T", FXL, FYL );
-
-				if( MRI.CR.SoloRank > j )
-					ExYL = FYL*5;
-				else ExYL = FYL*3;
-
-				// Calculate the positions before we start drawing!
-				XP = 4;
-				// Use table_rank instead of top!, but draw table_top ^^
-				C.TextSize( Table_Rank, XPL, YPL );
-				XP1 = XP;
-
-				// + = addional offset from last calculated Header name
-
-				XP += XPL+6;
-				C.TextSize( Table_PlayerName, XPL, YPL );
-				XP2 = XP;
-
-				XP += XPL+74;
-				C.TextSize( Table_Points, XPL, YPL );
-				XP5 = XP;
-
-				XP += XPL+16;
-				if( Options.bDisplayFullTime )
-				{
-					C.TextSize( "00:00:00.00", XPL, YPL );
-				}
-				else
-				{
-					C.TextSize( "00.00", XPL, YPL );
-				}
-				XP3 = XP;
-
-				if( Options.bDisplayFullTime )
-				{
-					XP += XPL+16;
-				}
-				else
-				{
-					XP += XPL+34;
-				}
-				C.TextSize( "00/00/0000", XPL, YPL );
-				XP4 = XP;
-				// ...
-
-				//GUIComponent None (function XInterface.GUIComponent.StripColorCodes:0012) Runaway loop detected (over 10000000 iterations)
-				// Best error ever!
-
-				// Draw background
-				YLength = (FYL * j)+ExYL;
-				FLength = ((C.ClipY*0.5)-(YLength*0.5));
-				TableXL = XP4+XPL+16;
-				TableOffset = C.ClipX - TableXL - 2/*right end border*/;
-				C.SetPos( TableOffset, FLength );
-
-	   			C.Style = 1;
-	   			C.DrawColor = Options.CTable;
-				C.DrawTile( AlphaLayer, TableXL, YLength, 0, 0, 256, 256 );
-				// ...
-
-				// Draw border
-				C.CurX = TableOffset;
-				C.DrawColor = Class'HUD'.Default.GrayColor;
-				C.DrawColor.A = 100;
-				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, FLength-2, TableXL );
-				Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, FLength+YLength, TableXL );
-				C.CurY -= 2;
-				Class'BTClient_SoloFinish'.Static.DrawVertical( C, TableOffset, YLength+4 );
-				Class'BTClient_SoloFinish'.Static.DrawVertical( C, TableOffset+TableXL, YLength+4 );
-				// ...
-
-				//C.Style = 3;
-				TableOffset += 4;
-
-				// Draw Header 1
-				C.TextSize( "T", XL, YL );
-				C.SetPos( TableOffset, FLength );
-				C.DrawColor = class'HUD'.default.WhiteColor;
-				class'BTClient_SoloFinish'.static.DrawHorizontal( C, (FLength-2) + YL, TableXL );
-
-				rXL = TableOffset;
-		        C.SetPos( rXL, FLength );
-		        S = "Tab: ";
-		        C.TextSize( S, XL, YL );
-		        C.DrawColor = Orange;
-				C.DrawText( S, true );
-
-		        rXL += XL + 8;
-		        C.SetPos( rXL, FLength );
-		        S = "Records";
-		        C.TextSize( S, XL, YL );
-		        C.DrawColor = class'HUD'.default.WhiteColor;
-		        if( SelectedMapTab == 0 || MRI.Level.Screenshot == none )
-		        {
-		      		C.DrawColor = class'HUD'.default.GoldColor;
-		      	}
-				C.DrawText( S, true );
-
-				if( MRI.Level.Screenshot != none )
-				{
-			        rXL += XL + 8;
-					C.SetPos( rXL, FLength );
-			        S = "Map";
-			        C.TextSize( S, XL, YL );
-			        C.DrawColor = class'HUD'.default.WhiteColor;
-			        if( SelectedMapTab == 1 )
-			        {
-			      		C.DrawColor = class'HUD'.default.GoldColor;
-			      	}
-					C.DrawText( S, true );
-				}
-
-				C.DrawColor = class'HUD'.default.WhiteColor;
-
-				if( SelectedMapTab == 0 )
-				{
-					// Draw Header 2
-					YP = FYL*2;
-
-					// Draw Top
-					C.SetPos( XP1 + TableOffset, FLength + YP );
-					C.DrawText( Table_Top, true );
-
-					// Draw Player
-					C.SetPos( XP2 + TableOffset, FLength + YP );
-					C.DrawText( Table_PlayerName, true );
-
-					// Draw Points
-					C.SetPos( XP5 + TableOffset, FLength + YP );
-					C.DrawText( Table_Points, True );
-
-					//Draw Time
-					C.SetPos( XP3 + TableOffset, FLength + YP );
-					C.DrawText( Table_Time, True );
-
-					// Draw Date
-					C.SetPos( XP4 + TableOffset, FLength + YP );
-					C.DrawText( Table_Date, True );
-
-					// Draw the packets
-					for( i = 0; i < j; ++ i )
-					{
-						YP += FYL;
-
-						// Background
-						// 0 = NOT RANKED
-						if( MRI.CR.SoloRank > 0 && MRI.CR.SoloRank-1 == i )
-						{
-							// Draw background
-							C.DrawColor = C.MakeColor( 128, 128, 0, Options.CTable.A );
-
-			                C.SetPos( TableOffset - 2, FLength + YP );
-							C.DrawTile( AlphaLayer, TableXL - 2, FYL-2, 0, 0, 256, 256 );
-						}
-
-						if( SelectedTable == 1 && i == SelectedIndex )
-						{
-							// Draw background
-							C.DrawColor = C.MakeColor( 255, 255, 255, Options.CTable.A );
-
-			                C.SetPos( TableOffset - 2, FLength + YP );
-							C.DrawTile( AlphaLayer, TableXL - 2, FYL-2, 0, 0, 256, 256 );
-						}
-
-						// Top
-						S = string( i+1 );
-						C.SetPos( XP1 + TableOffset, FLength + YP );
-						C.DrawColor = class'HUD'.default.WhiteColor;
-						C.DrawText( S, True );
-
-						// Point
-						S = string( MRI.CR.SoloTop[i].Points );
-						C.SetPos( XP5 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Name
-						S = MRI.CR.SoloTop[i].Name;
-						// Test name length whether if it fits the colum
-						test2:
-						C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-						if( nXP >= (XP5-XP2) )
-						{
-							S = Left( S, Len( S )-1 );
-							goto 'test2';
-						}
-						C.SetPos( XP2 + TableOffset, FLength + YP );
-						C.DrawColor = C.MakeColor( 100, 100, 100 );
-						C.DrawText( S, True );
-
-						// Time
-						S = FormatTime( MRI.CR.SoloTop[i].Time );
-						C.SetPos( XP3 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Date
-						S = MRI.CR.SoloTop[i].Date;
-						C.SetPos( XP4 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-					}
-
-					// Personal Packet
-					if( MRI.CR.SoloRank > j )	// Note:SoloRank is one value higher than the actual index!
-					{
-						YP += FYL*2;
-
-						// Draw background
-						C.DrawColor = C.MakeColor( 128, 128, 0, Options.CTable.A );
-
-		                //C.Style = 1;
-		                C.SetPos( TableOffset - 2, FLength + YP );
-						C.DrawTile( AlphaLayer, TableXL - 2, FYL-2, 0, 0, 256, 256 );
-
-						// Top
-						S = string( MRI.CR.SoloRank );
-						C.SetPos( XP1 + TableOffset, FLength + YP );
-						C.DrawColor = class'HUD'.default.WhiteColor;
-						C.DrawText( S, True );
-
-						// Points
-						S = string( MRI.CR.MySoloTop.Points );
-						C.SetPos( XP5 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Name
-						S = MRI.CR.MySoloTop.Name;
-						test3:
-						C.StrLen( Class'GUIComponent'.Static.StripColorCodes( S ), nXP, nYP );
-						if( nXP >= (XP5-XP2) )
-						{
-							S = Left( S, Len( S )-1 );
-							goto 'test3';
-						}
-						C.SetPos( XP2 + TableOffset, FLength + YP );
-						C.DrawColor = C.MakeColor( 100, 100, 100 );
-						C.DrawText( S, True );
-
-						// Time
-						S = FormatTime( MRI.CR.MySoloTop.Time );
-						C.SetPos( XP3 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-
-						// Date
-						S = MRI.CR.MySoloTop.Date;
-						C.SetPos( XP4 + TableOffset, FLength + YP );
-						C.DrawColor = Options.CGoldText;
-						C.DrawText( S, True );
-					}
-				}
-				else if( SelectedMapTab == 1 && MRI.Level.Screenshot != none )
-				{
-					//C.SetPos( TableOffset + (TableXL * 0.5) - (CR.Level.Screenshot.MaterialUSize() * 0.5), FLength + (FYL * 0.5) - (CR.Level.Screenshot.MaterialVSize() * 0.5) );
-					C.SetPos( TableOffset - 2, FLength + YL );
-					C.Style = 1;
-	   				C.DrawColor = myHUD.WhiteColor;
-					C.DrawTileJustified( MRI.Level.Screenshot, 0, TableXL - 2, YLength - YL );
-
-					/*C.SetPos( TableOffset - 2, FLength + YL );
-					C.Style = 3;
-					C.DrawTextJustified( MRI.Level.Description, 0,
-						TableOffset - 2, FLength + YL,
-						(TableOffset - 2) + (TableXL - 2), FLength + YLength );*/
-				}
-			}
+			RenderTables( C );
 		}
 
 		// Draw bottom bar
@@ -3483,5 +3376,18 @@ DefaultProperties
 
 	RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
 	AlphaLayer=Texture'BTScoreBoardBG'
-	Layer=Texture'BTScoreBoardBG'
+	Layer=Texture'BTScoreBoardBG' 
+
+	PlayersRankingColumns(0)=(Title="#",Format="000")
+	PlayersRankingColumns(1)=(Title="Score",Format="00000")
+	PlayersRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
+	PlayersRankingColumns(3)=(Title="Records",Format="0000")
+	PlayersRankingColumns(4)=(Title="Hijacks",Format="0000")
+	PlayersRankingColumns(5)=(Title="Objectives",Format="00000")
+
+	RecordsRankingColumns(0)=(Title="#",Format="000")
+	RecordsRankingColumns(1)=(Title="Score",Format="0000")
+	RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
+	RecordsRankingColumns(3)=(Title="Time",Format="00:00:00.00")
+	RecordsRankingColumns(4)=(Title="Date",Format="0000/00/00")
 }
