@@ -30,7 +30,8 @@ final private function SendRepData( int index )
 		class'BTClient_ClientReplication'.static.CompressStoreData( 
 			P.Store.Items[index].Cost, 
 			P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[index].ID ), 
-			P.PDat.ItemEnabled( CR.myPlayerSlot, P.Store.Items[index].ID ) 
+			P.PDat.ItemEnabled( CR.myPlayerSlot, P.Store.Items[index].ID ),
+			P.Store.Items[index].Access
 		)
 	);
 }
@@ -38,15 +39,15 @@ final private function SendRepData( int index )
 state Replicate
 {
 Begin:
-	for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+	if( filter ~= "Premium" )
 	{
-		if( !P.Store.Items[repIndex].bAdminGiven || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
 		{
-			continue;
-		}
+			if( P.Store.Items[repIndex].Access != Premium )
+			{
+				continue;
+			}
 		
-		if( bIsAdmin || P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[repIndex].ID ) )
-		{
 			SendRepData( repIndex );
 			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
 			{
@@ -54,21 +55,45 @@ Begin:
 			}
 		}
 	}
-	
-	if( !(filter ~= "Admin") )
-	{	
+	else
+	{
+		// Admin items
 		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
 		{
-			if( P.Store.Items[repIndex].bAdminGiven || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+			// Skip if item access is either buy or free, or not in requested category.
+			if( P.Store.Items[repIndex].Access < Admin || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
 			{
 				continue;
 			}
-	
-			SendRepData( repIndex );
-			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+		
+			// Show if player is an admin, requested category is "Admin" or player owns said admin item.
+			if( bIsAdmin || P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[repIndex].ID ) )
 			{
-				Sleep( 0.1 );
-			}	
+				SendRepData( repIndex );
+				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+				{
+					Sleep( 0.1 );
+				}
+			}
+		}
+	
+		// Non-Admin items
+		if( !(filter ~= "Admin") )
+		{	
+			for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+			{
+				// Skip if admin/premium/private, or not in requested category.
+				if( P.Store.Items[repIndex].Access >= Admin || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+				{
+					continue;
+				}
+	
+				SendRepData( repIndex );
+				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
+				{
+					Sleep( 0.1 );
+				}	
+			}
 		}
 	}
 	ReplicationFinished();
