@@ -1,1 +1,0 @@
-class VPlus_PlayerVotingPanel extends VPlus_VotingPanel;
