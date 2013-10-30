@@ -87,6 +87,8 @@ struct sBTPlayerInfo
 
 	/** Various booleans for this player. */
 	var int PlayerFlags;
+	
+	var bool bHasPremium;
 };
 
 var array<sBTPlayerInfo> Player;

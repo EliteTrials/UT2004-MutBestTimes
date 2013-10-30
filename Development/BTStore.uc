@@ -17,6 +17,24 @@ struct sItem
 	var() bool bPassive;
 	var() string Conditions;
 	var() array<string> Vars;
+	
+	var() enum EAccess
+	{
+		/** Default. Standard buying. */
+		Buy,
+		
+		/** Has zero cost. */
+		Free,
+		
+		/** Requires admin activation or anything below this. */
+		Admin,
+		
+		/** The item is for premium players only. */
+		Premium,
+		
+		/** The item is exclusive. */
+		Private,
+	} Access;
 
 	var transient Material CachedIMG;
 	var transient string CachedCategory;
@@ -118,11 +136,6 @@ final static function BTStore Load()
 			this.Items[j + i] = this.CustomItems[i];
 			this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
 		}
-
-		/*for( i = 0; i < this.Items.Length; ++ i )
-		{
-			Log( i @ this.Items[i].Name );
-		}*/
 	}
 	return this;
 }
@@ -135,7 +148,8 @@ final function Cache()
 	for( i = 0; i < Items.Length; ++ i )
 	{
 		Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
-		// Cache the cateogry in which each item resists.(This operation is quite expensive, takes about 100ms per request(300+ items).
+		// Cache the cateogry in which each item resists.
+		// (This operation is quite expensive, takes about 100ms per request(300+ items).
 		for( j = 0; j < Categories.Length; ++ j )
 		{
 			outCategoryName = Categories[j].Name; 
@@ -144,6 +158,11 @@ final function Cache()
 				Items[i].CachedCategory $= "&"$Categories[j].Name;
 			}			
 		}		
+
+		if( Items[i].bAdminGiven )
+		{
+			Items[i].Access = Admin;
+		}
 	}	
 }
 
@@ -183,10 +202,19 @@ final function bool ItemIsInCategory( string itemType, out string categoryName )
 	for( i = 0; i < Categories[categoryIndex].Types.Length; ++ i )
 	{
 		asterik = InStr( Categories[categoryIndex].Types[i], "*" );
-		if( Categories[categoryIndex].Types[i] ~= itemType || (asterik != -1 && Left( Categories[categoryIndex].Types[i], asterik ) ~= Left( itemType, asterik )) )
+		if( 
+			Categories[categoryIndex].Types[i] ~= itemType 
+			|| 
+			(
+				asterik != -1 
+				&& 
+				Left( Categories[categoryIndex].Types[i], asterik ) ~= Left( itemType, asterik )
+			) 
+		)
+		{
 			return true;
+		}
 	}
-
 	return false;
 }
 
@@ -200,7 +228,8 @@ final function bool HasCategory( string itemType )
 		for( j = 0; j < Categories[i].Types.Length; ++ j )
 		{
 			asterik = InStr( Categories[i].Types[j], "*" );
-			if( Categories[i].Types[j] ~= itemType || (asterik != -1 && Left( Categories[i].Types[j], asterik ) ~= Left( itemType, asterik )) )
+			if( Categories[i].Types[j] ~= itemType || 
+				(asterik != -1 && Left( Categories[i].Types[j], asterik ) ~= Left( itemType, asterik )) )
 				return true;
 		}
 	}
@@ -220,6 +249,145 @@ final function int FindItemByID( string id )
 	return -1;
 }
 
+final function AddBoughtItems( BTServer_PlayersData data, Pawn other, int playerSlot )
+{
+	local int i, j, itemSlot, curType;
+	local bool bIsKnown;
+	local array<string> addedTypes;
+
+ 	j = data.Player[playerSlot].Inventory.BoughtItems.Length;
+ 	for( i = 0; i < j; ++ i )
+ 	{
+  		itemSlot = FindItemByID( data.Player[playerSlot].Inventory.BoughtItems[i].ID );
+ 		if( itemSlot != -1 && data.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
+ 		{
+ 			if( Items[itemSlot].Type != "" )
+			{
+	        	for( curType = 0; curType < addedTypes.Length; ++ curType )
+	        	{
+			  		if( addedTypes[curType] == Items[itemSlot].Type )
+			  		{
+						bIsKnown = true;
+			  			break;
+			  		}
+	        	}
+
+	        	if( bIsKnown )
+	        	{
+	        		bIsKnown = false;
+	        		continue;
+	        	}
+	        	addedTypes[addedTypes.Length] = Items[itemSlot].Type;
+	        }
+	        ActivateItem( other, itemSlot, playerSlot );
+		}
+	}
+}
+
+final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
+{
+	local class<Actor> itemClass;
+	local Actor itemObject;
+
+	//FullLog( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
+	if( Items[itemSlot].ItemClass != "" )
+	{
+		if( Items[itemSlot].CachedClass == none )
+		{
+			Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Items[itemSlot].ItemClass, class'Class', true ));
+		}
+		
+		itemClass = Items[itemSlot].CachedClass;
+		if( itemClass == none )
+		{
+			Log( "Failed to load ItemClass" @ Items[itemSlot].ItemClass @ "for" @ Items[itemSlot].ID );
+			return;
+		}
+		
+		// Apply the vars on the pawn's instance if the item's class is a pawn(HACK)
+		if( itemClass == class'Pawn' )
+		{
+			itemObject = other;
+		}
+		else
+		{
+			itemObject = other.Spawn( itemClass, other,, other.Location, other.Rotation );
+			// Failed to spawn or it destroyed itself in BeginPlay.
+			if( itemObject == none )
+			{
+				return;
+			}
+		}
+		SetVarsFor( itemObject, itemSlot );
+	}
+}
+
+final function SetVarsFor( Actor other, int itemSlot )
+{
+	local array<string> s;
+	local int i;
+	
+	for( i = 0; i < Items[itemSlot].Vars.Length; ++ i )
+	{
+		Split( Items[itemSlot].Vars[i], ":", s );	
+		switch( Locs(s[0]) )
+		{
+			case "overlaymat":
+				other.SetOverlayMaterial( Material(DynamicLoadObject( s[1], class'Material', true )), 9999.00, true );
+				break;
+				
+			default:
+				other.SetPropertyText( s[0], s[1] );
+				break;
+		}	
+	}
+}
+
+final function bool CanBuyItem( BTServer_PlayersData data, BTClient_ClientReplication CR, int itemSlot, out string msg )
+{
+	if( data.HasItem( CR.myPlayerSlot, Items[itemSlot].Id ) )
+	{
+		msg = "You already own" @ Items[itemSlot].Name;
+		return false;
+	}
+		   		
+	if( PlayerReplicationInfo(CR.Owner).bAdmin /*|| CR.Level.NetMode == NM_Standalone*/ )
+		return true;
+		
+	switch( Items[itemSlot].Access )
+	{
+		case Buy:	
+			if( !data.HasCurrencyPoints( CR.myPlayerSlot, Items[itemSlot].Cost ) )
+			{
+				msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
+				return false;
+			}		
+			break;
+			
+		case Free:
+			break;
+			
+		case Admin:
+			msg = "Sorry" @ Items[itemSlot].Name @ "can only be given by admins!";
+			return false;
+			break;
+			
+		case Premium:
+			if( !data.Player[CR.myPlayerSlot].bHasPremium )
+			{
+				msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
+				return false;
+			}
+			break;
+			
+		case Private:
+			msg = "Sorry" @ Items[itemSlot].Name @ "is an exclusive item!";
+			return false;
+			break;
+	}
+	return true;
+}
+
 defaultproperties
 {
 	/** All items. */
@@ -230,18 +398,19 @@ defaultproperties
 
 	/** Any adminonly item. */
 	Categories(2)=(Name="Admin")
+	Categories(3)=(Name="Premium")
 
 	/** Any item type of Trailer. */
-	Categories(3)=(Name="Trailers",Types=("Trailer","FeetTrailer"))
+	Categories(4)=(Name="Trailers",Types=("Trailer","FeetTrailer"))
 
 	/** Any item that is an upgrade e.g. EXP boost etc. */
-	Categories(4)=(Name="Upgrades",Types=("UP_*"))
+	Categories(5)=(Name="Upgrades",Types=("UP_*"))
 
 	Items(0)=(Name="Trailer",ID="Trailer",Cost=50,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
 	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Cost=30,Desc="Gives you access to MNAF member options")
 	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=30,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE")
-	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",bAdminGiven=true,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2")
-	Items(4)=(Name="+100% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",bAdminGiven=true,Desc="Get +100% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE")
+	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2")
+	Items(4)=(Name="+100% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +100% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE")
 	
 	Items(5)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=100,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
 	Items(6)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=150,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))

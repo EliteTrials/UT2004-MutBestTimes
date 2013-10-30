@@ -1076,8 +1076,7 @@ function ModifyPlayer( Pawn Other )
 
 	if( Store != none )
 	{
-		AddBoughtItems( Other, CRI.myPlayerSlot );
-
+		Store.AddBoughtItems( PDat, Other, CRI.myPlayerSlot );
 		if( PDat.UseItem( CRI.myPlayerSlot, "Trailer" ) )
 		{
 			for( i = 0; i < Trailers.Length; ++ i )
@@ -1157,7 +1156,6 @@ function ModifyPlayer( Pawn Other )
 			if( i != -1 )
 			{
 				PimpClientSpawn( i, Other );
-
 				CRI.ClientSpawnPawn = other;
 
 				if( Holiday != "" )
@@ -1167,105 +1165,6 @@ function ModifyPlayer( Pawn Other )
 				}
 			}
 		}
-	}
-}
-
-final function AddBoughtItems( Pawn other, int playerSlot )
-{
-	local int i, j, itemSlot, curType;
-	local bool bIsKnown;
-	local array<string> addedTypes;
-
- 	j = PDat.Player[playerSlot].Inventory.BoughtItems.Length;
- 	for( i = 0; i < j; ++ i )
- 	{
- 		//FullLog( PDat.Player[playerSlot].Inventory.BoughtItems[i].ID @ PDat.Player[playerSlot].Inventory.BoughtItems[i].bEnabled );
- 		itemSlot = Store.FindItemByID( PDat.Player[playerSlot].Inventory.BoughtItems[i].ID );
- 		if( itemSlot != -1 && PDat.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
- 		{
- 			if( Store.Items[itemSlot].Type != "" )
-			{
-	        	for( curType = 0; curType < addedTypes.Length; ++ curType )
-	        	{
-			  		if( addedTypes[curType] == Store.Items[itemSlot].Type )
-			  		{
-						bIsKnown = true;
-			  			break;
-			  		}
-	        	}
-
-	        	if( bIsKnown )
-	        	{
-	        		bIsKnown = false;
-	        		//FullLog( "bIsKnown was true" );
-	        		continue;
-	        	}
-
-	        	addedTypes[addedTypes.Length] = Store.Items[itemSlot].Type;
-	        	//FullLog( "Added type:" $ Store.Items[itemSlot].Type );
-	        }
-
-	        ActivateItem( other, itemSlot, playerSlot );
-		}
-	}
-}
-
-final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
-{
-	local class<Actor> itemClass;
-	local Actor itemObject;
-
-	//FullLog( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
-	if( Store.Items[itemSlot].ItemClass != "" )
-	{
-		if( Store.Items[itemSlot].CachedClass == none )
-		{
-			Store.Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Store.Items[itemSlot].ItemClass, class'Class', true ));
-		}
-		
-		itemClass = Store.Items[itemSlot].CachedClass;
-		if( itemClass == none )
-		{
-			FullLog( "Failed to load ItemClass" @ Store.Items[itemSlot].ItemClass @ "for" @ Store.Items[itemSlot].ID );
-			return;
-		}
-		
-		// Apply the vars on the pawn's instance if the item's class is a pawn(HACK)
-		if( itemClass == class'Pawn' )
-		{
-			itemObject = other;
-		}
-		else
-		{
-			itemObject = Spawn( itemClass, other,, other.Location, other.Rotation );
-			// Failed to spawn or it destroyed itself in BeginPlay.
-			if( itemObject == none )
-			{
-				return;
-			}
-		}
-		SetVarsFor( itemObject, itemSlot );
-	}
-}
-
-final function SetVarsFor( Actor other, int itemSlot )
-{
-	local array<string> s;
-	local int i;
-	
-	for( i = 0; i < Store.Items[itemSlot].Vars.Length; ++ i )
-	{
-		Split( Store.Items[itemSlot].Vars[i], ":", s );	
-		switch( Locs(s[0]) )
-		{
-			case "overlaymat":
-				other.SetOverlayMaterial( Material(DynamicLoadObject( s[1], class'Material', true )), 9999.00, true );
-				break;
-				
-			default:
-				other.SetPropertyText( s[0], s[1] );
-				break;
-		}	
 	}
 }
 
@@ -2824,24 +2723,11 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			i = Store.FindItemByID( s );
 			if( i != -1 )
 			{
-		   		if( PDat.HasItem( Rep.myPlayerSlot, s ) )
-		   		{
-		   			SendErrorMessage( sender, "You already own" @ Store.Items[i].Name );
-		   			break;
-		   		}
-
-		   		if( (Store.Items[i].bAdminGiven || Store.Items[i].Cost <= 0) && !IsAdmin( sender.PlayerReplicationInfo ) )
-		   		{
-		   			SendErrorMessage( sender, "Sorry" @ Store.Items[i].Name @ "can only be given by admins!" );
-		   			break;
-		   		}
-
-				   // Don't use IsAdmin here, we want the currency system working offline as well!
-		   		if( !PDat.HasCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost ) && !sender.PlayerReplicationInfo.bAdmin )
-		   		{
-		   			SendErrorMessage( sender, "You do not have enough Currency points to buy" @ Store.Items[i].Name );
-		   			break;
-		   		}
+				if( !Store.CanBuyItem( PDat, Rep, i, s ) )
+				{
+					SendErrorMessage( sender, s );
+					break;
+				}
 
 		   		if( s == "trailer" )
 				{
@@ -2851,17 +2737,18 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 				}
 
 				NotifyItemBought( Rep.myPlayerSlot );
-		   		PDat.GiveItem( Rep.myPlayerSlot, s );
+		   		PDat.GiveItem( Rep.myPlayerSlot, Store.Items[i].ID );
 		   		// bBought, bEnabled
 				Rep.ClientSendItemData( Store.Items[i].ID,
 					class'BTClient_ClientReplication'.static.CompressStoreData( 
 						Store.Items[i].Cost, 
 						true, 
-						true 
+						true,
+						Store.Items[i].Access
 					)
 				);
 
-				if( Store.Items[i].bAdminGiven || Store.Items[i].Cost <= 0 )
+				if( Store.Items[i].Access >= Free || Store.Items[i].Cost <= 0 )
 				{
 					break;
 				}
@@ -2895,9 +2782,9 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			{
 		   		if( PDat.HasItem( Rep.myPlayerSlot, s ) )
 		   		{
-		   			if( (Store.Items[i].bAdminGiven || Store.Items[i].Cost <= 0) && !IsAdmin( sender.PlayerReplicationInfo ) )
+		   			if( Store.Items[i].Access >= Free && !IsAdmin( sender.PlayerReplicationInfo ) )
 			   		{
-			   			SendErrorMessage( sender, "Sorry you cannot sell items that can only be given by admins." );
+			   			SendErrorMessage( sender, "Sorry you cannot sell items that have no price." );
 			   			break;
 			   		}
 
@@ -2908,7 +2795,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			   		}
 
 		   			PDat.RemoveItem( Rep.myPlayerSlot, s );
-		   			if( !Store.Items[i].bAdminGiven && Store.Items[i].Cost > 0 )
+		   			if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
 		   			{
 		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost * 0.75 );
 		   			}
@@ -2918,7 +2805,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 						class'BTClient_ClientReplication'.static.CompressStoreData( 
 							Store.Items[i].Cost, 
 							false, 
-							false 
+							false,
+							Store.Items[i].Access
 						)
 					);
 		   		}
@@ -2958,7 +2846,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 					class'BTClient_ClientReplication'.static.CompressStoreData( 
 						Store.Items[i].Cost, 
 						bool(byteOne), 
-						bool(byteTwo) 
+						bool(byteTwo), 
+						Store.Items[i].Access
 					)
 				);
 			}
@@ -3139,6 +3028,23 @@ final function KeyVerified( BTActivateKey handler )
 			handler.ConsumeSerial();
 			break;
 			
+		case "prem":
+			if( !(handler.Serial.Code ~= "BTStore") )
+			{
+				SendErrorMessage( handler.Requester, "This isn't a premium key! Consumption aborted!" );
+				handler.Destroy();
+				break;
+			}
+			
+			if( PDat.Player[Rep.myPlayerSlot].bHasPremium )
+			{
+				SendErrorMessage( handler.Requester, "You are already own premium! Consumption aborted!" );
+				handler.Destroy();
+				break;
+			}
+			handler.ConsumeSerial();
+			break;
+			
 		case "curr":
 		case "exp":
 			handler.ConsumeSerial();
@@ -3219,6 +3125,12 @@ private final function ConsumeKey( BTActivateKey handler )
 		case "exp":
 			PDat.AddExperience( Rep.myPlayerSlot, int(handler.Serial.Code) );
 			SendSucceedMessage( handler.Requester, "You were given Experience!" );
+			break;
+			
+		case "prem":
+			PDat.Player[Rep.myPlayerSlot].bHasPremium = true;
+			SendSucceedMessage( handler.Requester, 0x00FF00 $ "You now have premium! You have been granted access to all premium items!" );
+			SaveAll();
 			break;
 	}
 }
