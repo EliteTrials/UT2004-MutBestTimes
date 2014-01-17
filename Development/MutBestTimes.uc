@@ -27,7 +27,7 @@ const MaxRecentRecords 					= 15;									// The max recent records that is save
 const MaxPlayerRecentRecords			= 5;									// The max recent records that are saved per player.
 const MaxHistoryLength					= 25;
 const MaxRecentMaps						= 20;
-const BTCredits 						= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";		// copyright
+const BTCredits 						= "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";		// copyright
 const BTAuthor 							= "2e216ede3cf7a275764b04b5ccdd005d";	// Author guid, gives access to some admin commands...
 
 // Points Related.
@@ -72,7 +72,8 @@ struct sPlayerStats																// Temporary stats, calculated every map!
 
 	var int
 		PLSlot,																	// Slot to the real account, Note:This slot is not incremented by 1!
-		PLRecords;																// Amount of holding records.
+		PLRecords,																// Amount of holding records.
+		PLTopRecords;
 };
 
 struct KeepScoreSE                                                              // structure to hold data of a leaving player, removed when a new round or map starts.
@@ -134,7 +135,6 @@ var array<sPlayerStats> 							SortedOverallTop;				// An array containing all t
 var array<sPlayerStats>								SortedQuarterlyTop;
 var array<sPlayerStats>								SortedDailyTop;
 var array<BTServer_GhostSaver> 						SavedMovements;				// for ghost (big!)
-var const array<string> 							TrustedProtocols;			// Only those in this list are allowed to use MutBestTimes
 var array<float> 									ObjCompT;					// Temporary Objective Complete Times, moves to saved BMTL.ObjCompT when new rec.
 var array<sClientSpawn> 							ClientPlayerStarts;			// Current playerstarts in the current map, cleaned when user performs 'DeleteClientSpawn' or when server travels or on QuickStart
 var const float 									RPScale[10];				// List of points scaling values
@@ -296,7 +296,8 @@ var() globalconfig
 	MaxLevel,
 	ObjectivesEXPDelay,
 	MinExchangeableTrophies,
-	MaxExchangeableTrophies;
+	MaxExchangeableTrophies,
+	DaysCountToConsiderPlayerInactive;
 
 var() globalconfig
 	float
@@ -1216,15 +1217,6 @@ final function InvalidAccess()
 
 function Tests()
 {
-	local array<string> a;
-	local string g;
-
-	PDat.StringToArray( "9", a );
-
-	g = PDat.GenerateCheckCharacter( a );
-	Log( g );
-	PDat.StringToArray( g, a );
-	Log( PDat.ValidateCheckCharacter( a ) );
 }
 
 //==============================================================================
@@ -1706,17 +1698,19 @@ event PostBeginPlay()
 
 		SkipMTTest:*/
 
-		SortedOverallTop = SortTopPlayers( 0 );
-		SortedQuarterlyTop = SortTopPlayers( 1 );
-		SortedDailyTop = SortTopPlayers( 2 );
-
 		if( bUpdateWebOnNextMap )
 		{
 			FullLog( "Writing WebBTimes.html" );
+			SortedOverallTop = SortTopPlayers( 0, true );
 			CreateWebBTimes();
 			bUpdateWebOnNextMap = False;
 			SaveConfig();
 		}
+
+		SortedOverallTop = SortTopPlayers( 0 );
+		SortedQuarterlyTop = SortTopPlayers( 1 );
+		SortedDailyTop = SortTopPlayers( 2 );
+
 	}
 
 	ModeRules = Spawn( Class'BTGameRules', self );
@@ -2695,7 +2689,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 				   		}
 				   		else
 				   		{
-				   			SendErrorMessage( sender, "Sorry the player has no item of the id:" @ s );
+				   			SendErrorMessage( sender, "Sorry the player has no item of id:" @ s );
 				   		}
 						break;
 					}
@@ -2812,7 +2806,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		   		}
 		   		else
 		   		{
-		   			SendErrorMessage( sender, "You cannot sell an item that you do not have." );
+		   			SendErrorMessage( sender, "You cannot sell an item that you do not own." );
 		   			break;
 		   		}
 			}
@@ -2879,13 +2873,13 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			params[0] = string(Min( int(params[0]), MaxExchangeableTrophies ));
 	  		if( int(params[0]) > i )
 	  		{
-	  			SendErrorMessage( sender, "You don't own that many trophies!" );
+	  			SendErrorMessage( sender, "You don't have that many trophies!" );
 				break;
 	  		}
 
 	  		if( int(params[0]) <= 0 )
 	  		{
-	  			SendErrorMessage( sender, "Please input a higher amount than 0!" );
+	  			SendErrorMessage( sender, "Please input an higher amount than 0!" );
 				break;
 	  		}
 
@@ -2938,7 +2932,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 				{
 					if( InStr( Caps( C.PlayerReplicationInfo.PlayerName ), S )  != -1 )
 					{
-						sender.ClientMessage( class'HUD'.default.GoldColor $ "20% of your donation is taken away as fee!" );
+						sender.ClientMessage( class'HUD'.default.GoldColor $ "20% of your donation has been taken away as fee!" );
 
 						PDat.SpendCurrencyPoints( Rep.myPlayerSlot, int(params[1]) );
 						sender.ClientMessage( class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ int(params[1])*0.80 @ "of your currency!" );
@@ -2946,7 +2940,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 						PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80 );
 						if( PlayerController(C) != sender )
 						{
-							PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his currency!" );
+							PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his/her currency!" );
 						}
 						break;
 					}
@@ -4184,37 +4178,6 @@ final function bool IsCompetitive()
 	return MRI.bCompetitiveMode && (bSoloMap && !bGroupMap);
 }
 
-//==============================================================================
-// QuickStart is ready, reset some stuff
-final function QuickStartReady()
-{
-	local int CurObj;
-
-	ClearClientStarts();
-
-	if( !bLCAMap )
-	{
-		// Keep red team as the attackers!
-		AssaultGame.CurrentAttackingTeam = 0;
-		ASGameReplicationInfo(Level.Game.GameReplicationInfo).bTeamZeroIsAttacking = True;
-		Level.Game.GameReplicationInfo.NetUpdateTime = Level.TimeSeconds - 1;
-
-
-		for( CurObj = 0; CurObj < Objectives.Length; ++ CurObj )
-		{
-			if( Objectives[CurObj] != None )
-			{
-				Objectives[CurObj].DefenderTeamIndex = 1;
-				Objectives[CurObj].NetUpdateTime = Level.TimeSeconds - 1;
-			}
-		}
-	}
-
-	// Even though, reset destroys the pawn already,
-	// we still have to kill them here again because otherwise the teams won't be fixed in some cases
-	KillAllPawns( True );
-}
-
 final function KillAllPawns( optional bool bSkipState )
 {
 	local Controller C;
@@ -4676,9 +4639,8 @@ final function string ColourName( int playerSlot, Color nameColor )
 	return nameColor $ %PDat.Player[playerSlot - 1].PLName @ Class'HUD'.Default.WhiteColor;
 }
 
-final function BroadcastFinishMessage( string message, optional byte failure )
+final function BroadcastFinishMessage( Controller instigator, string message, optional byte failure )
 {
-	local BTClient_ClientReplication CR;
 	local Controller C;
 
 	for( C = Level.ControllerList; C != None; C = C.NextController )
@@ -4687,13 +4649,16 @@ final function BroadcastFinishMessage( string message, optional byte failure )
 		{
 			continue;
 		}
-
-		CR = GetRep( C );
-		if( CR != None )
-		{
-			CR.ClientSetSFMSG( message, failure );
-		}
+		ClientSendRecordMessage( C, message, failure, instigator.PlayerReplicationInfo );
 	}
+}
+
+final function ClientSendRecordMessage( Controller receiver, string message, int switch, PlayerReplicationInfo otherPRI )
+{
+	local BTClient_ClientReplication LRI;
+
+	LRI = GetRep( receiver );
+	LRI.ClientSendMessage( class'BTClient_SoloFinish', message, switch, otherPRI );
 }
 
 final function ProcessGroupFinishAchievement( int playerSlot )
@@ -5088,32 +5053,26 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 			// Tied his own position
 			if( GetFixedTime( RDat.Rec[UsedSlot].PSRL[i].SRT ) == CurrentPlaySeconds )
 			{
-				AddHistory( ColourName( PLs, Class'HUD'.Default.GoldColor ) $ "Tied his record on" @ CurrentMapName );
-
-				BroadcastFinishMessage( cDarkGray $ "* " $ PDat.Player[PLs-1].PLNAME @ cDarkGray $
-				"Tied Personal( TIME:" $ TimeToStr( CurrentPlaySeconds ) $ " ) *", 0 );
+				AddHistory( ColourName( PLs, Class'HUD'.Default.GoldColor ) 
+					$ "Tied his/her record on" @ CurrentMapName );
+				BroadcastFinishMessage( PC, "%PLAYER% tied the personal record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
 
 				PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives + BonusPoints );
-
 				PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
 			}
 			// Tied the best record
 			else if( GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT ) == CurrentPlaySeconds )
 			{
-				AddHistory( ColourName( PLs, Class'HUD'.Default.GoldColor ) $ "Tied the top record on" @ CurrentMapName );
-
-				BroadcastFinishMessage( cDarkGray $ "* " $ PDat.Player[PLs-1].PLNAME @ cDarkGray $
-				"Tied Top( TIME:" $ TimeToStr( CurrentPlaySeconds ) $ " ) *", 0 );
+				AddHistory( ColourName( PLs, Class'HUD'.Default.GoldColor ) $ "Tied the best record on" @ CurrentMapName );
+				BroadcastFinishMessage( PC, "%PLAYER% tied the best record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
 
 				PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives + BonusPoints );
-
 				PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
 			}
 			// Failed record
 			else
 			{
-				BroadcastFinishMessage( Class'HUD'.Default.RedColor $ "* " $ PDat.Player[PLs-1].PLNAME @ Class'HUD'.Default.RedColor $
-				"Failed( TIME:" $ TimeToStr( CurrentPlaySeconds ) $ " ) *", 0 );
+				BroadcastFinishMessage( PC, "%PLAYER% failed to improve his/her record, time " $ TimeToStr( CurrentPlaySeconds ), 0 );
 
 				//PDat.AddExperience( PLs-1, EXP_FailRecord + xp + BonusPoints );
 			}
@@ -5217,7 +5176,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					if( BestPlaySeconds != -1 )	// Faster!
 					{
 						TimeBoost = (BestPlaySeconds - CurrentPlaySeconds);
-						EndMsg = "* New Best Top 1 Record( TIME:"$TimeToStr( CurrentPlaySeconds )$" BOOST:"$TimeToStr( TimeBoost )$" ) *";
+						EndMsg = "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$ ", new time "$TimeToStr( CurrentPlaySeconds );
 						if( TimeBoost <= 0.10f )
 							BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.HolyShit_F' );
 						else if( TimeBoost <= 1.0f )
@@ -5244,12 +5203,12 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					}
 					else	// 1st time record
 					{
-						EndMsg = "* New Best Top 1 Record( TIME:"$TimeToStr( CurrentPlaySeconds )$" ) *";
+						EndMsg = "A record has been set, time " $ TimeToStr( CurrentPlaySeconds );
 						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.WhickedSick' );
 					}
 
 					//SetXfireStatusFor( PC, %EndMsg @ "on" @ CurrentMapName );
-					BroadcastConsoleMessage( Class'HUD'.Default.WhiteColor $ EndMsg );
+					BroadcastConsoleMessage( EndMsg );
 
 					// Update map stats.
 					RDat.Rec[UsedSlot].TMFailures = 0;							// Reset this :)
@@ -5270,7 +5229,8 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					
 
 					// Cut off by 2(the objs) and display objs as +(2)
-					MRI.PointsReward = "Points:" $ GetSoloPoints( UsedSlot, 0 ) - (PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp)) $ "+(" $ PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp) $ ")";
+					MRI.PointsReward = "Points for this record " 
+						$ GetSoloPoints( UsedSlot, 0 ) - (PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp)) $ "+(" $ PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp) $ ")";
 
 					BestPlaySeconds = CurrentPlaySeconds;
 					MRI.MapBestTime = BestPlaySeconds;
@@ -5284,14 +5244,17 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					}
 					else
 					{
-						BroadcastFinishMessage( EndMsg, 1 );
+						BroadcastFinishMessage( PC, EndMsg, 1 );
 					}
 					//======================================================		
 				}
 				else
 				{
 					b = True;
-					BroadcastFinishMessage( Class'HUD'.Default.GoldColor $ "* New Top" @ (i+1) $ "/" $ RDat.Rec[UsedSlot].PSRL.Length @ "Record( TIME:" $ TimeToStr( CurrentPlaySeconds ) $ " ) set by" @ PDat.Player[PLs-1].PLNAME $ Class'HUD'.Default.GoldColor $ " *", 1 );
+					BroadcastFinishMessage( PC, "Record " $ (i+1) $ "/" $ RDat.Rec[UsedSlot].PSRL.Length 
+						$ " has been set, time " $ TimeToStr( CurrentPlaySeconds ) 
+						$ ", by %PLAYER%", 1 
+					);
 				}
 				break;
 			}
@@ -5387,7 +5350,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 				if( BestPlaySeconds == -1 )									// First Time record.
 				{
 					FullLog( "*** First-Run Speed-Record ***" );
-					UpdateEndMsg( "* New Speed Record( TIME:"$TimeToStr( CurrentPlaySeconds )@") *" );
+					UpdateEndMsg( "New record has been set, time "$TimeToStr( CurrentPlaySeconds ) );
 					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.WhickedSick' );
 
 					PDat.AddExperienceList( contributors, EXP_FirstRecord + numObjectives + 30 );
@@ -5398,7 +5361,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 
 					TimeBoost = (RDat.Rec[UsedSlot].TMT - CurrentPlaySeconds);
 
-					UpdateEndMsg( "* New Speed Record( OLD:"$TimeToStr( RDat.Rec[UsedSlot].TMT )@"NEW:"$TimeToStr( CurrentPlaySeconds )@"BOOST:"$TimeToStr( TimeBoost )@") *" );
+					UpdateEndMsg( "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$", time "$TimeToStr( CurrentPlaySeconds ) );
 					if( TimeBoost <= 0.10f )
 						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.HolyShit_F' );
 					else if( TimeBoost <= 1.0f )
@@ -5486,7 +5449,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 			   	if( CurrentPlaySeconds == BestPlaySeconds )
 			   	{
 			   		AddHistory( "A tie was made on"@CurrentMapName );
-			   		UpdateEndMsg( "* Tied( TIME:"$TimeToStr( CurrentPlaySeconds )@") *" );
+			   		UpdateEndMsg( "The record has been tied, time "$TimeToStr( CurrentPlaySeconds ) );
 					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Invulnerable' );
 
 					PDat.AddExperienceList( contributors, EXP_TiedRecord + numObjectives + 30 );
@@ -5499,7 +5462,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 				}
 				else
 				{
-					UpdateEndMsg( "* Fail( OVER:"$TimeToStr( CurrentPlaySeconds-BestPlaySeconds )@"- ELAPSED:"$TimeToStr( CurrentPlaySeconds )@") *" );
+					UpdateEndMsg( "Failed to beat the record, over by " $ TimeToStr( CurrentPlaySeconds-BestPlaySeconds ) $ ", time " $ TimeToStr( CurrentPlaySeconds ) );
 					if( CurrentPlaySeconds < (BestPlaySeconds+90) )
 						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Totalled' );
 					else BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Denied' );
@@ -5513,7 +5476,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 		{
 			FullLog( "*** Invalid-Record ***" );
 			MRI.RecordState = RS_Failure;
-			UpdateEndMsg( "* Invalid Record *" );
+			UpdateEndMsg( "Record denied" );
 			BroadcastConsoleMessage( Class'HUD'.Default.RedColor$"* Invalid Record *" );
 		}
 	}
@@ -6242,7 +6205,7 @@ final function CreateWebBTimes()														// .:..:, Eliot
 	SS.Length = Pos;
 	SS[Pos] =
 	"<div id="$T$"d_Players"$T$" class="$T$"hidden"$T$" align="$T$"center"$T$"> <table id="$T$"t_Players"$T$" class="$T$"sortable"$T$"> <tr>"
-	$"<th width="$T$"5%"$T$"><b>Rank</b></th> <th width="$T$"35%"$T$"><b>Player</b></th> <th width="$T$"20%"$T$"><b>Points</b></th> <th width="$T$"20%"$T$"><b>Objectives</b></th> <th width="$T$"20%"$T$"><b>Records</b></th> </tr>";
+	$"<th width="$T$"5%"$T$"><b>Rank</b></th> <th width="$T$"35%"$T$"><b>Player</b></th> <th width="$T$"20%"$T$"><b>Points</b></th> <th width="$T$"17.5%"$T$"><b>Objectives</b></th> <th width="$T$"17.5%"$T$"><b>Records</b></th> <th width="$T$"5%"$T$"><b>ID</b></th>  </tr>";
 
 	// Write table content...
 	++ Pos;
@@ -6256,7 +6219,7 @@ final function CreateWebBTimes()														// .:..:, Eliot
 			break;
 
 		SS.Length = Pos+1;
-		SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[SortedOverallTop[i].PLSlot].PLName$"</p></td><td><p>"$int( SortedOverallTop[i].PLPoints )$"</p></td><td><p>"$PDat.Player[SortedOverallTop[i].PLSlot].PLObjectives$"</p></td><td><p>"$SortedOverallTop[i].PLRecords$"</p></td></tr>";
+		SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[SortedOverallTop[i].PLSlot].PLName$"</p></td><td><p>"$int( SortedOverallTop[i].PLPoints )$"</p></td><td><p>"$PDat.Player[SortedOverallTop[i].PLSlot].PLObjectives$"</p></td><td><p>"$SortedOverallTop[i].PLRecords$"</p></td><td><p>"$PDat.Player[SortedOverallTop[i].PLSlot].PLID$"</p></td></tr>";
 		++ Pos;
 	}
 	SS.Length = Pos+1;
@@ -6368,7 +6331,7 @@ static final function string TimeToStr( float Value )										// .:..:, Epic Ga
 
 //==============================================================================
 // Calculate the best players from all stored players
-final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
+final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll )			// .:..:, Eliot
 {
 	local int z, y, PSlot;
 	local sPlayerStats Tmp;
@@ -6380,7 +6343,7 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 	local int TotalPlayers;
 	local int ly,lm,ld;
 	local bool bIsSoloMap;
-	local array<int> NumRecords;
+	local array<int> NumRecords, NumTopRecords;
 	local array<float> Points;
 	local array<sPlayerStats> NoobList;
 	local array<sPlayerStats> SortedPlayers;
@@ -6394,12 +6357,13 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 	TotalPlayers = PDat.Player.Length;
 	if( TotalPlayers == 0 )
 	{
-		FullLog( "Players list is empty!" );
+		Log( "Players list is empty!" );
 		return SortedPlayers;
 	}
 
 	Points.Length = TotalPlayers;
 	NumRecords.Length = TotalPlayers;
+	NumTopRecords.Length = TotalPlayers;
 
 	MRI.RecordsCount = 0;
 	// Calculate Points!
@@ -6446,6 +6410,11 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 				{
 					Points[PSlot] += GetSoloPoints( CurMap, CurRec );
 					++ NumRecords[PSlot];
+
+					if( CurRec == 0 )
+					{
+						++ NumTopRecords[PSlot];
+					}
 				}
 			}
 		}
@@ -6469,6 +6438,11 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 					{
 						++ NumRecords[PSlot];
 						Points[PSlot] += GetRegularPoints( CurMap, CurPlayer, RecPlayers );
+
+						if( CurPlayer == 0 )
+						{
+							++ NumTopRecords[PSlot];
+						}
 					}
 				}
 			}
@@ -6485,16 +6459,35 @@ final function array<sPlayerStats> SortTopPlayers( byte mode )			// .:..:, Eliot
 		}
 		else
 		{
-			//RDat.GetCompactDate( PDat.Player[PlayerNum].LastPlayedDate, ly, lm, ld );
-			//if( GetDaysSince( ly, lm, ld ) < 62 )
-			//{
-				SortedPlayers[CurPlayer].PLPoints 	= 	Points[PlayerNum];
-			//}	
+			if( bAll )
+			{
+				SortedPlayers[CurPlayer].PLPoints = Points[PlayerNum];	
+			}
+			else
+			{	
+				if( PDat.Player[PlayerNum].LastPlayedDate == 0 )
+				{
+					//Log("user " $ PDat.Player[PlayerNum].PLName $ " has not played in ages");
+				}
+				else
+				{
+					RDat.GetCompactDate( PDat.Player[PlayerNum].LastPlayedDate, ly, lm, ld );
+					if( mode != 0 || GetDaysSince( ly, lm, ld ) < DaysCountToConsiderPlayerInactive )
+					{
+						SortedPlayers[CurPlayer].PLPoints = Points[PlayerNum];
+						if( mode == 0 )
+						{
+							++ PDat.TotalActivePlayersCount;
+						}
+					}	
+				}
+			}
 		}
 		SortedPlayers[CurPlayer].PLID 			= 	PDat.Player[PlayerNum].PLID;
 		SortedPlayers[CurPlayer].PLRecords 		= 	NumRecords[PlayerNum];
+		SortedPlayers[CurPlayer].PLTopRecords   = 	NumTopRecords[PlayerNum];
 
-		// A index to PDat.Player
+		// An index to PDat.Player
 		SortedPlayers[CurPlayer].PLSlot			=	PlayerNum;
 
 		switch( mode )
@@ -6926,7 +6919,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 	
 	if( Perks != none )
 	{
-		FullLog( "Checking perks..." );
+		// FullLog( "Checking perks..." );
 		if( Perks.HasPerk( CR, 'auto_press', i ) )
 		{
 			CR.bAutoPress = true;
@@ -6934,7 +6927,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 		
 		if( Perks.HasPerk( CR, 'dodge_assist', i ) )
 		{
-			FullLog( "Dodge assist!" );
+			// FullLog( "Dodge assist!" );
 			CR.bAllowDodgePerk = true;
 		}
 	}
@@ -7007,9 +7000,8 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
 	if( bBlockSake && GroupFinishAchievementUnlockedNum < 10 )
 	{
-		CR.ClientSendText( $0xFF0000 $ "A new map for Group trials has been released! However the map is locked due lack of respect." );
-		CR.ClientSendText( $0xFF0000 $ "The map can be unlocked by finishing a Group map." );
-		CR.ClientSendText( $0xFF0000 $ "Atleast 10 people have to finish a Group map and the map will become unlocked automatically!" );
+		CR.ClientSendText( $0xFF0000 $ "A new map for Group trials has been released! However the map is locked." );
+		CR.ClientSendText( $0xFF0000 $ "At least 10 people have to finish a Group map, to get the map unlocked!" );
 		CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
 	}
 
@@ -7212,10 +7204,10 @@ final function float GetSoloPoints( int RecordSlot, int SoloRecordSlot )
 			(( BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT ) * ScalingPoints( RecordSlot )))), 0.0f ) * penalty;
 	}
 
-	if( penalty < 1.00 )
-	{
-		FullLog( "Penalty:" @ penalty );
-	}
+	// if( penalty < 1.00 )
+	// {
+	// 	FullLog( "Penalty:" @ penalty );
+	// }
 	return FMin( points + performanceBonus, 50.00 ) * penalty;	
 }
 
@@ -7334,7 +7326,7 @@ Final Function BroadcastConsoleMessage( coerce string Msg )
 			{
 				if( BTClient_ClientReplication(LRI) != None )
 				{
-					BTClient_ClientReplication(LRI).ClientSendMessage( Msg );
+					BTClient_ClientReplication(LRI).ClientSendConsoleMessage( Msg );
 					break;
 				}
 			}
@@ -7752,7 +7744,7 @@ state QuickStart
 	{
 		bQuickStart = true;
 		MRI.RecordState = RS_QuickStart;
-		UpdateEndMsg( "* QuickStart - Preparing... *" );	// Clear!
+		UpdateEndMsg( "Preparing next round..." );	// Clear!
 	}
 
 	function EndState()
@@ -7765,20 +7757,16 @@ Begin:
 	for( CurCountdown = 5; CurCountdown > 0; -- CurCountdown )
 	{
 		//FullLog( "CCD" $ CurCountDown );
-		UpdateEndMsg( "* QuickStart - Next round in " $ CurCountdown $ "... *" );
+		UpdateEndMsg( "Next round in " $ CurCountdown $ "..." );
 		Level.Game.BroadcastLocalizedMessage( Class'BTClient_QuickStartSound', CurCountdown );
 		Sleep( 1.0f );
 	}
 
-	// Make assault thing that the game hasn't ended yet!
- 	AssaultGame.bGameEnded = false;
-	AssaultGame.GotoState( 'MatchInProgress' );
-
-	UpdateEndMsg( "* QuickStart - Next round initializing... *" );
+	CurMode.PreRestartRound();
+	UpdateEndMsg( "Next round initializing..." );
 	Sleep( 0.5f );
 	BTServer_VotingHandler(Level.Game.VotingHandler).DisableMidGameVote();
-	AssaultGame.StartNewRound();
-	QuickStartReady();
+	CurMode.PostRestartRound();
 	UpdateEndMsg( "" );
 	GotoState( '' );
 }
@@ -7957,10 +7945,10 @@ static function string GetDescriptionText( string PropName )
 			return "The time limit for the Competitive Mode.";
 
 		case "ADMessage":
-			return "Input a advertise message that will be displayed to the user when QuickStart is active or map completed.";
+			return "Input an advertisement message, that will be displayed to every player, when QuickStart is active or when the map is completed.";
 
 		case "ADURL":
-			return "The web link the users will go to when hitting Enter while the Advertise Message is displayed.";
+			return "The web link, the players will go to when hitting Enter while the Advertise Message is displayed.";
 
 		case "bAddGhostTimerPaths":
 			return "Whether to spawn ghost markers.";
@@ -8046,15 +8034,6 @@ DefaultProperties
 	TrialModes(3)=Class'BTServer_GroupMode'
 	TrialModes(4)=Class'BTServer_SoloMode'
 
-	TrustedProtocols(0)="80.86.82.139"
-	TrustedProtocols(1)="85.14.228.186"
-	TrustedProtocols(2)="217.163.23.17"	// Elite
-	TrustedProtocols(3)="174.37.63.124"
-	TrustedProtocols(4)="69.64.69.181"	// PWC
-	TrustedProtocols(5)="70.92.73.161"	// PWC
-	TrustedProtocols(6)="5.59.118.164"	// Eliot:Local
-	TrustedProtocols(7)="85.214.198.244"// uuugh
-
 	bAllowClientSpawn=True
 	bTriggersKillClientSpawnPlayers=True
 	bClientSpawnPlayersCanCompleteMap=False
@@ -8067,6 +8046,7 @@ DefaultProperties
 	GhostSaveSpeed=0.025000
 	MinExchangeableTrophies=25
 	MaxExchangeableTrophies=45
+	DaysCountToConsiderPlayerInactive=30
 
 	FriendlyName="BestTimes"
 	Description="Records Best MapTime completion"

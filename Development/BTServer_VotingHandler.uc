@@ -154,11 +154,16 @@ Function AddMapVoteReplicationInfo( PlayerController Player )
 {
 	local BTClient_VRI VRI;
 
-	VRI = Spawn( Class'BTClient_VRI', Player );
+	log("___Spawning VotingReplicationInfo",'MapVoteDebug');
+	VRI = Spawn( Class'BTClient_VRI', Player,, Player.Location );
 	if( VRI == None )
+	{
+		Log("___Failed to spawn VotingReplicationInfo",'MapVote');
 		return;
+	}
 
 	VRI.PlayerID = Player.PlayerReplicationInfo.PlayerID;
+	VRI.InjectMapNameData = InjectMapNameData;
 	MVRI[MVRI.Length] = VRI;
 }
 
@@ -366,10 +371,52 @@ function LoadMapList()
 			RecordsManager.bBlockSake = true;
 			break;
 		}
+
+		AddMapInfoFor( i );
 	}
 	// ..
 
 	Loader.Destroy();
+}
+
+function string InjectMapNameData( int mapIndex )
+{
+	local int recordIndex;
+	local string data;
+
+	recordIndex = RecordsManager.RDat.FindRecord( MapList[mapIndex].MapName );
+	if( recordIndex == -1 )
+	{
+		return "";
+	}
+
+	if( RecordsManager.RDat.Rec[recordIndex].PSRL.length == 0 )
+	{
+		data = RecordsManager.TimeToStr( RecordsManager.RDat.Rec[recordIndex].TMT );
+		if( RecordsManager.RDat.Rec[recordIndex].TMT >= 0 )
+		{
+			data $= ";1";	
+		}
+	}
+	else
+	{
+		data = RecordsManager.TimeToStr( RecordsManager.RDat.Rec[recordIndex].PSRL[0].SRT );
+		data $= ";" $ RecordsManager.RDat.Rec[recordIndex].PSRL.Length;
+	}
+	return data;	
+}
+
+function AddMapInfoFor( int mapIndex )
+{
+	local int recordIndex;
+
+	recordIndex = RecordsManager.RDat.FindRecord( MapList[mapIndex].MapName );
+	if( recordIndex == -1 )
+	{
+		return;
+	}
+	
+	MapList[mapIndex].PlayCount = int(RecordsManager.RDat.Rec[recordIndex].PlayHours*100F);
 }
 
 function TallyVotes(bool bForceMapSwitch)

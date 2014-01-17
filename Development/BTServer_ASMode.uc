@@ -82,6 +82,42 @@ function ModeReset()
 	}
 }
 
+function PreRestartRound()
+{
+	super.PreRestartRound();
+	// Fool Assault from knowing the game has ended.
+ 	AssaultGame.bGameEnded = false;
+	AssaultGame.GotoState( 'MatchInProgress' );
+}
+
+function PostRestartRound()
+{
+	local int curObjIndex;
+
+	super.PostRestartRound();
+	AssaultGame.StartNewRound();
+
+	if( !bLCAMap )
+	{
+		// Keep red team as the attackers!
+		AssaultGame.CurrentAttackingTeam = 0;
+		ASGameReplicationInfo(Level.Game.GameReplicationInfo).bTeamZeroIsAttacking = True;
+		Level.Game.GameReplicationInfo.NetUpdateTime = Level.TimeSeconds - 1;
+		for( curObjIndex = 0; curObjIndex < Objectives.Length; ++ curObjIndex )
+		{
+			if( Objectives[curObjIndex] != none )
+			{
+				Objectives[curObjIndex].DefenderTeamIndex = 1;
+				Objectives[curObjIndex].NetUpdateTime = Level.TimeSeconds - 1;
+			}
+		}
+	}
+
+	// Even though, reset destroys the pawn already,
+	// we still have to kill them here again because otherwise the teams won't be fixed in some cases
+	KillAllPawns( true );
+}
+
 defaultproperties
 {
 }

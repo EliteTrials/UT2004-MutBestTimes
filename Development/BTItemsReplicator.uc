@@ -51,7 +51,7 @@ Begin:
 			SendRepData( repIndex );
 			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
 			{
-				Sleep( 0.1 );
+				Sleep( 0.3 );
 			}
 		}
 	}
@@ -72,7 +72,7 @@ Begin:
 				SendRepData( repIndex );
 				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
 				{
-					Sleep( 0.1 );
+					Sleep( 0.4 );
 				}
 			}
 		}
@@ -91,7 +91,7 @@ Begin:
 				SendRepData( repIndex );
 				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
 				{
-					Sleep( 0.1 );
+					Sleep( 0.2 );
 				}	
 			}
 		}
