@@ -41,7 +41,7 @@ Replication
 		XClipOffset;
 }
 
-Simulated Function string GetCName( PlayerReplicationInfo PRI )
+static function string GetCName( PlayerReplicationInfo PRI )
 {
 	local LinkedReplicationInfo LRI;
 	local string N;
@@ -105,21 +105,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	local string NextText;
 	local BTClient_ClientReplication CRI;
 
-	goto 'F';
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	F:
-
 	if( GRI == none || myInter == none )
 		return; // Still receiving server state...
 
@@ -169,13 +154,14 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	//C.Font = HUDClass.static.GetConsoleFont( C );
 	C.Font = class'BTClient_Interaction'.static.GetScreenFont( C );
 	C.StrLen( "T", XL, YL );
+	YL += 4;
 
 	if( SortedPlayers.Length != 0 )
-		PredictedPY = ((SortedPlayers.Length*(YL+4))+8+YL);
+		PredictedPY = ((SortedPlayers.Length*(YL+8))+8+YL);
 
 	if( SortedSpectators.Length != 0 )
 	{
-		PredictedSY = ((SortedSpectators.Length*(YL+4))+36+YL);
+		PredictedSY = ((SortedSpectators.Length*(YL+8))+36+YL);
 		if( SortedPlayers.Length == 0 )
 			PredictedSY += YL;
 	}
@@ -187,22 +173,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	C.Style = 1;
 	C.DrawColor = Class'BTClient_Config'.Static.FindSavedData().CTable;
 	C.DrawTile( Class'BTClient_Interaction'.Default.Layer, XL+8, YL+8, 0, 0, 256, 256 );
-
-	// Border
-	C.DrawColor = Class'HUD'.Default.GrayColor;
-	C.DrawColor.A = 100;
-
-	C.CurX = ((C.ClipX*0.5)-(XL*0.5))-4;
-	C.CurY = (YClipOffset*0.5)-(YL*0.5)-4;
-	// Parms: CurY, XLength
-	Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY-2 /* Start 2pixels before */, XL+8 );
-	Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY+YL+8, XL+8 );
-
-	C.CurY -= 2;
-	// Parms: CurX, YLength
-	Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX-2, YL+12 );
-	Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX+XL+8, YL+12 );
-	// ...
 
 	C.Style = 3;
 	C.DrawColor = HUDClass.Default.GoldColor;
@@ -223,22 +193,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		C.DrawColor = Class'HUD'.Default.WhiteColor;
 		C.DrawTileJustified( Level.Screenshot, 0, X, Y );
 	}*/
-
-	// Border
-	C.DrawColor = Class'HUD'.Default.GrayColor;
-	C.DrawColor.A = 100;
-
-	C.CurX = XClipOffset;
-	C.CurY = YClipOffset;
-	// Parms: CurY, XLength
-	Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY-2 /* Start 2pixels before */, X );
-	Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, C.CurY+Y, X );
-
-	C.CurY -= 2;
-	// Parms: CurX, YLength
-	Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX-2, Y+4 );
-	Class'BTClient_SoloFinish'.Static.DrawVertical( C, C.CurX+X, Y+4 );
-	// ...
 
 	C.Style = 3;
 
@@ -283,21 +237,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
 
 	C.StrLen( "00:00", TXL, YL );	// Time Width
 
-	goto 'Ff';
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-	Ff:
-
 	// Calc Start Time
 	HX += XL+TXL;
 	ETX = HX;
@@ -341,6 +280,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 
 	// Get Height of this font
 	C.StrLen( "A", XL, YL );
+	YL += 4;
 
 	YOffset = TY;
 
@@ -351,16 +291,19 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( SortedPlayers[i] == None )
 			continue;
 
-		if( YOffset+YL+4+PredictedSY >= C.ClipY-YClipOffset )
+		if( YOffset+YL+8+PredictedSY >= C.ClipY-YClipOffset )
 			break;
 
 		CRI = GetCRI( SortedPlayers[i] );
 
-		YOffset += YL+4;
+		YOffset += YL+8;
 
 		// <BACKGROUND>
 		if( SortedPlayers[i].bAdmin )
+		{
 			C.DrawColor = HUDClass.Default.RedColor;
+			C.DrawColor.A = 150;
+		}
 		else
 		{
 			if( SortedPlayers[i] != PlayerController(Owner).PlayerReplicationInfo )
@@ -374,8 +317,8 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		}
 
 		C.Style = 3;
-		C.SetPos( XClipOffset+20, YOffset );
-		C.DrawTile( Class'BTClient_Interaction'.Default.Layer, X-20, YL, 0, 0, 256, 256 );
+		C.SetPos( XClipOffset+25, YOffset );
+		C.DrawTile( Class'BTClient_Interaction'.Default.Layer, X-25, YL, 0, 0, 256, 256 );
 		// </BACKGROUND>
 
 		// <TEAM>
@@ -389,12 +332,13 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		}
 		else C.DrawColor = HUDClass.Default.GreenColor;
 
+		C.DrawColor.A = 180;
 		C.SetPos( XClipOffset, YOffset );
-		C.DrawTile( Class'BTClient_Interaction'.Default.Layer, 20, YL, 0, 0, 256, 256 );
+		C.DrawTile( Class'BTClient_Interaction'.Default.Layer, 25, YL, 0, 0, 256, 256 );
 		// </TEAM>
 
 		// Draw Player Name
-		C.SetPos( NX, YOffset );
+		C.SetPos( NX + 4, YOffset+2 );
 		C.DrawColor = HUDClass.Default.WhiteColor;
 		C.Style = 1;
 		C.DrawText( GetCName( SortedPlayers[i] )$Eval( SortedPlayers[i].bReadyToPlay, " (" $ class'ScoreBoardDeathMatch'.default.ReadyText $ ")", "" ), True );
@@ -405,21 +349,21 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		// Draw BTLevel
 		if( CRI != none )
 		{
-			C.SetPos( XClipOffset, YOffset );
+			C.SetPos( XClipOffset+2, YOffset+2 );
 			C.DrawText( CRI.BTLevel, True );
 		}
 
-		if( ASPlayerReplicationInfo(SortedPlayers[i]).DisabledObjectivesCount+ASPlayerReplicationInfo(SortedPlayers[i]).DisabledFinalObjective > 0 )
+		if( ASPlayerReplicationInfo(SortedPlayers[i]) != none && ASPlayerReplicationInfo(SortedPlayers[i]).DisabledObjectivesCount+ASPlayerReplicationInfo(SortedPlayers[i]).DisabledFinalObjective > 0 )
 		{
 			OSize = YL * 1.5f;
 
 			// Draw Objectives
-			C.SetPos( OX, YOffset - ((OSize - YL) * 0.5f) );
-			C.DrawTile( Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final', OSize, OSize, 0.0, 0.0, 128, 128 );
+			C.SetPos( OX+2, YOffset - ((OSize - YL) * 0.5f)+2 );
+			C.DrawTile( Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final', OSize-4, OSize-4, 0.0, 0.0, 128, 128 );
 
 	        NextText = string(ASPlayerReplicationInfo(SortedPlayers[i]).DisabledObjectivesCount+ASPlayerReplicationInfo(SortedPlayers[i]).DisabledFinalObjective);
 	        C.StrLen( NextText, XL, YL );
-			C.SetPos( (OX + OSize * 0.5f) - XL * 0.5f, YOffset );
+			C.SetPos( (OX + OSize * 0.5f) - XL * 0.5f, YOffset+2 );
 			C.Style = 3;
 			C.DrawText( NextText, True );
 	       	C.Style = 1;
@@ -429,13 +373,13 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	    }
 
 		// Draw Score
-   		C.SetPos( OX + OSize, YOffset );
+   		C.SetPos( OX + OSize, YOffset+2 );
 		C.DrawText( string(Min( int(SortedPlayers[i].Score), 9999 )), True );
 
 		if( myInter.MRI.bCompetitiveMode )
 		{
 	        // Draw Deaths
-			C.SetPos( DX, YOffset );
+			C.SetPos( DX, YOffset+2 );
 			C.DrawText( string(int(SortedPlayers[i].Deaths)), True );
 		}
 
@@ -445,7 +389,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 			PTime = CRI.PersonalTime;
 			if( PTime > 0 )
 			{
-				C.SetPos( TX, YOffset );
+				C.SetPos( TX, YOffset+2 );
 				C.DrawText( Class'BTClient_Interaction'.Static.Strl( PTime ), True );
 			}
 		}
@@ -453,14 +397,14 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( (GRI.ElapsedTime > 0 && GRI.Winner == None) || SavedElapsedTime == 0 )
 			SavedElapsedTime = GRI.ElapsedTime;
 
-		C.SetPos( ETX, YOffset );
+		C.SetPos( ETX, YOffset+2 );
 		C.DrawText( Class'BTClient_Interaction'.Static.StrlNoMS( Max( 0, SavedElapsedTime-SortedPlayers[i].StartTime ) ), True );
 
 		if( Level.NetMode != NM_Standalone )
 		{
 			NextText = Min( 999, 4*SortedPlayers[i].Ping ) $ Eval( SortedPlayers[i].PacketLoss > 0, "/" $ SortedPlayers[i].PacketLoss, "" );
 			C.StrLen( NextText, XL, YL );
-			C.SetPos( XClipOffset + X - XL, YOffset );
+			C.SetPos( XClipOffset + X - XL, YOffset+2 );
 			C.DrawText( NextText, True );
 		}
 	}
@@ -471,11 +415,12 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	// Draw Spectators Title
 	YOffset += 32;
 	C.StrLen( Header_Spectators, XL, YL );
+	YL += 4;
 	C.SetPos( ((C.ClipX*0.5)-(XL*0.5)), YOffset );
 	//C.SetPos( (XClipOffset*0.5)+((X*0.5)-(XL*0.5)), YOffset );
 	C.DrawColor = HUDClass.Default.WhiteColor;
 	C.DrawText( Header_Spectators, True );
-	YOffset += 4+YL;
+	YOffset += 8+YL;
 
 	// Draw Spectator Info
 	C.SetPos( NX, YOffset );
@@ -503,17 +448,20 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( SortedSpectators[i] == None )
 			continue;
 
-		if( YOffset+YL+4 >= C.ClipY-YClipOffset )
+		if( YOffset+YL+8 >= C.ClipY-YClipOffset )
 			break;
 
 		CRI = GetCRI( SortedSpectators[i] );
 
-		YOffset += YL+4;
+		YOffset += YL+8;
 
 		// Draw background for this player
 		C.SetPos( XClipOffset, YOffset );
 		if( SortedSpectators[i].bAdmin )
+		{
 			C.DrawColor = HUDClass.Default.RedColor;
+			C.DrawColor.A = 150;
+		}
 		else
 		{
 			if( SortedSpectators[i] != PlayerController(Owner).PlayerReplicationInfo )
@@ -525,7 +473,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		C.Style = 1;
 
 		// Draw Player Name
-		C.SetPos( NX, YOffset );
+		C.SetPos( NX+2, YOffset+2 );
 		C.DrawColor = HUDClass.Default.WhiteColor;
 		C.DrawText( GetCName( SortedSpectators[i] ), True );
 
@@ -538,7 +486,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 			PTime = CRI.PersonalTime;
 			if( PTime > 0 )
 			{
-				C.SetPos( TX, YOffset );
+				C.SetPos( TX, YOffset+2 );
 				C.DrawText( Class'BTClient_Interaction'.Static.Strl( PTime ), True );
 			}
 		}
@@ -546,14 +494,14 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( (GRI.ElapsedTime > 0 && GRI.Winner == None) || SavedElapsedTime == 0 )
 			SavedElapsedTime = GRI.ElapsedTime;
 
-		C.SetPos( ETX, YOffset );
+		C.SetPos( ETX, YOffset+2 );
 		C.DrawText(	Class'BTClient_Interaction'.Static.StrlNoMS( Max( 0, SavedElapsedTime-SortedSpectators[i].StartTime ) ), True );
 
 		if( Level.NetMode != NM_Standalone )
 		{
 			NextText = Min( 999, 4*SortedSpectators[i].Ping ) $ Eval( SortedSpectators[i].PacketLoss > 0, "/" $ SortedSpectators[i].PacketLoss, "" );
 			C.StrLen( NextText, XL, YL );
-			C.SetPos( XClipOffset + X - XL, YOffset );
+			C.SetPos( XClipOffset + X - XL, YOffset+2 );
 			C.DrawText( NextText, True );
 		}
 	}
