@@ -330,7 +330,7 @@ function LoadMapList()
 	Loader.LoadMapList(self);
 
 	// NEW
-  	AddRandomVotes();
+  	// AddRandomVotes();
 	CheckMapData();
 	// ..
 
@@ -354,7 +354,7 @@ function LoadMapList()
 			SaveConfig();
 			Loader.LoadMapList(self);
 
-	  		AddRandomVotes();
+	  		// AddRandomVotes();
 			CheckMapData();
 		}
 	}

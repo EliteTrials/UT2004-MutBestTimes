@@ -4658,6 +4658,10 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
 	local BTClient_ClientReplication LRI;
 
 	LRI = GetRep( receiver );
+	if( LRI == none )
+	{
+		return;
+	}
 	LRI.ClientSendMessage( class'BTClient_SoloFinish', message, switch, otherPRI );
 }
 
