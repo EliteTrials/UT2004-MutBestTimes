@@ -7,21 +7,51 @@
 //	Coded by Eliot
 //	Updated @ XX/XX/2008
 //==============================================================================
-Class BTClient_VRI Extends VotingReplicationInfo;
+class BTClient_VRI extends VotingReplicationInfo;
 
-/*Simulated Function OpenWindow()
+const MapVotingPageClass = class'BTClient_MapVotingPage';
+
+simulated function string GetMapNameString(int Index)
 {
-	local GUIController GC;
+	if(Index >= MapList.Length)
+		return "";
+	else
+		return class'BTClient_MapVoteMultiColumnList'.static.ParseMapName(MapList[Index].MapName);
+}
 
- 	GC = GetController();
- 	if( GC != None )
- 	{
-		if( GC.FindMenuByClass( Class'BTClient_MapVotingPage' ) == None )
-			GC.OpenMenu( string( Class'BTClient_MapVotingPage' ) );
+simulated function OpenWindow()
+{
+	GetController().OpenMenu( string(MapVotingPageClass) );
+}
+
+// Hooked by BTServer_VotingHandler.
+delegate string InjectMapNameData(int mapIndex);
+
+// Ugly copy from parent, modified to, inject data into the MapName variable.
+function TickedReplication_MapList(int Index, bool bDedicated)
+{
+ 	local VotingHandler.MapVoteMapList MapInfo;
+ 	local string data;
+
+	MapInfo = VH.GetMapList(Index);
+	DebugLog("___Sending " $ Index $ " - " $ MapInfo.MapName);
+
+	data = InjectMapNameData(index);
+	if( data != "" )
+	{
+		MapInfo.MapName $= "$$" $ data;
 	}
-}*/
 
-DefaultProperties
+	if( bDedicated )
+	{
+		ReceiveMapInfo(MapInfo);  // replicate one map each tick until all maps are replicated.
+		bWaitingForReply = True;
+	}
+	else
+		MapList[MapList.Length] = MapInfo;
+}
+
+defaultproperties
 {
 	NetPriority=1.5
 	NetUpdateFrequency=2

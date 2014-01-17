@@ -5,66 +5,90 @@
 */
 //	Coded by Eliot
 //	Updated @ 19/11/2009
+// 	Updated @ 16/01/2014
 //==============================================================================
-Class BTClient_SoloFinish Extends CriticalEventPlus;
+class BTClient_SoloFinish extends BTClient_LocalMessage;
 
-static function string GetString(
-	optional int Switch,
-	optional PlayerReplicationInfo RelatedPRI_1,
-	optional PlayerReplicationInfo RelatedPRI_2,
-	optional Object OptionalObject
-	)
+var Color RecordStateColor[3];
+
+/** Returns color A as a color tag. */
+static final preoperator string $( Color A )
 {
-	// Pass a non color code string so RenderComplexMessage receives the correct XL, YL
-	return Class'GUIComponent'.Static.StripColorCodes( BTClient_ClientReplication(OptionalObject).SFMSG );
+	return (Chr( 0x1B ) $ (Chr( Max( A.R, 1 )  ) $ Chr( Max( A.G, 1 ) ) $ Chr( Max( A.B, 1 ) )));
 }
 
-static function RenderComplexMessage(
-	Canvas C,
-	out float XL,
-	out float YL,
-	optional String MessageString,
-	optional int Switch,
-	optional PlayerReplicationInfo RelatedPRI_1,
-	optional PlayerReplicationInfo RelatedPRI_2,
-	optional Object OptionalObject
-	)
+/** Strips all color tags from A. */
+static final preoperator string %( string A )
 {
-	local float CurX, CurY;
-	local byte A;
+	local int i;
 
-	C.SetPos( C.CurX-8, C.CurY-8 );
-	CurX = C.CurX;
-	CurY = C.CurY;
-
-	A = C.DrawColor.A*0.50;
-	C.DrawColor = Class'BTClient_Config'.Static.FindSavedData().CTable;
-	C.DrawColor.A = A;
-	C.Style = 1;
-	C.DrawTile( Class'BTClient_Interaction'.Default.Layer, XL+16, YL+16, 0, 0, 256, 256 );
-
-	// Draw the lines
-	C.DrawColor = Class'HUD'.Default.GrayColor;
-	C.DrawColor.A = A;
-
-	// 2 = addional pixel to fill corners
-	C.SetPos( CurX-2, CurY );
-	if( A > 20 )
+	while( true )
 	{
-		DrawHorizontal( C, C.CurY, XL+18 );
-		DrawHorizontal( C, C.CurY+YL+16, XL+18 );
-
-		DrawVertical( C, C.CurX, YL+18 );
-		DrawVertical( C, C.CurX+XL+18, YL+18 );
+		i = InStr( A, Chr( 0x1B ) );
+		if( i != -1 )
+		{
+			A = Left( A, i ) $ Mid( A, i + 4 );
+			continue;
+		}
+		break;
 	}
+	return A;
+}
 
-	C.CurX += 8;
-	C.CurY += 12;
+static function color GetColor(
+    optional int RecordState,
+    optional PlayerReplicationInfo MessageReceiver,
+    optional PlayerReplicationInfo MessageInstigator
+    )
+{
+    return default.RecordStateColor[RecordState];
+}
 
-	// Text
-	C.SetPos( C.CurX, C.CurY );
-	// Use SFMSG instead of MessageString because messagestring colours were stripped by GetString
-	C.DrawTextClipped( BTClient_ClientReplication(OptionalObject).SFMSG, True );
+// Make a copy of the temporary ClientMessage
+static function string GetString( optional int RecordState, 
+	optional PlayerReplicationInfo MessageReceiver, optional PlayerReplicationInfo MessageInstigator,
+	optional Object ReceiverClientReplication )
+{
+	return Repl( 
+		super.GetString(RecordState, MessageReceiver, MessageInstigator, ReceiverClientReplication), 
+		"%PLAYER%", 
+		$class'HUD'.default.WhiteColor $ class'BTClient_TrialScoreBoard'.static.GetCName(MessageInstigator) $ $GetColor(RecordState, MessageReceiver, MessageInstigator) 
+	);
+}
+
+static function RenderComplexMessage( 
+    Canvas Canvas, 
+    out float XL,
+    out float YL,
+    optional String MessageString,
+    optional int RecordState,
+    optional PlayerReplicationInfo MessageReceiver, 
+    optional PlayerReplicationInfo MessageInstigator,
+    optional Object ReceiverClientReplication
+    )
+{
+	local byte	Alpha;
+	local float	IconSize;
+
+	Canvas.DrawTextClipped( MessageString, false );
+
+	IconSize = YL*2;
+	Alpha = Canvas.DrawColor.A;
+
+	Canvas.SetPos( Canvas.CurX - IconSize - YL*0.33, Canvas.CurY + YL*0.5 - IconSize*0.5 );
+	if( RecordState == 1 )
+	{
+		Canvas.DrawColor = Canvas.MakeColor(255, 255, 255);
+		Canvas.DrawColor.A	= Alpha;
+		Canvas.DrawTile( Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Single', IconSize, IconSize, 0, 0, 128, 128);
+	}
+	else if( RecordState == 0 || RecordState == 2 )
+	{
+		Canvas.DrawColor = Canvas.MakeColor(255, 0, 0);
+		Canvas.DrawColor.A	= Alpha;
+		Canvas.DrawTile( Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Single', IconSize, IconSize, 0, 0, 128, 128);
+		// Canvas.DrawTile( Texture'AS_FX_TX.Emitter.HoldArrow', IconSize, IconSize, 0, 0, 128, 128);
+	}
 }
 
 // Taken from the canvas class. Changed to a different texture
@@ -93,11 +117,13 @@ DefaultProperties
 {
 	Lifetime=6
 	bComplexString=True
-	//bIsSpecial=False
 
-	DrawColor=(R=255,G=128,B=0)
+	DrawColor=(R=255,G=128,B=0,A=255)
+	RecordStateColor(0)=(R=255,G=0,B=0,A=255)
+	RecordStateColor(1)=(R=255,G=255,B=0,A=255)
+	RecordStateColor(2)=(R=20,G=20,B=20,A=255)
 	FontSize=-2
 
 	StackMode=SM_Down
-	PosY=0.3
+	PosY=0.35
 }

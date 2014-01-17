@@ -219,6 +219,8 @@ var bool bReceivedRankings;
 var bool bAutoPress;
 var bool bPermitBoosting;
 
+var /**TEMP*/ string ClientMessage;
+
 replication
 {
 	reliable if( bNetDirty )
@@ -227,10 +229,10 @@ replication
 		BTLevel, BTExperience, BTPoints,
 		PreferedColor;
 		
-	reliable if( bNetDirty && bNetOwner )
+	reliable if( bNetOwner )
 		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
 
-	unreliable if( bNetInitial && bNetOwner && bNetDirty )
+	unreliable if( bNetInitial && bNetOwner )
 		UserState;
 
 	reliable if( bNetInitial )
@@ -262,8 +264,7 @@ replication
 
 	// unreliable
 	reliable if( Role == ROLE_Authority )
-		ClientSendText, ClientCleanText,
-		ClientSetSFMSG;
+		ClientSendText, ClientCleanText, ClientSendMessage, ClientSendConsoleMessage;
 
 	unreliable if( Role < ROLE_Authority )
 		ServerSetClientFlags;
@@ -364,46 +365,40 @@ function SetClientFlags( int newFlags, bool bAdd )
 	}
 }
 
-Simulated Function ClientSetSFMSG( string Msg, byte Failed )
+
+simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass, string message, 
+	optional byte switch, 
+	optional PlayerReplicationInfo PRI2
+	)
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
-	if( Options == None )
+	// HACK: Respect the options specifically for record messages.
+	if( messageClass == class'BTClient_SoloFinish' && Options.bDisplayCompletingMessages )
 	{
-		InitializeClient();
-		if( Options == None )
+		if( (switch == 0 || switch == 2) && Options.bDisplayFail )
 		{
-			Log( "Options None!!!!", Name );
+			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
+				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.FailSound, SLOT_Interface, 255, true );
+		}
+		else if( switch == 1 && Options.bDisplayNew )
+		{
+			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
+				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.NewSound, SLOT_Interface, 255, true );
+		}
+		else
+		{
+			// When both are disabled, still print a message in the console
+			ClientSendConsoleMessage( message );
 			return;
 		}
 	}
 
-	if( Options.bDisplayCompletingMessages )
-	{
-		if( Failed == 0 && Options.bDisplayFail )
-		{
-			SFMSG = Msg;
-			PlayerController(Owner).ReceiveLocalizedMessage( Class'BTClient_SoloFinish', 0,,, Self );
-			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != None )
-				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.FailSound, SLOT_Interface, 255, True );
-
-			return;
-		}
-
-		if( Failed == 1 && Options.bDisplayNew )
-		{
-			SFMSG = Msg;
-			PlayerController(Owner).ReceiveLocalizedMessage( Class'BTClient_SoloFinish', 1,,, Self );
-			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != None )
-				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.NewSound, SLOT_Interface, 255, True );
-
-			return;
-		}
-
-		// When both are disabled, still print a message in the console
-		ClientSendMessage( Msg );
-	}
+	// Temporary copy for the LocalMessage class to copy.
+	ClientMessage = message;
+	PlayerController(Owner).ReceiveLocalizedMessage( messageClass, 
+		int(switch), 
+		PlayerController(Owner).PlayerReplicationInfo, PRI2, 
+		self 
+	);
 }
 
 // Call this on server instead of clientspawn!
@@ -427,11 +422,8 @@ Simulated Function ClientSpawn()
 	LastSpawnTime = Level.TimeSeconds;
 }
 
-Simulated Function ClientSendMessage( coerce string Msg )
+Simulated Function ClientSendConsoleMessage( coerce string Msg )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
 }
 
@@ -665,7 +657,7 @@ simulated final function ClientAchievementProgressed( string title, string icon,
 			PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.AchievementSound, SLOT_Interface, 255, true );
 	}
 
-	ClientSendMessage( "You have made progress on the achievement" @ title );
+	ClientSendConsoleMessage( "You have made progress on the achievement" @ title );
 }
 
 simulated final function ClientAchievementAccomplished( string title, optional string icon )
@@ -678,7 +670,7 @@ simulated final function ClientAchievementAccomplished( string title, optional s
 	if( PlayerController(Owner).ViewTarget != none )
 		PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.AchievementSound, SLOT_Interface, 255, true );
 
-	ClientSendMessage( "You accomplished the achievement" @ title );
+	ClientSendConsoleMessage( "You accomplished the achievement" @ title );
 }
 
 simulated final function ClientCleanAchievements()
@@ -814,5 +806,6 @@ DefaultProperties
 
 	myPlayerSlot=-1
 
-	NetPriority=0.5
+	NetUpdateFrequency=0.5
+	// NetPriority=0.5
 }
