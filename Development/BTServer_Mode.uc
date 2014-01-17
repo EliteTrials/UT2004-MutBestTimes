@@ -92,6 +92,7 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 	}
 	
 	if( !bmissed )
+	{
 		return true;
 	}
 	return false;
