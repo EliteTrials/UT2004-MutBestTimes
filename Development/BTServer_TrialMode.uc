@@ -25,6 +25,13 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 	other.SetCollision( true, false, false );
 }
 
+function PostRestartRound()
+{
+	super.PostRestartRound();
+
+	ClearClientStarts();
+}
+
 function bool ChatCommandExecuted( PlayerController sender, string command )
 {
 	local bool bmissed;
@@ -37,22 +44,6 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 			
 		case "revote":
 			Mutate( "votemap" @ CurrentMapName, sender );
-			break;
-			
-		case "vote":
-			sender.ConsoleCommand( "ShowVoteMenu" );
-			break;
-			
-		case "spec":
-			if( !sender.PlayerReplicationInfo.bOnlySpectator )
-				sender.BecomeSpectator();
-				
-			break;
-			
-		case "join":
-			if( sender.PlayerReplicationInfo.bOnlySpectator )
-				sender.BecomeActivePlayer();
-				
 			break;
 			
 		case "red":

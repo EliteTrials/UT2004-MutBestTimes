@@ -98,6 +98,8 @@ var int TotalItemsBought;
 
 var int DayTest;
 
+var transient int TotalActivePlayersCount;
+
 var transient MutBestTimes BT;
 
 final function StringToArray( string s, out array<string> a )
@@ -115,75 +117,6 @@ final function StringToArray( string s, out array<string> a )
 	{
 		a[i] = Mid( Left( s, i + 1), i );
 	}
-}
-
-function int CodePointFromCharacter( string char )
-{
-	local int i;
-
-	i = Asc( char );
-	if( char > "9" )
-	{
-		return i - (48 + 7);
-	}
-	return i - 48;
-}
-
-function string CharacterFromCodePoint( int codePoint )
-{
-	if( codePoint > 9 )
-	{
-		return Chr( 48 + 7 + codePoint );
-	}
-	return Chr( 48 + codePoint );
-}
-
-function string GenerateCheckCharacter( array<string> input )
-{
-	local int i, factor, sum, n, addend, remainder;
-
-    factor = 2;
-    n = 9;
-
-    // Starting from the right and working leftwards is easier since
-    // the initial "factor" will always be "2"
-    for (i = input.Length - 1; i >= 0; i--) {
-            addend = factor * CodePointFromCharacter( input[i] );
-
-            // Alternate the "factor" that each "codePoint" is multiplied by
-            factor = 1 + (1 * int(factor != 2));
-
-            // Sum the digits of the "addend" as expressed in base "n"
-            addend = (addend / n) + (addend % n);
-            sum += addend;
-    }
-
-    // Calculate the number that must be added to the "sum"
-    // to make it divisible by "n"
-    remainder = sum % n;
-    return CharacterFromCodePoint( (n - remainder) % n );
-}
-
-function bool ValidateCheckCharacter( array<string> input )
-{
-	local int i, factor, sum, n, addend, remainder;
-
-    factor = 1;
-    n = 9;
-
-    for (i = input.Length - 1; i >= 0; i--) {
-            addend = factor * CodePointFromCharacter( input[i] );
-
-            // Alternate the "factor" that each "codePoint" is multiplied by
-            factor = 1 + (1 * int(factor == 2));
-
-            // Sum the digits of the "addend" as expressed in base "n"
-            addend = (addend / n) + (addend % n);
-            sum += addend;
-    }
-
-    remainder = sum % n;
-	return (remainder == 0);;
 }
 
 final function bool HasTrophy( int playerSlot, string trophyID )

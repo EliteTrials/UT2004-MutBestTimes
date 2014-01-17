@@ -123,8 +123,8 @@ final static function int MakeCompactDate( LevelInfo Level )
 final static function GetCompactDate( int date, out int year, out int month, out int day )
 {
 	year = date >> 16;
-	month = date & 0x0000FF00 >> 8;
-	day = date & 0x000000FF;
+	month = byte(date >> 8);
+	day = byte(date & 0xFF);
 }
 
 final function int FindRecord( string mapName )

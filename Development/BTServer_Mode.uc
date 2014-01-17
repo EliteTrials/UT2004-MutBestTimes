@@ -41,6 +41,16 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 {
 }
 
+function PreRestartRound()
+{
+	
+}
+
+function PostRestartRound()
+{
+	
+}
+
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 {
 	local string S, Color;
@@ -58,6 +68,32 @@ function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 
 function bool ChatCommandExecuted( PlayerController sender, string command )
 {
+	local bool bmissed;
+
+	switch( command )
+	{
+		case "vote":
+			sender.ConsoleCommand( "ShowVoteMenu" );
+			break;
+			
+		case "spec":
+			if( !sender.PlayerReplicationInfo.bOnlySpectator )
+				sender.BecomeSpectator();
+			break;
+			
+		case "join":
+			if( sender.PlayerReplicationInfo.bOnlySpectator )
+				sender.BecomeActivePlayer();
+			break;
+
+		default:
+			bmissed = true;
+			break;
+	}
+	
+	if( !bmissed )
+		return true;
+	}
 	return false;
 }
 
