@@ -1760,20 +1760,20 @@ const COLUMN_PADDING_X = 4;
 const COLUMN_PADDING_Y = 2;
 const ROW_MARGIN = 2;
 
-final function DrawLayer( Canvas C, float x, float y, float width, float height )
+final static function DrawLayer( Canvas C, float x, float y, float width, float height )
 {
 	C.SetPos( x, y );
-	C.DrawTile( AlphaLayer, width, height, 0, 0, 256, 256 );
+	C.DrawTile( default.AlphaLayer, width, height, 0, 0, 256, 256 );
 	C.SetPos( x, y ); // Reset pushment from DrawTile
 }
 
-final function DrawHeaderTile( Canvas C, float x, float y, float width, float height )
+final static function DrawHeaderTile( Canvas C, float x, float y, float width, float height )
 {
 	C.DrawColor = #0x99990066;
 	DrawLayer( C, x, y, width, height );
 }
 
-final function DrawHeaderText( Canvas C, float x, float y, string title )
+final static function DrawHeaderText( Canvas C, float x, float y, string title )
 {
 	C.SetPos( x + COLUMN_PADDING_X, y + COLUMN_PADDING_Y );
 	C.DrawColor = #0xFFFFFFFF;
@@ -1781,12 +1781,12 @@ final function DrawHeaderText( Canvas C, float x, float y, string title )
 	C.SetPos( x, y ); // Reset pushment from DrawText
 }
 
-final function DrawColumnTile( Canvas C, float x, float y, float width, float height )
+final static function DrawColumnTile( Canvas C, float x, float y, float width, float height )
 {
 	DrawLayer( C, x, y, width, height );
 }
 
-final function DrawColumnText( Canvas C, float x, float y, string title )
+final static function DrawColumnText( Canvas C, float x, float y, string title )
 {
 	C.SetPos( x + COLUMN_MARGIN, y + COLUMN_MARGIN );
 	C.DrawText( title, false );
@@ -1884,7 +1884,7 @@ final function DrawElementTile( Canvas C, float x, float y, float width, float h
 	DrawLayer( C, x, y, width + COLUMN_PADDING_X*2, height + COLUMN_PADDING_Y*2 );
 }
 
-final function DrawElementPart( Canvas C, float x, float y, string title, optional Color textColor )
+final static function DrawElementPart( Canvas C, float x, float y, string title, optional Color textColor )
 {
 	C.SetPos( x, y + COLUMN_PADDING_Y + COLUMN_MARGIN );
 	if( textColor.A == 0 )
@@ -1899,7 +1899,7 @@ final function DrawElementPart( Canvas C, float x, float y, string title, option
 	C.SetPos( x, y ); // Reset pushment from DrawText
 }
 
-final function DrawElementText( Canvas C, float x, float y, string title )
+final static function DrawElementText( Canvas C, float x, float y, string title )
 {
 	C.SetPos( x + COLUMN_PADDING_X, y + COLUMN_PADDING_Y + COLUMN_MARGIN );
 	C.DrawColor = #0xFFFFFFFF;
@@ -1907,7 +1907,7 @@ final function DrawElementText( Canvas C, float x, float y, string title )
 	C.SetPos( x, y ); // Reset pushment from DrawText
 }
 
-final function DrawElementValue( Canvas C, float x, float y, string title, optional Color textColor )
+final static function DrawElementValue( Canvas C, float x, float y, string title, optional Color textColor )
 {
 	C.SetPos( x - COLUMN_PADDING_X, y + COLUMN_PADDING_Y + COLUMN_MARGIN );
 	if( textColor.A == 0 )
@@ -1918,7 +1918,7 @@ final function DrawElementValue( Canvas C, float x, float y, string title, optio
 	{
 		C.DrawColor = textColor;
 	}
-	C.DrawText( title, false );
+	C.DrawTextClipped( title );
 	C.SetPos( x, y ); // Reset pushment from DrawText
 }
 
@@ -2768,7 +2768,7 @@ function DrawRecordWidget( Canvas C )
 		// Record Author
 		// Title
 		s = RecordHolderMsg $ " " $ MRI.PlayersBestTimes;
-		C.StrLen( %s, width, height );
+		C.TextSize( %s, width, height );
 		width = FMax( width, minWidth );
 		DrawElementTile( C, drawX - width, drawY, width, height );
 
@@ -2778,7 +2778,7 @@ function DrawRecordWidget( Canvas C )
 
 		// Right column
 		s = MRI.PlayersBestTimes;
-		C.StrLen( %s, xl, yl );
+		C.TextSize( %s, xl, yl );
 		DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );
 		drawY += height + COLUMN_PADDING_Y*3;
 		// ...
