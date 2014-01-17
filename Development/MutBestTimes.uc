@@ -21,7 +21,7 @@ class MutBestTimes extends Mutator
 //	Minor Version  // minor new features
 //	Build Number // compile/test count, resets??
 //	Revision // quick fix
-const BTVersion 						= "3.1.1.0";
+const BTVersion 						= "4.0.0.0";
 const MaxPlayers						= 3;									// Note: Setting this higher than 4 will cause the extra players to not receive any points for the record!.
 const MaxRecentRecords 					= 15;									// The max recent records that is saved.
 const MaxPlayerRecentRecords			= 5;									// The max recent records that are saved per player.
@@ -41,7 +41,7 @@ const EXP_FailRecord					= 3;
 const EXP_Objective 					= 4;
 
 const META_DECOMPILER_VAR_AUTHOR				= "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2012 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE		= "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 // Rewards related.

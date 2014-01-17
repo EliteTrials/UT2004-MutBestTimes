@@ -1,5 +1,5 @@
 cd..
-cd ClientBTimesV4D
+cd ClientBTimesV5
 make.bat
 
 pause

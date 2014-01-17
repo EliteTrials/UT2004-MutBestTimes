@@ -4,7 +4,7 @@
 class BTServer_PlayersData extends Object
 	hidedropdown;
 
-#exec obj load file="..\System\ClientBTimesV4D.u"
+#exec obj load file="..\System\ClientBTimesV5.u"
 
 struct sBTPlayerInfo
 {
