@@ -204,6 +204,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
 					//	BT.PDat.RemoveExperience( BT.GetRep( PlayerController(Killed.Controller) ).myPlayerSlot, EXP_Dead );
 				}
 			}
+			BT.CurMode.ModePlayerKilled( C );
 			// Quick Respawn with no gibbing.
 			RespawnPlayer( Killed );
 			// Give other mutators a chance to know about a players dead, but without giving the chance to overwrite the return value.

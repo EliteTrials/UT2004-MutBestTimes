@@ -548,7 +548,14 @@ final function NotifyGiveCurrency( int playerSlot, int currencyReceived )
 	}
 
 	CRI.BTPoints = PDat.Player[playerSlot].LevelData.BTPoints;
-	PC.ClientMessage( "You have received" @ class'HUD'.default.GreenColor $ currencyReceived $ class'HUD'.default.WhiteColor @ "currency points!" );
+	if( currencyReceived < 0 )
+	{
+		PC.ClientMessage( "You have lost" @ class'HUD'.default.RedColor $ currencyReceived $ class'HUD'.default.WhiteColor @ "currency points!" );
+	}
+	else
+	{
+		PC.ClientMessage( "You have received" @ class'HUD'.default.GreenColor $ currencyReceived $ class'HUD'.default.WhiteColor @ "currency points!" );
+	}
 }
 
 final function NotifyItemBought( int playerSlot )
@@ -3123,6 +3130,7 @@ private final function ConsumeKey( BTActivateKey handler )
 			
 		case "prem":
 			PDat.Player[Rep.myPlayerSlot].bHasPremium = true;
+			Rep.bIsPremiumMember = true;
 			SendSucceedMessage( handler.Requester, 0x00FF00 $ "You now have premium! You have been granted access to all premium items!" );
 			SaveAll();
 			break;
@@ -5077,7 +5085,10 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 			else
 			{
 				BroadcastFinishMessage( PC, "%PLAYER% failed to improve his/her record, time " $ TimeToStr( CurrentPlaySeconds ), 0 );
-
+				if( CR.BTWage > 0 )
+				{
+					BTServer_SoloMode(CurMode).WageFailed( CR, CR.BTWage );
+				}
 				//PDat.AddExperience( PLs-1, EXP_FailRecord + xp + BonusPoints );
 			}
 		}
@@ -5204,6 +5215,11 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 							// Failure immunity
 							PDat.ProgressAchievementByID( PLs-1, 'records_2' );
 						}
+
+						if( CR.BTWage > 0 )
+						{
+							BTServer_SoloMode(CurMode).WageSuccess( CR, CR.BTWage );
+						}
 					}
 					else	// 1st time record
 					{
@@ -5259,6 +5275,18 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 						$ " has been set, time " $ TimeToStr( CurrentPlaySeconds ) 
 						$ ", by %PLAYER%", 1 
 					);
+
+					if( CR.BTWage > 0 )
+					{
+						if( i+1 < RDat.Rec[UsedSlot].PSRL.Length )
+						{
+							BTServer_SoloMode(CurMode).WageSuccess( CR, CR.BTWage );
+						}
+						else
+						{
+							BTServer_SoloMode(CurMode).WageFailed( CR, CR.BTWage );	
+						}
+					}
 				}
 				break;
 			}
@@ -6918,6 +6946,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
 	CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
 	CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
+	CR.bIsPremiumMember = PDat.Player[Slot].bHasPremium;
 
 	CR.Title = class'BTDonators'.static.GetTitleFor( ss );
 	

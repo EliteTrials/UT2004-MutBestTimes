@@ -41,6 +41,11 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 {
 }
 
+function ModePlayerKilled( Controller player )
+{
+
+}
+
 function PreRestartRound()
 {
 	
