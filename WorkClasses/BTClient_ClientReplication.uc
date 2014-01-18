@@ -181,6 +181,8 @@ var private Pawn DeadPawn;
 var int BTLevel;
 // Not to be confused with actual Ranking Points!
 var int BTPoints;
+var int BTWage;
+var bool bIsPremiumMember;
 
 var Color PreferedColor;
 
@@ -218,6 +220,8 @@ var int myPlayerSlot;				// Cached slot of the PDat.Player list for this player
 var bool bReceivedRankings;
 var bool bAutoPress;
 var bool bPermitBoosting;
+var bool bWantsToWage;
+var int AmountToWage;
 
 var /**TEMP*/ string ClientMessage;
 
@@ -226,8 +230,8 @@ replication
 	reliable if( bNetDirty )
 		myPawn, PersonalTime,
 		Rank, ClientFlags, SoloRank,
-		BTLevel, BTExperience, BTPoints,
-		PreferedColor;
+		BTLevel, BTExperience, BTPoints, BTWage,
+		PreferedColor, bIsPremiumMember;
 		
 	reliable if( bNetOwner )
 		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;

@@ -2024,7 +2024,7 @@ final function RenderRankingsTable( Canvas C )
 		drawY += ROW_MARGIN;
 		if( isRowSelected)
 		{
-			C.DrawColor = #0x222222FF;
+			C.DrawColor = #0x222222EE;
 		}
 		else
 		{
@@ -2200,7 +2200,7 @@ final function RenderRecordsTable( Canvas C )
 		drawY += ROW_MARGIN;
 		if( isRowSelected )
 		{
-			C.DrawColor = #0x222222FF;
+			C.DrawColor = #0x222222EE;
 		}
 		else
 		{
@@ -2603,6 +2603,17 @@ function RenderHUDElements( Canvas C )
 		Options.CTable.A = 100;
 		Options.CTable.G = 150;
 		drawY += DrawElement( C, drawX, drawY, s ).y*1.2;
+		Options.CTable = backupColor;
+	}
+
+	if( SpectatedClient.BTWage > 0 )
+	{
+		// Draw Level and percent
+		S = "Waging";
+		backupColor = Options.CTable;
+		Options.CTable = #0xFF00FFFF;
+		Options.CTable.A = 100;
+		drawY += DrawElement( C, drawX, drawY, s, string(SpectatedClient.BTWage) ).y*1.2;
 		Options.CTable = backupColor;
 	}
 	

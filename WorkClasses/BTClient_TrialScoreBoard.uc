@@ -373,7 +373,14 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	// <BACKGROUND>
 	if( player != PlayerController(Owner).PlayerReplicationInfo )
 		C.DrawColor = #0x22222244;
-	else C.DrawColor = #0x222222FF;
+	else C.DrawColor = #0x222222EE;
+
+	if( CRI != none && CRI.bIsPremiumMember )
+	{
+		C.DrawColor.G = 200;
+		C.DrawColor.B = 200;
+	}
+
 	if( player.bOutOfLives )
 	{
 		C.DrawColor.A = 20;
@@ -422,6 +429,10 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	{
 		s $= "[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] ";
 		C.DrawColor = #0x888800FF;
+	}
+	if( CRI != none && CRI.bIsPremiumMember )
+	{
+		s $= "[Premium] ";
 	}
 	s $= player.GetLocationName();
 	C.DrawText( s );
