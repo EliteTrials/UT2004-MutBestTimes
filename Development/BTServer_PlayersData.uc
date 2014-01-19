@@ -2,6 +2,7 @@
 // Copyright 2005-2011 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTServer_PlayersData extends Object
+	dependson(BTStructs)
 	hidedropdown;
 
 #exec obj load file="..\System\ClientBTimesV5.u"
@@ -318,15 +319,15 @@ final function GiveCurrencyPoints( int playerSlot, int amount )
 }
 
 /** Make sure the playerSlot's are incremented by 1 when calling. */
-final function AddExperienceList( array<int> playerSlots, int experience )
+final function AddExperienceList( array<BTStructs.sPlayerReference> playerSlots, int experience )
 {
 	local int i;
 
 	for( i = 0; i < playerSlots.Length; ++ i )
 	{
-		if( playerSlots[i] > 0 )
+		if( playerSlots[i].PlayerSlot > 0 )
 		{
-			AddExperience( playerSlots[i]-1, experience );
+			AddExperience( playerSlots[i].PlayerSlot-1, experience );
 		}
 	}
 }

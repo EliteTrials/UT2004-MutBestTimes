@@ -118,6 +118,27 @@ function PostRestartRound()
 	KillAllPawns( true );
 }
 
+function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
+{
+	local BTChallenges.sChallenge chall;
+
+	super.PlayerCompletedMap( player, playerSlot, playSeconds );
+	if( InStr( Locs(Level.Author), "haydon" ) != -1 || InStr( Locs(Level.Author), "eliot" ) != -1 )
+	{
+		PDat.ProgressAchievementByType( playerSlot, 'FinishQuality', 1 );
+	}
+
+	// Complete any map 200 times
+	PDat.ProgressAchievementByType( playerSlot, 'Finish', 1 );
+	if( ChallengesManager.IsTodaysChallenge( CurrentMapName ) )
+	{
+		chall = ChallengesManager.DailyChallenge;
+		chall.Title = Repl( chall.Title, "%MAPNAME%", CurrentMapName );
+		chall.ID = Repl( chall.ID, "%MAPNAME%", CurrentMapName );
+   		PlayerEarnedTrophy( playerSlot, chall );
+	}
+}
+
 defaultproperties
 {
 }

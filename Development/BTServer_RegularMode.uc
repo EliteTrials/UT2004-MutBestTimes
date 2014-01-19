@@ -9,6 +9,20 @@ static function bool DetectMode( MutBestTimes M )
 	return !Class'BTServer_SoloMode'.static.DetectMode( M );
 }
 
+function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
+{
+	super.PlayerCompletedMap( player, playerSlot, playSeconds );
+
+	// Completed a regular map.
+	PDat.ProgressAchievementByID( playerSlot, 'mode_2' );
+	// Has 10 or more regular records.
+	if( PDat.FindAchievementByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( regularNum, playerSlot ) >= 10 )
+	{
+		// Regular gamer.
+		PDat.ProgressAchievementByID( playerSlot, 'records_4' );
+	}
+}
+
 defaultproperties
 {
 	ModeName="Regular"

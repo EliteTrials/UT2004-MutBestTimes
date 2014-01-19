@@ -28,8 +28,62 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 function PostRestartRound()
 {
 	super.PostRestartRound();
-
 	ClearClientStarts();
+}
+
+function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
+{
+	super.PlayerMadeRecord( player, rankSlot, rankUps );
+	PerformItemDrop( player, rankUps );
+}
+
+function PerformItemDrop( PlayerController player, int rankUps )
+{
+	local int itemIndex;
+	local float chance;
+	local string itemName;
+	local BTClient_ClientReplication LRI;
+
+	LRI = GetRep( player );
+	if( LRI == none )
+	{
+		return;
+	}
+
+	itemIndex = Store.GetRandomItem();
+	if( itemIndex == -1 )
+	{
+		return;
+	}
+	chance = GetItemDropChance( LRI, itemIndex, rankUps );
+	if( chance >= FRand()*100 )
+	{
+		itemName = Store.Items[itemIndex].Name;
+		if( PDat.HasItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID ) )
+		{
+			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, Store.Items[itemIndex].Cost*0.50 );
+	   		SendSucceedMessage( player, "You won" @ Store.Items[itemIndex].Cost*0.50 @ "currency by random chance" );
+	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won" @ Store.Items[itemIndex].Cost*0.50 @ "currency by random chance" );
+		}
+		else
+		{
+	   		PDat.GiveItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID );
+	   		SendSucceedMessage( player, "You won item" @ Store.Items[itemIndex].Name @ "by random chance" );
+	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won item" @ itemName @ "by random chance" );
+		}
+	}
+}
+
+function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex, int rankUps )
+{
+	local float dropChance;
+
+	dropChance = DropChanceBonus;
+	if( LRI.bIsPremiumMember )
+	{
+		dropChance += 5.0;
+	}
+	return dropChance + 0.5*float(rankUps) + Store.GetItemDropChance( itemIndex );
 }
 
 function bool ChatCommandExecuted( PlayerController sender, string command )

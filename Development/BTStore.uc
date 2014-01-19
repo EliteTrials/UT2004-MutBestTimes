@@ -17,6 +17,9 @@ struct sItem
 	var() bool bPassive;
 	var() string Conditions;
 	var() array<string> Vars;
+
+	/** Additional dropchance added on top of the default dropchance. */
+	var() private float DropChance;
 	
 	var() enum EAccess
 	{
@@ -43,6 +46,7 @@ struct sItem
 
 var() array<sItem> Items;
 var() globalconfig array<sItem> CustomItems;
+var() float DefaultDropChance;
 
 struct sCategory
 {
@@ -249,6 +253,29 @@ final function int FindItemByID( string id )
 	return -1;
 }
 
+final function float GetItemDropChance( int itemIndex )
+{
+	return DefaultDropChance + Items[itemIndex].DropChance;
+}
+
+final function int GetRandomItem()
+{
+	local int randomIndex, tries;
+
+tryagain:
+	randomIndex = Rand(Items.Length);
+	if( Items[randomIndex].Access != Buy )
+	{
+		if( tries >= Items.Length )
+		{
+			return -1;
+		}
+		++ tries;
+		goto tryagain;
+	}
+	return randomIndex;
+}
+
 final function AddBoughtItems( BTServer_PlayersData data, Pawn other, int playerSlot )
 {
 	local int i, j, itemSlot, curType;
@@ -390,6 +417,8 @@ final function bool CanBuyItem( BTServer_PlayersData data, BTClient_ClientReplic
 
 defaultproperties
 {
+	DefaultDropChance=0.5
+
 	/** All items. */
 	//Categories(0)=(Name="All")
 

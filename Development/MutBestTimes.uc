@@ -3,6 +3,7 @@
 //=============================================================================
 class MutBestTimes extends Mutator
 	config(MutBestTimes)
+	dependson(BTStructs)
 	dependson(BTServer_PlayersData)
 	dependson(BTServer_RecordsData)
 	dependson(BTServer_RewardsTable)
@@ -48,6 +49,10 @@ const META_DECOMPILER_EVENT_ONLOAD_MESSAGE		= "Please, only decompile this for l
 const Objectives_GhostFollow			= 15000;
 const GhostFollowPrice					= 25;
 const GhostFollowDiePrice				= 1;
+
+const groupNum = 2;
+const soloNum = 1;
+const regularNum = 0;
 
 struct sPointsList
 {
@@ -4483,7 +4488,7 @@ final function SetRecordTime( float newTime )
 	}
 }
 
-final function SetSoloRecordTime( int soloSlot, float newTime )
+final function SetSoloRecordTime( PlayerController player, int soloSlot, float newTime )
 {
 	RDat.Rec[UsedSlot].LastRecordedDate = RDat.MakeCompactDate( Level );
 	RDat.Rec[UsedSlot].PSRL[soloSlot].SRT = newTime;
@@ -4495,6 +4500,8 @@ final function SetSoloRecordTime( int soloSlot, float newTime )
 
 	// This increments all the RecordCount kind of Achievements progress!
 	PDat.ProgressAchievementByType( RDat.Rec[UsedSlot].PSRL[soloSlot].PLs - 1, 'RecordsCount', 1 );
+
+	CurMode.PlayerMadeRecord( player, soloSlot, 0 );
 }
 
 final function ObjectiveCompleted( PlayerReplicationInfo PRI )
@@ -4802,73 +4809,6 @@ final function TeamFinishedMap( PlayerController finisher )
 	}
 }
 
-final function MapFinishedBy( int playerSlot )
-{
-	local BTChallenges.sChallenge chall;
-	const groupNum = 2;
-	const soloNum = 1;
-	const regularNum = 0;
-
-	if( IsCompetitive() )
-	{
-		TeamFinishedMap( FindPCByPlayerSlot( playerSlot ) );
-	}
-
-	if( bGroupMap )
-	{
-		// Complete a Group map
-		ProcessGroupFinishAchievement( playerSlot );
-		if( PDat.FindAchievementByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( groupNum, playerSlot ) >= 4 )
-		{
-			// Group gamer
-			PDat.ProgressAchievementByID( playerSlot, 'records_5' );
-		}
-	}
-	else if( bSoloMap )
-	{
-		// Complete a Solo map
-		PDat.ProgressAchievementByType( playerSlot, 'FinishSolo', 1 );
-
-		if( Level.Hour >= 0 && Level.Hour <= 6 )
-		{
-			PDat.ProgressAchievementByID( playerSlot, 'mode_3_night' );
-		}
-
-		if( PDat.FindAchievementByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( soloNum, playerSlot ) >= 50 )
-		{
-			// Solo gamer
-			PDat.ProgressAchievementByID( playerSlot, 'records_3' );
-		}
-	}
-	else
-	{
-		// Complete a regular map
-		PDat.ProgressAchievementByID( playerSlot, 'mode_2' );
-
-		if( PDat.FindAchievementByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( regularNum, playerSlot ) >= 10 )
-		{
-			// Regular gamer
-			PDat.ProgressAchievementByID( playerSlot, 'records_4' );
-		}
-	}
-
-	if( InStr( Locs(Level.Author), "haydon" ) != -1 || InStr( Locs(Level.Author), "eliot" ) != -1 )
-	{
-		PDat.ProgressAchievementByType( playerSlot, 'FinishQuality', 1 );
-	}
-
-	// Complete any maps 200 times
-	PDat.ProgressAchievementByType( playerSlot, 'Finish', 1 );
-
-	if( ChallengesManager.IsTodaysChallenge( CurrentMapName ) )
-	{
-		chall = ChallengesManager.DailyChallenge;
-		chall.Title = Repl( chall.Title, "%MAPNAME%", CurrentMapName );
-		chall.ID = Repl( chall.ID, "%MAPNAME%", CurrentMapName );
-   		PlayerEarnedTrophy( playerSlot, chall );
-	}
-}
-
 // BunnyMode
 final function BunnyScored( BTClient_ClientReplication CRI, PlayerController PC, CTFFlag flag )
 {
@@ -4968,7 +4908,6 @@ final private function SoloEndWrp( PlayerController PC )
 	else
 	{
 		CurrentPlaySeconds = GetFixedTime( Level.TimeSeconds - CR.LastSpawnTime );
-
 		if( SoloEndGrpFx( PC, CR ) && GhostManager != none )
 		{
 			NewGhostsQue.Length = 1;
@@ -4988,7 +4927,6 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 	local int i, j, PLs, PLi, y, z;
 	local float TimeBoost;
 	local Pawn P;
-	local name achievementID;
 	local int numObjectives;
 
 	// macro to playerslot.
@@ -5002,22 +4940,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 		numObjectives = GetPlayerObjectives( PC );
 	}
 
-	MapFinishedBy( PLs-1 );
-
-	if( AchievementsManager.TestMap( Level.Title, CurrentPlaySeconds, achievementID ) )
-	{
-		PDat.ProgressAchievementByID( PLs-1, achievementID );
-	}
-
-	if( Left( Level.Title, 13 ) == "TechChallenge" )
-	{
-		PDat.ProgressAchievementByType( PLs-1, 'FinishTech', 1 );
-	}
-	else if( Left( Level.Title, 9 ) == "EgyptRuin" )
-	{
-		PDat.ProgressAchievementByType( PLs-1, 'FinishRuin', 1 );
-	}
-
+	CurMode.PlayerCompletedMap( PC, PLs-1, CurrentPlaySeconds );
 	j = RDat.Rec[UsedSlot].PSRL.Length;
 	if( j > 0 )
 	{
@@ -5043,7 +4966,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 			// Update solo record slot
 
 			//FullLog( "Faster personal record!" );
-			SetSoloRecordTime( i, CurrentPlaySeconds );
+			SetSoloRecordTime( PC, i, CurrentPlaySeconds );
 			RDat.Rec[UsedSlot].PSRL[i].SRD[0] = Level.Day;
 			RDat.Rec[UsedSlot].PSRL[i].SRD[1] = Level.Month;
 			RDat.Rec[UsedSlot].PSRL[i].SRD[2] = Level.Year;
@@ -5101,7 +5024,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 		//FullLog( "First b check failed" );
 		RDat.Rec[UsedSlot].PSRL.Length = j + 1;
 		RDat.Rec[UsedSlot].PSRL[j].PLs = PLs;
-		SetSoloRecordTime( j, CurrentPlaySeconds );
+		SetSoloRecordTime( PC, j, CurrentPlaySeconds );
 		RDat.Rec[UsedSlot].PSRL[j].SRD[0] = Level.Day;
 		RDat.Rec[UsedSlot].PSRL[j].SRD[1] = Level.Month;
 		RDat.Rec[UsedSlot].PSRL[j].SRD[2] = Level.Year;
@@ -5325,7 +5248,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 	local string EndMsg;
 	local int i, j;
 	local float TimeBoost;
-	local array<int> contributors;
+	local array<BTStructs.sPlayerReference> contributors;
 	local int numRecordHolders;
 	local int objectivesArray[4];
 	local name achievementID;
@@ -5343,7 +5266,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 
 		for( i = 0; i < contributors.Length; ++ i )
 		{
-			MapFinishedBy( contributors[i]-1 );
+			CurMode.PlayerCompletedMap( contributors[i].player, contributors[i].PlayerSlot-1, CurrentPlaySeconds );
 		}
 
 		for( i = 0; i < arraycount(objectivesArray); ++ i )
@@ -5355,7 +5278,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 		{
 			for( i = 0; i < contributors.Length; ++ i )
 			{
-				PDat.ProgressAchievementByID( contributors[i]-1, achievementID );
+				PDat.ProgressAchievementByID( contributors[i].PlayerSlot-1, achievementID );
 			}
 		}
 
@@ -5425,7 +5348,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 					EndMsg = "Points:";
 					for( i = 0; i < numRecordHolders; ++ i )
 					{
-						RDat.Rec[UsedSlot].PLs[i] = contributors[i];
+						RDat.Rec[UsedSlot].PLs[i] = contributors[i].PlayerSlot;
 						++ PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].PLHijacks;
 
 						// Predicted Points given...
@@ -5460,11 +5383,11 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 				NewGhostsQue.Length = contributors.Length;
 				for( i = 0; i < contributors.Length; ++ i )
 				{
-					NewGhostsQue[i] = contributors[i]-1;
+					NewGhostsQue[i] = contributors[i].PlayerSlot-1;
 				}
 
 				UpdateGhosts();
-				NotifyNewRecord( contributors[0]-1 );
+				NotifyNewRecord( contributors[0].PlayerSlot-1 );
 				CurrentPlaySeconds = 0;
 				return true;
 			}
@@ -5489,7 +5412,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 					/*for( i = 0; i < contributors.Length; ++ i )
 					{
 						// Tie on a regular map
-						PDat.ProgressAchievementByID( contributors[i]-1, 'tie_0' );
+						PDat.ProgressAchievementByID( contributors[i].PlayerSlot-1, 'tie_0' );
 					}*/
 				}
 				else
@@ -5558,13 +5481,13 @@ protected final function bool ValidRecord()														// .:..:, Eliot
 //==============================================================================
 // Team-Trial Method
 // Get the best players of the current game
-final function array<int> GetBestPlayers( out int ObjsPerP[4] )						// .:..:, Eliot
+final function array<BTStructs.sPlayerReference> GetBestPlayers( out int ObjsPerP[4] )						// .:..:, Eliot
 {
 	local Controller C;
 	local array<PlayerController> Players;
 	local int i, NumPCs, Max, J;
 	local PlayerController Tmp;
-	local array<int> S;
+	local array<BTStructs.sPlayerReference> S;
 
 	for( C = Level.ControllerList; C != None; C = C.NextController )
 	{
@@ -5599,7 +5522,8 @@ final function array<int> GetBestPlayers( out int ObjsPerP[4] )						// .:..:, E
 	{
 		ObjsPerP[0] = (ASPlayerReplicationInfo(Players[0].PlayerReplicationInfo).DisabledObjectivesCount + ASPlayerReplicationInfo(Players[0].PlayerReplicationInfo).DisabledFinalObjective);
 		S.Length = 1;
-		S[0] = FastFindPlayerSlot( Players[0] );
+		S[0].player = Players[0];
+		S[0].playerSlot = FastFindPlayerSlot( Players[0] );
 		return S;
 	}
 	for( i = 0; i < NumPCs-1; ++ i )
@@ -5621,7 +5545,8 @@ final function array<int> GetBestPlayers( out int ObjsPerP[4] )						// .:..:, E
 	for( i = 0; i < NumPCs; ++ i )
 	{
 		S.Length = i+1;
-		S[i] = FastFindPlayerSlot( Players[i] );
+		S[i].player = Players[i];
+		S[i].playerSlot = FastFindPlayerSlot( Players[i] );
 		ObjsPerP[i] = (ASPlayerReplicationInfo(Players[i].PlayerReplicationInfo).DisabledObjectivesCount + ASPlayerReplicationInfo(Players[i].PlayerReplicationInfo).DisabledFinalObjective);
 	}
 	return S;

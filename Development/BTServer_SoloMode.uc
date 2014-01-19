@@ -183,6 +183,52 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 	LRI.bWantsToWage = true;
 }
 
+function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
+{
+	super.PlayerCompletedMap( player, playerSlot, playSeconds );
+
+	if( bGroupMap )
+	{
+		// Complete a Group map
+		ProcessGroupFinishAchievement( playerSlot );
+		if( PDat.FindAchievementByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( groupNum, playerSlot ) >= 4 )
+		{
+			// Group gamer
+			PDat.ProgressAchievementByID( playerSlot, 'records_5' );
+		}
+		return;
+	}
+
+	if( IsCompetitive() )
+	{
+		TeamFinishedMap( player );
+	}
+
+	if( Left( Level.Title, 13 ) == "TechChallenge" )
+	{
+		PDat.ProgressAchievementByType( playerSlot, 'FinishTech', 1 );
+	}
+	else if( Left( Level.Title, 9 ) == "EgyptRuin" )
+	{
+		PDat.ProgressAchievementByType( playerSlot, 'FinishRuin', 1 );
+	}
+
+	// Complete a Solo map
+	PDat.ProgressAchievementByType( playerSlot, 'FinishSolo', 1 );
+
+	if( Level.Hour >= 0 && Level.Hour <= 6 )
+	{
+		PDat.ProgressAchievementByID( playerSlot, 'mode_3_night' );
+	}
+
+	// Has 50 or more records.
+	if( PDat.FindAchievementByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( soloNum, playerSlot ) >= 50 )
+	{
+		// Solo gamer
+		PDat.ProgressAchievementByID( playerSlot, 'records_3' );
+	}
+}
+
 defaultproperties
 {
 	ModeName="Solo"

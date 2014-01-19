@@ -15,6 +15,7 @@ var editconst const noexport string ModePrefix;
 //var editconst noexport MutBestTimes Master;
 
 var() int ExperienceBonus;
+var() float DropChanceBonus;
 
 static function bool DetectMode( MutBestTimes M )
 {
@@ -54,6 +55,25 @@ function PreRestartRound()
 function PostRestartRound()
 {
 	
+}
+
+/** 
+ * Called when a player sets a new best or persoanl record. 
+ * @rankUps not implemented!
+ */
+function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
+{
+
+}
+
+function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
+{
+	local name achievementID;
+
+	if( AchievementsManager.TestMap( Level.Title, playSeconds, achievementID ) )
+	{
+		PDat.ProgressAchievementByID( playerSlot, achievementID );
+	}
 }
 
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
