@@ -150,7 +150,7 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 		return;
 	}
 
-	if( !LRI.bIsPremiumMember )
+	if( !LRI.bIsPremiumMember && !IsAdmin( sender.PlayerReplicationInfo ) )
 	{
 		SendErrorMessage( sender, "Waging is only for premium members!" );
 		return;
