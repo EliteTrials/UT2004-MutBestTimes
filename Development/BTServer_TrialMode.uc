@@ -73,9 +73,9 @@ function PerformItemDrop( PlayerController player, float bonus )
 		itemName = Store.Items[itemIndex].Name;
 		if( PDat.HasItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID ) )
 		{
-			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, Store.Items[itemIndex].Cost*0.50 );
-	   		SendSucceedMessage( player, "You won" @ Store.Items[itemIndex].Cost*0.50 @ "currency by random chance" );
-	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won" @ Store.Items[itemIndex].Cost*0.50 @ "currency by random chance" );
+			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, Store.Items[itemIndex].Cost*0.75 );
+	   		SendSucceedMessage( player, "You won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance" );
+	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance" );
 		}
 		else
 		{
