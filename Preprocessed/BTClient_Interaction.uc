@@ -1163,6 +1163,8 @@ Final Function ModifyMenu()
 		{
 			myMenu.MyInteraction = self;
 			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BTButton', True );
+			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
+			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
 			myMenu.MyButton.StyleName = "BTButton";
 			myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "BTButton", myMenu.FontScale );
 			myMenu.PostInitPanel();

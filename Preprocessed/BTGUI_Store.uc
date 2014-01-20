@@ -393,9 +393,9 @@ defaultproperties
 
 	begin object Class=BTStore_ItemsMultiColumnListBox Name=oItemsListBox
 		WinWidth=0.7
-		WinHeight=0.825
+		WinHeight=0.79
 		WinLeft=0.0
-		WinTop=0.035
+		WinTop=0.06
 		bVisibleWhenEmpty=true
 		bScaleToParent=true
 		bBoundToParent=true
@@ -406,7 +406,7 @@ defaultproperties
 	begin object Class=GUIButton Name=oColorDialog
 		Caption="Prefered Color"
 		WinLeft=0.71
-		WinTop=0.01
+		WinTop=0.005
 		WinWidth=0.29
 		WinHeight=0.05
 		OnClick=InternalOnClick
@@ -452,8 +452,8 @@ defaultproperties
 
 	begin object Class=GUIButton Name=oEdit
 		Caption="Edit"
-		WinLeft=0.01
-		WinTop=0.87
+		WinLeft=0.8
+		WinTop=0.795
 		WinWidth=0.12
 		WinHeight=0.05
 		OnClick=InternalOnClick
@@ -463,21 +463,21 @@ defaultproperties
 
 	begin object Class=GUIButton Name=oToggle
 		Caption="Toggle"
-		WinLeft=0.14
-		WinTop=0.87
+		WinLeft=0.88000
+		WinTop=0.855
 		WinWidth=0.12
-		WinHeight=0.025
+		WinHeight=0.08
 		OnClick=InternalOnClick
 		Hint="Activate/Deactivate the selected item"
 	end object
 	b_Toggle=oToggle
 
 	begin object Class=GUIButton Name=oDisableAll
-		Caption="All"
+		Caption="Disable All"
 		WinLeft=0.14
-		WinTop=0.895
-		WinWidth=0.12
-		WinHeight=0.025
+		WinTop=0.855
+		WinWidth=0.24
+		WinHeight=0.08
 		OnClick=InternalOnClick
 		Hint="Deactivate all your items"
 	end object
@@ -485,20 +485,21 @@ defaultproperties
 
 	begin object Class=GUIButton Name=oSell
 		Caption="Sell"
-		WinLeft=0.27
-		WinTop=0.87
+		WinLeft=0.71000
+		WinTop=0.855
 		WinWidth=0.12
-		WinHeight=0.05
+		WinHeight=0.08
 		OnClick=InternalOnClick
+		StyleName="SellButton"
 		Hint="Sell the selected item for 75% of its original price"
 	end object
 	b_Sell=oSell
 
 	Begin Object class=moComboBox Name=oFilter
 		WinLeft=0.40
-		WinTop=0.87
+		WinTop=0.01
 		WinWidth=0.3
-		WinHeight=0.05
+		WinHeight=0.08
 
 		Caption="Filter"
 		INIDefault="Other"
@@ -511,10 +512,10 @@ defaultproperties
 
 	begin object Class=GUIButton Name=oDonate
 		Caption="Donate"
-		WinLeft=0.74
-		WinTop=0.87
+		WinLeft=0.0
+		WinTop=0.855
 		WinWidth=0.12
-		WinHeight=0.05
+		WinHeight=0.08
 		OnClick=InternalOnClick
 		StyleName="BTButton"
 		Hint="Here you can donate to the admins who are working vigorously to update and add new things to the store to show appreciation for all the new things the server has. You can also make requests for personal items if you have made a donation. ÿIf you want to donate make sure you ALERT an admin who can verify it."
@@ -523,11 +524,12 @@ defaultproperties
 
 	begin object Class=GUIButton Name=oBuy
 		Caption="Buy"
-		WinLeft=0.87
-		WinTop=0.87
-		WinWidth=0.12
-		WinHeight=0.05
+		WinLeft=0.550000
+		WinTop=0.855
+		WinWidth=0.15
+		WinHeight=0.08
 		OnClick=InternalOnClick
+		StyleName="BuyButton"
 		Hint="Buy the selected item"
 	end object
 	b_Buy=oBuy
