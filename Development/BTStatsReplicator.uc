@@ -23,7 +23,6 @@ final function Initialize( BTClient_ClientReplication client )
 final function BeginReplication()
 {
 	GotoState( 'ReplicateOverallTop' );
-	SendAdditionalInfo();
 }
 
 /** Strips all color tags from A. */
@@ -84,6 +83,7 @@ Begin:
 		}
 	}
 	Sleep( 1 );
+	SendAdditionalInfo();
 	GotoState( 'ReplicateQuarterlyTop' );
 }
 
