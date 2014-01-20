@@ -189,6 +189,7 @@ var Color PreferedColor;
 /** Percentage progress of the next level. */
 var float BTExperience;
 var float LastObjectiveCompletedTime;
+var float LastDropChanceTime;
 // LOCAL ONLY
 var float LastRenderedBTExperience;
 var float LastRenderedBTLevel;
@@ -805,11 +806,10 @@ DefaultProperties
 {
 	RemoteRole=ROLE_SimulatedProxy
 	bAlwaysRelevant=true
-	//bSkipActorPropertyReplication=false
 	bNetNotify=true
+	NetPriority=0.5
 
+	LastDropChanceTime=-60
+	LastObjectiveCompletedTime=-10
 	myPlayerSlot=-1
-
-	NetUpdateFrequency=0.5
-	// NetPriority=0.5
 }
