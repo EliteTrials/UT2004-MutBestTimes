@@ -2489,6 +2489,39 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			else SendErrorMessage( sender, lzCS_NotEnabled );
 			break;
 
+		case "settitle":
+			Rep = GetRep( sender );
+			if( Rep == none )
+				break;
+
+			if( !Rep.bIsPremiumMember )
+			{
+				SendErrorMessage( sender, "Titles is only available for premium players!" );
+				break;
+			}
+
+			if( params.Length == 0 )
+			{
+				SendErrorMessage( sender, "Please specify the title!" );
+				break;
+			}
+
+			for( i = 0; i < params.Length; ++ i )
+			{
+				s $= params[i] $ " ";
+			}
+
+			if( Len( s ) > 30 )
+			{
+				SendErrorMessage( sender, "Your title cannot have more than 30 characters!" );
+				break;	
+			}
+
+			PDat.Player[Rep.myPlayerSlot].Title = s;
+			Rep.Title = s;
+			SendSucceedMessage( sender, "Changed your title to" @ s );
+			break;
+
 		case "settrailercolor":
 			Rep = GetRep( sender );
 			if( Rep == none )
@@ -3139,7 +3172,7 @@ private final function ConsumeKey( BTActivateKey handler )
 		case "prem":
 			PDat.Player[Rep.myPlayerSlot].bHasPremium = true;
 			Rep.bIsPremiumMember = true;
-			SendSucceedMessage( handler.Requester, 0x00FF00 $ "You now have premium! You have been granted access to all premium items!" );
+			SendSucceedMessage( handler.Requester, $0x00FF00 $ "You now have premium! You have been granted access to all premium items!" );
 			SaveAll();
 			break;
 	}
@@ -6858,6 +6891,27 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
 	//client.ClientTravel( "xfire:game_stats?game=ut2k4&Hours of Trials:=" $ int(PDat.Player[slot].PlayHours), TRAVEL_Absolute, false );
 }
 
+final function BroadcastLocalMessage( Controller instigator, class<BTClient_LocalMessage> messageClass, string message, optional int switch )
+{
+	local Controller C;
+	local BTClient_ClientReplication LRI;
+
+	for( C = Level.ControllerList; C != None; C = C.NextController )
+	{
+		if( C.PlayerReplicationInfo == None )
+		{
+			continue;
+		}
+
+		LRI = GetRep( C );
+		if( LRI == none )
+		{
+			continue;
+		}
+		LRI.ClientSendMessage( messageClass, message, switch, instigator.PlayerReplicationInfo );
+	}
+}
+
 //==============================================================================
 // Initialize the replication for this player
 final function CreateReplication( PlayerController PC, string SS, int Slot )
@@ -6881,11 +6935,14 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 	
 	CR.myPlayerSlot = Slot;
 
+	CR.Title = PDat.Player[Slot].Title;
 	CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
 	CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
 	CR.bIsPremiumMember = PDat.Player[Slot].bHasPremium;
-
-	CR.Title = class'BTDonators'.static.GetTitleFor( ss );
+	if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
+	{
+		BroadcastLocalMessage( PC, class'BTClient_PremLocalMessage', "Premium player %PLAYER% has entered the game" );
+	}
 	
 	if( Perks != none )
 	{

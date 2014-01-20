@@ -90,6 +90,7 @@ struct sBTPlayerInfo
 	var int PlayerFlags;
 	
 	var bool bHasPremium;
+	var string Title;
 };
 
 var array<sBTPlayerInfo> Player;
