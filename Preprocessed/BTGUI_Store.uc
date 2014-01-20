@@ -1,4 +1,6 @@
-class BTGUI_Store extends BTGUI_TabBase;
+class BTGUI_Store extends MidGamePanel;
+
+var BTClient_Interaction MyInteraction;
 
 var automated GUIImage Stats;
 var automated BTStore_ItemsMultiColumnListBox lb_ItemsListBox;
@@ -19,15 +21,13 @@ var transient int ItemsNum;
 event Free()
 {
 	ClientData = none;
+	MyInteraction = none;
 	super.Free();
 }
 
 function PostInitPanel()
 {
-	ClientData = MyMenu.MyInteraction.MRI.CR;
-
-	//DisableComponent( b_ColorDialog );
-
+	ClientData = MyInteraction.MRI.CR;
 	cb_Filter.INIDefault = Eval( ClientData.Options.StoreFilter != "", ClientData.Options.StoreFilter, "Other" );
 }
 
@@ -376,6 +376,11 @@ final function bool LoadCachedCategory( string categoryName )
 
 defaultproperties
 {
+	WinWidth=0.600000
+	WinHeight=1.000000
+	WinLeft=0.100000
+	WinTop=0.100000
+
 	lastSelectedItemIndex=-1
 
 	Begin Object class=GUIImage name=oStats

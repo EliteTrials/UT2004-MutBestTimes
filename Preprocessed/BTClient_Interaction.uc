@@ -1146,29 +1146,36 @@ Final Function ModifyMenu()
 {
 	local UT2K4PlayerLoginMenu Menu;
 	local BTClient_Menu myMenu;
+	local BTGUI_Store storeMenu;
 
 	Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
 	if( Menu != None )
 	{
 		Menu.BackgroundRStyle = MSTY_None;
 		Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
+		Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BTButton', True );
+		Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
+		Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
+		Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
 
-		/*Menu.WinHeight = 0.85;
-		Menu.WinWidth = 0.75;
-		Menu.WinLeft = 0.175;
-		Menu.WinTop = 0.075;*/
+		storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Store", string(Class'BTGUI_Store'),, "Buy and manage items" ));
+		if( storeMenu != none )
+		{
+			storeMenu.MyInteraction = self;
+			storeMenu.MyButton.StyleName = "StoreButton";
+			storeMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", storeMenu.FontScale );
+			storeMenu.PostInitPanel();
+		}
 
 		myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
 		if( myMenu != None )
 		{
 			myMenu.MyInteraction = self;
-			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BTButton', True );
-			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
-			Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
 			myMenu.MyButton.StyleName = "BTButton";
 			myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "BTButton", myMenu.FontScale );
 			myMenu.PostInitPanel();
 		}
+
 		bMenuModified = True;
 	}
 }
