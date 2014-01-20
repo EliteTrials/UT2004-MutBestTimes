@@ -61,7 +61,7 @@ Begin:
 		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
 		{
 			// Skip if item access is either buy or free, or not in requested category.
-			if( P.Store.Items[repIndex].Access < Admin || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+			if( (P.Store.Items[repIndex].Access < Admin || P.Store.Items[repIndex].Access == Drop) || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
 			{
 				continue;
 			}
@@ -82,8 +82,13 @@ Begin:
 		{	
 			for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
 			{
-				// Skip if admin/premium/private, or not in requested category.
-				if( P.Store.Items[repIndex].Access >= Admin || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+				// Skip if admin/premium/private, or not in requested category, unless item is a drop and is owned by player.
+				if( (P.Store.Items[repIndex].Access >= Admin && P.Store.Items[repIndex].Access != Drop) || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+				{
+					continue;
+				}
+
+				if( P.Store.Items[repIndex].Access == Drop && !P.PDat.HasItem( CR.myPlayerSlot, P.store.Items[repIndex].ID ) )
 				{
 					continue;
 				}

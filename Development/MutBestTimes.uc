@@ -5713,6 +5713,15 @@ Function NotifyLogout( Controller Exiting )											// .:..:, Eliot
 				{
 					PDat.RemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
 				}
+			}			
+
+			if( PDat.HasItem( CR.myPlayerSlot, "drop_bonus_1", i ) )
+			{
+				PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
+				if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
+				{
+					PDat.RemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
+				}
 			}
 		}
 
