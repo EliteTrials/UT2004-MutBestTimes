@@ -2821,7 +2821,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		   		}
 		   		else
 		   		{
-		   			SendErrorMessage( sender, "You cannot sell an item that you do not own." );
+		   			SendErrorMessage( sender, "You cannot sell an item that you do not have." );
 		   			break;
 		   		}
 			}
@@ -3876,7 +3876,7 @@ function Mutate( string MutateString, PlayerController Sender )
 		{
 			ForEach DynamicActors(class'BTServer_TeamPlayerStart',X)
 				X.Destroy();
-			Level.Game.BroadcastHandler.Broadcast(Self,"All added playerstarts has been deleted.");
+			Level.Game.BroadcastHandler.Broadcast(Self,"All added playerstarts have been deleted.");
 			return;
 		}
 		else if( MutateString ~= "ExitServer" )
@@ -6974,6 +6974,14 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 		CR.ClientSendText( $0xFF0000 $ "At least 10 people have to finish a Group map, to get the map unlocked!" );
 		CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
 	}
+
+	CR.ClientSendText( "" );
+	CR.ClientSendText( $0xFF8800 $ "Welcome to this server, a new MutBestTimes version is currently being tested, here are the changes:" );
+	CR.ClientSendText( "" );
+	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" For every time you complete an objective you have a small chance to receive a random item!" );
+	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" Recent donators will receive a premium activation code, giving them access to exclusive features!" );
+	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" The MutBestTimes HUD/Scoreboard and pretty much everything has a new look!" );
+	CR.ClientSendText( "" );
 
 	if( bShowRankings && ModeIsTrials() )
 	{
