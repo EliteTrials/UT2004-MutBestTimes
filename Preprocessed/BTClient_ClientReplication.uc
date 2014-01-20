@@ -19,6 +19,7 @@ struct sGlobalPacket
 	var float Points;
 	var int Objectives;
 	var int Hijacks;
+	var transient bool bIsSelf;
 };
 
 struct sDailyPacket
@@ -42,6 +43,7 @@ struct sSoloPacket
 	var float Points;
 	var float Time;
 	var string Date;
+	var transient bool bIsSelf;
 };
 
 /** A structure that defines an earnable achievement. */
@@ -298,7 +300,7 @@ final function bool IsClient()
 }
 
 // Client-side detection whether the pawn of this CRI owner died!
-Simulated Function PostNetReceive()
+simulated function PostNetReceive()
 {
 	super.PostNetReceive();
 	// Using Options to know whether were executing this on my own CRI
@@ -335,7 +337,7 @@ Simulated Function PostNetReceive()
 	}
 }
 
-Simulated Function ReplicateResetGhost()
+simulated function ReplicateResetGhost()
 {
 	ServerSetClientFlags( CFRESETGHOST, class'BTClient_Config'.static.FindSavedData().bResetGhostOnDead );
 }
@@ -407,19 +409,19 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
 }
 
 // Call this on server instead of clientspawn!
-Function PlayerSpawned()
+function PlayerSpawned()
 {
 	LastSpawnTime = Level.TimeSeconds;
 	ClientSpawn();
 }
 
-Function ClientSetPersonalTime( float CPT )
+function ClientSetPersonalTime( float CPT )
 {
 	PersonalTime = CPT;
 }
 
 // Client spawned, reset timer...
-Simulated Function ClientSpawn()
+simulated function ClientSpawn()
 {
 	if( Role == ROLE_Authority )
 		return;
@@ -427,38 +429,29 @@ Simulated Function ClientSpawn()
 	LastSpawnTime = Level.TimeSeconds;
 }
 
-Simulated Function ClientSendConsoleMessage( coerce string Msg )
+simulated function ClientSendConsoleMessage( coerce string Msg )
 {
 	PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
 }
 
 //==============================================================================
-// OVERALL TOP FUNCTIONS
-Simulated Function ClientCleanOverallTop()
+// OVERALL TOP functionS
+simulated function ClientCleanOverallTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	OverallTop.Length = 0;
 }
 
-Simulated function ClientSendOverallTop( sGlobalPacket APacket )
+simulated function ClientSendOverallTop( sGlobalPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = OverallTop.Length;
 	OverallTop.Length = j+1;
 	OverallTop[j] = APacket;
 }
 
-Simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
+simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > OverallTop.Length-1 )
 		return;
 
@@ -466,128 +459,111 @@ Simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
 }
 //==============================================================================
 
-Simulated Function ClientCleanQuarterlyTop()
+simulated function ClientCleanQuarterlyTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	QuarterlyTop.Length = 0;
 }
 
-Simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
+simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = QuarterlyTop.Length;
 	QuarterlyTop.Length = j+1;
 	QuarterlyTop[j] = APacket;
 }
 
-Simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
+simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > QuarterlyTop.Length-1 )
 		return;
 
 	QuarterlyTop[Slot] = APacket;
 }
 
-Simulated Function ClientCleanDailyTop()
+simulated function ClientCleanDailyTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	DailyTop.Length = 0;
 }
 
-Simulated function ClientSendDailyTop( sDailyPacket APacket )
+simulated function ClientSendDailyTop( sDailyPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = DailyTop.Length;
 	DailyTop.Length = j+1;
 	DailyTop[j] = APacket;
 }
 
-Simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
+simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > DailyTop.Length-1 )
 		return;
 
 	DailyTop[Slot] = APacket;
 }
 
-Simulated Function ClientCleanSoloTop()
+simulated function ClientCleanSoloTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	SoloTop.Length = 0;
 }
 
-Simulated function ClientSendSoloTop( sSoloPacket APacket )
+simulated function ClientSendSoloTop( sSoloPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = SoloTop.Length;
 	SoloTop.Length = j+1;
 	SoloTop[j] = APacket;
 }
 
-Simulated Function ClientUpdateSoloTop( sSoloPacket APacket, byte Slot )
+simulated function ClientUpdateSoloTop( sSoloPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > SoloTop.Length-1 )
 		return;
 
 	SoloTop[Slot] = APacket;
 }
 
-Simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
+simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
+	local int i;
 
-	MySoloTop = APacket;
+	for( i = 0; i < SoloTop.Length; ++ i )
+	{
+		if( SoloTop[i].bIsSelf )
+		{
+			SoloTop[i] = APacket;
+			return;	
+		}
+	}
+	APacket.bIsSelf = true;
+	ClientSendSoloTop( APacket );
 }
 
-Simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
+simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
+	local int i;
 
-	MyOverallTop = APacket;
+	for( i = 0; i < OverallTop.Length; ++ i )
+	{
+		if( OverallTop[i].bIsSelf )
+		{
+			OverallTop[i] = APacket;
+			return;	
+		}
+	}
+	APacket.bIsSelf = true;
+	ClientSendOverallTop( APacket );
 }
 
-Simulated Function ClientSendText( string Packet )
+simulated function ClientSendText( string Packet )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	Text[Text.Length] = Packet;
 }
 
-Simulated Function ClientCleanText()
+simulated function ClientCleanText()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	Text.Length = 0;
 }
 

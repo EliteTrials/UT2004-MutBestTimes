@@ -2040,6 +2040,16 @@ final function RenderRankingsTable( Canvas C )
 			C.DrawColor = #0x22222244;
 		}
 		DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+		if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
+		{
+			C.DrawColor = #0x88880044;
+			C.SetPos( drawX, drawY + headerHeight-2 );
+			C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );			
+
+			C.SetPos( drawX, drawY + headerHeight*0.5 );
+			C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
+		}
+
 		for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
 		{
 			value = "---";
@@ -2047,7 +2057,14 @@ final function RenderRankingsTable( Canvas C )
 			{
 				case 0: // "Rank (Any)"
 					C.DrawColor = #0x666666FF;
-					value = string(i + 1);
+					if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf )
+					{
+						value = string(MRI.CR.Rank);
+					}
+					else
+					{
+						value = string(i + 1);
+					}
 					break;
 
 				case 5: // "Tasks (Overall)"
@@ -2215,14 +2232,32 @@ final function RenderRecordsTable( Canvas C )
 		{
 			C.DrawColor = #0x22222244;
 		}
+
 		DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
+		if( MRI.CR.SoloTop[i].bIsSelf || i == MRI.CR.SoloRank-1 )
+		{
+			C.DrawColor = #0x88880044;
+			C.SetPos( drawX, drawY + headerHeight-2 );
+			C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );			
+
+			C.SetPos( drawX, drawY + headerHeight*0.5 );
+			C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
+		}
+
 		for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
 		{
 			switch( columnIdx )
 			{
 				case 0: // "Rank"
 					C.DrawColor = #0x666666FF;
-					value = string(i + 1);
+					if( MRI.CR.SoloTop[i].bIsSelf )
+					{
+						value = string(MRI.CR.SoloRank);
+					}
+					else
+					{
+						value = string(i + 1);
+					}
 					break;
 
 				case 1: // "Score"
@@ -3130,7 +3165,7 @@ DefaultProperties
 	AlphaLayer=Texture'BTScoreBoardBG'
 	Layer=Texture'BTScoreBoardBG' 
 
-	PlayersRankingColumns(0)=(Title="#",Format="000")
+	PlayersRankingColumns(0)=(Title="#",Format="0000")
 	PlayersRankingColumns(1)=(Title="Score",Format="00000")
 	PlayersRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
 	PlayersRankingColumns(3)=(Title="Records",Format="0000")
