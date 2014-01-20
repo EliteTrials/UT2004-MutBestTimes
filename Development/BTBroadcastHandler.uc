@@ -6,6 +6,7 @@ class BTBroadcastHandler extends UnrealChatHandler;
 function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver, coerce string Msg, optional name Type )
 {
 	local string execCommand;
+	local string value;
 
 	if( Sender != none )
 	{
@@ -15,7 +16,13 @@ function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver,
 			if( Left( execCommand, 1 ) == "!" )
 			{
 				execCommand = Mid( execCommand, 1 );
-				if( MutBestTimes(Owner).CurMode.ChatCommandExecuted( PlayerController(Sender.Owner), execCommand ) )
+				if( InStr( execCommand, " " ) != -1 )
+				{
+					value = execCommand;
+					execCommand = Left( execCommand, InStr( execCommand, " " ) );
+					value = Mid( value, InStr( value, " " ) + 1 );
+				}
+				if( MutBestTimes(Owner).CurMode.ChatCommandExecuted( PlayerController(Sender.Owner), execCommand, value ) )
 				{
 					return;
 				}

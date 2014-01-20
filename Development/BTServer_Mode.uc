@@ -96,7 +96,7 @@ function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 	}
 }
 
-function bool ChatCommandExecuted( PlayerController sender, string command )
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
 	local bool bmissed;
 
@@ -104,6 +104,14 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 	{
 		case "vote":
 			sender.ConsoleCommand( "ShowVoteMenu" );
+			break;
+
+		case "revote":
+			Mutate( "votemap" @ CurrentMapName, sender );
+			break;
+
+		case "votemap":
+			Mutate( "votemap" @ value, sender );
 			break;
 			
 		case "spec":
@@ -114,6 +122,10 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 		case "join":
 			if( sender.PlayerReplicationInfo.bOnlySpectator )
 				sender.BecomeActivePlayer();
+			break;
+
+		case "title":
+			sender.ConsoleCommand( "BT SetTitle" @ value );
 			break;
 
 		default:

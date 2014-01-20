@@ -67,14 +67,15 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 	return super.ClientExecuted( sender, command, params );
 }
 
-function bool ChatCommandExecuted( PlayerController sender, string command )
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
-	if( Left( command, 5 ) == "wager" )
+	switch( command )
 	{
-		ActivateWager( sender, int(Mid( command, 5 )) );
-		return true;
+		case "wager":
+			ActivateWager( sender, value );
+			return true;
 	}
-	return super.ChatCommandExecuted( sender, command );
+	return super.ChatCommandExecuted( sender, command, value );
 }
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
@@ -133,7 +134,7 @@ function WageSuccess( BTClient_ClientReplication wager, int wagedPoints )
 	PDat.GiveCurrencyPoints( wager.myPlayerSlot, wagedPoints*2 );
 }
 
-function ActivateWager( PlayerController sender, int wagerAmount )
+function ActivateWager( PlayerController sender, coerce int wagerAmount )
 {
 	local BTClient_ClientReplication LRI;
 
@@ -166,7 +167,7 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 		}
 		else
 		{
-			SendSucceedMessage( sender, "Please specify a wage amount, for example: !wager100" );	
+			SendSucceedMessage( sender, "Please specify a wage amount, for example: !wager 100" );	
 		}
 		return;
 	}

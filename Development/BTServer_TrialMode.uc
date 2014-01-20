@@ -55,6 +55,7 @@ function PerformItemDrop( PlayerController player, float bonus )
 	local float chance;
 	local string itemName;
 	local BTClient_ClientReplication LRI;
+	local string s;
 
 	LRI = GetRep( player );
 	if( LRI == none )
@@ -75,14 +76,16 @@ function PerformItemDrop( PlayerController player, float bonus )
 		{
 			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, Store.Items[itemIndex].Cost*0.75 );
 	   		SendSucceedMessage( player, "You won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance" );
-	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance" );
+	  		s = "%PLAYER% has won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance";
 		}
 		else
 		{
 	   		PDat.GiveItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID );
 	   		SendSucceedMessage( player, "You won item" @ Store.Items[itemIndex].Name @ "by random chance" );
-	  		Level.Game.Broadcast( Outer, player.PlayerReplicationInfo.PlayerName @ "has won item" @ itemName @ "by random chance" );
+			s = "%PLAYER% has won item" @ itemName @ "by random chance";
 		}
+		BroadcastLocalMessage( player, class'BTClient_RewardLocalMessage', s );
+		BroadcastSound( Sound'AnnouncerSEXY.GodLike', SLOT_Misc );
 	}
 }
 
@@ -98,7 +101,7 @@ function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex,
 	return dropChance + 0.5*bonus + Store.GetItemDropChance( itemIndex );
 }
 
-function bool ChatCommandExecuted( PlayerController sender, string command )
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
 	local bool bmissed;
 	
@@ -106,10 +109,6 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 	{
 		case "cp":
 			Mutate( "clientspawn", sender );
-			break;
-			
-		case "revote":
-			Mutate( "votemap" @ CurrentMapName, sender );
 			break;
 			
 		case "red":
@@ -128,7 +127,7 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 	if( !bmissed )
 		return true;
 		
-	return super.ChatCommandExecuted( sender, command );
+	return super.ChatCommandExecuted( sender, command, value );
 }
 
 defaultproperties

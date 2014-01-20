@@ -25,7 +25,7 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 	}
 }
 
-function bool ChatCommandExecuted( PlayerController sender, string command )
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
 	local bool bmissed;
 	local BTClient_ClientReplication CRI;
@@ -53,7 +53,7 @@ function bool ChatCommandExecuted( PlayerController sender, string command )
 	if( !bmissed )
 		return true;
 		
-	return super.ChatCommandExecuted( sender, command );
+	return super.ChatCommandExecuted( sender, command, value );
 }
 
 defaultproperties

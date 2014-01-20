@@ -13,6 +13,7 @@ class MutBestTimes extends Mutator
 
 #exec obj load file="..\System\TrialGroup.u"
 #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
+#exec obj load file="..\Sounds\Stock\AnnouncerSexy.uax"
 
 //#include DEC_Structs.uc
 
@@ -3887,6 +3888,10 @@ function Mutate( string MutateString, PlayerController Sender )
 			SaveRecords();
 			return;
 		}
+		else if( MutateString ~= "TestRandomDrop" )
+		{
+			BTServer_TrialMode(CurMode).PerformItemDrop( Sender, 50 );
+		}
 		else if( Left(MutateString,8)~="AddStart" )								// .:..:
 		{
 			if( Mid(MutateString,9)=="1" )
@@ -6829,6 +6834,23 @@ final Function BroadcastAnnouncement( sound Snd )
 	for( C = Level.ControllerList; C != None; C = C.NextController )
 		if( PlayerController(C) != None )
 			PlayerController(C).QueueAnnouncement( Snd.Name, 1 );
+}
+
+final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
+{
+	local Controller C;
+
+	if( Snd == none )
+		return;
+
+	if( soundSlot == SLOT_None )
+	{
+		soundSlot = SLOT_Misc;
+	}
+
+	for( C = Level.ControllerList; C != None; C = C.NextController )
+		if( PlayerController(C) != None )
+			PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
 }
 
 final function int GetMapSlotByName( string mapName )
