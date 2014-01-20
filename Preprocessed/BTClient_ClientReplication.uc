@@ -234,16 +234,13 @@ replication
 		myPawn, PersonalTime,
 		Rank, ClientFlags, SoloRank,
 		BTLevel, BTExperience, BTPoints, BTWage,
-		PreferedColor, bIsPremiumMember;
+		PreferedColor, bIsPremiumMember, Title;
 		
 	reliable if( bNetOwner && Role == ROLE_Authority )
 		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
 
 	unreliable if( bNetInitial && bNetOwner && Role == ROLE_Authority )
 		UserState;
-
-	reliable if( bNetInitial && Role == ROLE_Authority )
-		Title;
 
 	reliable if( Role == ROLE_Authority )
 		// Rankings scoreboard

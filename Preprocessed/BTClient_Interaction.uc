@@ -1589,9 +1589,9 @@ final function RenderTitle( Canvas C )
 			}
 
 			s = CRI.Title;
-			C.TextSize( Class'GUIComponent'.static.StripColorCodes( s ), XL, YL );
+			C.TextSize( %s, XL, YL );
 			Scre = C.WorldToScreen( P.Location - vect(0,0,1) * P.CollisionHeight );
-			DrawElement( C, Scre.X - XL * 0.5f, Scre.Y - YL * 0.5f, s );
+			DrawElement( C, Scre.X, Scre.Y - YL*0.5f, s, "", true );
 		}
 	}
 }
