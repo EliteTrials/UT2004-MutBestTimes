@@ -7,3 +7,8 @@ static function string GetString( optional int Switch,
 {
 	return BTClient_ClientReplication(Source).ClientMessage;
 }
+
+defaultproperties
+{
+	bIsUnique=false
+}

@@ -21,7 +21,7 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
 	super.InitComponent( InController,InOwner );
 
 	eb_Desc.MyScrollText.SetContent( "You are allowed to say things in the chat as a command by prefixing it with a ! symbol.||Such as:|"
-		$ "!Red, !Blue|!CP|!Revote|!Join, !Spec|"
+		$ "!Red, !Blue|!CP|!Revote, !Vote, !VoteMap <Filter>|!Join, !Spec|!Wager <Value>, !Title <Title>|"
 	);
 	eb_Desc.MyScrollBar.AlignThumb();
 	eb_Desc.MyScrollBar.UpdateGripPosition( 0 );
