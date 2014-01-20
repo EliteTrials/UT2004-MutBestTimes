@@ -300,6 +300,7 @@ var() globalconfig
 	PointsPerLevel,
 	MaxLevel,
 	ObjectivesEXPDelay,
+	DropChanceCooldown,
 	MinExchangeableTrophies,
 	MaxExchangeableTrophies,
 	DaysCountToConsiderPlayerInactive;
@@ -485,6 +486,8 @@ final function NotifyObjectiveAccomplished( PlayerController PC )
 
 			CRI.LastObjectiveCompletedTime = Level.TimeSeconds;
 		}
+
+		CurMode.PlayerCompletedObjective( PC, CRI );
 	}
 }
 
@@ -7985,6 +7988,7 @@ DefaultProperties
 	PointsPerLevel=5
 	MaxLevel=100
 	ObjectivesEXPDelay=10
+	DropChanceCooldown=60
 
 	TrialModes(0)=Class'BTServer_InvasionMode'
 	TrialModes(1)=Class'BTServer_BunnyMode'
@@ -7999,7 +8003,7 @@ DefaultProperties
 	bShowRankings=True
 	bAddGhostTimerPaths=true
 	bAllowCompetitiveMode=true
-	MaxRankedPlayers=25
+	MaxRankedPlayers=15
 	GhostPlaybackFPS=10
 	GhostSaveSpeed=0.025000
 	MinExchangeableTrophies=25

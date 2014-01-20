@@ -34,10 +34,22 @@ function PostRestartRound()
 function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
 {
 	super.PlayerMadeRecord( player, rankSlot, rankUps );
-	PerformItemDrop( player, rankUps );
+	PerformItemDrop( player, float(rankUps) );
 }
 
-function PerformItemDrop( PlayerController player, int rankUps )
+function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI )
+{
+	super.PlayerCompletedObjective( player, LRI );
+	// FullLog( "Objective accomplished" );
+	if( Level.TimeSeconds - LRI.LastDropChanceTime >= DropChanceCooldown )
+	{
+		// FullLog( "Performing drop chance" );
+		PerformItemDrop( player, 0 );
+		LRI.LastDropChanceTime = Level.TimeSeconds;
+	}
+}
+
+function PerformItemDrop( PlayerController player, float bonus )
 {
 	local int itemIndex;
 	local float chance;
@@ -55,7 +67,7 @@ function PerformItemDrop( PlayerController player, int rankUps )
 	{
 		return;
 	}
-	chance = GetItemDropChance( LRI, itemIndex, rankUps );
+	chance = GetItemDropChance( LRI, itemIndex, bonus );
 	if( chance >= FRand()*100 )
 	{
 		itemName = Store.Items[itemIndex].Name;
@@ -74,7 +86,7 @@ function PerformItemDrop( PlayerController player, int rankUps )
 	}
 }
 
-function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex, int rankUps )
+function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex, float bonus )
 {
 	local float dropChance;
 
@@ -83,7 +95,7 @@ function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex,
 	{
 		dropChance += 5.0;
 	}
-	return dropChance + 0.5*float(rankUps) + Store.GetItemDropChance( itemIndex );
+	return dropChance + 0.5*bonus + Store.GetItemDropChance( itemIndex );
 }
 
 function bool ChatCommandExecuted( PlayerController sender, string command )

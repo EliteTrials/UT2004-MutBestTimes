@@ -76,6 +76,11 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 	}
 }
 
+function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI )
+{
+
+}
+
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 {
 	local string S, Color;

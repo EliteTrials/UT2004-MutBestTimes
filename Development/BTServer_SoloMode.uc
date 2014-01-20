@@ -87,7 +87,7 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 		if( CRI.bWantsToWage )
 		{
 			CRI.BTWage = CRI.AmountToWage;
-			SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose the amount you're waging!, or if you beat your personal/top record you will gain double the amount you waged!" );
+			SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose half the amount you're waging!, or if you beat your personal/top record you will gain double the amount you waged!" );
 
 			CRI.bWantsToWage = false;
 		}
@@ -120,7 +120,7 @@ function ModePlayerKilled( Controller player )
 function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 {
 	SendErrorMessage( PlayerController(wager.Owner), "You failed your wage!" );
-	PDat.GiveCurrencyPoints( wager.myPlayerSlot, -wagedPoints );
+	PDat.GiveCurrencyPoints( wager.myPlayerSlot, (-wagedPoints)*0.5 );
 	if( wager.BTPoints < wagedPoints )
 	{
 		ActivateWager( PlayerController(wager.Owner), 0 );
@@ -129,7 +129,7 @@ function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 
 function WageSuccess( BTClient_ClientReplication wager, int wagedPoints )
 {
-	SendErrorMessage( PlayerController(wager.Owner), "You succeeded your wage!" );
+	SendSucceedMessage( PlayerController(wager.Owner), "You succeeded your wage!" );
 	PDat.GiveCurrencyPoints( wager.myPlayerSlot, wagedPoints*2 );
 }
 
@@ -137,7 +137,7 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 {
 	local BTClient_ClientReplication LRI;
 
-	if( RDat.Rec[UsedSlot].PSRL.Length < 3 )
+	if( RDat.Rec[UsedSlot].PSRL.Length < 3 && !IsAdmin( sender.PlayerReplicationInfo ) )
 	{
 		SendErrorMessage( sender, "Waging is disabled on this map until 3 or more records are available!" );
 		return;
@@ -158,7 +158,7 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 
 	if( wagerAmount == 0 )
 	{
-		if( LRI.BTWage > 0 )
+		if( LRI.BTWage > 0 || LRI.AmountToWage > 0 )
 		{
 			SendSucceedMessage( sender, "Waging disabled, wage will update when you respawn!" );	
 			LRI.AmountToWage = 0;
@@ -172,7 +172,7 @@ function ActivateWager( PlayerController sender, int wagerAmount )
 	}
 
 	wagerAmount = Min( Max( wagerAmount, 0 ), Min( LRI.BTPoints, 1000 ) );
-	if( wagerAmount <= 0 )
+	if( wagerAmount <= 1 )
 	{
 		SendErrorMessage( sender, "You cannot wage this amount!" );
 		return;
