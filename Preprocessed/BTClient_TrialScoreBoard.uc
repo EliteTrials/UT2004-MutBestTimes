@@ -82,7 +82,7 @@ static function string GetCName( PlayerReplicationInfo PRI )
 	return PRI.PlayerName;
 }
 
-Simulated Function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+Simulated static Function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
 {
 	local LinkedReplicationInfo LRI;
 
@@ -172,12 +172,12 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	if( SortedPlayers.Length != 0 )
 	{
 		PredictedPY = SortedPlayers.Length*(rowHeight + rowMargin);
-		PredictedPY += YL*3; // columns level 1&2
 	}
+	PredictedPY += YL*3; // columns level 1&2
 
 	if( SortedSpectators.Length != 0 )
 	{
-		PredictedSY = ((SortedSpectators.Length*(YL+8))+YL);
+		PredictedSY = SortedSpectators.Length*(rowHeight + rowMargin);
 		if( SortedPlayers.Length == 0 )
 			PredictedSY += YL;
 	}
@@ -373,12 +373,13 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	// <BACKGROUND>
 	if( player != PlayerController(Owner).PlayerReplicationInfo )
 		C.DrawColor = #0x22222244;
-	else C.DrawColor = #0x222222EE;
+	else C.DrawColor = #0x222222BB;
 
 	if( CRI != none && CRI.bIsPremiumMember )
 	{
 		C.DrawColor.G = 200;
 		C.DrawColor.B = 200;
+		C.DrawColor.A -= 30;
 	}
 
 	if( player.bOutOfLives )

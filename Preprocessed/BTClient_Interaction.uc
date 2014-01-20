@@ -1812,7 +1812,7 @@ final function Vector DrawElement( Canvas C, float x, float y, string title, opt
 	if( value != "" )
 	{
 		s = title $ " " $ value;
-		C.StrLen( value, valueXL, yl );
+		C.StrLen( %value, valueXL, yl );
 	}
 	else
 	{
@@ -1852,7 +1852,7 @@ final function Vector DrawElement( Canvas C, float x, float y, string title, opt
 	{
 		C.DrawColor = #0xEEEEEEFF;
 	}
-	C.DrawText( title, false );
+	C.DrawTextClipped( title, false );
 
 	if( value != "" )
 	{
@@ -1865,7 +1865,7 @@ final function Vector DrawElement( Canvas C, float x, float y, string title, opt
 		{
 			C.DrawColor = textColor;
 		}
-		C.DrawText( value, false );
+		C.DrawTextClipped( value, false );
 	}
 	if( bCenter )
 	{
@@ -2024,7 +2024,7 @@ final function RenderRankingsTable( Canvas C )
 		drawY += ROW_MARGIN;
 		if( isRowSelected)
 		{
-			C.DrawColor = #0x222222EE;
+			C.DrawColor = #0x222222BB;
 		}
 		else
 		{
@@ -2200,7 +2200,7 @@ final function RenderRecordsTable( Canvas C )
 		drawY += ROW_MARGIN;
 		if( isRowSelected )
 		{
-			C.DrawColor = #0x222222EE;
+			C.DrawColor = #0x222222BB;
 		}
 		else
 		{
@@ -2699,8 +2699,8 @@ function DrawRecordWidget( Canvas C )
 	// Press F12 or Escape to hide this.
 	s = "Press " $ Options.CGoldText $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey );
 	C.StrLen( s, width, height );
-	DrawHeaderTile( C, drawX - width, drawY, width, height );
-	DrawHeaderText( C, drawX - width, drawY, s );
+	DrawHeaderTile( C, drawX - width-4, drawY, width+4, height );
+	DrawHeaderText( C, drawX - width-4, drawY, s );
 	drawY += height + COLUMN_PADDING_Y;
 	drawX -= COLUMN_PADDING_X*2;
 
@@ -2763,7 +2763,6 @@ function DrawRecordWidget( Canvas C )
 			DrawElementTile( C, drawX - width, drawY, width, height );
 
 			s = RecordTimeMsg $ " ";
-			C.StrLen( s, xl, yl );
 			DrawElementText( C, drawX - width, drawY, s );
 
 			s = FormatTime( MRI.MapBestTime );
@@ -2771,8 +2770,9 @@ function DrawRecordWidget( Canvas C )
 			{
 				s $= " / " $ FormatTime( MRI.PreviousBestTime );
 			}
+			C.StrLen( s, xl, yl );
 			C.DrawColor = Options.CGoldText;
-			DrawElementValue( C, drawX - width - xl, drawY, s );
+			DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );
 			drawY += height + COLUMN_PADDING_Y*3;
 		}
 
@@ -2822,6 +2822,10 @@ function DrawRecordWidget( Canvas C )
 			C.StrLen( s, xl2, yl2 );
 			DrawElementPart( C, drawX - xl - xl2 + COLUMN_PADDING_X, drawY, s );
 		}
+		else
+		{
+			xl = 0;
+		}
 
 		// Draws > [00.00] / 00.00
 		s = timeLeftF;
@@ -2842,15 +2846,19 @@ function DrawRecordWidget( Canvas C )
 		if( MRI.bSoloMap )
 		{
 			DrawnTimer = (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
-			s = FormatTime( DrawnTimer );
-			C.StrLen( RecordTimeElapsed $ " " $ s, width, height );
-			width = FMax( width, minWidth );
-			DrawElementTile( C, drawX - width, drawY, width, height );
-
-			C.StrLen( s, xl, yl );
-			DrawElementText( C, drawX - width, drawY, RecordTimeElapsed $ " " );
-			DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s, GetFadingColor( class'HUD'.default.GreenColor ) );
 		}
+		else
+		{
+			DrawnTimer = MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime);
+		}
+		s = FormatTime( DrawnTimer );
+		C.StrLen( RecordTimeElapsed $ " " $ s, width, height );
+		width = FMax( width, minWidth );
+		DrawElementTile( C, drawX - width, drawY, width, height );
+
+		C.StrLen( s, xl, yl );
+		DrawElementText( C, drawX - width, drawY, RecordTimeElapsed $ " " );
+		DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s, GetFadingColor( class'HUD'.default.GreenColor ) );
 	}
 }
 
@@ -3088,7 +3096,7 @@ DefaultProperties
 	bVisible=True
 	bRequiresTick=True
 
-	RecordTimeMsg="Best Time"
+	RecordTimeMsg="Time"
 	RecordPrevTimeMsg="Previous Time"
 	RecordHolderMsg="Holder"
 	RecordTimeLeftMsg="Timer"
