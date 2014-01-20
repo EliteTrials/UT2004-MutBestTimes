@@ -33,6 +33,7 @@ var BTClient_Interaction myInter;
 var const color GrayColor;
 var const color BGColor;
 var const color OrangeColor;
+var const color PrimaryColor, SecondaryColor;
 
 var int SavedElapsedTime;
 
@@ -61,6 +62,24 @@ final static preoperator Color #( int rgbInt )
 	c.B = rgbInt >> 8;	
 	c.A = (rgbInt & 255);	
 	return c;
+}
+
+/** Returns color A as a color tag. */
+static final preoperator string $( Color A )
+{
+	return (Chr( 0x1B ) $ (Chr( Max( A.R, 1 )  ) $ Chr( Max( A.G, 1 ) ) $ Chr( Max( A.B, 1 ) )));
+}
+
+/** Adds B as a color tag to the end of A. */
+static final operator(40) string $( coerce string A, Color B )
+{
+	return A $ $B;
+}
+
+/** Adds A as a color tag to the begin of B. */
+static final operator(40) string $( Color A, coerce string B )
+{
+	return $A $ B;
 }
 
 static function string GetCName( PlayerReplicationInfo PRI )
@@ -258,7 +277,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	myInter.DrawHeaderText( C, TX, TY, Header_ElapsedTime );
 
 	C.SetPos( TX, TY+YL+2 );
-	C.DrawColor = #0x666666FF;
+	C.DrawColor = SecondaryColor;
 	C.DrawText( "Personal Record" );
 
 	C.SetPos( LX, TY );
@@ -266,7 +285,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	myInter.DrawHeaderText( C, LX, TY, "Team" );
 
 	C.SetPos( LX, TY+YL+2 );
-	C.DrawColor = #0x666666FF;
+	C.DrawColor = SecondaryColor;
 	C.DrawText( Header_Rank );
 
 	// Draw Players Info Header
@@ -275,7 +294,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	myInter.DrawHeaderText( C, NX, TY, Header_Name );
 
 	C.SetPos( NX, TY+YL+2 );
-	C.DrawColor = #0x666666FF;
+	C.DrawColor = SecondaryColor;
 	C.DrawText( "Region" );
 
 	C.SetPos( OX, TY );
@@ -283,7 +302,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	myInter.DrawHeaderText( C, OX, TY, class'ScoreBoardDeathMatch'.default.PointsText );
 
 	C.SetPos( OX, TY+YL+2 );
-	C.DrawColor = #0x666666FF;
+	C.DrawColor = SecondaryColor;
 	C.DrawText( "Objectives" );
 
 	C.SetPos( DX, TY );
@@ -303,7 +322,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		myInter.DrawHeaderText( C, PX-8, TY, class'ScoreBoardDeathMatch'.default.NetText );
 
 		C.SetPos( PX - 4, TY+YL+2 );
-		C.DrawColor = #0x666666FF;
+		C.DrawColor = SecondaryColor;
 		C.DrawText( "P/L" );
 	}
 
@@ -322,7 +341,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( SortedPlayers[i] == None )
 			continue;
 
-		if( YOffset+YL+rowMargin+PredictedSY >= C.ClipY-YClipOffset )
+		if( YOffset+YL*2+rowMargin+4 >= C.ClipY-YClipOffset )
 			break;
 
 		YOffset += YL*2+rowMargin+4;
@@ -339,7 +358,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 		if( SortedSpectators[i] == None )
 			continue;
 
-		if( YOffset+YL+rowMargin >= C.ClipY-YClipOffset )
+		if( YOffset+YL*2+rowMargin+4 >= C.ClipY-YClipOffset )
 			break;
 
 		YOffset += YL*2+rowMargin+4;
@@ -397,7 +416,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 
 	// Draw Player Name
 	C.SetPos( NX, rowTextY );
-	C.DrawColor = #0xAAAAAAFF;
+	C.DrawColor = PrimaryColor;
 	C.DrawText( GetCName( player ) );
 
 	// Draw Player Region
@@ -405,28 +424,24 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	s = "";
 	if( player.bAdmin )
 	{
-		C.DrawColor = #0x880000FF;
-		s = "[Admin] ";
-	}
-	else
-	{
-		if( player.bReadyToPlay && !isSpectator )
-		{
-			C.DrawColor = #0x888800FF;
-		}
-		else
-		{
-			C.DrawColor = #0x666666FF;
-		}
+		s = #0xFF0000FF$"[Admin] "$SecondaryColor;
 	}
 	if( player.bReadyToPlay && !isSpectator )
 	{
-		s $= "[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] ";
-		C.DrawColor = #0x888800FF;
+		s $= #0xFF8800FF$"[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] "$SecondaryColor;
 	}
 	if( CRI != none && CRI.bIsPremiumMember )
 	{
-		s $= "[Premium] ";
+		s $= #0x00FFFFFF$"[Premium] "$SecondaryColor;
+	}
+
+	if( isSpectator )
+	{
+		s $= #0xFFFF00FF$"";
+	}
+	else
+	{
+		s $= SecondaryColor$"";
 	}
 	s $= player.GetLocationName();
 	C.DrawText( s );
@@ -435,7 +450,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	if( CRI != none )
 	{
 		C.SetPos( LX+4, rowTextY );
-		C.DrawColor = #0x666666FF;
+		C.DrawColor = PrimaryColor;
 		C.DrawText( CRI.Rank, True );
 	}
 
@@ -443,7 +458,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	if( !isSpectator )
 	{
 		C.SetPos( OX, rowTextY );
-		C.DrawColor = #0xAAAAAAFF;
+		C.DrawColor = PrimaryColor;
 		C.DrawText( string(Min( int(player.Score), 9999 )), True );
 
 		if( ASPlayerReplicationInfo(player) != none && ASPlayerReplicationInfo(player).DisabledObjectivesCount+ASPlayerReplicationInfo(player).DisabledFinalObjective > 0 )
@@ -464,7 +479,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 
     // Draw Deaths
 	C.SetPos( DX, rowTextY );
-	C.DrawColor = #0xAAAAAAFF;
+	C.DrawColor = PrimaryColor;
 	C.DrawText( string(int(player.Deaths)) );
 
 	// Draw Time
@@ -473,7 +488,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 		if( CRI.PersonalTime > 0 )
 		{
 			C.SetPos( TX, rowTextY+rowSegmentHeight );
-			C.DrawColor = #0x666666FF;
+			C.DrawColor = SecondaryColor;
 			C.DrawText( Class'BTClient_Interaction'.Static.Strl( CRI.PersonalTime ) );
 		}
 	}
@@ -482,7 +497,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 		SavedElapsedTime = GRI.ElapsedTime;
 
 	C.SetPos( TX, rowTextY+2 );
-	C.DrawColor = #0xAAAAAAFF;
+	C.DrawColor = PrimaryColor;
 	C.DrawText( Class'BTClient_Interaction'.Static.StrlNoMS( Max( 0, SavedElapsedTime-player.StartTime ) ) );
 
 	if( Level.NetMode != NM_Standalone && !player.bBot )
@@ -490,7 +505,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 		s = string(Min( 999, 4*player.Ping ));
 		C.StrLen( s, XL, YL );
 		C.SetPos( rowTileX + rowWidth - XL - 4, rowTextY );
-		C.DrawColor = #0x888888FF;
+		C.DrawColor = PrimaryColor;
 		C.DrawText( s );
 
 		if( player.PacketLoss > 0 )
@@ -498,7 +513,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 			s = string(player.PacketLoss);
 			C.StrLen( s, XL, YL );
 			C.SetPos( rowTileX + rowWidth - XL - 4, rowTextY+rowSegmentHeight );
-			C.DrawColor = #0x666666FF;
+			C.DrawColor = SecondaryColor;
 			C.DrawText( s );	
 		}
 	}
@@ -544,4 +559,6 @@ DefaultProperties
 	GrayColor=(R=100,G=100,B=100,A=255)
 	BGColor=(R=0,G=0,B=0,A=150)
 	OrangeColor=(R=255,G=128,A=255)
+	PrimaryColor=(R=255,G=255,B=255,A=255)
+	SecondaryColor=(R=182,G=182,B=182,A=255)
 }
