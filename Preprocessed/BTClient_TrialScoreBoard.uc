@@ -237,19 +237,15 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	OX = HX;
 	C.StrLen( "000000000", OXL, YL );	// Obj Width
 
-	if( myInter.MRI.bCompetitiveMode || true )
-	{
-		// Calc Deaths
-		HX += 20+OXL;
-		C.StrLen( class'ScoreBoardDeathMatch'.default.DeathsText, XL, YL );
-		DX = HX;
+	// Calc Deaths
+	HX += 18+OXL;
+	C.StrLen( class'ScoreBoardDeathMatch'.default.DeathsText, XL, YL );
+	DX = HX;
 
-		C.StrLen( "0000000", DXL, YL );	// Deaths Width
-	}
-	else DXL = OXL;
+	C.StrLen( "0000000", DXL, YL );	// Deaths Width
 
 	// Calc Time
-	HX += XL+DXL;
+	HX += 18+DXL;
 	C.StrLen( Header_Time, XL, YL );
 	TX = HX;
 	C.StrLen( "00:00:00.00", TXL, YL );	// Time Width
@@ -290,12 +286,9 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	C.DrawColor = #0x666666FF;
 	C.DrawText( "Objectives" );
 
-	if( myInter.MRI.bCompetitiveMode || true )
-	{
-		C.SetPos( DX, TY );
-		myInter.DrawHeaderTile( C, DX, TY, DXL+4, YL );
-		myInter.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
-	}
+	C.SetPos( DX, TY );
+	myInter.DrawHeaderTile( C, DX, TY, DXL+4, YL );
+	myInter.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
 
 	// Header done
 
@@ -469,13 +462,10 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	    }
    	}
 
-	if( myInter.MRI.bCompetitiveMode || true )
-	{
-        // Draw Deaths
-		C.SetPos( DX, rowTextY );
-		C.DrawColor = #0xAAAAAAFF;
-		C.DrawText( string(int(player.Deaths)) );
-	}
+    // Draw Deaths
+	C.SetPos( DX, rowTextY );
+	C.DrawColor = #0xAAAAAAFF;
+	C.DrawText( string(int(player.Deaths)) );
 
 	// Draw Time
 	if( CRI != none && myInter.MRI.bSoloMap )
