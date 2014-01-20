@@ -2704,13 +2704,6 @@ function DrawRecordWidget( Canvas C )
 	C.Style = 1;
 
 	C.Font = GetScreenFont( C );
-
-	// Press F12 or Escape to hide this.
-	s = "Press " $ Options.CGoldText $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey );
-	C.StrLen( s, width, height );
-	DrawHeaderTile( C, drawX - width-4, drawY, width+4, height );
-	DrawHeaderText( C, drawX - width-4, drawY, s );
-	drawY += height + COLUMN_PADDING_Y;
 	drawX -= COLUMN_PADDING_X*2;
 
 	if( MRI.PlayersBestTimes == "" )
@@ -2868,7 +2861,16 @@ function DrawRecordWidget( Canvas C )
 		C.StrLen( s, xl, yl );
 		DrawElementText( C, drawX - width, drawY, RecordTimeElapsed $ " " );
 		DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s, GetFadingColor( class'HUD'.default.GreenColor ) );
+		drawY += height + COLUMN_PADDING_Y*3;
 	}
+
+	// Press F12 or Escape to hide this.
+	s = "Rankings " $ Options.CGoldText $ "[" $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey ) $ "]";
+	C.StrLen( s, width, height );
+	C.DrawColor = #0x0088BBFF;
+	C.DrawColor.A = Options.CTable.A;
+	DrawColumnTile( C, drawX - width + COLUMN_PADDING_X, drawY, width+4, height+2 );
+	DrawHeaderText( C, drawX - width + COLUMN_PADDING_X, drawY, s );
 }
 
 final static function DrawBorder( Canvas C, float X1, float Y1, float X2, float Y2 )
