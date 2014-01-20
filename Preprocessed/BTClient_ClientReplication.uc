@@ -228,19 +228,19 @@ var /**TEMP*/ string ClientMessage;
 
 replication
 {
-	reliable if( bNetDirty )
+	reliable if( Role == ROLE_Authority )
 		myPawn, PersonalTime,
 		Rank, ClientFlags, SoloRank,
 		BTLevel, BTExperience, BTPoints, BTWage,
 		PreferedColor, bIsPremiumMember;
 		
-	reliable if( bNetOwner )
+	reliable if( bNetOwner && Role == ROLE_Authority )
 		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
 
-	unreliable if( bNetInitial && bNetOwner )
+	unreliable if( bNetInitial && bNetOwner && Role == ROLE_Authority )
 		UserState;
 
-	reliable if( bNetInitial )
+	reliable if( bNetInitial && Role == ROLE_Authority )
 		Title;
 
 	reliable if( Role == ROLE_Authority )
@@ -802,12 +802,9 @@ event Tick( float deltaTime )
 	}
 }
 
-DefaultProperties
+defaultproperties
 {
-	RemoteRole=ROLE_SimulatedProxy
-	bAlwaysRelevant=true
 	bNetNotify=true
-	NetPriority=0.5
 
 	LastDropChanceTime=-60
 	LastObjectiveCompletedTime=-10

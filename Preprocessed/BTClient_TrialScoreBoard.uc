@@ -13,7 +13,7 @@ Class BTClient_TrialScoreBoard Extends ScoreBoard;
 //Warning: BTClient_TrialScoreBoard STR-TechChallenge-11.BTClient_TrialScoreBoard (Function ClientBTimesV3K.BTClient_TrialScoreBoard.UpdateScoreBoard:1685) Accessed None 'A1233320'
 
 var() string
-	Header_Level,
+	Header_Rank,
 	Header_Name,
 	Header_Objectives,
 	Header_Score,
@@ -267,7 +267,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 
 	C.SetPos( LX, TY+YL+2 );
 	C.DrawColor = #0x666666FF;
-	C.DrawText( Header_Level );
+	C.DrawText( Header_Rank );
 
 	// Draw Players Info Header
 	C.SetPos( NX, TY );
@@ -431,12 +431,12 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	s $= player.GetLocationName();
 	C.DrawText( s );
 
-	// Draw BTLevel
+	// Draw Rank
 	if( CRI != none )
 	{
 		C.SetPos( LX+4, rowTextY );
 		C.DrawColor = #0x666666FF;
-		C.DrawText( CRI.BTLevel, True );
+		C.DrawText( CRI.Rank, True );
 	}
 
 	// Draw Score
@@ -532,7 +532,7 @@ DefaultProperties
 	XClipOffset=64
 	YClipOffset=64
 
-	Header_Level="LVL"
+	Header_Rank="Rank"
 	Header_Name="NAME"
 	Header_Time="PERSONAL TIME"
 	Header_Spectators="Spectators"
