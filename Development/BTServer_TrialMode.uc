@@ -98,7 +98,12 @@ function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex,
 	{
 		dropChance += 5.0;
 	}
-	return dropChance + 0.5*bonus + Store.GetItemDropChance( itemIndex );
+	dropChance += 0.5*bonus + Store.GetItemDropChance( itemIndex );
+	if( PDat.HasItem( LRI.myPlayerSlot, "drop_bonus_1" ) )
+	{
+		dropChance *= 2.0;
+	}
+	return dropChance;
 }
 
 function bool ChatCommandExecuted( PlayerController sender, string command, string value )
