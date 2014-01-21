@@ -321,6 +321,31 @@ var() localized editconst const
 	lzCS_ObjAndTrigger, 		lzCS_Obj, 			lzCS_AllowComplete,
 	lzCS_NoPawn, 				lzCS_NotEnabled, 	lzCS_NoQuickStartDelete,
 	lzRandomPick, lzClientSpawn;
+
+//AddSetting(string Group, string PropertyName, string Description, byte SecLevel,
+//byte Weight, string RenderType, optional string Extras, optional string ExtraPrivs,
+//optional bool bMultiPlayerOnly, optional bool bAdvanced);
+
+struct sConfigProperty
+{
+	var Property Property;
+	var localized string Category;
+	var localized string Description;
+	var localized string Hint;
+	var byte AccessLevel;
+	var byte Weight;
+
+	/** If Type is *empty* then the type will be guessed from the Property.Class variable. */
+	var string Type;
+
+	/** "DEFAULT;MIN:MAX" */
+	var string Rules;
+	var string Privileges;
+	var bool bMultiPlayerOnly;
+	var bool bAdvanced;
+};
+
+var array<sConfigProperty> ConfigurableProperties;
 	
 var const string InvalidAccessMessage;
 
@@ -7895,124 +7920,54 @@ final function int GetGroupTaskPoints( int groupIndex )
 	return points;
 }
 
-//==============================================================================
-// WebAdmin and Mutators page config functions!
-
-//==============================================================================
-// AddMutatorSettings.
-//AddSetting(string Group, string PropertyName, string Description, byte SecLevel,
-//byte Weight, string RenderType, optional string Extras, optional string ExtraPrivs,
-//optional bool bMultiPlayerOnly, optional bool bAdvanced);
-static function FillPlayInfo( PlayInfo Info )
+static function FillPlayInfo( PlayInfo info )
 {
-	Super.FillPlayInfo(Info);
-	Info.AddSetting( default.RulesGroup,
-		"bGenerateBTWebsite",
-		"Create WebBTimes.html", 255, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bSpawnGhost",
-		"Ghost", 255, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bDontEndGameOnRecord",
-		"Don't End Game on New Record", 255, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bEnhancedTime",
-		"Enhanced Time", 0, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bDisableForceRespawn",
-		"Disable Force Respawn", 0, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bAllowClientSpawn",
-		"Allow 'Client Spawn'", 0, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bTriggersKillClientSpawnPlayers",
-		"'Client Spawn' Triggers Kill", 255, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bClientSpawnPlayersCanCompleteMap",
-		"Allow 'Client Spawn' Finish", 255, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"bAddGhostTimerPaths",
-		"Add Ghost Timer Paths", 0, 1, "Check" );
-	Info.AddSetting( default.RulesGroup,
-		"GhostPlaybackFPS",
-		"Ghost FPS", 255, 1, "Text", "2;1:25" );
-	Info.AddSetting( default.RulesGroup,
-		"GhostSaveSpeed",
-		"Ghost Saving Delay", 255, 1, "Text" );
-	Info.AddSetting( default.RulesGroup,
-		"MaxRankedPlayers",
-		"Maximum Ranked Players", 255, 1, "Text", "2;5:30" );
-	Info.AddSetting( default.RulesGroup,
-		"TimeScaling",
-		"Time Scaling", 0, 1, "Text" );
-	Info.AddSetting( default.RulesGroup,
-		"CompetitiveTimeLimit",
-		"Time Limit for Competitive Mode", 0, 1, "Text" );
-	Info.AddSetting( default.RulesGroup,
-		"ADMessage",
-		"Advertise Message", 255, 1, "Text", "255" );
-	Info.AddSetting( default.RulesGroup,
-		"ADURL",
-		"Advertise URL", 255, 1, "Text", "255" );
-}
+	local int i;
+	local sConfigProperty prop;
 
-//==============================================================================
-// Display Description.
-static function string GetDescriptionText( string PropName )
-{
-	switch( PropName )
+	super.FillPlayInfo( info );
+	for( i = 0; i < default.ConfigurableProperties.Length; ++ i )
 	{
-		case "bGenerateBTWebsite":
-			return "If Checked: BTimes will create a WebBTimes.html file under Saves folder when a new record is set.";
+		prop = default.ConfigurableProperties[i];
+		if( prop.Category == "" )
+		{
+			prop.Category = default.RulesGroup;
+		}
 
-		case "bSpawnGhost":
-			return "If Checked: BTimes will record all players movements and spawn a ghost using the best player movements (ONLY FOR FAST SERVERS).";
-		
-		case "bDontEndGameOnRecord":
-			return "If Checked: The game will not end when a player sets a new record. bSpawnGhost must be disabled!";
+		if( prop.Type == "" )
+		{
+			switch( prop.Property.Class )
+			{
+				case class'BoolProperty':
+					prop.Type = "Check";
+					break;	
 
-		case "bEnhancedTime":
-			return "If Checked: BTimes will adjust the RoundTimeLimit of Assault based on the record time.";
-
-		case "bDisableForceRespawn":
-			return "If Checked: BTimes will not respawn dying players instantly.";
-
-		case "bAllowClientSpawn":
-			return "If Checked: BTimes will allow people to use 'Client Spawn'.";
-
-		case "bTriggersKillClientSpawnPlayers":
-			return "If Checked: BTimes will kill people coming near a trigger if using a 'Client Spawn'.";
-
-		case "bClientSpawnPlayersCanCompleteMap":
-			return "If Checked: BTimes will alow people using a 'Client Spawn' to be able to finish the map.";
-
-		case "GhostPlaybackFPS":
-			return "Amount of frames recorded every second (DON'T SET THIS HIGH).";
-
-		case "GhostSaveSpeed":
-			return "Amount of saving delay between every 10 Movements.";
-
-		case "MaxRankedPlayers":
-			return "Amount of players to show in the ranking table and top records list.";
-
-		case "TimeScaling":
-			return "RoundTimeLimit percent scaling.";
-
-		case "CompetitiveTimeLimit":
-			return "The time limit for the Competitive Mode.";
-
-		case "ADMessage":
-			return "Input an advertisement message, that will be displayed to every player, when QuickStart is active or when the map is completed.";
-
-		case "ADURL":
-			return "The web link, the players will go to when hitting Enter while the Advertise Message is displayed.";
-
-		case "bAddGhostTimerPaths":
-			return "Whether to spawn ghost markers.";
+				default:
+					prop.Type = "Text";
+					break;
+			}
+		}
+		info.AddSetting( prop.Category, string(prop.Property.Name), prop.Description, prop.AccessLevel, prop.Weight, prop.Type, prop.Rules, prop.Privileges, prop.bMultiPlayerOnly, prop.bAdvanced );
 	}
-	return Super.GetDescriptionText(PropName);
 }
-//==============================================================================
+
+static function string GetDescriptionText( string propertyName )
+{
+	local int i;
+
+	for( i = 0; i < default.ConfigurableProperties.Length; ++ i )
+	{
+		if( string(default.ConfigurableProperties[i].Property.Name) == propertyName )
+		{
+			if( default.ConfigurableProperties[i].Hint == "" )
+			{
+				return default.ConfigurableProperties[i].Description;
+			}
+			return default.ConfigurableProperties[i].Hint;
+		}
+	}
+	return super.GetDescriptionText( propertyName );
+}
 
 event Destroyed()
 {
@@ -8163,4 +8118,30 @@ DefaultProperties
 	ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
 
 	InvalidAccessMessage="Sorry! This server is not permitted to use MutBestTimes!"
+
+	ConfigurableProperties(0)=(Property=BoolProperty'bGenerateBTWebsite',Description="Generate a WebBTimes.html File",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will create a WebBTimes.html file under Saves folder when a new record is set.")
+	ConfigurableProperties(1)=(Property=BoolProperty'bSpawnGhost',Description="Record and Spawn Ghosts",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will record all players movements and spawn a ghost using the best player movements (ONLY FOR FAST SERVERS).")
+	ConfigurableProperties(2)=(Property=BoolProperty'bDontEndGameOnRecord',Description="Don't End the Game on Record",AccessLevel=255,Weight=1,Hint="If Checked: The game will not end when a player sets a new record. bSpawnGhost must be disabled!")
+	ConfigurableProperties(3)=(Property=BoolProperty'bEnhancedTime',Description="Dynamic RoundTime Limit",Weight=1,Hint="If Checked: BTimes will adjust the RoundTimeLimit of Assault based on the record time.")
+	ConfigurableProperties(4)=(Property=BoolProperty'bDisableForceRespawn',Description="Disable Instant Respawning",Weight=1,Hint="If Checked: BTimes will not respawn dying players instantly.")
+	ConfigurableProperties(5)=(Property=BoolProperty'bAllowClientSpawn',Description="Allow ClientSpawn Use",Weight=1,Hint="If Checked: BTimes will allow people to use 'Client Spawn'.")
+	ConfigurableProperties(6)=(Property=BoolProperty'bTriggersKillClientSpawnPlayers',Description="Triggers Should Kill ClientSpawn Players",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will kill people coming near a trigger if using a 'Client Spawn'.")
+	ConfigurableProperties(7)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will alow people using a 'Client Spawn' to be able to finish the map.")
+	ConfigurableProperties(8)=(Property=BoolProperty'bAddGhostTimerPaths',Description="Generate Ghost Time Paths",Weight=1,Hint="Whether to spawn ghost markers.")
+	ConfigurableProperties(9)=(Property=IntProperty'GhostPlaybackFPS',Description="Ghost Recording Framerate",AccessLevel=255,Weight=1,Rules="2;1:25",Hint="Amount of frames recorded every second (DON'T SET THIS HIGH).")
+	ConfigurableProperties(10)=(Property=FloatProperty'GhostSaveSpeed',Description="Ghost Saving Interval",AccessLevel=255,Weight=1,Hint="Amount of saving delay between every 10 Movements.")
+	ConfigurableProperties(11)=(Property=IntProperty'MaxRankedPlayers',Description="Maximum Rankable Players",Weight=1,Rules="2;5:30",Hint="Amount of players to show in the ranking table and top records list.")
+	ConfigurableProperties(12)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
+	ConfigurableProperties(13)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
+	ConfigurableProperties(14)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
+	ConfigurableProperties(15)=(Property=StrProperty'ADMessage',Description="Advertise Message",AccessLevel=255,Weight=1,Rules="255",Hint="Input an advertisement message, that will be displayed to every player, when QuickStart is active or when the map is completed.")
+	ConfigurableProperties(16)=(Property=StrProperty'ADURL',Description="Advertise URL",AccessLevel=255,Weight=1,Rules="255",Hint="The web link, the players will go to when hitting Enter while the Advertise Message is displayed.")
+	ConfigurableProperties(17)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
+	ConfigurableProperties(18)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
+	ConfigurableProperties(19)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
+	ConfigurableProperties(20)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
+	ConfigurableProperties(21)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
+	ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
+	ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
+	ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Remove PlayerStart Locking",Weight=1,Hint="If Checked: BTimes will no longer force everyone to be spawned on one PlayerStart location.")
 }
