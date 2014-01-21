@@ -5179,11 +5179,6 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 							// Failure immunity
 							PDat.ProgressAchievementByID( PLs-1, 'records_2' );
 						}
-
-						if( CR.BTWage > 0 )
-						{
-							BTServer_SoloMode(CurMode).WageSuccess( CR, CR.BTWage );
-						}
 					}
 					else	// 1st time record
 					{
@@ -5218,6 +5213,11 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
 					BestPlaySeconds = CurrentPlaySeconds;
 					MRI.MapBestTime = BestPlaySeconds;
+
+					if( CR.BTWage > 0 )
+					{
+						BTServer_SoloMode(CurMode).WageSuccess( CR, CR.BTWage );
+					}
 
 					UpdateRecordHoldersMessage();
 					if( !bDontEndGameOnRecord )

@@ -88,7 +88,7 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
 		if( CRI.bWantsToWage )
 		{
 			CRI.BTWage = CRI.AmountToWage;
-			SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose half the amount you're waging!, or if you beat your personal/top record you will gain double the amount you waged!" );
+			SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose the amount you're waging!, or if you beat your personal/top record you will gain triple the amount you waged!" );
 
 			CRI.bWantsToWage = false;
 		}
@@ -121,7 +121,7 @@ function ModePlayerKilled( Controller player )
 function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 {
 	SendErrorMessage( PlayerController(wager.Owner), "You failed your wage!" );
-	PDat.GiveCurrencyPoints( wager.myPlayerSlot, (-wagedPoints)*0.5 );
+	PDat.GiveCurrencyPoints( wager.myPlayerSlot, -wagedPoints, true );
 	if( wager.BTPoints < wagedPoints )
 	{
 		ActivateWager( PlayerController(wager.Owner), 0 );
@@ -131,7 +131,10 @@ function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 function WageSuccess( BTClient_ClientReplication wager, int wagedPoints )
 {
 	SendSucceedMessage( PlayerController(wager.Owner), "You succeeded your wage!" );
-	PDat.GiveCurrencyPoints( wager.myPlayerSlot, wagedPoints*2 );
+	PDat.GiveCurrencyPoints( wager.myPlayerSlot, wagedPoints*3, true );
+	wager.BTWage = 0;
+	wager.AmountToWage = 0;
+	wager.bWantsToWage = false;
 }
 
 function ActivateWager( PlayerController sender, coerce int wagerAmount )
@@ -173,7 +176,7 @@ function ActivateWager( PlayerController sender, coerce int wagerAmount )
 	}
 
 	wagerAmount = Min( Max( wagerAmount, 0 ), Min( LRI.BTPoints, 1000 ) );
-	if( wagerAmount <= 1 )
+	if( wagerAmount <= 0 )
 	{
 		SendErrorMessage( sender, "You cannot wage this amount!" );
 		return;

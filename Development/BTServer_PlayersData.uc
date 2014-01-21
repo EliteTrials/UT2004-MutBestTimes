@@ -306,12 +306,12 @@ final function SpendCurrencyPoints( int playerSlot, int amount )
 	BT.A123341.TotalCurrencySpent = TotalCurrencySpent;
 }
 
-final function GiveCurrencyPoints( int playerSlot, int amount )
+final function GiveCurrencyPoints( int playerSlot, int amount, optional bool shouldIgnoreBonuses )
 {
 	if( amount == 0 )
 		return;
 
- 	if( HasItem( playerSlot, "cur_bonus_1" ) )
+ 	if( amount > 0 && !shouldIgnoreBonuses && HasItem( playerSlot, "cur_bonus_1" ) )
 	{
 		amount *= 2;
 	}
