@@ -4,6 +4,13 @@
 class BTStore extends Object
 	config(BTStore);
 
+enum ETarget
+{
+	T_Pawn,
+	T_Vehicle,
+	T_Player
+};
+
 struct sItem
 {
 	var() string Name;
@@ -41,6 +48,8 @@ struct sItem
 		/** The item can only be found as a drop. */
 		Drop,
 	} Access;
+
+	var() ETarget ApplyOn;
 
 	var transient Material CachedIMG;
 	var transient string CachedCategory;
@@ -279,7 +288,36 @@ tryagain:
 	return randomIndex;
 }
 
-final function AddBoughtItems( BTServer_PlayersData data, Pawn other, int playerSlot )
+final function ModifyPawn( Pawn other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
+{
+	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Pawn );
+}
+
+final function ModifyVehicle( Vehicle other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
+{
+	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Vehicle );
+}
+
+final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
+{
+	local LinkedReplicationInfo customRep;
+
+	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Player );
+	// Is active?
+	if( data.UseItem( CRI.myPlayerSlot, "MNAFAccess" ) )
+	{
+		for( customRep = other.PlayerReplicationInfo.CustomReplicationInfo; customRep != none; customRep = customRep.NextReplicationInfo )
+		{
+			if( customRep.IsA('MNAFLinkedRep') )
+			{
+				customRep.SetPropertyText( "bIsUnique", "1" );
+				break;
+			}
+		}
+	}
+}
+
+private final function ApplyOwnedItems( BTServer_PlayersData data, Actor other, int playerSlot, ETarget target )
 {
 	local int i, j, itemSlot, curType;
 	local bool bIsKnown;
@@ -288,8 +326,13 @@ final function AddBoughtItems( BTServer_PlayersData data, Pawn other, int player
  	j = data.Player[playerSlot].Inventory.BoughtItems.Length;
  	for( i = 0; i < j; ++ i )
  	{
+ 		if( !data.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
+ 		{
+ 			continue;
+ 		}
+
   		itemSlot = FindItemByID( data.Player[playerSlot].Inventory.BoughtItems[i].ID );
- 		if( itemSlot != -1 && data.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
+ 		if( itemSlot != -1 && Items[itemSlot].ApplyOn == target )
  		{
  			if( Items[itemSlot].Type != "" )
 			{
@@ -314,7 +357,7 @@ final function AddBoughtItems( BTServer_PlayersData data, Pawn other, int player
 	}
 }
 
-final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
+private final function ActivateItem( Actor other, int itemSlot, int playerSlot )
 {
 	local class<Actor> itemClass;
 	local Actor itemObject;
@@ -352,7 +395,7 @@ final function ActivateItem( Pawn other, int itemSlot, int playerSlot )
 	}
 }
 
-final function SetVarsFor( Actor other, int itemSlot )
+private final function SetVarsFor( Actor other, int itemSlot )
 {
 	local array<string> s;
 	local int i;
@@ -444,11 +487,11 @@ defaultproperties
 	Categories(5)=(Name="Upgrades",Types=("UP_*"))
 
 	Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
-	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options")
-	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3)
-	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2")
-	Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE")
-	Items(5)=(Name="+100% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +100% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400)
+	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
+	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
+	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
+	Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
+	Items(5)=(Name="+100% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +100% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
 	
 	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
 	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))

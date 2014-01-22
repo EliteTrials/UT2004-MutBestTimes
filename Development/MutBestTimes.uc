@@ -1009,9 +1009,7 @@ function ModifyPlayer( Pawn Other )
 {
 	local int CheckPointIndex;
 	local int i;
-	local LinkedReplicationInfo LRI;
 	local BTClient_ClientReplication CRI;
-	//local BTServer_AntiAutoPress AAP;
 	local bool bTrailerRegistered;
 
 	super.ModifyPlayer( Other );
@@ -1118,7 +1116,7 @@ function ModifyPlayer( Pawn Other )
 
 	if( Store != none )
 	{
-		Store.AddBoughtItems( PDat, Other, CRI.myPlayerSlot );
+		Store.ModifyPawn( Other, PDat, CRI );
 		if( PDat.UseItem( CRI.myPlayerSlot, "Trailer" ) )
 		{
 			for( i = 0; i < Trailers.Length; ++ i )
@@ -1164,19 +1162,6 @@ function ModifyPlayer( Pawn Other )
 							Trailers[i].T.PostNetReceive();
 						}
 					}
-				}
-			}
-		}
-
-		if( PDat.UseItem( CRI.myPlayerSlot, "MNAFAccess" ) )
-		{
-			for( LRI = Other.Controller.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
-			{
-				if( LRI.IsA('MNAFLinkedRep') )
-				{
-					LRI.SetPropertyText( "bIsUnique", "1" );
-					//LRI.SetPropertyText( "MNAF", "None" );
-					break;
 				}
 			}
 		}
@@ -7004,6 +6989,11 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 			// FullLog( "Dodge assist!" );
 			CR.bAllowDodgePerk = true;
 		}
+	}
+
+	if( Store != none )
+	{
+		Store.ModifyPlayer( PC, PDat, CR );
 	}
 
 	// Check whether user lost some records since he logged off
