@@ -34,6 +34,7 @@ var const color GrayColor;
 var const color BGColor;
 var const color OrangeColor;
 var const color PrimaryColor, SecondaryColor;
+var transient color TempColor;
 
 var int SavedElapsedTime;
 
@@ -51,7 +52,7 @@ var float 		YOffset,
 				NXL,
 				OXL,
 				DXL,
-				TXL;
+				TXL, OTHERX, OTHERXL;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -110,6 +111,20 @@ Simulated static Function BTClient_ClientReplication GetCRI( PlayerReplicationIn
 		if( BTClient_ClientReplication(LRI) != None )
 		{
 			return BTClient_ClientReplication(LRI);
+		}
+	}
+	return none;
+}
+
+simulated static function LinkedReplicationInfo GetGRI( PlayerReplicationInfo PRI )
+{
+	local LinkedReplicationInfo LRI;
+
+	for( LRI = PRI.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+	{
+		if( LRI.IsA('GroupPlayerLinkedReplicationInfo') )
+		{
+			return LRI;
 		}
 	}
 	return none;
@@ -267,7 +282,19 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	HX += 18+DXL;
 	C.StrLen( Header_Time, XL, YL );
 	TX = HX;
-	C.StrLen( "00:00:00.00", TXL, YL );	// Time Width
+	C.StrLen( "00:00:00.00", TXL, YL );	// Time Width	
+
+	// Calc Other
+	HX += 40+TXL;
+	C.StrLen( "Other", XL, YL );
+	OTHERX = HX;
+	C.StrLen( "WWWWWWWWWWWWWWWWWWWW", OTHERXL, YL );
+
+	// Fits screen?
+	if( X+XClipOffset <= OTHERX + OTHERXL )
+	{
+		OTHERX = 0;
+	}
 
 	// DrawHeaderTile( C, drawX + COLUMN_MARGIN, drawY, columns[columnIdx].W - COLUMN_MARGIN*2, columns[columnIdx].H );
 	// DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, PlayersRankingColumns[columnIdx].Title );
@@ -308,6 +335,13 @@ Simulated Function UpdateScoreBoard( Canvas C )
 	C.SetPos( DX, TY );
 	myInter.DrawHeaderTile( C, DX, TY, DXL+4, YL );
 	myInter.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
+
+	if( OTHERX != 0 )
+	{
+		C.SetPos( OTHERX, TY );
+		myInter.DrawHeaderTile( C, OTHERX, TY, OTHERXL+4, YL );
+		myInter.DrawHeaderText( C, OTHERX, TY, "Other" );
+	}
 
 	// Header done
 
@@ -372,8 +406,11 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	local float rowSegmentHeight;
 	local string s;
 	local bool isSpectator;
+	local int i;
 
 	local BTClient_ClientReplication CRI;
+	local LinkedReplicationInfo GLRI;
+	local ReplicationInfo other;
 
 	rowTileX = x;
 	rowTileY = y;
@@ -477,10 +514,13 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	    }
    	}
 
-    // Draw Deaths
-	C.SetPos( DX, rowTextY );
-	C.DrawColor = PrimaryColor;
-	C.DrawText( string(int(player.Deaths)) );
+   	if( !isSpectator )
+   	{
+	    // Draw Deaths
+		C.SetPos( DX, rowTextY );
+		C.DrawColor = PrimaryColor;
+		C.DrawText( string(int(player.Deaths)) );
+	}
 
 	// Draw Time
 	if( CRI != none && myInter.MRI.bSoloMap )
@@ -499,6 +539,30 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 	C.SetPos( TX, rowTextY+2 );
 	C.DrawColor = PrimaryColor;
 	C.DrawText( Class'BTClient_Interaction'.Static.StrlNoMS( Max( 0, SavedElapsedTime-player.StartTime ) ) );
+
+	if( OTHERX != 0 )
+	{
+		GLRI = GetGRI( player );
+		if( GLRI != none )
+		{
+			i = int(GLRI.GetPropertyText("PlayerGroupId"));
+			if( i != -1 )
+			{
+				foreach DynamicActors( class'ReplicationInfo', other )
+				{
+					if( other.IsA('GroupInstance') && int(other.GetPropertyText("GroupId")) == i )
+					{
+						// Draw Other
+						C.SetPos( OTHERX, rowTextY );
+						SetPropertyText( string(Property'TempColor'.Name), other.GetPropertyText("GroupColor") );
+						C.DrawColor = TempColor;
+						C.DrawText( other.GetPropertyText("GroupName") );	
+						break;
+					}
+				}
+			}
+		}
+	}
 
 	if( Level.NetMode != NM_Standalone && !player.bBot )
 	{
