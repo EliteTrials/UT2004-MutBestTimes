@@ -139,6 +139,31 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 	}
 }
 
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
+{
+	local bool bmissed;
+	
+	switch( command )
+	{
+		case "red":
+			sender.ServerChangeTeam( 0 );
+			break;
+			
+		case "blue":
+			sender.ServerChangeTeam( 1 );
+			break;
+	
+		default:
+			bmissed = true;
+			break;
+	}
+	
+	if( !bmissed )
+		return true;
+		
+	return super.ChatCommandExecuted( sender, command, value );
+}
+
 defaultproperties
 {
 }

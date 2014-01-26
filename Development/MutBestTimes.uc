@@ -472,7 +472,7 @@ final function bool IsTrials()
 	return ASGameInfo(Level.Game) != none;
 }
 
-final function NotifyObjectiveAccomplished( PlayerController PC )
+final function NotifyObjectiveAccomplished( PlayerController PC, float score )
 {
 	local int playerSlot;
 	local BTClient_ClientReplication CRI;
@@ -513,7 +513,7 @@ final function NotifyObjectiveAccomplished( PlayerController PC )
 			CRI.LastObjectiveCompletedTime = Level.TimeSeconds;
 		}
 
-		CurMode.PlayerCompletedObjective( PC, CRI );
+		CurMode.PlayerCompletedObjective( PC, CRI, score );
 	}
 }
 
@@ -4556,7 +4556,7 @@ final function SetSoloRecordTime( PlayerController player, int soloSlot, float n
 	CurMode.PlayerMadeRecord( player, soloSlot, 0 );
 }
 
-final function ObjectiveCompleted( PlayerReplicationInfo PRI )
+final function ObjectiveCompleted( PlayerReplicationInfo PRI, float score )
 {
 	local BTClient_ClientReplication CR;
 
@@ -4568,6 +4568,7 @@ final function ObjectiveCompleted( PlayerReplicationInfo PRI )
 			MRI.ObjectiveTotalTime += Level.TimeSeconds - CR.LastSpawnTime;
 		}
  	}
+ 	NotifyObjectiveAccomplished( PC, score );
 }
 
 function RewardPlayersOfTeam( int teamIndex, int rewardPoints )

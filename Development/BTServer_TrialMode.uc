@@ -21,7 +21,6 @@ function ModePostBeginPlay()
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
 	super.ModeModifyPlayer( other, c, CRI );
-	
 	other.SetCollision( true, false, false );
 }
 
@@ -37,14 +36,14 @@ function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
 	PerformItemDrop( player, float(rankUps) );
 }
 
-function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI )
+function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
 {
-	super.PlayerCompletedObjective( player, LRI );
+	super.PlayerCompletedObjective( player, LRI, score );
 	// FullLog( "Objective accomplished" );
 	if( Level.TimeSeconds - LRI.LastDropChanceTime >= DropChanceCooldown )
 	{
 		// FullLog( "Performing drop chance" );
-		PerformItemDrop( player, 0 );
+		PerformItemDrop( player, score/10 );
 		LRI.LastDropChanceTime = Level.TimeSeconds;
 	}
 }
@@ -96,12 +95,12 @@ function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex,
 	dropChance = DropChanceBonus;
 	if( LRI.bIsPremiumMember )
 	{
-		dropChance += 5.0;
+		dropChance += 1.0;
 	}
-	dropChance += 0.5*bonus + Store.GetItemDropChance( itemIndex );
+	dropChance += bonus + Store.GetItemDropChance( itemIndex );
 	if( PDat.HasItem( LRI.myPlayerSlot, "drop_bonus_1" ) )
 	{
-		dropChance *= 2.0;
+		dropChance *= 1.25;
 	}
 	return dropChance;
 }
@@ -114,14 +113,6 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 	{
 		case "cp":
 			Mutate( "clientspawn", sender );
-			break;
-			
-		case "red":
-			sender.ServerChangeTeam( 0 );
-			break;
-			
-		case "blue":
-			sender.ServerChangeTeam( 1 );
 			break;
 	
 		default:

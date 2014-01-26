@@ -16,11 +16,6 @@ event PostBeginPlay()
 	BT = MutBestTimes(Owner);
 }
 
-private final function AddObjective( PlayerController PC )
-{
-	BT.NotifyObjectiveAccomplished( PC );
-}
-
 function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
 {
 	local PlayerController PC, LastHitBy;
@@ -67,7 +62,6 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
 		}
 		// Double the score reward but cap to 10 incase the Level Designer did input a ridiculous number!
 		Scorer.Score += Min( Score, 10 );
-		AddObjective( PC );
 
 		// Solo handles the ending...
 		if( BT.bSoloMap )
@@ -76,7 +70,7 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
 			return;
 		}
 
-		BT.ObjectiveCompleted( Scorer );
+		BT.ObjectiveCompleted( Scorer, Min( Score, 10 ) );
 
 		// Find out if the obj ended the level
 		if( Level.Game.bGameEnded )
@@ -154,6 +148,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
 	//local int i;
 	local Controller C;
 
+	// FIXME: if bDisableForceSpawn is true then features like !Wager will break.
 	if( !BT.IsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded )
 		return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
@@ -367,17 +362,12 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
 		if( CS != None )
 			return CS;
 				
-		// Only attackers! aka the red team
-		if( ASGameInfo(Level.Game) != none 
-			&& Player.PlayerReplicationInfo.Team.TeamIndex == ASGameInfo(Level.Game).CurrentAttackingTeam )
+		// Always check after client so that client still functions even when user has a checkpoint!
+		if( BT.CheckPointHandler != None )
 		{
-			// Always check after client so that client still functions even when user has a checkpoint!
-			if( BT.CheckPointHandler != None )
-			{
-				CS = BT.CheckPointHandler.FindCheckPointStart( Player );
-				if( CS != None )
-					return CS;
-			}
+			CS = BT.CheckPointHandler.FindCheckPointStart( Player );
+			if( CS != None )
+				return CS;
 		}
 
 		if( BT.bNoRandomSpawnLocation )

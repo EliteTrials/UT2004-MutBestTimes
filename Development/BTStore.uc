@@ -267,7 +267,13 @@ final function int FindItemByID( string id )
 
 final function float GetItemDropChance( int itemIndex )
 {
-	return DefaultDropChance + Items[itemIndex].DropChance;
+	local float bonus;
+
+	if( Items[itemIndex].Access = Drop )
+	{
+		bonus += 0.25;
+	}
+	return DefaultDropChance + bonus + Items[itemIndex].DropChance;
 }
 
 final function int GetRandomItem()
@@ -468,10 +474,10 @@ final function bool CanBuyItem( BTServer_PlayersData data, BTClient_ClientReplic
 
 defaultproperties
 {
-	DefaultDropChance=0.5
+	DefaultDropChance=0.25
 
 	/** All items. */
-	//Categories(0)=(Name="All")
+	Categories(0)=(Name="All")
 
 	/** Any item with no type. */
 	Categories(1)=(Name="Other")
@@ -491,7 +497,7 @@ defaultproperties
 	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
 	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
 	Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-	Items(5)=(Name="+100% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +100% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
+	Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
 	
 	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
 	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))

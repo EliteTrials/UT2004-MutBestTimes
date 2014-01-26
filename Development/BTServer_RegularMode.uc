@@ -28,6 +28,7 @@ defaultproperties
 	ModeName="Regular"
 	ModePrefix="RTR"
 
+	DropChanceBonus=1.0
 	ExperienceBonus=25
 	
 	// 60 Seconds

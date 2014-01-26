@@ -76,7 +76,7 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 	}
 }
 
-function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI )
+function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
 {
 
 }
