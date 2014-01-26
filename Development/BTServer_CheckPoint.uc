@@ -36,6 +36,7 @@ struct sSavedCheckPoint
 	var sPawnStats SavedStats;
 
 	var int Used;
+	var int TeamIndex;
 };
 var array<sSavedCheckPoint> SavedCheckPoints; // In-Use CheckPoints
 
@@ -72,10 +73,25 @@ Final Function bool CheckPointMade( Actor Other, optional out int SlotIndex )
 Final Function AddCheckPointLocation( Actor Other )
 {
 	local int j;
+	local Rotator destRotation;
+	local Vector destLocation;
+	local Volume remoteLocation;
 
 	j = CheckPoints.Length;
 	CheckPoints.Length = j + 1;
-	CheckPoints[j].Location = Spawn( class'BTServer_CheckPointNavigation', Other,, Other.Location, Other.Rotation );
+
+	remoteLocation = Volume(Other);
+	if( remoteLocation != none && remoteLocation.AssociatedActor != none )
+	{
+		destRotation = remoteLocation.AssociatedActor.Rotation;
+		destLocation = remoteLocation.AssociatedActor.Location;
+	}
+	else
+	{
+		destRotation = Other.Rotation;
+		destLocation = Other.Location;
+	}
+	CheckPoints[j].Location = Spawn( class'BTServer_CheckPointNavigation', Other,, destLocation, destRotation );
 	if( CheckPoints[j].Location == none )
 	{
 		Log( "Error failed to set new CheckPoint on" @ Other, Name );
@@ -90,8 +106,7 @@ Function Trigger( Actor Other, Pawn Player )
 {
 	local int SlotIndex;
 
-	// Don't allow fakers!
-	if( (Other.IsA('LCA_BTSoloCheckPointVolume') || Other.IsA('LCA_CheckPointVolume')) && Player != None && Player.Controller != None )
+	if( Player != None && Player.Controller != None )
 	{
 		// Look if the checkpoint location is created!
 		if( !CheckPointMade( Other ) )
@@ -144,7 +159,7 @@ Final Function bool HasSavedCheckPoint( Controller C, optional out int SlotIndex
 
 	for( CurCP = 0; CurCP < SavedCheckPoints.Length; ++ CurCP )
 	{
-		if( SavedCheckPoints[CurCP].Owner == C )
+		if( SavedCheckPoints[CurCP].Owner == C && (SavedCheckPoints[CurCP].TeamIndex == -1 || (C.PlayerReplicationInfo.Team != none && SavedCheckPoints[CurCP].TeamIndex == C.PlayerReplicationInfo.Team.TeamIndex)) )
 		{
 			SlotIndex = CurCP;
 			return True;
@@ -162,13 +177,21 @@ Final Function AddSavedCheckPoint( Controller C, Actor Other )
 	SavedCheckPoints[j].Owner = C;
 	SavedCheckPoints[j].CheckPointSetTime = Level.TimeSeconds;
 	SavedCheckPoints[j].CheckPointActor = Other;
-
+	if(	C.PlayerReplicationInfo.Team != none )
+	{
+		SavedCheckPoints[j].TeamIndex = C.PlayerReplicationInfo.Team.TeamIndex;
+	}
+	else
+	{
+		SavedCheckPoints[j].TeamIndex = -1;	
+	}
 	SaveStatsFor( C.Pawn, j );
 }
 
 Final Function SaveStatsFor( Pawn Other, int SlotIndex )
 {
-	local inventory Inv;
+	local Inventory Inv;
+	local Volume remoteLocation;
 
 	SavedCheckPoints[SlotIndex].SavedStats.Health = Other.Health;
 	SavedCheckPoints[SlotIndex].SavedStats.Shield = Other.ShieldStrength;
@@ -192,8 +215,17 @@ Final Function SaveStatsFor( Pawn Other, int SlotIndex )
 		}
 	}
 
-	SavedCheckPoints[SlotIndex].SavedStats.Rotation = Other.Rotation;
-	SavedCheckPoints[SlotIndex].SavedStats.Location = Other.Location;
+	remoteLocation = Volume(SavedCheckPoints[SlotIndex].CheckPointActor);
+	if( remoteLocation != none && remoteLocation.AssociatedActor != none )
+	{
+		SavedCheckPoints[SlotIndex].SavedStats.Rotation = remoteLocation.AssociatedActor.Rotation;
+		SavedCheckPoints[SlotIndex].SavedStats.Location = remoteLocation.AssociatedActor.Location;
+	}
+	else
+	{
+		SavedCheckPoints[SlotIndex].SavedStats.Rotation = Other.Rotation;
+		SavedCheckPoints[SlotIndex].SavedStats.Location = Other.Location;
+	}
 }
 
 Final Function RemoveSavedCheckPoint( Controller C )
