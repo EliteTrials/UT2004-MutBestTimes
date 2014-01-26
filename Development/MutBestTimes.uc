@@ -615,7 +615,7 @@ final function NotifyExperienceAdded( int playerSlot, int experienceAdded )
 		return;
 	}
 
-	if( experienceAdded >= 35 )
+	if( experienceAdded >= 64 )
 	{
 		PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'experience_0' );
 	}
@@ -3717,31 +3717,6 @@ function Mutate( string MutateString, PlayerController Sender )
 	if( Sender == none )
 		return;
 
-	Split( MutateString, " ", ss );
-	ss2 = ss;
-	ss2.Remove( 0, 1 );
-	ss[0] = Locs( ss[0] );
-	if( (IsAdmin( Sender.PlayerReplicationInfo ) || Sender.GetPlayerIdHash() == BTAuthor) && DeveloperExecuted( Sender, ss[0], ss2 ) )
-	{
-		return;
-	}
-
-	if( IsAdmin( Sender.PlayerReplicationInfo ) && AdminExecuted( Sender, ss[0], ss2 ) )
-	{
-		return;
-	}
-
-	if( ClientExecuted( Sender, ss[0], ss2 ) )
-	{
-		return;
-	}
-
-	if( Left( MutateString, Len("Exec") ) ~= "exec" )
-	{
-		Sender.ClientTravel( Mid( MutateString, Len("Exec") + 1 ), TRAVEL_Absolute, false );
-		return;
-	}
-
 	// Name was changed( called by the unofficial UT2K4 server patch )
 	if( MutateString == "GUGIPATCH_NAMECHANGED" )
 	{
@@ -3939,6 +3914,32 @@ function Mutate( string MutateString, PlayerController Sender )
 			return;
 		}
 	}
+
+	Split( MutateString, " ", ss );
+	ss2 = ss;
+	ss2.Remove( 0, 1 );
+	ss[0] = Locs( ss[0] );
+	if( (IsAdmin( Sender.PlayerReplicationInfo ) || Sender.GetPlayerIdHash() == BTAuthor) && DeveloperExecuted( Sender, ss[0], ss2 ) )
+	{
+		return;
+	}
+
+	if( IsAdmin( Sender.PlayerReplicationInfo ) && AdminExecuted( Sender, ss[0], ss2 ) )
+	{
+		return;
+	}
+
+	if( ClientExecuted( Sender, ss[0], ss2 ) )
+	{
+		return;
+	}
+
+	if( Left( MutateString, Len("Exec") ) ~= "exec" )
+	{
+		Sender.ClientTravel( Mid( MutateString, Len("Exec") + 1 ), TRAVEL_Absolute, false );
+		return;
+	}
+
 	super.Mutate( MutateString, Sender );
 }
 

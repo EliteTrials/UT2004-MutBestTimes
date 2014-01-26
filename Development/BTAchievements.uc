@@ -137,7 +137,7 @@ defaultproperties
  	Achievements(13)=(Title="Look at my level!",ID=level_0,Type=LevelUp,Count=2,Description="Level up 2 times",Points=1)
  	Achievements(14)=(Title="My E-Penis pwns yours!",ID=level_2,Type=LevelUp,Count=8,Description="Level up 8 times",Points=2)
  	Achievements(15)=(Title="My E-Penis is huge!",ID=level_3,Type=LevelUp,Count=20,Description="Level up 20 times",Points=5)
- 	Achievements(16)=(Title="Experience lover",ID=experience_0,Description="Earn 35 experience from one action",Points=2)
+ 	Achievements(16)=(Title="Experience lover",ID=experience_0,Description="Earn 64 experience from one action",Points=2)
  	Achievements(17)=(Title="Buy a item",ID=store_0,Description="Buy your first item from the Store",Points=1)
  	Achievements(18)=(Title="BTimes explorer",ID=store_1,Description="Find the Store",Points=1)
  	Achievements(19)=(Title="Dedicated noob",ID=level_4,Description="Reach level 50",Points=10)
