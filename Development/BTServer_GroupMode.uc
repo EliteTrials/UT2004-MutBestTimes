@@ -22,6 +22,38 @@ protected function InitializeMode()
 	bGroupMap = true;
 }
 
+function bool ChatCommandExecuted( PlayerController sender, string command, string value )
+{
+	local bool bmissed;
+	
+	switch( command )
+	{
+		case "group":
+			if( value == "" )
+			{
+				sender.ConsoleCommand("mutate leavegroup");
+			}
+			else
+			{
+				sender.ConsoleCommand("mutate joingroup" @ value);
+			}
+			break;
+
+		case "countdown":
+			sender.ConsoleCommand("mutate GroupCountDown" @ value);
+			break;
+	
+		default:
+			bmissed = true;
+			break;
+	}
+	
+	if( !bmissed )
+		return true;
+		
+	return super.ChatCommandExecuted( sender, command, value );
+}
+
 // Yet to implement.
 /*function FinalObjectiveCompleted( PlayerController PC )
 {
