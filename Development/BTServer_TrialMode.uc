@@ -51,7 +51,7 @@ function PlayerCompletedObjective( PlayerController player, BTClient_ClientRepli
 function PerformItemDrop( PlayerController player, float bonus )
 {
 	local int itemIndex;
-	local float chance;
+	local float chance, resalcePrice;
 	local string itemName;
 	local BTClient_ClientReplication LRI;
 	local string s;
@@ -73,9 +73,10 @@ function PerformItemDrop( PlayerController player, float bonus )
 		itemName = Store.Items[itemIndex].Name;
 		if( PDat.HasItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID ) )
 		{
-			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, Store.Items[itemIndex].Cost*0.75 );
-	   		SendSucceedMessage( player, "You won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance" );
-	  		s = "%PLAYER% has won" @ Store.Items[itemIndex].Cost*0.75 @ "currency by random chance";
+			resalcePrice = Store.GetResalePrice( itemIndex );
+			PDat.GiveCurrencyPoints( LRI.myPlayerSlot, resalcePrice );
+	   		SendSucceedMessage( player, "You won" @ resalcePrice @ "currency by random chance" );
+	  		s = "%PLAYER% has won" @ resalcePrice @ "currency by random chance";
 		}
 		else
 		{

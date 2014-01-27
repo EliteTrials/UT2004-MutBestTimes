@@ -215,6 +215,7 @@ final function RemoveItem( int playerSlot, string id )
 
 	if( HasItem( playerSlot, id, i ) )
 	{
+		BT.Store.ItemRemoved( self, playerSlot, id );
 		Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
 	}
 }
@@ -229,6 +230,7 @@ final function ToggleItem( int playerSlot, string id )
 		for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
 		{
 			Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
+			BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
 		}
 		return;
 	}
@@ -236,6 +238,7 @@ final function ToggleItem( int playerSlot, string id )
 	if( HasItem( playerSlot, id, itemSlot ) )
 	{
 		Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled = !Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled;
+		BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[itemSlot].ID, Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled );
 
 		// Disable all other items of the same Type!
 		if( Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled )
@@ -260,6 +263,7 @@ final function ToggleItem( int playerSlot, string id )
 				if( BT.Store.Items[storeSlot].Type ~= type )
 				{
 					Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
+					BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
 				}
 			}
 		}

@@ -1,12 +1,11 @@
 //=============================================================================
-// Copyright 2005-2012 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
 	config(MutBestTimes)
 	dependson(BTStructs)
 	dependson(BTServer_PlayersData)
 	dependson(BTServer_RecordsData)
-	dependson(BTServer_RewardsTable)
 	dependson(BTAchievements)
 	dependson(BTChallenges)
 	dependson(BTActivateKey);
@@ -186,11 +185,9 @@ var GroupManager									GroupManager;
 var BTServer_Mode									CurMode;
 var private BTGameRules								ModeRules;
 var BTServer_HttpNotificator						Notify;
-var private BTServer_RewardsTable					RewardsTable;
 var BTAchievements									AchievementsManager;
 var BTChallenges									ChallengesManager;
 var BTStore											Store;
-var BTPerks											Perks;
 
 var bool
 	bPracticeRound,																// Asssault is in Practice Round																// Obsolete?
@@ -891,18 +888,6 @@ final function SendChallenges( PlayerController requester )
 	}
 }
 
-final function SendPerks( PlayerController requester )
-{
-	local BTClient_ClientReplication Rep;
-
-	//FullLog( "Sending perks to:" @ requester.GetHumanReadableName() );
-	Rep = GetRep( requester );
-	if( Rep == none )
-		return;
-
-	Perks.SendPerks( Rep );
-}
-
 final function SendItemMeta( PlayerController requester, string id )
 {
 	local int i;
@@ -1067,11 +1052,6 @@ function ModifyPlayer( Pawn Other )
 		}
 	}
 	
-	if( Perks != none )
-	{
-		Perks.CheckPlayer( CRI, Other );
-	}
-
 	if( ModeIsTrials() )
 	{
 		if( !bSoloMap )	// Regular
@@ -1289,8 +1269,6 @@ event PreBeginPlay()
 
 	Store = class'BTStore'.static.Load();
 	Store.Cache();
-	
-	Perks = class'BTPerks'.static.Load( self );
 	AddToPackageMap( "TextureBTimes" );
 	// Dangerous code
 	/*for( i = 0; i < Store.Items.Length; ++ i )
@@ -2850,7 +2828,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		   			PDat.RemoveItem( Rep.myPlayerSlot, s );
 		   			if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
 		   			{
-		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost * 0.75 );
+		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ) );
 		   			}
 		   			
 		   			// bBought, bEnabled
@@ -3761,11 +3739,6 @@ function Mutate( string MutateString, PlayerController Sender )
 		SendChallenges( Sender );
 		return;
 	}
-	else if( MutateString == "BTClient_RequestPerks" )
-	{
-		SendPerks( Sender );
-		return;
-	}
 	else if( Left( MutateString, Len("BTClient_RequestStoreItems") ) == "BTClient_RequestStoreItems" )
 	{
 		SendStoreItems( Sender, Mid( MutateString, Len("BTClient_RequestStoreItems")+1 ) );
@@ -4568,7 +4541,13 @@ final function ObjectiveCompleted( PlayerReplicationInfo PRI, float score )
 			MRI.ObjectiveTotalTime += Level.TimeSeconds - CR.LastSpawnTime;
 		}
  	}
- 	NotifyObjectiveAccomplished( PC, score );
+
+	// Bot?
+ 	if( PlayerController(PRI.Owner) == none )
+ 	{
+ 		return;
+ 	}
+ 	NotifyObjectiveAccomplished( PlayerController(PRI.Owner), score );
 }
 
 function RewardPlayersOfTeam( int teamIndex, int rewardPoints )
@@ -6978,21 +6957,6 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 		BroadcastLocalMessage( PC, class'BTClient_PremLocalMessage', "Premium player %PLAYER% has entered the game" );
 	}
 	
-	if( Perks != none )
-	{
-		// FullLog( "Checking perks..." );
-		if( Perks.HasPerk( CR, 'auto_press', i ) )
-		{
-			CR.bAutoPress = true;
-		}
-		
-		if( Perks.HasPerk( CR, 'dodge_assist', i ) )
-		{
-			// FullLog( "Dodge assist!" );
-			CR.bAllowDodgePerk = true;
-		}
-	}
-
 	if( Store != none )
 	{
 		Store.ModifyPlayer( PC, PDat, CR );

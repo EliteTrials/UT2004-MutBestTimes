@@ -49,7 +49,7 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
 						{
 							LastHitBy.PlayerReplicationInfo.Score += Min( Score*2, 20 );
 							ASPlayerReplicationInfo(LastHitBy.PlayerReplicationInfo).DisabledObjectivesCount ++;
-							AddObjective( LastHitBy );
+							BT.ObjectiveCompleted( LastHitBy.PlayerReplicationInfo, FMin( Score, 10 ) );
 						}
 					}
 				}
@@ -70,7 +70,7 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
 			return;
 		}
 
-		BT.ObjectiveCompleted( Scorer, Min( Score, 10 ) );
+		BT.ObjectiveCompleted( Scorer, FMin( Score, 10 ) );
 
 		// Find out if the obj ended the level
 		if( Level.Game.bGameEnded )

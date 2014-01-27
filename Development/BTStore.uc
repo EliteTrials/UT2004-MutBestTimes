@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2011 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class BTStore extends Object
 	config(BTStore);
@@ -269,7 +269,7 @@ final function float GetItemDropChance( int itemIndex )
 {
 	local float bonus;
 
-	if( Items[itemIndex].Access = Drop )
+	if( Items[itemIndex].Access == Drop )
 	{
 		bonus += 0.25;
 	}
@@ -294,41 +294,105 @@ tryagain:
 	return randomIndex;
 }
 
+final function float GetResalePrice( int itemIndex )
+{
+	return Items[itemIndex].Cost*0.75;
+}
+
+/** Called when an item is activated/deactivated either through the store or via a programmatic function. */
+final function ItemToggled( BTServer_PlayersData data, int playerSlot, string itemID, bool status )
+{
+	local PlayerController PC;
+	local BTClient_ClientReplication CRI;
+
+	PC = data.BT.FindPCByPlayerSlot( playerSlot, CRI );
+	if( PC != none )
+	{
+		switch( itemID )
+		{
+			case "perk_dodge_assistance":
+				CRI.bAllowDodgePerk = status;
+				break;		
+
+			case "perk_press_assistance":
+				CRI.bAutoPress = status;
+				break;
+		}
+	}
+	// Handle toggling of items for non-living players.
+}
+	
+/** Called when an item is removed from a player either through selling or removal by an admin. */
+final function ItemRemoved( BTServer_PlayersData data, int playerSlot, string itemID )
+{
+	switch( itemID )
+	{
+		case "perk_dodge_assistance":
+			// Stimulate as if the item got toggled off.
+			ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+			break;		
+
+		case "perk_press_assistance":
+			// Stimulate as if the item got toggled off.
+			ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+			break;
+	}
+}
+
+/** 
+ * Called when an item becomes active either through possesing a Pawn, entering a Vehicle, or joing the game as a PlayerController. 
+ * @other Actor the item is supposed to get applied to.
+ */
+final function ItemActivated( Actor other, BTClient_ClientReplication CRI, string itemID )
+{
+	local LinkedReplicationInfo customRep;
+
+	switch( itemID )
+	{
+		case "MNAFAccess":
+			for( customRep = Controller(other).PlayerReplicationInfo.CustomReplicationInfo; customRep != none; customRep = customRep.NextReplicationInfo )
+			{
+				if( customRep.IsA('MNAFLinkedRep') )
+				{
+					customRep.SetPropertyText( "bIsUnique", "1" );
+					break;
+				}
+			}
+			break;
+
+		case "perks_dodge_assistance":
+			CRI.bAllowDodgePerk = true;
+			break;	
+
+		case "perk_press_assistance":
+			CRI.bAutoPress = true;
+			break;
+	}
+}
+
 final function ModifyPawn( Pawn other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Pawn );
+	ApplyOwnedItems( other, data, CRI, ETarget.T_Pawn );
 }
 
 final function ModifyVehicle( Vehicle other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Vehicle );
+	ApplyOwnedItems( other, data, CRI, ETarget.T_Vehicle );
 }
 
 final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	local LinkedReplicationInfo customRep;
-
-	ApplyOwnedItems( data, other, CRI.myPlayerSlot, ETarget.T_Player );
-	// Is active?
-	if( data.UseItem( CRI.myPlayerSlot, "MNAFAccess" ) )
-	{
-		for( customRep = other.PlayerReplicationInfo.CustomReplicationInfo; customRep != none; customRep = customRep.NextReplicationInfo )
-		{
-			if( customRep.IsA('MNAFLinkedRep') )
-			{
-				customRep.SetPropertyText( "bIsUnique", "1" );
-				break;
-			}
-		}
-	}
+	ApplyOwnedItems( other, data, CRI, ETarget.T_Player );
 }
 
-private final function ApplyOwnedItems( BTServer_PlayersData data, Actor other, int playerSlot, ETarget target )
+private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, BTClient_ClientReplication CRI, ETarget target )
 {
 	local int i, j, itemSlot, curType;
 	local bool bIsKnown;
 	local array<string> addedTypes;
+	local int playerSlot;
 
+	playerSlot = CRI.myPlayerSlot;
  	j = data.Player[playerSlot].Inventory.BoughtItems.Length;
  	for( i = 0; i < j; ++ i )
  	{
@@ -358,12 +422,16 @@ private final function ApplyOwnedItems( BTServer_PlayersData data, Actor other, 
 	        	}
 	        	addedTypes[addedTypes.Length] = Items[itemSlot].Type;
 	        }
-	        ActivateItem( other, itemSlot, playerSlot );
+
+	        if( ActivateItem( other, itemSlot, playerSlot ) )
+	        {
+	        	ItemActivated( other, CRI, Items[itemSlot].ID );
+			}
 		}
 	}
 }
 
-private final function ActivateItem( Actor other, int itemSlot, int playerSlot )
+private final function bool ActivateItem( Actor other, int itemSlot, int playerSlot )
 {
 	local class<Actor> itemClass;
 	local Actor itemObject;
@@ -380,7 +448,7 @@ private final function ActivateItem( Actor other, int itemSlot, int playerSlot )
 		if( itemClass == none )
 		{
 			Log( "Failed to load ItemClass" @ Items[itemSlot].ItemClass @ "for" @ Items[itemSlot].ID );
-			return;
+			return false;
 		}
 		
 		// Apply the vars on the pawn's instance if the item's class is a pawn(HACK)
@@ -394,21 +462,22 @@ private final function ActivateItem( Actor other, int itemSlot, int playerSlot )
 			// Failed to spawn or it destroyed itself in BeginPlay.
 			if( itemObject == none )
 			{
-				return;
+				return false;
 			}
 		}
-		SetVarsFor( itemObject, itemSlot );
+		ApplyVariablesOn( itemObject, Items[itemSlot].Vars );
 	}
+	return true;
 }
 
-private final function SetVarsFor( Actor other, int itemSlot )
+private final function ApplyVariablesOn( Actor other, array<string> variables )
 {
 	local array<string> s;
 	local int i;
 	
-	for( i = 0; i < Items[itemSlot].Vars.Length; ++ i )
+	for( i = 0; i < variables.Length; ++ i )
 	{
-		Split( Items[itemSlot].Vars[i], ":", s );	
+		Split( variables[i], ":", s );	
 		switch( Locs(s[0]) )
 		{
 			case "overlaymat":
@@ -492,6 +561,9 @@ defaultproperties
 	/** Any item that is an upgrade e.g. EXP boost etc. */
 	Categories(5)=(Name="Upgrades",Types=("UP_*"))
 
+	/** Any item that effects gameplay either practically or visually. */
+	Categories(6)=(Name="Perks",Types=("Perk_*"))
+
 	Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
 	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
 	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
@@ -502,4 +574,7 @@ defaultproperties
 	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
 	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
 	Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",img="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+
+	Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
+	Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
 }
