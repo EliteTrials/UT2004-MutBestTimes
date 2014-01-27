@@ -125,7 +125,7 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 			break;
 
 		case "title":
-			sender.ConsoleCommand( "BT SetTitle" @ value );
+			sender.ConsoleCommand( "mutate SetTitle" @ value );
 			break;
 
 		default:
