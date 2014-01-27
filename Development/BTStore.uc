@@ -296,7 +296,7 @@ tryagain:
 
 final function float GetResalePrice( int itemIndex )
 {
-	return Items[itemIndex].Cost*0.75;
+	return Items[itemIndex].Cost*0.25;
 }
 
 /** Called when an item is activated/deactivated either through the store or via a programmatic function. */

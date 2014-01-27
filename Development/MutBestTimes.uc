@@ -2828,7 +2828,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 		   			PDat.RemoveItem( Rep.myPlayerSlot, s );
 		   			if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
 		   			{
-		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ) );
+		   				PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
 		   			}
 		   			
 		   			// bBought, bEnabled
@@ -2927,7 +2927,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 	  		}
 
 			j = 5 ** (float(int(params[0]))/(float(MinExchangeableTrophies)/2f));
-			PDat.GiveCurrencyPoints( Rep.myPlayerSlot, j );
+			PDat.GiveCurrencyPoints( Rep.myPlayerSlot, j, true );
 			PDat.Player[Rep.myPlayerSlot].Trophies.Remove( 0, int(params[0]) );
 
 	   		NotifyPlayers( sender,
@@ -2974,7 +2974,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 						PDat.SpendCurrencyPoints( Rep.myPlayerSlot, int(params[1]) );
 						sender.ClientMessage( class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ int(params[1])*0.80 @ "of your currency!" );
 
-						PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80 );
+						PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80, true );
 						if( PlayerController(C) != sender )
 						{
 							PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his/her currency!" );
@@ -3149,7 +3149,7 @@ private final function ConsumeKey( BTActivateKey handler )
 			break;
 			
 		case "curr":
-			PDat.GiveCurrencyPoints( Rep.myPlayerSlot, int(handler.Serial.Code) );
+			PDat.GiveCurrencyPoints( Rep.myPlayerSlot, int(handler.Serial.Code), true );
 			SendSucceedMessage( handler.Requester, "You were given Currency!" );
 			break;
 			
@@ -3250,6 +3250,22 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			for( i = 0; i < PDat.Player.Length; ++ i )
 			{
 				PDat.Player[i].PLObjectives = 0;
+			}
+			SavePlayers();
+			break;		
+
+		case "bt_resetcurrency":
+			for( i = 0; i < PDat.Player.Length; ++ i )
+			{
+				PDat.Player[i].LevelData.BTPoints = 0;
+			}
+			SavePlayers();
+			break;		
+
+		case "bt_resetexperience":
+			for( i = 0; i < PDat.Player.Length; ++ i )
+			{
+				PDat.Player[i].LevelData.Experience = 0;
 			}
 			SavePlayers();
 			break;
@@ -3376,7 +3392,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
 					 	if( int(params[1]) > 0 )
 					 	{
-							PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]) );
+							PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]), true );
 						}
 						else if( int(params[1]) < 0 )
 						{
