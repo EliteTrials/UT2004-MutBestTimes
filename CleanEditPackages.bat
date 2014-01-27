@@ -4,6 +4,7 @@ title ServerBTimes
 cd..
 cd system
 :remove
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ClientBTimesV5
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
 pause
 goto remove
