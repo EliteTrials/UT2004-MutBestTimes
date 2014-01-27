@@ -111,16 +111,6 @@ struct sCategoryClient
 
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;	// SERVER and LOCAL
-
-struct sPerkState
-{
-	var string Name;
-	var float Points;
-	var string Description;
-	var Texture Icon;
-	var bool bActive;
-};
-
 //==============================================================================
 
 //==============================================================================
@@ -149,10 +139,6 @@ var sTrophyClient LastTrophyEvent;
 
 /** The availabe items for sale and bought. */
 var(DEBUG) array<sItemClient> Items;
-
-/** Available perks. */
-var(DEBUG) array<sPerkState> Perks;
-
 
 // --NOT REPLICATED
 var(DEBUG) transient bool bItemsTransferComplete;
@@ -261,7 +247,6 @@ replication
 		// Stats
 		ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
 		ClientSendChallenge,
-		ClientSendPerk,
 		ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
 		ClientSendItem, ClientSendCategory,
 		ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
@@ -587,16 +572,6 @@ simulated final function ClientSendChallenge( string title, string description, 
 	Challenges[0].Title = title;
 	Challenges[0].Description = description;
 	Challenges[0].Points = points;
-}
-
-simulated final function ClientSendPerk( string name, string description, int points, Texture icon, bool bActive )
-{
-	Perks.Insert( 0, 1 );
-	Perks[0].Name = name;
-	Perks[0].Description = description;
-	Perks[0].Points = points;
-	Perks[0].Icon = icon;
-	Perks[0].bActive = bActive;
 }
 
 simulated final function ClientSendTrophy( string title )
