@@ -496,7 +496,7 @@ defaultproperties
 		WinHeight=0.08
 		OnClick=InternalOnClick
 		StyleName="SellButton"
-		Hint="Sell the selected item for 75% of its original price"
+		Hint="Sell the selected item for 25% of its current price"
 	end object
 	b_Sell=oSell
 
