@@ -17,62 +17,49 @@ final function Initialize( BTClient_ClientReplication client, string selector, b
 	StopWatch( false );
 	BT = MutBestTimes(Owner);
 	CR = client;
-	if( selector ~= "Premium" )
+
+	for( i = 0; i < BT.Store.Items.Length; ++ i )
 	{
-		for( i = 0; i < BT.Store.Items.Length; ++ i )
+		if( selector ~= "Premium" )
 		{
 			if( BT.Store.Items[i].Access != Premium )
 			{
 				continue;
 			}
-		
-			j = IndexedItems.Length;
-			IndexedItems.Length = j + 1;
-			IndexedItems[j] = i;
 		}
-	}
-	else
-	{
-		// Admin items
-		for( i = 0; i < BT.Store.Items.Length; ++ i )
+		else if( selector ~= "Admin" && selectAdminItems )
 		{
-			// Skip if item access is either buy or free, or not in requested category.
-			if( (BT.Store.Items[i].Access < Admin || BT.Store.Items[i].Access == Drop) || InStr( BT.Store.Items[i].CachedCategory, "&"$selector ) == -1 )
+			if( BT.Store.Items[i].Access < Admin || BT.Store.Items[i].Access == Premium )
+			{
+				continue;
+			}	
+		}
+		else
+		{
+			if( InStr( BT.Store.Items[i].CachedCategory, "&"$selector ) == -1 )
 			{
 				continue;
 			}
-		
-			// Show if player is an admin, requested category is "Admin" or player owns said admin item.
-			if( selectAdminItems || BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[i].ID ) )
-			{
-				j = IndexedItems.Length;
-				IndexedItems.Length = j + 1;
-				IndexedItems[j] = i;
-			}
-		}
-	
-		// Non-Admin items
-		if( !(selector ~= "Admin") )
-		{	
-			for( i = 0; i < BT.Store.Items.Length; ++ i )
-			{
-				// Skip if admin/premium/private, or not in requested category, unless item is a drop and is owned by player.
-				if( (BT.Store.Items[i].Access >= Admin && BT.Store.Items[i].Access != Drop) || InStr( BT.Store.Items[i].CachedCategory, "&"$selector ) == -1 )
-				{
-					continue;
-				}
 
-				if( BT.Store.Items[i].Access == Drop && !BT.PDat.HasItem( CR.myPlayerSlot, BT.store.Items[i].ID ) )
-				{
-					continue;
-				}
-	
-				j = IndexedItems.Length;
-				IndexedItems.Length = j + 1;
-				IndexedItems[j] = i;
+			// Doesn't own special item?
+			if( BT.Store.Items[i].Access > Free && (!selectAdminItems && !BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[i].ID ) ) )
+			{
+				continue;
 			}
 		}
+	
+		j = IndexedItems.Length;
+		IndexedItems.Length = j + 1;
+		IndexedItems[j] = i;
 	}
+
+	if( IndexedItems.Length == 0 )
+	{
+		CR.ClientSendItemsCompleted();
+		Destroy();
+		return;
+	}
+
 	MaxItemsPerTick = Max( Min( BT.MaxItemsToReplicatePerTick, IndexedItems.Length ), IndexedItems.Length*float(Level.NetMode == NM_Standalone) );
 }
 

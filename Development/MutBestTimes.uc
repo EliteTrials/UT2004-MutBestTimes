@@ -915,15 +915,21 @@ final function SendStoreItems( PlayerController requester, string filter )
 {
 	local int i;
 	local BTClient_ClientReplication Rep;
+	local bool showAdminItems;
 
 	Rep = GetRep( requester );
 	if( Rep == none )
 		return;
 
+	showAdminItems = IsAdmin( requester.PlayerReplicationInfo );
 	if( !Rep.bReceivedCategories || filter == "" )
 	{
 		for( i = 0; i < Store.Categories.Length; ++ i )
 		{
+			if( Store.Categories[i].Name ~= "Admin" && !showAdminItems )
+			{
+				continue;
+			}
 			Rep.ClientSendCategory( Store.Categories[i].Name );
 		}
 
@@ -933,12 +939,10 @@ final function SendStoreItems( PlayerController requester, string filter )
 		}
 	}
 
-	//FullLog( "Sending store items to:" @ requester.GetHumanReadableName() );
-
 	Spawn( class'BTItemsReplicator', self ).Initialize( 
 		rep, 
 		filter, 
-		IsAdmin( requester.PlayerReplicationInfo ) || filter ~= "Admin" 
+		showAdminItems
 	);
 	
 	// Store discovery
@@ -8041,7 +8045,7 @@ DefaultProperties
 	CompetitiveTimeLimit=5.0
 	TimeScaling=1.0
 	bGenerateBTWebsite=True
-	MaxItemsToReplicatePerTick=10
+	MaxItemsToReplicatePerTick=1
 
 	//bSavePreviousGhost=True
 
