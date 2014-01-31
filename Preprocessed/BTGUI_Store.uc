@@ -57,10 +57,10 @@ function LoadData()
 		ItemsNum = ClientData.Items.Length;
 		ClientData.Items.Length = 0;
 
+	    bWaitingForResponse = true;
 		PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), ClientData.Options.StoreFilter ) );
 
 		DisableComponent( cb_Filter );
-	    bWaitingForResponse = true;
 		SetTimer( 0.2, true );
 	}
 }
