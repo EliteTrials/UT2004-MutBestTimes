@@ -1,119 +1,128 @@
 class BTItemsReplicator extends Info;
 
-var private int repIndex;
-
 var protected BTClient_ClientReplication CR;
-var protected MutBestTimes P;
+var protected MutBestTimes BT;
 
-var string Filter;
-var bool bIsAdmin;
+var array<int> IndexedItems;
+var int CurrentItemIndex;
+var int MaxItemsPerTick;
 
-final function Initialize( BTClient_ClientReplication client )
+final function Initialize( BTClient_ClientReplication client, string selector, bool selectAdminItems )
 {
+	local int i, j;
+
 	if( client == none )
 		return;
 
+	StopWatch( false );
+	BT = MutBestTimes(Owner);
 	CR = client;
-	P = MutBestTimes(Owner);
-}
-
-final function BeginReplication()
-{
-	GotoState( 'Replicate' );
-}
-
-final private function SendRepData( int index )
-{
-	CR.ClientSendItem( 
-		P.Store.Items[index].Name,
-		P.Store.Items[index].ID,
-		class'BTClient_ClientReplication'.static.CompressStoreData( 
-			P.Store.Items[index].Cost, 
-			P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[index].ID ), 
-			P.PDat.ItemEnabled( CR.myPlayerSlot, P.Store.Items[index].ID ),
-			P.Store.Items[index].Access
-		)
-	);
-}
-
-state Replicate
-{
-Begin:
-	if( filter ~= "Premium" )
+	if( selector ~= "Premium" )
 	{
-		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+		for( i = 0; i < BT.Store.Items.Length; ++ i )
 		{
-			if( P.Store.Items[repIndex].Access != Premium )
+			if( BT.Store.Items[i].Access != Premium )
 			{
 				continue;
 			}
 		
-			SendRepData( repIndex );
-			if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
-			{
-				Sleep( 0.3 );
-			}
+			j = IndexedItems.Length;
+			IndexedItems.Length = j + 1;
+			IndexedItems[j] = i;
 		}
 	}
 	else
 	{
 		// Admin items
-		for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+		for( i = 0; i < BT.Store.Items.Length; ++ i )
 		{
 			// Skip if item access is either buy or free, or not in requested category.
-			if( (P.Store.Items[repIndex].Access < Admin || P.Store.Items[repIndex].Access == Drop) || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+			if( (BT.Store.Items[i].Access < Admin || BT.Store.Items[i].Access == Drop) || InStr( BT.Store.Items[i].CachedCategory, "&"$selector ) == -1 )
 			{
 				continue;
 			}
 		
 			// Show if player is an admin, requested category is "Admin" or player owns said admin item.
-			if( bIsAdmin || P.PDat.HasItem( CR.myPlayerSlot, P.Store.Items[repIndex].ID ) )
+			if( selectAdminItems || BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[i].ID ) )
 			{
-				SendRepData( repIndex );
-				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
-				{
-					Sleep( 0.4 );
-				}
+				j = IndexedItems.Length;
+				IndexedItems.Length = j + 1;
+				IndexedItems[j] = i;
 			}
 		}
 	
 		// Non-Admin items
-		if( !(filter ~= "Admin") )
+		if( !(selector ~= "Admin") )
 		{	
-			for( repIndex = 0; repIndex < P.Store.Items.Length; ++ repIndex )
+			for( i = 0; i < BT.Store.Items.Length; ++ i )
 			{
 				// Skip if admin/premium/private, or not in requested category, unless item is a drop and is owned by player.
-				if( (P.Store.Items[repIndex].Access >= Admin && P.Store.Items[repIndex].Access != Drop) || InStr( P.Store.Items[repIndex].CachedCategory, "&"$filter ) == -1 )
+				if( (BT.Store.Items[i].Access >= Admin && BT.Store.Items[i].Access != Drop) || InStr( BT.Store.Items[i].CachedCategory, "&"$selector ) == -1 )
 				{
 					continue;
 				}
 
-				if( P.Store.Items[repIndex].Access == Drop && !P.PDat.HasItem( CR.myPlayerSlot, P.store.Items[repIndex].ID ) )
+				if( BT.Store.Items[i].Access == Drop && !BT.PDat.HasItem( CR.myPlayerSlot, BT.store.Items[i].ID ) )
 				{
 					continue;
 				}
 	
-				SendRepData( repIndex );
-				if( Level.NetMode != NM_Standalone && repIndex % 10 == 0 )
-				{
-					Sleep( 0.2 );
-				}	
+				j = IndexedItems.Length;
+				IndexedItems.Length = j + 1;
+				IndexedItems[j] = i;
 			}
 		}
 	}
-	ReplicationFinished();
-	Destroy();
+	MaxItemsPerTick = Max( Min( BT.MaxItemsToReplicatePerTick, IndexedItems.Length ), IndexedItems.Length*float(Level.NetMode == NM_Standalone) );
 }
 
-final protected function ReplicationFinished()
+final private function SendRepData( int index )
 {
-	CR.ClientSendItemsCompleted();
+	local int playerItemSlot;
+	local bool hasItem, isEnabled;
+
+	hasItem = BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[index].ID, playerItemSlot );
+	if( playerItemSlot != -1 )
+	{
+		isEnabled = BT.PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[playerItemSlot].bEnabled;
+	}
+	CR.ClientSendItem( 
+		BT.Store.Items[index].Name,
+		BT.Store.Items[index].ID,
+		class'BTClient_ClientReplication'.static.CompressStoreData( 
+			BT.Store.Items[index].Cost, 
+			hasItem, 
+			isEnabled,
+			BT.Store.Items[index].Access
+		)
+	);
 }
 
 event Tick( float deltaTime )
 {
-	if( P != none && CR == none )
+	local int i;
+
+	if( CR == none )
 	{
 		Destroy();
+		return;
 	}
+
+	for( i = 0; i < MaxItemsPerTick; ++ i )
+	{
+		SendRepData( IndexedItems[CurrentItemIndex] );
+		++ CurrentItemIndex;
+		if( CurrentItemIndex == IndexedItems.Length )
+		{
+			CR.ClientSendItemsCompleted();
+			Destroy();
+			return;
+		}
+	}
+}
+
+event Destroyed()
+{
+	super.Destroyed();
+	StopWatch( true );
 }

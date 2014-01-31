@@ -256,6 +256,8 @@ var globalconfig
 	array<string>
 	History;
 
+var globalconfig int MaxItemsToReplicatePerTick; 
+
 var globalconfig int GroupFinishAchievementUnlockedNum;
 var bool bBlockSake;
 const UnlockBlockSakeCount = 10;
@@ -913,7 +915,6 @@ final function SendStoreItems( PlayerController requester, string filter )
 {
 	local int i;
 	local BTClient_ClientReplication Rep;
-	local BTItemsReplicator replicator;
 
 	Rep = GetRep( requester );
 	if( Rep == none )
@@ -934,12 +935,11 @@ final function SendStoreItems( PlayerController requester, string filter )
 
 	//FullLog( "Sending store items to:" @ requester.GetHumanReadableName() );
 
-	replicator = Spawn( class'BTItemsReplicator', self );
-	replicator.Initialize( rep );
-	replicator.Filter = filter;
-	replicator.bIsAdmin = IsAdmin( requester.PlayerReplicationInfo ) || filter ~= "Admin";
-
-	replicator.BeginReplication();
+	Spawn( class'BTItemsReplicator', self ).Initialize( 
+		rep, 
+		filter, 
+		IsAdmin( requester.PlayerReplicationInfo ) || filter ~= "Admin" 
+	);
 	
 	// Store discovery
 	PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
@@ -8041,6 +8041,7 @@ DefaultProperties
 	CompetitiveTimeLimit=5.0
 	TimeScaling=1.0
 	bGenerateBTWebsite=True
+	MaxItemsToReplicatePerTick=10
 
 	//bSavePreviousGhost=True
 
