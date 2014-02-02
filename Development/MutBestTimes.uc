@@ -963,7 +963,7 @@ final function SendStoreItems( PlayerController requester, string filter )
 	);
 	
 	// Store discovery
-	PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
+	// PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
 }
 //==============================================================================
 
@@ -2504,26 +2504,42 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			if( Rep == none )
 				break;
 
-			if( !Rep.bIsPremiumMember )
-			{
-				SendErrorMessage( sender, "Titles is only available for premium players!" );
-				break;
-			}
-
-			if( params.Length == 0 )
-			{
-				SendErrorMessage( sender, "Please specify the title!" );
-				break;
-			}
-
 			for( i = 0; i < params.Length; ++ i )
 			{
-				s $= params[i] $ " ";
+				if( s != "" )
+				{
+					s $= " ";
+				}
+				s $= params[i];
+			}	
+
+			if( s == "" )
+			{
+				SendErrorMessage( sender, "Please specify a title!" );
+				break;
 			}
 
+			if( !Rep.bIsPremiumMember )
+			{
+				i = AchievementsManager.FindAchievementByTitle( s );
+				if( i == -1 )
+				{
+					SendErrorMessage( sender, "As a non-premium player you may only use titles from earned achievements!" );
+					break;
+				}
+
+				if( !PDat.HasEarnedAchievement( Rep.myPlayerSlot, i ) )
+				{
+					SendErrorMessage( sender, "Sorry you cannot use an achievement title that you have not earned yet!" );
+					break;
+				}
+				s = AchievementsManager.Achievements[i].Title;	// Sync caps
+			}
+			
+			// Clip to a max length of 30 chars.
 			if( Len( s ) > 30 )
 			{
-				SendErrorMessage( sender, "Your title cannot have more than 30 characters!" );
+				s = Left( s, 30 );
 				break;	
 			}
 
@@ -3330,7 +3346,16 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			break;
 
 		case "seteventdesc":
-			EventDescription = params[0];
+			for( i = 0; i < params.Length; ++ i )
+			{
+				if( s != "" )
+				{
+					s $= " ";
+				}
+				s $= params[i];
+			}	
+
+			EventDescription = s;
 			SaveConfig();
 			break;
 
@@ -3430,7 +3455,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			}
 			break;
 
-		case "resetachievements":
+		case "bt_resetachievements":
 			if( params.Length == 1 )
 			{
 				if( params[0] ~= "all" )
@@ -3460,6 +3485,68 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 					PDat.DeleteAchievements( Rep.myPlayerSlot );
 					Rep.ClientCleanText();
 					Rep.ClientSendText( "Your achievements have been reset!" );
+				}
+			}
+			break;
+
+		case "givepremium":
+			if( params.Length == 0 )
+			{
+				sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify a playername!" );
+				break;
+			}
+
+			S = Caps( params[0] );
+			for( C = Level.ControllerList; C != None; C = C.NextController )
+			{
+				if( PlayerController(C) != None && C.PlayerReplicationInfo != None )
+				{
+					if( InStr( Caps( C.PlayerReplicationInfo.PlayerName ), S )  != -1 )
+					{
+						sender.ClientMessage( Class'HUD'.default.GreenColor $ "You gave" 
+							@ PlayerController(C).GetHumanReadableName() $" premium!" );
+
+						Rep = GetRep( PlayerController(C) );
+						PDat.Player[Rep.myPlayerSlot].bHasPremium = true;
+						Rep.bIsPremiumMember = true;
+
+						if( PlayerController(C) != sender )
+						{
+							PlayerController(C).ClientMessage( Class'HUD'.default.RedColor $ sender.GetHumanReadableName() @ "gave you premium membership!" );
+						}
+						break;
+					}
+				}
+			}
+			break;
+
+		case "removepremium":
+			if( params.Length == 0 )
+			{
+				sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify a playername!" );
+				break;
+			}
+
+			S = Caps( params[0] );
+			for( C = Level.ControllerList; C != None; C = C.NextController )
+			{
+				if( PlayerController(C) != None && C.PlayerReplicationInfo != None )
+				{
+					if( InStr( Caps( C.PlayerReplicationInfo.PlayerName ), S )  != -1 )
+					{
+						sender.ClientMessage( Class'HUD'.default.GreenColor $ "You removed" 
+							@ PlayerController(C).GetHumanReadableName() $"'s premium membership!" );
+
+						Rep = GetRep( PlayerController(C) );
+						PDat.Player[Rep.myPlayerSlot].bHasPremium = false;
+						Rep.bIsPremiumMember = false;
+
+						if( PlayerController(C) != sender )
+						{
+							PlayerController(C).ClientMessage( Class'HUD'.default.RedColor $ sender.GetHumanReadableName() @ "removed your premium membership!" );
+						}
+						break;
+					}
 				}
 			}
 			break;
@@ -5209,7 +5296,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 							PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = "Map:"$CurrentMapName@"BOOST:"$TimeToStr( TimeBoost );
 						}
 
-						if( RDat.Rec[UsedSlot].TMFailures >= 1000 )
+						if( RDat.Rec[UsedSlot].TMFailures >= 50 )
 						{
 							// Failure immunity
 							PDat.ProgressAchievementByID( PLs-1, 'records_2' );
@@ -7081,6 +7168,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" For every time you complete an objective you have a small chance to receive a random item!" );
 	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" Recent donators will receive a premium activation code, giving them access to exclusive features!" );
 	CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" The MutBestTimes HUD/Scoreboard and pretty much everything has a new look!" );
+	CR.ClientSendText( $0xFFFF00 $ "  New!"$$0x888800$" !title <AchievementTitle>, for premium players: !title <Title>" );
 	CR.ClientSendText( "" );
 
 	if( bShowRankings && ModeIsTrials() )
@@ -8104,7 +8192,7 @@ DefaultProperties
 	Commands(7)=(Cmd="BT_RestoreData",Params=("None"),Help="Restores the current used *.uvx BTimes related files to the backedup files if available")
 	Commands(8)=(Cmd="BT_ExportRecord ",Params=("MapName"),Help="")
 	Commands(9)=(Cmd="BT_ImportRecord ",Params=("MapName"),Help="")
-	Commands(10)=(Cmd="QuickStart",Params=("None"),Help="Forces the mutator to start a new round")
+	Commands(10)=(Cmd="QuickStart",Params=("None"),Help="Forces the start of a new round")
 	Commands(11)=(Cmd="DeleteGhost",Params=("None"),Help="Deletes the ghost of the currently played map")
 	Commands(12)=(Cmd="ExitServer",Params=("None"),Help="Just like Admin Exit but this one also forces the mutator to save its *.uvx BTimes related files")
 	Commands(13)=(Cmd="ForceSave",Params=("None"),Help="Forces the mutator to save its *.uvx BTimes related files")
@@ -8116,9 +8204,21 @@ DefaultProperties
 	Commands(19)=(Cmd="SetMaxRankedPlayers",Params=("Amount"),Help="Changes the amount of shown ranked players to the specified value")
 	Commands(20)=(Cmd="SetGhostRecordFPS",Params=("Amount"),Help="Changes the amount of frames per second to the specified value")
 	Commands(21)=(Cmd="SetQuickStartLimit",Params=("Amount"),Help="Changes the amount of maximum quickstarts to the specified value")
-	Commands(22)=(Cmd="AddStart",Params=("Team"),Help="Adds a player spawn for the specified team")
+	Commands(22)=(Cmd="AddStart",Params=("TeamNum"),Help="Adds a player spawn for the specified team")
 	Commands(23)=(Cmd="RemoveStarts",Params=("None"),Help="Removes all added player spawns")
-	Commands(24)=(Cmd="GiveExperience",Params=("PartOfPlayerName","Amount"),Help="Give experience to the specified player")
+	Commands(24)=(Cmd="GiveExperience",Params=("PartOfPlayerName","Amount"),Help="Gives experience to the specified player")
+	Commands(25)=(Cmd="GiveCurrency",Params=("PartOfPlayerName","Amount"),Help="Gives currency to the specified player")
+	Commands(26)=(Cmd="GiveItem",Params=("PartOfPlayerName","ItemID"),Help="Gives an item to the specified player")
+	Commands(27)=(Cmd="RemoveItem",Params=("PartOfPlayerName","ItemID"),Help="Remove an item from the specified player")
+	Commands(28)=(Cmd="GivePremium",Params=("PartOfPlayerName"),Help="Gives premium to the specified player")
+	Commands(29)=(Cmd="RemovePremium",Params=("PartOfPlayerName"),Help="Removes premium from the specified player")
+	Commands(30)=(Cmd="BT_ResetAchievements",Params=("PartOfPlayerName|All"),Help="Resets achievement stats of the specified player")
+	Commands(31)=(Cmd="BT_ResetExperience",Params=("None"),Help="Resets everyone experience to 0")
+	Commands(32)=(Cmd="BT_ResetCurrency",Params=("None"),Help="Resets everyone currency to 0")
+	Commands(33)=(Cmd="BT_ResetObjectives",Params=("None"),Help="Resets everyone completed objectives count to 0")
+	Commands(34)=(Cmd="BT_UpdateMapPrefixes",Params=("None"),Help="Converts AS-* existing records to their corresponding prefixes such as STR-*")
+	Commands(35)=(Cmd="CompetitiveMode",Params=("None"),Help="Starts the competitive mode")
+	Commands(36)=(Cmd="SetEventDesc",Params=("Message(255)"),Help="Sets the BTimes MOTD")
 
 	ADMessage="Become a fan of our 'Unreal Trials' page on Facebook: Press Enter to visit it now"
 	ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
@@ -8150,4 +8250,5 @@ DefaultProperties
 	ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
 	ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
 	ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Remove PlayerStart Locking",Weight=1,Hint="If Checked: BTimes will no longer force everyone to be spawned on one PlayerStart location.")
+	ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="255",Hint="Message of the day.")
 }

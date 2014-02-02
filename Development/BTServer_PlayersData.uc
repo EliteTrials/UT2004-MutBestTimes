@@ -516,6 +516,24 @@ final function ProgressAchievementByType( int playerSlot, name type, optional in
 	}
 }
 
+final function bool HasEarnedAchievement( int playerSlot, int achievementIndex )
+{
+	local int i;
+
+	for( i = 0; i < Player[playerSlot].Achievements.Length; ++ i )
+	{
+		if( Player[playerSlot].Achievements[i].ID == BT.AchievementsManager.Achievements[achievementIndex].ID )
+		{
+			if( Player[playerSlot].Achievements[i].Progress == -1 || Player[playerSlot].Achievements[i].Progress >= BT.AchievementsManager.Achievements[achievementIndex].Count )
+			{
+				return true;
+			}
+			break;
+		}
+	}
+	return false;
+}
+
 final function int CountEarnedAchievements( int playerSlot )
 {
 	local int i, numAchievements;
