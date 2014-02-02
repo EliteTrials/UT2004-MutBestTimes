@@ -11,7 +11,7 @@ class MutBestTimes extends Mutator
 	dependson(BTActivateKey);
 
 #exec obj load file="..\System\TrialGroup.u"
-#exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
+// #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
 #exec obj load file="..\Sounds\Stock\AnnouncerSexy.uax"
 
 //#include DEC_Structs.uc
@@ -304,6 +304,23 @@ var() globalconfig
 	MinExchangeableTrophies,
 	MaxExchangeableTrophies,
 	DaysCountToConsiderPlayerInactive;
+
+var() globalconfig 
+	name
+	// AnnouncerFemale2K4.Generic.HolyShit_F
+	AnnouncementRecordImprovedVeryClose,
+	// AnnouncerFemale2K4.Generic.Last_Second_Save
+	AnnouncementRecordImprovedClose,
+	// AnnouncerFemale2K4.Generic.Hijacked 
+	AnnouncementRecordHijacked,
+	// AnnouncerFemale2K4.Generic.WhickedSick
+	AnnouncementRecordSet,
+	// AnnouncerFemale2K4.Generic.Invulnerable
+	AnnouncementRecordTied,
+	// AnnouncerFemale2K4.Generic.Denied
+	AnnouncementRecordFailed,
+	// AnnouncerFemale2K4.Generic.Totalled
+	AnnouncementRecordAlmost;				
 
 var() globalconfig
 	float
@@ -3850,12 +3867,7 @@ function Mutate( string MutateString, PlayerController Sender )
 	// Admin Commands!
 	if( IsAdmin( Sender.PlayerReplicationInfo ) )
 	{
-		if( MutateString ~= "ScanPlayersTEST" ) 							// Debug.
-		{
-			ScanSpeedTest();
-			return;
-		}
-		else if( MutateString ~= "SetRecord" )									// Debug.
+		if( MutateString ~= "BT_TestGenRecord" && bDebugMode )									// Debug.
 		{
 			Sender.ClientMessage( Class'HUD'.default.GoldColor $ "Created a random generated record!" );
 			RDat.Rec[UsedSlot].TMT = Rand( 1200 ) + 60;
@@ -3866,9 +3878,21 @@ function Mutate( string MutateString, PlayerController Sender )
 			SaveRecords();
 			return;
 		}
-		else if( MutateString ~= "TestRandomDrop" )
+		else if( MutateString ~= "BT_TestEndGame" && bDebugMode )
+		{
+			GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
+			return;
+		}
+		else if( MutateString ~= "BT_TestRecord" && bDebugMode )
+		{
+			GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
+			Trigger( Sender, Sender.Pawn );
+			return;
+		}
+		else if( MutateString ~= "BT_TestRandomDrop" && bDebugMode )
 		{
 			BTServer_TrialMode(CurMode).PerformItemDrop( Sender, 50 );
+			return;
 		}
 		else if( Left(MutateString,8)~="AddStart" )								// .:..:
 		{
@@ -5168,10 +5192,10 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 						TimeBoost = (BestPlaySeconds - CurrentPlaySeconds);
 						EndMsg = "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$ ", new time "$TimeToStr( CurrentPlaySeconds );
 						if( TimeBoost <= 0.10f )
-							BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.HolyShit_F' );
+							BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
 						else if( TimeBoost <= 1.0f )
-							BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Last_Second_Save' );
-						else BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Hijacked' );
+							BroadcastAnnouncement( AnnouncementRecordImprovedClose );
+						else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
 						// Add lost record.
 						// Check avoids to print a message if the record owner beated his own record!
@@ -5194,7 +5218,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 					else	// 1st time record
 					{
 						EndMsg = "A record has been set, time " $ TimeToStr( CurrentPlaySeconds );
-						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.WhickedSick' );
+						BroadcastAnnouncement( AnnouncementRecordSet );
 					}
 
 					//SetXfireStatusFor( PC, %EndMsg @ "on" @ CurrentMapName );
@@ -5358,7 +5382,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 				{
 					FullLog( "*** First-Run Speed-Record ***" );
 					UpdateEndMsg( "New record has been set, time "$TimeToStr( CurrentPlaySeconds ) );
-					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.WhickedSick' );
+					BroadcastAnnouncement( AnnouncementRecordSet );
 
 					PDat.AddExperienceList( contributors, EXP_FirstRecord + numObjectives + 30 );
 				}
@@ -5370,10 +5394,10 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 
 					UpdateEndMsg( "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$", time "$TimeToStr( CurrentPlaySeconds ) );
 					if( TimeBoost <= 0.10f )
-						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.HolyShit_F' );
+						BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
 					else if( TimeBoost <= 1.0f )
-						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Last_Second_Save' );
-					else BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Hijacked' );
+						BroadcastAnnouncement( AnnouncementRecordImprovedClose );
+					else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
 					// Add lost record.
 					for( i = 0; i < MaxPlayers; ++ i )
@@ -5457,8 +5481,7 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 			   	{
 			   		AddHistory( "A tie was made on"@CurrentMapName );
 			   		UpdateEndMsg( "The record has been tied, time "$TimeToStr( CurrentPlaySeconds ) );
-					BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Invulnerable' );
-
+					BroadcastAnnouncement( AnnouncementRecordTied );
 					PDat.AddExperienceList( contributors, EXP_TiedRecord + numObjectives + 30 );
 
 					/*for( i = 0; i < contributors.Length; ++ i )
@@ -5471,8 +5494,8 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
 				{
 					UpdateEndMsg( "Failed to beat the record, over by " $ TimeToStr( CurrentPlaySeconds-BestPlaySeconds ) $ ", time " $ TimeToStr( CurrentPlaySeconds ) );
 					if( CurrentPlaySeconds < (BestPlaySeconds+90) )
-						BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Totalled' );
-					else BroadcastAnnouncement( Sound'AnnouncerFemale2K4.Generic.Denied' );
+						BroadcastAnnouncement( AnnouncementRecordAlmost );
+					else BroadcastAnnouncement( AnnouncementRecordFailed );
 
 					PDat.AddExperienceList( contributors, EXP_FailRecord + numObjectives + (30 * (BestPlaySeconds/CurrentPlaySeconds)) );
 				}
@@ -6835,16 +6858,13 @@ Static Final Function string MakeColor( byte R, byte G, byte B, optional byte A 
 
 //==============================================================================
 // Broadcast an announcement
-final Function BroadcastAnnouncement( sound Snd )
+final Function BroadcastAnnouncement( name soundName )
 {
 	local Controller C;
 
-	if( Snd == None )
-		return;
-
-	for( C = Level.ControllerList; C != None; C = C.NextController )
-		if( PlayerController(C) != None )
-			PlayerController(C).QueueAnnouncement( Snd.Name, 1 );
+	for( C = Level.ControllerList; C != none; C = C.NextController )
+		if( PlayerController(C) != none )
+			PlayerController(C).QueueAnnouncement( soundName, 1 );
 }
 
 final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
@@ -7954,6 +7974,15 @@ event Destroyed()
 DefaultProperties
 {
 	UsedSlot=-1
+
+	AnnouncementRecordImprovedVeryClose=HolyShit_F
+	AnnouncementRecordImprovedClose=Last_Second_Save
+	AnnouncementRecordHijacked=Hijacked 
+	AnnouncementRecordSet=WhickedSick
+	AnnouncementRecordTied=Invulnerable
+	AnnouncementRecordFailed=Denied
+	AnnouncementRecordAlmost=Totalled
+
 	CheckPointHandlerClass=Class'BTServer_CheckPoint'
 	CheckPointNavigationClass=Class'BTServer_CheckPointNavigation'
 	TrailerInfoClass=Class'BTClient_TrailerInfo'
