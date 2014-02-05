@@ -23,7 +23,7 @@ function ModePostBeginPlay()
 	AssaultGame.RoundLimit = 1;
 	
 	// We need to watch out for the end of Practice Round.
-	Spawn( Class'BTServer_EventTimer', Outer );
+	Spawn( class'BTPracticeRoundDetector', Outer );
 	
 	if( bSpawnGhost )
 	{
