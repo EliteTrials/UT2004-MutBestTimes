@@ -252,6 +252,8 @@ var globalconfig
 	LastRecords[MaxRecentRecords],
 	EventDescription;	// "" empty for no event
 
+var private array<string> EventMessages;
+
 var globalconfig
 	array<string>
 	History;
@@ -1748,6 +1750,8 @@ event PostBeginPlay()
 	PrepareMapAchievements();
 	
 	ValidateAccess();
+
+	BuildEventDescription( EventMessages );
 }
 
 final function PrepareMapAchievements()
@@ -3345,7 +3349,10 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			SaveConfig();
 			break;
 
+		case "seteventdescription":
 		case "seteventdesc":
+		case "setevent":
+		case "setmotd":
 			for( i = 0; i < params.Length; ++ i )
 			{
 				if( s != "" )
@@ -3357,6 +3364,18 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
 			EventDescription = s;
 			SaveConfig();
+
+			BuildEventDescription( EventMessages );
+
+			for( C = Level.ControllerList; C != none; C = C.NextController )
+			{
+				if( PlayerController(C) != none && C.PlayerReplicationInfo != none )
+				{
+					Rep = GetRep( C );
+					Rep.ClientCleanText();
+					SendEventDescription( Rep );
+				}
+			}
 			break;
 
 		case "deleteghost":
@@ -3371,6 +3390,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			}
 			break;
 
+		case "giveexp":
 		case "giveexperience":
 			Rep = GetRep( sender );
 			if( params.Length == 0 )
@@ -3413,6 +3433,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 			}
 			break;
 
+		case "givecur":
 		case "givecurrency":
 			Rep = GetRep( sender );
 			if( params.Length == 0 )
@@ -6989,7 +7010,10 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
 {
 	// Player joined while server traveling?
 	if( PDat == none )
+	{
+		Warn( "PDat == none @ NotifyPostLogin" @ guid );
 		return;
+	}
 
 	// True if ModifyPlayer called NotifyPostLogin( which happens if the player spawns very early like before the replication is created )
 	//if( GetRep( client ) != none )
@@ -7130,29 +7154,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 	}
 	else if( EventDescription != "" )
 	{
-		i = InStr( EventDescription, "<MapName>" );
-		if( i != -1 )
-		{
-			mapname = Left( Mid( EventDescription, i ), InStr( EventDescription, "</MapName>" ) );
-			// erase..
-			EventDescription = Repl( EventDescription, "<MapName>", "", false );
-			EventDescription = Repl( EventDescription, "</MapName>", "", false );
-		}
-
-		Split( EventDescription, "\\n", EventLines );
-		for( i = 0; i < EventLines.Length; ++ i )
-		{
-			CR.ClientSendText( EventLines[i] );
-		}
-
-		if( mapname != "" )
-		{
-			i = GetMapSlotByName( mapname );
-			for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
-			{
-				CR.ClientSendText( PDat.Player[RDat.Rec[i].PSRL[j].PLS-1].PLName @ "with a time of" @ TimeToStr( RDat.Rec[i].PSRL[j].SRT ) );
-			}
-		}
+		SendEventDescription( CR );
 	}
 
 	if( bBlockSake && GroupFinishAchievementUnlockedNum < 10 )
@@ -7175,6 +7177,44 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 	{
 		RR = StartReplicatorFor( CR );
 		RR.BeginReplication();
+	}
+}
+
+private final function BuildEventDescription( out array<string> messages )
+{
+	local string mapname;
+	local int i, j, l;
+
+	i = InStr( EventDescription, "<MapName>" );
+	if( i != -1 )
+	{
+		mapname = Mid( EventDescription, i + 9 );
+		mapname = Left( mapname, InStr( mapname, "</MapName>" ) );
+		// erase..
+		EventDescription = Repl( EventDescription, "<MapName>", "", false );
+		EventDescription = Repl( EventDescription, "</MapName>", "", false );
+	}
+
+	Split( EventDescription, "\\n", messages );
+	if( mapname != "" )
+	{
+		i = GetMapSlotByName( mapname );
+		for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
+		{
+			l = messages.Length;
+			messages.Length = l + 1;
+			messages[l] = PDat.Player[RDat.Rec[i].PSRL[j].PLS-1].PLName @ "with a time of" @ TimeToStr( RDat.Rec[i].PSRL[j].SRT );
+		}
+	}	
+}
+
+private final function SendEventDescription( BTClient_ClientReplication CR )
+{
+	local int i;
+
+	for( i = 0; i < EventMessages.Length; ++ i )
+	{
+		CR.ClientSendText( EventMessages[i] );
 	}
 }
 
@@ -8148,6 +8188,7 @@ DefaultProperties
 	bAddGhostTimerPaths=true
 	bAllowCompetitiveMode=true
 	MaxRankedPlayers=15
+	bSpawnGhost=true
 	GhostPlaybackFPS=10
 	GhostSaveSpeed=0.025000
 	MinExchangeableTrophies=25
@@ -8218,7 +8259,7 @@ DefaultProperties
 	Commands(33)=(Cmd="BT_ResetObjectives",Params=("None"),Help="Resets everyone completed objectives count to 0")
 	Commands(34)=(Cmd="BT_UpdateMapPrefixes",Params=("None"),Help="Converts AS-* existing records to their corresponding prefixes such as STR-*")
 	Commands(35)=(Cmd="CompetitiveMode",Params=("None"),Help="Starts the competitive mode")
-	Commands(36)=(Cmd="SetEventDesc",Params=("Message(255)"),Help="Sets the BTimes MOTD")
+	Commands(36)=(Cmd="SetEventDesc",Params=("Message(1024)"),Help="Sets the BTimes MOTD")
 
 	ADMessage="Become a fan of our 'Unreal Trials' page on Facebook: Press Enter to visit it now"
 	ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
@@ -8250,5 +8291,5 @@ DefaultProperties
 	ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
 	ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
 	ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Remove PlayerStart Locking",Weight=1,Hint="If Checked: BTimes will no longer force everyone to be spawned on one PlayerStart location.")
-	ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="255",Hint="Message of the day.")
+	ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
 }
