@@ -5,8 +5,8 @@ class BTActivateKey extends Info
 	config(MutBestTimes);
 
 var() const globalconfig string Host;
-var() const string VerifySerialAction;
-var() const string ConsumeSerialAction;
+var() const globalconfig string VerifySerialAction;
+var() const globalconfig string ConsumeSerialAction;
 var PlayerController Requester;
 
 var transient string PerformedGet;
