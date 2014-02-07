@@ -28,7 +28,6 @@ echo.
 cd Development
 for %%F in (*.uc) do (
     if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  ( 
-        echo Obfusctating class %%F
         ..\..\ClientBTimesV5\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
     )
 )
@@ -40,8 +39,7 @@ echo.
 cd..
 cd System
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %projn%
-ucpp.exe -wait -debug -include ..\%projn%\Defines.puc -P SYSTEM=. %projn%
-ucc.exe editor.MakeCommandlet -EXPORTCACHE -DEBUG -SHOWDEP
+ucc.exe editor.MakeCommandlet -EXPORTCACHE -DEBUG -SHOWDEP -SILENTBUILD -AUTO
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %projn%
 pause
 
