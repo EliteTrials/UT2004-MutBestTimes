@@ -1018,6 +1018,22 @@ final function bool ModeIsTrials()
 	return CurMode != none && CurMode.IsA('BTServer_TrialMode');
 }
 
+function DriverEnteredVehicle( Vehicle v, Pawn other )
+{
+	super.DriverEnteredVehicle( v, other );
+
+	// Ensure this is an actual player, not a bot.
+	if( Bot(v.Controller) != none )
+	{
+		return;
+	}
+
+	if( Store != none )
+	{
+		Store.ModifyVehicle( other, v, PDat, GetRep( v.Controller ) );
+	}
+}
+
 /** Reset Time, add ranked stuff, handle client spawn and checkpoints! */
 function ModifyPlayer( Pawn Other )
 {
@@ -2801,7 +2817,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 			i = Store.FindItemByID( s );
 			if( i != -1 )
 			{
-				if( !Store.CanBuyItem( PDat, Rep, i, s ) )
+				if( !Store.CanBuyItem( sender, PDat, Rep.myPlayerSlot, i, s ) )
 				{
 					SendErrorMessage( sender, s );
 					break;
@@ -5935,6 +5951,11 @@ Function NotifyLogout( Controller Exiting )											// .:..:, Eliot
 			{
 				if( LRI.Owner == Exiting || LRI.Owner == Exiting.PlayerReplicationInfo )
 					LRI.Destroy();
+			}
+
+			if( Level.NetMode == NM_Standalone )
+			{
+				SaveAll();
 			}
 		}
 	}

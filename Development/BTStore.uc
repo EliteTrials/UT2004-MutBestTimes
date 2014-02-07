@@ -375,9 +375,9 @@ final function ModifyPawn( Pawn other, BTServer_PlayersData data, BTClient_Clien
 	ApplyOwnedItems( other, data, CRI, ETarget.T_Pawn );
 }
 
-final function ModifyVehicle( Vehicle other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
+final function ModifyVehicle( Pawn other, Vehicle v, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( other, data, CRI, ETarget.T_Vehicle );
+	ApplyOwnedItems( v, data, CRI, ETarget.T_Vehicle );
 }
 
 final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
@@ -392,6 +392,7 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
 	local array<string> addedTypes;
 	local int playerSlot;
 
+	// data.BT.FullLog( "ApplyOwnedItems(" @ other @ CRI @ target @ ")" );
 	playerSlot = CRI.myPlayerSlot;
  	j = data.Player[playerSlot].Inventory.BoughtItems.Length;
  	for( i = 0; i < j; ++ i )
@@ -436,7 +437,7 @@ private final function bool ActivateItem( Actor other, int itemSlot, int playerS
 	local class<Actor> itemClass;
 	local Actor itemObject;
 
-	//FullLog( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
+	// Log( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
 	if( Items[itemSlot].ItemClass != "" )
 	{
 		if( Items[itemSlot].CachedClass == none )
@@ -451,8 +452,8 @@ private final function bool ActivateItem( Actor other, int itemSlot, int playerS
 			return false;
 		}
 		
-		// Apply the vars on the pawn's instance if the item's class is a pawn(HACK)
-		if( itemClass == class'Pawn' )
+		// Apply the vars on the pawn's instance if the item's class equals the target(@other)
+		if( other.Class == itemClass || ClassIsChildOf( other.Class, itemClass ) )
 		{
 			itemObject = other;
 		}
@@ -491,21 +492,21 @@ private final function ApplyVariablesOn( Actor other, array<string> variables )
 	}
 }
 
-final function bool CanBuyItem( BTServer_PlayersData data, BTClient_ClientReplication CR, int itemSlot, out string msg )
+final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData data, int playerSlot, int itemSlot, out string msg )
 {
-	if( data.HasItem( CR.myPlayerSlot, Items[itemSlot].Id ) )
+	if( data.HasItem( playerSlot, Items[itemSlot].Id ) )
 	{
 		msg = "You already own" @ Items[itemSlot].Name;
 		return false;
 	}
 		   		
-	if( PlayerReplicationInfo(CR.Owner).bAdmin /*|| CR.Level.NetMode == NM_Standalone*/ )
+	if( buyer.PlayerReplicationInfo.bAdmin || buyer.Level.NetMode == NM_Standalone )
 		return true;
 		
 	switch( Items[itemSlot].Access )
 	{
 		case Buy:	
-			if( !data.HasCurrencyPoints( CR.myPlayerSlot, Items[itemSlot].Cost ) )
+			if( !data.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
 			{
 				msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
 				return false;
@@ -521,7 +522,7 @@ final function bool CanBuyItem( BTServer_PlayersData data, BTClient_ClientReplic
 			break;
 			
 		case Premium:
-			if( !data.Player[CR.myPlayerSlot].bHasPremium )
+			if( !data.Player[playerSlot].bHasPremium )
 			{
 				msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
 				return false;
@@ -564,17 +565,25 @@ defaultproperties
 	/** Any item that effects gameplay either practically or visually. */
 	Categories(6)=(Name="Perks",Types=("Perk_*"))
 
+	// Upgrades
 	Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
 	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
+
+	// Upgrades - Bonuses
 	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
 	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
 	Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
 	Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
 	
-	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",img="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
-	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",img="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
-	Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",img="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+	// Player Skins
+	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+	Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 
+	// Player Perks
 	Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
 	Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
+
+	// Vehicle Skins
+	Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",itemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 }
