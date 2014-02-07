@@ -45,11 +45,6 @@ const META_DECOMPILER_VAR_AUTHOR				= "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT				= "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE		= "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
-// Rewards related.
-const Objectives_GhostFollow			= 15000;
-const GhostFollowPrice					= 25;
-const GhostFollowDiePrice				= 1;
-
 const groupNum = 2;
 const soloNum = 1;
 const regularNum = 0;
@@ -136,10 +131,9 @@ var const class<BTServer_HttpNotificator>			NotifyClass;
 var array<GameObjective> 							Objectives;					// An array containig all objectives for ClientSpawn performance
 var array<Triggers> 								Triggers; 					// An array containig all triggers for ClientSpawn performance
 var private array<KeepScoreSE> 						KeepScoreTable;				// Backed up score from leaving players.
-var array<sPlayerStats> 							SortedOverallTop;				// An array containing all the data of PDat.Player, but in order by points.
+var array<sPlayerStats> 							SortedOverallTop;			// An array containing all the data of PDat.Player, but in order by points.
 var array<sPlayerStats>								SortedQuarterlyTop;
 var array<sPlayerStats>								SortedDailyTop;
-var array<BTServer_GhostSaver> 						SavedMovements;				// for ghost (big!)
 var array<float> 									ObjCompT;					// Temporary Objective Complete Times, moves to saved BMTL.ObjCompT when new rec.
 var array<sClientSpawn> 							ClientPlayerStarts;			// Current playerstarts in the current map, cleaned when user performs 'DeleteClientSpawn' or when server travels or on QuickStart
 var const float 									RPScale[10];				// List of points scaling values
@@ -161,10 +155,18 @@ var array<sTrailerInfo>								Trailers;
 var BTClient_MutatorReplicationInfo					MRI;						// Contains all the data clients might want to use.
 var ASGameInfo 										AssaultGame;				// reference to ASGameInfo
 var UTServerAdminSpectator							WebAdminActor;				// For Logging, messaging
+
+//===============<GHOST VARS>=====================================
+// Rewards related.
+const Objectives_GhostFollow			= 15000;
+const GhostFollowPrice					= 25;
+const GhostFollowDiePrice				= 1;
+
 var private SMovDat 								OldGhostData;				// Old ghost data object, only used for converting to new ghost data object system
 var BTServer_GhostLoader 							GhostManager; 				// Currently used ghost data loader.
+var array<BTServer_GhostSaver> 						RecordingPlayers;			// Players we are currently recording. 
 
-// TEMP!
+// Que of ghosts yet to be saved in 'GhostSave's state. Array of playerslots starting with index 0, -1 = none.
 var private array<int> 								NewGhostsQue;
 struct sNewGhostsInfo
 {
@@ -172,12 +174,31 @@ struct sNewGhostsInfo
 	var BTServer_GhostData GhostData;
 };
 var private array<sNewGhostsInfo>					NewGhostsInfo;
+var PlayerController 								LeadingGhost;				// PlayerController the ghost should reset CurrentMove for
+
+// "GhostFollow <PlayerName>" was used on a player by an Admin.
+var bool											bGhostWasAdminAwarded;
+
+// Used in 'SaveGhost' state
+var private int
+	CurMove,
+	MaxMove,
+	SavedMoves,
+	iGhost,
+	TotalSavedMoves;
+
+var bool bGhostIsSaving; // For SaveGhost state and votinghandler
+var bool bRedoVotingTimer; // for SaveGhost state and votinghandler
+
+var() globalconfig float GhostSaveSpeed;
+var() globalconfig bool bSpawnGhost;
+var() globalconfig int GhostPlaybackFPS;
+var const noexport string GhostDataFileName;
+//===============</GHOST VARS>====================================
 
 var BTServer_RecordsData 							RDat;						// Holds all the Records
 var BTServer_PlayersData 							PDat; 						// Holds all the Players
 var sSharedPoints 									PPoints;					// Structure containing the points players will be rewarded with
-var PlayerController 								LeadingGhost;				// PlayerController the ghost should reset CurrentMove for
-var bool											bGhostWasAdminAwarded;
 
 // External
 var GroupManager									GroupManager;
@@ -195,14 +216,11 @@ var bool
 	bRecordChecked,																// Used for after quickstart when a record was set before that...
 	bMaxRoundSet,																// Fixed rounds (default 2 rounds) to 1
 	bQuickStart,																// QuickStart is in progress right now
-	bRecording,																	// Player Moves are recording
 	bLCAMap, 																	// Current Map is using LevelConfigActor
 	bKeyMap,
 	bSoloMap,																	// Map is solo i.e One objective only
 	bGroupMap,																	// Map supports group aka team working.
-	bGhostIsSaving, 															// For SaveGhost state and votinghandler
-	bAlwaysKillClientSpawnPlayersNearTriggers,
-	bRedoVotingTimer;                                                        	// for SaveGhost state and votinghandler
+	bAlwaysKillClientSpawnPlayersNearTriggers;
 
 var enum ERecordTeam
 {
@@ -228,15 +246,6 @@ var string
 
 var const noexport string RecordsDataFileName;
 var const noexport string PlayersDataFileName;
-var const noexport string GhostDataFileName;
-
-// Used in 'SaveGhost' state
-var private int
-	CurMove,
-	MaxMove,
-	SavedMoves,
-	iGhost,
-	TotalSavedMoves;
 
 var private int
 	CurCountdown;
@@ -270,7 +279,6 @@ var() globalconfig
 	bool
 	bAggressiveMonsters,
 	bGenerateBTWebsite,
-	bSpawnGhost,
 	bEnhancedTime,
 	bShowRankings,
 	bNoRandomSpawnLocation,
@@ -294,7 +302,6 @@ var() globalconfig
 
 var() globalconfig
 	int
-	GhostPlaybackFPS,
 	MaxRankedPlayers;
 
 var() globalconfig
@@ -326,7 +333,6 @@ var() globalconfig
 
 var() globalconfig
 	float
-	GhostSaveSpeed,
 	CompetitiveTimeLimit,
 	TimeScaling;
 
@@ -1079,7 +1085,7 @@ function ModifyPlayer( Pawn Other )
 	{
 		if( !bSoloMap )	// Regular
 		{
-			SaveMovementsFor( PlayerController(Other.Controller) );
+			RecordGhostForPlayer( PlayerController(Other.Controller) );
 		}
 		else	// Solo or Group
 		{
@@ -1101,7 +1107,7 @@ function ModifyPlayer( Pawn Other )
 				if( bSpawnGhost )
 				{
 					// Restart ghost recording!
-					RestartRecording( PlayerController(Other.Controller) );
+					RestartGhostRecording( PlayerController(Other.Controller) );
 
 					// Reset ghost, if wanted
 					if( CRI.HasClientFlags( 0x00000001 ) && (Other.Controller == LeadingGhost || Level.Game.NumPlayers <= 1) )
@@ -4417,7 +4423,7 @@ final function Revoted()
 	}
 
 	if( bSpawnGhost )
-		EndRecording();
+		KillGhostRecorders();
 
 	if( !bRecordChecked )
 		++ RDat.Rec[UsedSlot].TMFailures;
@@ -4590,10 +4596,6 @@ function MatchStarting()
 			if( bSpawnGhost && GhostManager != none )
 			{
 				GhostManager.GhostsRespawn();
-				bRecording = true;
-
-				// Start recording when they spawn instead!
-				//BeginRecording();													// Record movements.
 			}
 		}
 		// FORCE MaxRounds override i.e. Assault makes the minimum rounds 2 which is only editable on runtime.
@@ -4776,6 +4778,7 @@ function NotifyGameEnd( Actor other, Pawn eventInstigator )
 	//{
 	//	Round ended due time or the player was an idiot!
 	//}
+	FullLog("BT::NotifyGameEnd" @ other @ eventInstigator );
 	if( IsCompetitive() && !AssaultGame.IsPracticeRound() )
 	{
 		FullLog( "* Round ended! *" );
@@ -6711,119 +6714,82 @@ final function int GetDaysSince( int y, int m, int d )
 
 //==============================================================================
 // Start recording this Player(Other) movements
-final function SaveMovementsFor( PlayerController Other )								// .:..:
+final function RecordGhostForPlayer( PlayerController other )								// .:..:
 {
 	local int i, j;
 
 	// Check if this player is being recorded already?
-	j = SavedMovements.Length;
+	j = RecordingPlayers.Length;
 	for( i = 0; i < j; ++ i )
 	{
-		if( SavedMovements[i] != none && SavedMovements[i].ImitatedPlayer == Other )
+		if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer == other )
 		{
 			return;
 		}
 	}
 
-	SavedMovements.Length = j+1;
-	SavedMovements[j] = Spawn( Class'BTServer_GhostSaver' );
-	SavedMovements[j].ImitatedPlayer = Other;
+	// FullLog( "Recording ghost for player" @ other.GetHumanReadableName() );
+	RecordingPlayers.Length = j+1;
+	RecordingPlayers[j] = Spawn( Class'BTServer_GhostSaver' );
+	RecordingPlayers[j].ImitatedPlayer = other;
+	RecordingPlayers[j].StartGhostCapturing( GhostPlaybackFPS );
 
 	if( !bSoloMap )
 	{
-		SavedMovements[j].RelativeStartTime = Level.TimeSeconds - MRI.MatchStartTime;
+		RecordingPlayers[j].RelativeStartTime = Level.TimeSeconds - MRI.MatchStartTime;
+		// FullLog( "Relative start time:" @ RecordingPlayers[j].RelativeStartTime );
 	}
-
-	// Start Recording
-	SavedMovements[j].SetTimer( 1.0f/GhostPlaybackFPS, True );
-
-	// Record Initial Postion etc
-	SavedMovements[j].SetInitialMoveData();
-}
-
-//==============================================================================
-// Look for players to record
-final function BeginRecording()														// .:..:, Eliot
-{
-	local Controller C;
-
-	// No need to BeginRecording on Solo Maps because the recording on solo maps re-start everytime someone respawns
-	if( bSoloMap )
-		return;
-
-	if( bRecording )
-		EndRecording();
-
-	FullLog( "Begin Recording" );
-	for( C = Level.ControllerList; C != None; C = C.NextController )
-	{
-		if( PlayerController(C) == None )
-			continue;
-
-		if( C.PlayerReplicationInfo != None && ((!C.PlayerReplicationInfo.bIsSpectator && !C.PlayerReplicationInfo.bOnlySpectator) || C.PlayerReplicationInfo.bWaitingPlayer) )
-			SaveMovementsFor( PlayerController(C) );
-	}
-	bRecording = True;
-
-	FullLog( "Recording"@SavedMovements.Length@"Player(s)" );
 }
 
 //==============================================================================
 // (bSoloMap) clear recorded moves, and restart
-final function RestartRecording( PlayerController PC )								// Eliot
+final function RestartGhostRecording( PlayerController PC )
 {
 	local int i;
 
-	if( PC == None || !bSoloMap || PC.Player == None )
+	// Was instigated by leaving player?
+	if( PC.Player == none )
 		return;
 
-	// Find his SavedMovements and clear it and re-begin.
-	for( i = 0; i < SavedMovements.Length; ++ i )
+	// Find his RecordingPlayers and clear it and re-begin.
+	for( i = 0; i < RecordingPlayers.Length; ++ i )
 	{
-		if( SavedMovements[i] != None && (SavedMovements[i].ImitatedPlayer != None && SavedMovements[i].ImitatedPlayer == PC) )
+		if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer == PC )
 		{
-			// Clean moves
-			SavedMovements[i].MovementsData.Length = 0;
-
 			// Restart recording!
-			SavedMovements[i].SetTimer( 1.0f/GhostPlaybackFPS, True ); 			// Begin recording
-			SavedMovements[i].SetInitialMoveData();
+			RecordingPlayers[i].StartGhostCapturing( GhostPlaybackFPS );
 			return;
 		}
 	}
-	SaveMovementsFor( PC );
+	RecordGhostForPlayer( PC );
 }
 
-//==============================================================================
-// Stop recording all players movements
-final function EndRecording()															// .:..:, Eliot
+private function PauseGhostRecorders()
 {
-	local int i, j;
+	local int i;
 
-	if( bSoloMap )
-		return;
-
-	FullLog("End Recording");
-	if( !bRecording )
-		return;
-
-	j = SavedMovements.Length;
-	FullLog( "Recorded Players:"$j );
-	if( j > 0 )
+	// FullLog( "Pausing ghost recorders" );
+	for( i = 0; i < RecordingPlayers.Length; ++ i )
 	{
-		for( i = 0; i < j; ++ i )
-		{
-			if( SavedMovements[i] != None )
-				SavedMovements[i].Destroy();
-		}
-		//j = SavedMovements.Length;
-		//SavedMovements.Remove( j-1, j );
-		SavedMovements.Length = 0;
-		bRecording = False;
-		FullLog( "End Recording Succeed" );
-		return;
+		if( RecordingPlayers[i] != none )
+			RecordingPlayers[i].StopGhostCapturing();
 	}
-	FullLog( "No SavedMovements (EndRecording)" );
+}
+
+final function KillGhostRecorders()
+{
+	local int i;
+
+	// FullLog( "Killing" @ RecordingPlayers.Length @ "ghost recorders" );
+	if( RecordingPlayers.Length > 0 )
+	{
+		for( i = 0; i < RecordingPlayers.Length; ++ i )
+		{
+			if( RecordingPlayers[i] != none )
+				RecordingPlayers[i].Destroy();
+		}
+		RecordingPlayers.Length = 0;
+	}
 }
 
 final function UpdateGhosts()
@@ -6843,19 +6809,16 @@ final function UpdateGhosts()
 	GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
 	if( BestPlaySeconds > 1800 )							// 30 min.
 	{
-		if( bRecording )
-		{
-			EndRecording();
-		}
+		KillGhostRecorders();
 		return;
 	}
 
 	// Pause recording
-	for( i = 0; i < SavedMovements.Length; ++ i )
+	for( i = 0; i < RecordingPlayers.Length; ++ i )
 	{
-		if( SavedMovements[i] != none )
+		if( RecordingPlayers[i] != none )
 		{
-			SavedMovements[i].SetTimer( 0f, false );
+			RecordingPlayers[i].StopGhostCapturing();
 		}
 	}
 
@@ -6876,15 +6839,15 @@ final function UpdateGhosts()
 	{
 		NewGhostsInfo[iQue].GhostData = dataObjects[iQue];
 
-		for( i = 0; i < SavedMovements.Length; ++ i )
+		for( i = 0; i < RecordingPlayers.Length; ++ i )
 		{
-			if( SavedMovements[i] != none && SavedMovements[i].ImitatedPlayer != none
-				&& SavedMovements[i].ImitatedPlayer.GetPlayerIDHash() == IDs[iQue] )
+			if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer != none
+				&& RecordingPlayers[i].ImitatedPlayer.GetPlayerIDHash() == IDs[iQue] )
 			{
 				// First ghost!
 				PDat.ProgressAchievementByID( NewGhostsQue[iQue], 'ghost_0' );
 
-				NewGhostsInfo[iQue].Moves = SavedMovements[i];
+				NewGhostsInfo[iQue].Moves = RecordingPlayers[i];
 				break;
 			}
 		}
@@ -7861,11 +7824,11 @@ state SaveGhost
 		SavedMoves = 0;
 		iGhost = 0;
 
-		if( bRecording )
-			EndRecording();		// Clean up all temporary MovementSavers
+		KillGhostRecorders();		// Clean up all temporary MovementSavers
 	}
 
 Begin:
+	PauseGhostRecorders();	// Don't keep on recording until the end of this recording.
 	bGhostIsSaving = True;
 	MRI.bUpdatingGhost = True;
 	MRI.GhostPercent = 0.00;

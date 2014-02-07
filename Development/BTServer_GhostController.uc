@@ -39,8 +39,3 @@ ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVol
 	{
 	}
 }
-
-DefaultProperties
-{
-	PlayerReplicationInfoClass=None
-}
