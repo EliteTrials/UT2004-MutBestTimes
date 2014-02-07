@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2012 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005-2014 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTActivateKey extends Info	
 	config(MutBestTimes);
@@ -7,6 +7,10 @@ class BTActivateKey extends Info
 var() const globalconfig string Host;
 var() const globalconfig string VerifySerialAction;
 var() const globalconfig string ConsumeSerialAction;
+
+var() const string VerifyIP;
+var() const string VerifyIPAction;
+
 var PlayerController Requester;
 
 var transient string PerformedGet;
@@ -109,4 +113,6 @@ defaultproperties
 	Host="http://eliotvu.com/apps/%ACTION%"
 	VerifySerialAction="verifyserial/%SERIAL%"
 	ConsumeSerialAction="consumeserial/%ID%/%TOKEN%/%GUID%"
+	VerifyIP="http://eliotvu.com/apps/%ACTION%"
+	VerifyIPAction="validateip"
 }

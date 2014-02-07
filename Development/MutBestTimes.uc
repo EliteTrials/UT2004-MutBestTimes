@@ -1232,7 +1232,7 @@ private final function ValidateAccess()
 	sock = Spawn( class'HttpSock', self );
 	sock.OnComplete = OnValidateSuccess;
 	sock.OnError = OnValidateError;
-	request = Repl( class'BTActivateKey'.default.Host, "%ACTION%", "validateip" );
+	request = Repl( class'BTActivateKey'.default.VerifyIP, "%ACTION%", class'BTActivateKey'.default.VerifyIPAction );
 	sock.Get( request );
 }
 
