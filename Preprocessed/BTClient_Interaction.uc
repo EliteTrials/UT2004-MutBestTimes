@@ -87,7 +87,10 @@ var bool
 	bTestRun,
 	bPauseTest,
 	bMenuModified,
-	bNoRenderZoneActors;
+	bNoRenderZoneActors, bRenderAll, bRenderOnlyDynamic;
+
+var name RenderTag;
+var byte RenderMode;
 
 // Table
 // Page 0 : Draw Best Ranked Players
@@ -1204,11 +1207,66 @@ Final Function Color GetFadingColor( color FadingColor )
 	return FadingColor;
 }
 
-Exec Function ShowZoneActors()
+Exec Function ShowZoneActors( optional bool bshowAll, optional bool bdynamicOnly, optional name tag, optional byte rm )
 {
-	Options.bShowZoneActors = !Options.bShowZoneActors;
+	Options.bShowZoneActors = !Options.bShowZoneActors || bshowAll;
 	SendConsoleMessage( "ShowZoneActors:"$Options.bShowZoneActors );
 	Options.SaveConfig();
+
+	bRenderAll = bshowAll;
+	bRenderOnlyDynamic = bdynamicOnly;
+	RenderTag = tag;
+	RenderMode = rm;
+}
+
+exec function ShowCollision()
+{
+	ToggleShowFlag( 31 );
+}
+
+exec function ToggleShowFlag( byte bit )
+{
+	local int flag;
+
+	if( ViewPortOwner.Actor.Level.NetMode != NM_StandAlone )
+		return;
+
+	flag = 0x1 << bit;
+	if( (ViewPortOwner.Actor.ShowFlags & flag) == flag )
+	{
+		ViewPortOwner.Actor.ShowFlags = ViewPortOwner.Actor.ShowFlags & (~flag);
+	}
+	else ViewPortOwner.Actor.ShowFlags = ViewPortOwner.Actor.ShowFlags | flag;
+}
+
+exec function ToggleMisc1( byte bit )
+{
+	local int flag;
+
+	if( ViewPortOwner.Actor.Level.NetMode != NM_StandAlone )
+		return;
+
+	flag = 0x1 << bit;
+	if( (ViewPortOwner.Actor.Misc1 & flag) == flag )
+	{
+		ViewPortOwner.Actor.Misc1 = ViewPortOwner.Actor.Misc1 & (~flag);
+	}
+	else ViewPortOwner.Actor.Misc1 = ViewPortOwner.Actor.Misc1 | flag;
+}
+
+exec function ToggleMisc2( byte bit )
+{
+	local int flag;
+
+	if( ViewPortOwner.Actor.Level.NetMode != NM_StandAlone )
+		return;
+
+	flag = 0x1 << bit;
+	if( (ViewPortOwner.Actor.Misc2 & flag) == flag )
+	{
+		ViewPortOwner.Actor.Misc2 = ViewPortOwner.Actor.Misc2 & (~flag);
+	}
+	else ViewPortOwner.Actor.Misc2 = ViewPortOwner.Actor.Misc2 | flag;
 }
 
 Final Function RenderZoneActors( Canvas C )
@@ -1219,6 +1277,8 @@ Final Function RenderZoneActors( Canvas C )
 	local string S;
 	local float Dist, XL, YL;
 	local PlayerController PC;
+	local bool bWireframed;
+	local byte oldRendMap;
 
 	if( bNoRenderZoneActors )
 		return;
@@ -1226,6 +1286,41 @@ Final Function RenderZoneActors( Canvas C )
 	PC = ViewportOwner.Actor;
 	if( PC == None || Pawn(PC.ViewTarget) == None )
 		return;
+
+	if( bRenderAll )
+	{
+		if( RenderMode == 1 )
+		{
+			bWireframed = true;
+		}
+		else
+		{
+			oldRendMap = PC.RendMap;
+			PC.RendMap = RenderMode;
+		}
+
+		C.SetPos( 0, 0 );
+		if( bRenderOnlyDynamic )
+		{
+			foreach PC.DynamicActors( class'Actor', A, RenderTag )
+			{
+				C.DrawActor( A, bWireframed );
+			}		
+		}
+		else
+		{
+			foreach PC.AllActors( class'Actor', A, RenderTag )
+			{
+				C.DrawActor( A, bWireframed );
+			}	
+		}
+
+		if( !bWireframed )
+		{
+			PC.RendMap = oldRendMap;
+		}
+		return;
+	}
 
 	ForEach PC.Region.Zone.ZoneActors( Class'Actor', A )
 	{
