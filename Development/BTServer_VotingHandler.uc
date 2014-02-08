@@ -7,14 +7,12 @@ const COMPETITIVEMODE = "*-CompetitiveMode";
 const ASTERIKPREFIX = "*";
 
 var() globalconfig array<string> RandomMapModes;
-
-var MutBestTimes RecordsManager;
-
-var int ThisMapDSlot;
-var int QuickStarts;
-
 var() globalconfig int QuickStartLimit;
 var() globalconfig bool bRankedVotingPriority;
+
+var MutBestTimes BT;
+
+var int QuickStarts;
 
 struct sMapData
 {
@@ -23,7 +21,10 @@ struct sMapData
 };
 var globalconfig array<sMapData> MapData;
 
+var int ThisMapDSlot;
 var bool bThisMapHasD;
+
+var protected transient bool bAdminForced;
 
 // Small fix
 event timer()
@@ -62,25 +63,6 @@ event timer()
 		TallyVotes(true);   // if no-one has voted a random map will be choosen
 }
 
-function string GetCurrentGame()
-{
-	local string S;
-	local int i;
-
-	S = string(Self);
-	S = Left(S,InStr(S,"."));
-	i = InStr(S,"-");
-	if( i==-1 )
-		S = Left(S,2);
-	else S = Left(S,i);
-	For( i=0; i<GameConfig.Length; i++ )
-	{
-		if( GameConfig[i].Prefix~=S )
-			Return GameConfig[i].GameName;
-	}
-	Return "Assault";
-}
-
 final function array<string> GetRandomMapModePrefixes( string randomMode )
 {
 	local int i;
@@ -103,15 +85,11 @@ final function bool IsRandom( string mapName, out array<string> randomModes )
 {
 	local int i;
 
-	Log( mapName );
 	i = InStr( Locs(mapName), "random:" );
-	Log( i );
 	if( i == -1 )
 		return false;
 
 	i += Len("random:");
-
-   	Log( Mid( mapName, i ) );
   	randomModes = GetRandomMapModePrefixes( Mid( mapName, i ) );
   	return true;
 }
@@ -167,37 +145,41 @@ Function AddMapVoteReplicationInfo( PlayerController Player )
 	MVRI[MVRI.Length] = VRI;
 }
 
+function bool IsValidVote( int mapIndex, int gameIndex ) 
+{
+	if( BT.bGhostIsSaving )
+	{
+		return false;
+	}
+
+	if( BT.bQuickStart )
+	{
+		return false;
+	}
+
+	return super.IsValidVote( mapIndex, gameIndex );
+}
+
 function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
 {
 	local int Index, VoteCount, PrevMapVote, PrevGameVote;
 
-	if( Level.bLevelChange )
+	if( Level.bLevelChange || bLevelSwitchPending )
 	{
-		PlayerController(Voter).ClientMessage( "You can not vote while LevelSwitch pending is in progress!" );
+		// PlayerController(Voter).ClientMessage( "You can not vote while LevelSwitch pending is in progress!" );
 		return;
 	}
 
-	if( RecordsManager.bGhostIsSaving )
-	{
-		PlayerController(Voter).ClientMessage( "You can not vote while Ghost Saving is in progress!" );
-		return;
-	}
 
-	if( RecordsManager.bQuickStart )
-	{
-		PlayerController(Voter).ClientMessage( "You can not vote while QuickStart is in progress!" );
-		return;
-	}
-
-	Index = GetMVRIIndex(PlayerController(Voter));
 
 	// check for invalid vote from unpatch players
 	if( !IsValidVote(MapIndex, GameIndex) )
 	{
-		PlayerController(Voter).ClientMessage( "This shouldn't happen..." );
+		PlayerController(Voter).ClientMessage( "Invalid vote!" );
 		return;
 	}
 
+	Index = GetMVRIIndex(PlayerController(Voter));
 	if( MapIndex < 0 || MapIndex >= MapCount || GameIndex >= GameConfig.Length || (MVRI[Index].GameVote == GameIndex && MVRI[Index].MapVote == MapIndex) )
 	{
 		return;
@@ -223,6 +205,17 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
 			PlayerController(Voter).ClientMessage( "You cannot vote for a disabled map!" );
 			return;
 		}
+	}
+	else
+	{
+		TextMessage = lmsgAdminMapChange;
+		TextMessage = Repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")");
+		Level.Game.Broadcast(self,TextMessage);
+		log("Admin has forced map switch to " $ MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")",'MapVote');
+		CloseAllVoteWindows();
+        ClearAllVotes();
+
+		bAdminForced = true;
 	}
 
 	PrevMapVote = MVRI[Index].MapVote;
@@ -275,7 +268,7 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
 	if( PrevMapVote > -1 && PrevGameVote > -1 )
 		UpdateVoteCount(PrevMapVote, PrevGameVote, -MVRI[Index].VoteCount); // undo previous vote
 	MVRI[Index].VoteCount = VoteCount;
-	TallyVotes(PlayerController(Voter).PlayerReplicationInfo.bAdmin);
+	TallyVotes(false);
 }
 
 // TAKEN FROM:xVotingHandler -- Removed logs and added RandomVotes
@@ -307,10 +300,10 @@ function LoadMapList()
 	MapCount = 0;
 
 	// NEW
-	foreach DynamicActors( class'MutBestTimes', RecordsManager )
+	foreach DynamicActors( class'MutBestTimes', BT )
 		break;
 
-	if( RecordsManager.AllowCompetitiveMode() )
+	if( BT.AllowCompetitiveMode() )
 	{
 		for( i = 0; i < GameConfig.Length; ++ i )
 		{
@@ -331,6 +324,7 @@ function LoadMapList()
 
 	// NEW
   	// AddRandomVotes();
+  	AddOtherVotes();
 	CheckMapData();
 	// ..
 
@@ -364,11 +358,11 @@ function LoadMapList()
 	{
 		if( MapList[i].MapName ~= "GTR-GeometryBasics" )
 		{
-			if( RecordsManager.GroupFinishAchievementUnlockedNum < 10 )
+			if( BT.GroupFinishAchievementUnlockedNum < 10 )
 			{
 				MapList[i].bEnabled = false;
 			}
-			RecordsManager.bBlockSake = true;
+			BT.bBlockSake = true;
 			break;
 		}
 
@@ -384,24 +378,24 @@ function string InjectMapNameData( int mapIndex )
 	local int recordIndex;
 	local string data;
 
-	recordIndex = RecordsManager.RDat.FindRecord( MapList[mapIndex].MapName );
+	recordIndex = BT.RDat.FindRecord( MapList[mapIndex].MapName );
 	if( recordIndex == -1 )
 	{
 		return "";
 	}
 
-	if( RecordsManager.RDat.Rec[recordIndex].PSRL.length == 0 )
+	if( BT.RDat.Rec[recordIndex].PSRL.length == 0 )
 	{
-		data = RecordsManager.TimeToStr( RecordsManager.RDat.Rec[recordIndex].TMT );
-		if( RecordsManager.RDat.Rec[recordIndex].TMT >= 0 )
+		data = BT.TimeToStr( BT.RDat.Rec[recordIndex].TMT );
+		if( BT.RDat.Rec[recordIndex].TMT >= 0 )
 		{
 			data $= ";1";	
 		}
 	}
 	else
 	{
-		data = RecordsManager.TimeToStr( RecordsManager.RDat.Rec[recordIndex].PSRL[0].SRT );
-		data $= ";" $ RecordsManager.RDat.Rec[recordIndex].PSRL.Length;
+		data = BT.TimeToStr( BT.RDat.Rec[recordIndex].PSRL[0].SRT );
+		data $= ";" $ BT.RDat.Rec[recordIndex].PSRL.Length;
 	}
 	return data;	
 }
@@ -410,13 +404,13 @@ function AddMapInfoFor( int mapIndex )
 {
 	local int recordIndex;
 
-	recordIndex = RecordsManager.RDat.FindRecord( MapList[mapIndex].MapName );
+	recordIndex = BT.RDat.FindRecord( MapList[mapIndex].MapName );
 	if( recordIndex == -1 )
 	{
 		return;
 	}
 	
-	MapList[mapIndex].PlayCount = int(RecordsManager.RDat.Rec[recordIndex].PlayHours*100F);
+	MapList[mapIndex].PlayCount = int(BT.RDat.Rec[recordIndex].PlayHours*100F);
 }
 
 function TallyVotes(bool bForceMapSwitch)
@@ -430,8 +424,6 @@ function TallyVotes(bool bForceMapSwitch)
 	local array<string>     randomModes;
 	local int        Votes;
 	local MapHistoryInfo MapInfo;
-//	local int		 VoteExceptionCount;
-//	local string 	 VoterName;
 	local int j, k;
 
 	if(Level.bLevelChange)
@@ -446,34 +438,37 @@ function TallyVotes(bool bForceMapSwitch)
 			if( MVRI[x].MapVote > -1 && MVRI[x].GameVote > -1 )
 			{
 				// Don't count people that did vote and became spectater after...
-				if( MVRI[x].PlayerOwner.PlayerReplicationInfo.bOnlySpectator )
+				if( MVRI[x].PlayerOwner.PlayerReplicationInfo.bOnlySpectator && !(bAdminForced && MVRI[x].PlayerOwner.PlayerReplicationInfo.bAdmin) )
 					continue;
 
-				PlayersThatVoted++;
+                PlayersThatVoted++;
+                if(bScoreMode)
+                {
+                    if(bAccumulationMode)
+                        Votes = GetAccVote(MVRI[x].PlayerOwner) + int(GetPlayerScore(MVRI[x].PlayerOwner));
+                    else
+                        Votes = int(GetPlayerScore(MVRI[x].PlayerOwner));
+                }
+                else
+                {  // Not Score Mode == Majority (one vote per player)
+                    if(bAccumulationMode)
+                        Votes = GetAccVote(MVRI[x].PlayerOwner) + 1;
+                    else
+                        Votes = 1;
+                }
 
-				if(bScoreMode)
-				{
-					if(bAccumulationMode)
-						Votes = GetAccVote(MVRI[x].PlayerOwner) + int(GetPlayerScore(MVRI[x].PlayerOwner));
-					else
-						Votes = int(GetPlayerScore(MVRI[x].PlayerOwner));
-				}
-				else
-				{  // Not Score Mode == Majority (one vote per player)
-					if(bAccumulationMode)
-						Votes = GetAccVote(MVRI[x].PlayerOwner) + 1;
-					else
-						Votes = 1;
-				}
+                // Count top ranked players twice.
+                // Hardcoded 3 because MaxRewardedPlayers adjusts when its holiday and so then almost everyone gets double votes which is just stupid
+                if( bRankedVotingPriority && BT.IsRank( MVRI[x].PlayerOwner.GetPlayerIdHash(), 3/*BT.MaxRewardedPlayers*/ ) && !BT.FoundDuplicateID( MVRI[x].PlayerOwner ) )
+                {
+                    PlayersThatVoted ++;
+                    Votes *= 2;
+                }
 
-				// Count top ranked players twice.
-				// Hardcoded 3 because MaxRewardedPlayers adjusts when its holiday and so then almost everyone gets double votes which is just stupid
-				if( bRankedVotingPriority && RecordsManager.IsRank( MVRI[x].PlayerOwner.GetPlayerIdHash(), 3/*RecordsManager.MaxRewardedPlayers*/ ) && !RecordsManager.FoundDuplicateID( MVRI[x].PlayerOwner ) )
-				{
-					PlayersThatVoted ++;
-					Votes *= 2;
-				}
-
+                if( bAdminForced && MVRI[x].PlayerOwner.PlayerReplicationInfo.bAdmin )
+                {
+                    Votes = maxint;
+                }
 				VoteCount[MVRI[x].GameVote * MapCount + MVRI[x].MapVote] += Votes;
 
 				if(!bScoreMode)
@@ -483,15 +478,9 @@ function TallyVotes(bool bForceMapSwitch)
 						bForceMapSwitch = true;
 				}
 			}
-			/*else
-			{
-				VoterName = MVRI[x].PlayerOwner.PlayerReplicationInfo.PlayerName;
-				if( InStr( VoterName, "(AFK)" ) != -1 )
-					VoteExceptionCount ++;
-			}*/
 		}
 	}
-	//log("___Voted - " $ PlayersThatVoted,'MapVoteDebug');
+	log("___Voted - " $ PlayersThatVoted,'MapVoteDebug');
 
 	if(Level.Game.NumPlayers > 2 && !Level.Game.bGameEnded && !bMidGameVote && (float(PlayersThatVoted) / float(Level.Game.NumPlayers)) * 100 >= MidGameVotePercent) // Mid game vote initiated
 	{
@@ -522,9 +511,9 @@ function TallyVotes(bool bForceMapSwitch)
 			{
 				if(VoteCount[Ranking[x]] < VoteCount[Ranking[y]])
 				{
-				topmap = Ranking[x];
-				Ranking[x] = Ranking[y];
-				Ranking[y] = topmap;
+					topmap = Ranking[x];
+					Ranking[x] = Ranking[y];
+					Ranking[y] = topmap;
 				}
 			}
 		}
@@ -572,15 +561,16 @@ function TallyVotes(bool bForceMapSwitch)
 	}
 
 	// if everyone has voted go ahead and change map
-	if( bForceMapSwitch || (PlayersThatVoted >= Level.Game.NumPlayers && Level.Game.NumPlayers > 0) )
+	if( bAdminForced || bForceMapSwitch || (PlayersThatVoted >= Level.Game.NumPlayers && Level.Game.NumPlayers > 0) )
 	{
+        bAdminForced = false;
 		i = topmap - topmap/MapCount * MapCount;
 
 		if( MapList[i].MapName == "" )
 			return;
 
 		/* Activate Quick Restart when same map is voted */
-		if( MapList[i].MapName ~= RecordsManager.CurrentMapName )
+		if( MapList[i].MapName ~= BT.CurrentMapName )
 		{
 			TextMessage = lmsgMapWon;
 			TextMessage = repl(TextMessage,"%mapname%",MapList[i].MapName $ "(" $ GameConfig[topmap/MapCount].Acronym $ ")");
@@ -593,11 +583,11 @@ function TallyVotes(bool bForceMapSwitch)
 			if( !bAutoDetectMode )
 				SaveConfig();
 
-			if( !RecordsManager.bQuickStart )
+			if( !BT.bQuickStart )
 			{
 				QuickStarts ++;
 				Level.Game.Broadcast( Self, "QuickStart in progress..."@QuickStartLimit-QuickStarts@"remaining revotes!" );
-				RecordsManager.Revoted();
+				BT.Revoted();
 
 				MapData[ThisMapDSlot].R = QuickStarts+1;
 
@@ -616,7 +606,7 @@ function TallyVotes(bool bForceMapSwitch)
 		}
 		else if( MapList[i].MapName ~= COMPETITIVEMODE )
 		{
-			if( RecordsManager.EnableCompetitiveMode() )
+			if( BT.EnableCompetitiveMode() )
 			{
 				Level.Game.Broadcast( self, "Competitive Mode is now enabled!" );
 				MapList[i].bEnabled = false;
@@ -731,8 +721,6 @@ function AddRandomVotes()
 	local int i, g, p;
 	local array<string> modes;
 
-	AddOtherVotes();
-
 	for( g = 0; g < GameConfig.Length; ++ g )
 	{
 		for( i = 0; i < RandomMapModes.Length; ++ i )
@@ -750,10 +738,11 @@ function AddRandomVotes()
 
 function AddOtherVotes()
 {
-	if( RecordsManager.AllowCompetitiveMode() && RecordsManager.bSoloMap && !RecordsManager.bGroupMap )
+	if( !BT.bAllowCompetitiveMode || (!BT.bSoloMap || BT.bGroupMap) )
 	{
-		Log( "Competitive Mode supported by VotingHandler!", Name );
+		return;
 	}
+
 	MapList.Insert( 0, 1 );
 	MapList[0].bEnabled = true;
 	MapList[0].MapName = COMPETITIVEMODE;
@@ -809,10 +798,10 @@ static function string GetDescriptionText( string PropName )
 	switch( PropName )
 	{
 		case "bRankedVotingPriority":
-			return "Whether to give the top ranked players give an higher voting priority";
+			return "Whether to give the top ranked players an higher voting priority";
 
 		case "QuickStartLimit":
-			return "The amount of times people are allowed to vote for quickstart in one session";
+			return "The amount of times people are allowed to vote for quickstart within one session";
 	}
 	return Super.GetDescriptionText(PropName);
 }

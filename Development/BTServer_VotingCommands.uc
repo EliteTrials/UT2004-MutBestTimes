@@ -11,7 +11,7 @@ final static function VoteMapSeq( PlayerController sender, int sequence )
 
 	if( sequence < 1 )
 	{
-		sender.ClientMessage( sequence @ "is to low, please enter a higher sequence number" );
+		sender.ClientMessage( sequence @ "is too low, please enter an higher sequence number" );
 		return;
 	}
 
