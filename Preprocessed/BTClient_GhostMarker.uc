@@ -10,14 +10,14 @@ replication
 
 defaultproperties
 {
-	RemoteRole=ROLE_SimulatedProxy
+	RemoteRole=ROLE_DumbProxy
 	bStatic=false
 	bNoDelete=false
 	Texture=none
-	bAlwaysRelevant=true
+	// bAlwaysRelevant=true
 	bReplicateMovement=true
 
-	NetUpdateFrequency=1
+	NetUpdateFrequency=0.3
 	NetPriority=0.5
 }
 

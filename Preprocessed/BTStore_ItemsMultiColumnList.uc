@@ -34,6 +34,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 	local float CellLeft, CellWidth;
 	local GUIStyles DrawStyle;
 	local string price;
+	local byte orgStyle;
 
 	if( CRI == none )
 		return;
@@ -49,9 +50,8 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 	}
 	else DrawStyle = Style;
 	
-	Canvas.Style = 3;
-	
 	GetCellLeftWidth( 0, CellLeft, CellWidth );
+	Canvas.Style = 3;
 	switch( CRI.Items[SortData[i].SortItem].Access )
 	{
 		case 0:
@@ -84,16 +84,24 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 			Canvas.SetDrawColor( 30, 30, 45, 40 );
 			Canvas.SetPos( CellLeft+2, Y+2 );
 			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
+			break;		
+
+		case 5:
+			price = "ÅˇDrop";
+			Canvas.SetDrawColor( 64, 0, 128, 40 );
+			Canvas.SetPos( CellLeft+2, Y+2 );
+			Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
 			break;
 	}
 
 	if( CRI.Items[SortData[i].SortItem].bBought )
 	{
 		Canvas.SetPos( CellLeft, Y );
+		orgStyle = Canvas.Style;
 		Canvas.Style = 5;
 		Canvas.SetDrawColor( 255, 255, 255 );
 		Canvas.DrawTileJustified( PositiveIcon, 1, H, H );
-		Canvas.Style = 3;
+		Canvas.Style = orgStyle;
 		CellLeft += H + 4;
 	}
 

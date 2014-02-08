@@ -19,6 +19,7 @@ struct sGlobalPacket
 	var float Points;
 	var int Objectives;
 	var int Hijacks;
+	var transient bool bIsSelf;
 };
 
 struct sDailyPacket
@@ -42,6 +43,7 @@ struct sSoloPacket
 	var float Points;
 	var float Time;
 	var string Date;
+	var transient bool bIsSelf;
 };
 
 /** A structure that defines an earnable achievement. */
@@ -109,16 +111,6 @@ struct sCategoryClient
 
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;	// SERVER and LOCAL
-
-struct sPerkState
-{
-	var string Name;
-	var float Points;
-	var string Description;
-	var Texture Icon;
-	var bool bActive;
-};
-
 //==============================================================================
 
 //==============================================================================
@@ -147,10 +139,6 @@ var sTrophyClient LastTrophyEvent;
 
 /** The availabe items for sale and bought. */
 var(DEBUG) array<sItemClient> Items;
-
-/** Available perks. */
-var(DEBUG) array<sPerkState> Perks;
-
 
 // --NOT REPLICATED
 var(DEBUG) transient bool bItemsTransferComplete;
@@ -181,12 +169,15 @@ var private Pawn DeadPawn;
 var int BTLevel;
 // Not to be confused with actual Ranking Points!
 var int BTPoints;
+var int BTWage;
+var bool bIsPremiumMember;
 
 var Color PreferedColor;
 
 /** Percentage progress of the next level. */
 var float BTExperience;
 var float LastObjectiveCompletedTime;
+var float LastDropChanceTime;
 // LOCAL ONLY
 var float LastRenderedBTExperience;
 var float LastRenderedBTLevel;
@@ -218,23 +209,24 @@ var int myPlayerSlot;				// Cached slot of the PDat.Player list for this player
 var bool bReceivedRankings;
 var bool bAutoPress;
 var bool bPermitBoosting;
+var bool bWantsToWage;
+var int AmountToWage;
+
+var /**TEMP*/ string ClientMessage;
 
 replication
 {
-	reliable if( bNetDirty )
+	reliable if( Role == ROLE_Authority )
 		myPawn, PersonalTime,
 		Rank, ClientFlags, SoloRank,
-		BTLevel, BTExperience, BTPoints,
-		PreferedColor;
+		BTLevel, BTExperience, BTPoints, BTWage,
+		PreferedColor, bIsPremiumMember, Title;
 		
-	reliable if( bNetDirty && bNetOwner )
+	reliable if( bNetOwner && Role == ROLE_Authority )
 		bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
 
-	unreliable if( bNetInitial && bNetOwner && bNetDirty )
+	unreliable if( bNetInitial && bNetOwner && Role == ROLE_Authority )
 		UserState;
-
-	reliable if( bNetInitial )
-		Title;
 
 	reliable if( Role == ROLE_Authority )
 		// Rankings scoreboard
@@ -255,15 +247,13 @@ replication
 		// Stats
 		ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
 		ClientSendChallenge,
-		ClientSendPerk,
 		ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
 		ClientSendItem, ClientSendCategory,
 		ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
 
 	// unreliable
 	reliable if( Role == ROLE_Authority )
-		ClientSendText, ClientCleanText,
-		ClientSetSFMSG;
+		ClientSendText, ClientCleanText, ClientSendMessage, ClientSendConsoleMessage;
 
 	unreliable if( Role < ROLE_Authority )
 		ServerSetClientFlags;
@@ -292,7 +282,7 @@ final function bool IsClient()
 }
 
 // Client-side detection whether the pawn of this CRI owner died!
-Simulated Function PostNetReceive()
+simulated function PostNetReceive()
 {
 	super.PostNetReceive();
 	// Using Options to know whether were executing this on my own CRI
@@ -329,7 +319,7 @@ Simulated Function PostNetReceive()
 	}
 }
 
-Simulated Function ReplicateResetGhost()
+simulated function ReplicateResetGhost()
 {
 	ServerSetClientFlags( CFRESETGHOST, class'BTClient_Config'.static.FindSavedData().bResetGhostOnDead );
 }
@@ -364,62 +354,56 @@ function SetClientFlags( int newFlags, bool bAdd )
 	}
 }
 
-Simulated Function ClientSetSFMSG( string Msg, byte Failed )
+
+simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass, string message, 
+	optional byte switch, 
+	optional PlayerReplicationInfo PRI2
+	)
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
-	if( Options == None )
+	// HACK: Respect the options specifically for record messages.
+	if( messageClass == class'BTClient_SoloFinish' && Options.bDisplayCompletingMessages )
 	{
-		InitializeClient();
-		if( Options == None )
+		if( (switch == 0 || switch == 2) && Options.bDisplayFail )
 		{
-			Log( "Options None!!!!", Name );
+			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
+				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.FailSound, SLOT_Interface, 255, true );
+		}
+		else if( switch == 1 && Options.bDisplayNew )
+		{
+			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
+				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.NewSound, SLOT_Interface, 255, true );
+		}
+		else
+		{
+			// When both are disabled, still print a message in the console
+			ClientSendConsoleMessage( message );
 			return;
 		}
 	}
 
-	if( Options.bDisplayCompletingMessages )
-	{
-		if( Failed == 0 && Options.bDisplayFail )
-		{
-			SFMSG = Msg;
-			PlayerController(Owner).ReceiveLocalizedMessage( Class'BTClient_SoloFinish', 0,,, Self );
-			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != None )
-				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.FailSound, SLOT_Interface, 255, True );
-
-			return;
-		}
-
-		if( Failed == 1 && Options.bDisplayNew )
-		{
-			SFMSG = Msg;
-			PlayerController(Owner).ReceiveLocalizedMessage( Class'BTClient_SoloFinish', 1,,, Self );
-			if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != None )
-				PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.NewSound, SLOT_Interface, 255, True );
-
-			return;
-		}
-
-		// When both are disabled, still print a message in the console
-		ClientSendMessage( Msg );
-	}
+	// Temporary copy for the LocalMessage class to copy.
+	ClientMessage = message;
+	PlayerController(Owner).ReceiveLocalizedMessage( messageClass, 
+		int(switch), 
+		PlayerController(Owner).PlayerReplicationInfo, PRI2, 
+		self 
+	);
 }
 
 // Call this on server instead of clientspawn!
-Function PlayerSpawned()
+function PlayerSpawned()
 {
 	LastSpawnTime = Level.TimeSeconds;
 	ClientSpawn();
 }
 
-Function ClientSetPersonalTime( float CPT )
+function ClientSetPersonalTime( float CPT )
 {
 	PersonalTime = CPT;
 }
 
 // Client spawned, reset timer...
-Simulated Function ClientSpawn()
+simulated function ClientSpawn()
 {
 	if( Role == ROLE_Authority )
 		return;
@@ -427,41 +411,29 @@ Simulated Function ClientSpawn()
 	LastSpawnTime = Level.TimeSeconds;
 }
 
-Simulated Function ClientSendMessage( coerce string Msg )
+simulated function ClientSendConsoleMessage( coerce string Msg )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
 }
 
 //==============================================================================
-// OVERALL TOP FUNCTIONS
-Simulated Function ClientCleanOverallTop()
+// OVERALL TOP functionS
+simulated function ClientCleanOverallTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	OverallTop.Length = 0;
 }
 
-Simulated function ClientSendOverallTop( sGlobalPacket APacket )
+simulated function ClientSendOverallTop( sGlobalPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = OverallTop.Length;
 	OverallTop.Length = j+1;
 	OverallTop[j] = APacket;
 }
 
-Simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
+simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > OverallTop.Length-1 )
 		return;
 
@@ -469,128 +441,111 @@ Simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
 }
 //==============================================================================
 
-Simulated Function ClientCleanQuarterlyTop()
+simulated function ClientCleanQuarterlyTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	QuarterlyTop.Length = 0;
 }
 
-Simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
+simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = QuarterlyTop.Length;
 	QuarterlyTop.Length = j+1;
 	QuarterlyTop[j] = APacket;
 }
 
-Simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
+simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > QuarterlyTop.Length-1 )
 		return;
 
 	QuarterlyTop[Slot] = APacket;
 }
 
-Simulated Function ClientCleanDailyTop()
+simulated function ClientCleanDailyTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	DailyTop.Length = 0;
 }
 
-Simulated function ClientSendDailyTop( sDailyPacket APacket )
+simulated function ClientSendDailyTop( sDailyPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = DailyTop.Length;
 	DailyTop.Length = j+1;
 	DailyTop[j] = APacket;
 }
 
-Simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
+simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > DailyTop.Length-1 )
 		return;
 
 	DailyTop[Slot] = APacket;
 }
 
-Simulated Function ClientCleanSoloTop()
+simulated function ClientCleanSoloTop()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	SoloTop.Length = 0;
 }
 
-Simulated function ClientSendSoloTop( sSoloPacket APacket )
+simulated function ClientSendSoloTop( sSoloPacket APacket )
 {
 	local int j;
-
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
 
 	j = SoloTop.Length;
 	SoloTop.Length = j+1;
 	SoloTop[j] = APacket;
 }
 
-Simulated Function ClientUpdateSoloTop( sSoloPacket APacket, byte Slot )
+simulated function ClientUpdateSoloTop( sSoloPacket APacket, byte Slot )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	if( Slot > SoloTop.Length-1 )
 		return;
 
 	SoloTop[Slot] = APacket;
 }
 
-Simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
+simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
+	local int i;
 
-	MySoloTop = APacket;
+	for( i = 0; i < SoloTop.Length; ++ i )
+	{
+		if( SoloTop[i].bIsSelf )
+		{
+			SoloTop[i] = APacket;
+			return;	
+		}
+	}
+	APacket.bIsSelf = true;
+	ClientSendSoloTop( APacket );
 }
 
-Simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
+simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
+	local int i;
 
-	MyOverallTop = APacket;
+	for( i = 0; i < OverallTop.Length; ++ i )
+	{
+		if( OverallTop[i].bIsSelf )
+		{
+			OverallTop[i] = APacket;
+			return;	
+		}
+	}
+	APacket.bIsSelf = true;
+	ClientSendOverallTop( APacket );
 }
 
-Simulated Function ClientSendText( string Packet )
+simulated function ClientSendText( string Packet )
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	Text[Text.Length] = Packet;
 }
 
-Simulated Function ClientCleanText()
+simulated function ClientCleanText()
 {
-	if( Role == ROLE_Authority && Level.NetMode != NM_StandAlone )
-		return;
-
 	Text.Length = 0;
 }
 
@@ -617,16 +572,6 @@ simulated final function ClientSendChallenge( string title, string description, 
 	Challenges[0].Title = title;
 	Challenges[0].Description = description;
 	Challenges[0].Points = points;
-}
-
-simulated final function ClientSendPerk( string name, string description, int points, Texture icon, bool bActive )
-{
-	Perks.Insert( 0, 1 );
-	Perks[0].Name = name;
-	Perks[0].Description = description;
-	Perks[0].Points = points;
-	Perks[0].Icon = icon;
-	Perks[0].bActive = bActive;
 }
 
 simulated final function ClientSendTrophy( string title )
@@ -665,7 +610,7 @@ simulated final function ClientAchievementProgressed( string title, string icon,
 			PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.AchievementSound, SLOT_Interface, 255, true );
 	}
 
-	ClientSendMessage( "You have made progress on the achievement" @ title );
+	ClientSendConsoleMessage( "You have made progress on the achievement" @ title );
 }
 
 simulated final function ClientAchievementAccomplished( string title, optional string icon )
@@ -678,7 +623,7 @@ simulated final function ClientAchievementAccomplished( string title, optional s
 	if( PlayerController(Owner).ViewTarget != none )
 		PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.AchievementSound, SLOT_Interface, 255, true );
 
-	ClientSendMessage( "You accomplished the achievement" @ title );
+	ClientSendConsoleMessage( "You accomplished the achievement" @ title );
 }
 
 simulated final function ClientCleanAchievements()
@@ -805,14 +750,11 @@ event Tick( float deltaTime )
 	}
 }
 
-DefaultProperties
+defaultproperties
 {
-	RemoteRole=ROLE_SimulatedProxy
-	bAlwaysRelevant=true
-	//bSkipActorPropertyReplication=false
 	bNetNotify=true
 
+	LastDropChanceTime=-60
+	LastObjectiveCompletedTime=-10
 	myPlayerSlot=-1
-
-	NetPriority=0.5
 }
