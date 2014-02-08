@@ -2,6 +2,7 @@
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTServer_Mode extends Object within MutBestTimes
+	config(MutBestTimes)
 	abstract
 	hidedropdown;
 
@@ -16,6 +17,13 @@ var editconst const noexport string ModePrefix;
 
 var() int ExperienceBonus;
 var() float DropChanceBonus;
+
+var() private const globalconfig array<struct sChatMacro{
+	var string Name;
+	var string Command;
+	var string Prot;
+	var string Value;
+}> ChatMacros;
 
 static function bool DetectMode( MutBestTimes M )
 {
@@ -103,7 +111,27 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 	switch( command )
 	{
 		case "vote":
-			sender.ConsoleCommand( "ShowVoteMenu" );
+			if( VotingReplicationInfo(sender.VoteReplicationInfo) == none || !sender.VoteReplicationInfo.MapVoteEnabled() )
+			{
+				SendErrorMessage( sender, "Sorry voting is not possible at the moment!" );
+				break;
+			}
+
+			if( value == "" )
+			{
+				VotingReplicationInfo(sender.VoteReplicationInfo).OpenWindow();
+			}
+			else
+			{
+				if( int(value) > 0 || value == "0" )
+				{
+					ChatCommandExecuted( sender, "votemapseq", value );
+				}
+				else
+				{
+					ChatCommandExecuted( sender, "votemap", value );
+				}
+			}
 			break;
 
 		case "revote":
@@ -112,6 +140,10 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 
 		case "votemap":
 			Mutate( "votemap" @ value, sender );
+			break;
+
+		case "votemapseq":
+			Mutate( "votemapseq" @ value, sender );
 			break;
 			
 		case "spec":
@@ -128,14 +160,53 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 			sender.ConsoleCommand( "mutate SetTitle" @ value );
 			break;
 
+		case "exec":
+			if( value == "" )
+			{
+				SendErrorMessage( sender, "Please specify a console command!" );
+				break;
+			}
+			sender.ConsoleCommand( value );
+			break;
+
+		case "prot":
+			if( value == "" )
+			{
+				SendErrorMessage( sender, "Please specify a protocol and value, for example: \"xfire:status?text=UT2004!\"" );
+				break;
+			}
+			sender.ClientTravel( value, TRAVEL_Absolute, false );
+			sender.ClientMessage( "Performed protocol: " $ value );
+			break;
+			
 		default:
-			bmissed = true;
+			bmissed = !ChatMacroCommandExecuted( sender, command, value );
 			break;
 	}
 	
 	if( !bmissed )
 	{
 		return true;
+	}
+	return false;
+}
+
+function bool ChatMacroCommandExecuted( PlayerController sender, string command, string input )
+{
+	local int i;
+	local string s;
+
+	for( i = 0; i < ChatMacros.Length; ++ i )
+	{
+		if( ChatMacros[i].Name ~= command )
+		{
+			if( ChatMacros[i].Prot != "" )
+			{
+				s = ChatMacros[i].Prot $ "://";
+			}
+			ChatCommandExecuted( sender, ChatMacros[i].Command, s$Repl( ChatMacros[i].Value, "%Input%", input ) );
+			return true;
+		}
 	}
 	return false;
 }
@@ -177,4 +248,8 @@ function Free()
 defaultproperties
 {
 	ExperienceBonus=0
+
+	// ChatMacros(0)=(Name="ts",Command="prot",Prot="TeamSpeak",Value="212.187.247.41:9103")
+	// ChatMacros(1)=(Name="xfirestatus",Command="prot",Value="xfire:status?text=%Input%")
+	ChatMacros(0)=(Name="donate",Command="prot",Prot="http",Value="www.paypal.com/cgi-bin/webscr?cmd=_donations&business=9KT3RZU8569N6&lc=BE&item_name=%Input%&currency_code=EUR&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHosted")
 }
