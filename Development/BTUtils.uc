@@ -7,41 +7,41 @@ const MeterUnits = 128;
 
 final static function bool IsInServerPackages( string packageName, out int index )
 {
-	local int j;
+    local int j;
 
-	j = Class'GameEngine'.default.ServerPackages.Length;
-	for( index = 0; index < j; ++ index )
-	{
-		if( Class'GameEngine'.default.ServerPackages[index] ~= packageName )
-		{
-			return true;
-		}
-	}
-	return false;
+    j = Class'GameEngine'.default.ServerPackages.Length;
+    for( index = 0; index < j; ++ index )
+    {
+        if( Class'GameEngine'.default.ServerPackages[index] ~= packageName )
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 final static function int FahrenheitToCelsius( int f )
 {
-	return (5f / 9f) * (f - 32);
+    return (5f / 9f) * (f - 32);
 }
 
 final static function float UUnitToMeters( float UUnit )
 {
-	return UUnit / MeterUnits;
+    return UUnit / MeterUnits;
 }
 
 final static function string DecimalToBinary( int decimal )
 {
-	local string binary;
-	local int c;
+    local string binary;
+    local int c;
 
-	c = 1;
-	do
-	{
-		binary = Eval( ((decimal & c) == c), "1", "0" ) $ binary;
-		c *= 2;
-	} until( c > decimal || c == 2147483648 /* 32th bit */);
-	return binary;
+    c = 1;
+    do
+    {
+        binary = Eval( ((decimal & c) == c), "1", "0" ) $ binary;
+        c *= 2;
+    } until( c > decimal || c == 2147483648 /* 32th bit */);
+    return binary;
 }
 
 

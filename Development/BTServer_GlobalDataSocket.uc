@@ -14,139 +14,139 @@ var int CurrentGlobalRecordIndex;
 
 Function PostBeginPlay()
 {
-	local int i, j;
-	local bool bFound;
+    local int i, j;
+    local bool bFound;
 
-	DownloadGlobalData();
-	if( GDat != None )
-	{
-		j = GDat.GRL.Length;
-		for( i = 0; i < j; i ++ )
-		{
-			if( GDat.GRL[i].GRN == BTimesMute(Owner).CurrentMapName )
-			{
-				CurrentGlobalRecordIndex = i;
-				bFound = True;
-				break;
-			}
-		}
-	}
+    DownloadGlobalData();
+    if( GDat != None )
+    {
+        j = GDat.GRL.Length;
+        for( i = 0; i < j; i ++ )
+        {
+            if( GDat.GRL[i].GRN == BTimesMute(Owner).CurrentMapName )
+            {
+                CurrentGlobalRecordIndex = i;
+                bFound = True;
+                break;
+            }
+        }
+    }
 
-	if( !bFound )
-		CreateGlobalRecord();
+    if( !bFound )
+        CreateGlobalRecord();
 }
 
 // Called after download!
 Function LoadGlobalData()
 {
-	GDat = Level.Game.LoadDataObject( Class'BTServer_GlobalData', "BestTimes_GlobalData", "BestTimes_GlobalData" );
+    GDat = Level.Game.LoadDataObject( Class'BTServer_GlobalData', "BestTimes_GlobalData", "BestTimes_GlobalData" );
 
-	// No Global Data yet? create one and upload to the host!
-	if( GDat == None )
-	{
-		GDat = Level.Game.CreateDataObject( Class'BTServer_GlobalData', "BestTimes_GlobalData", "BestTimes_GlobalData" );
-		UploadGlobalData();
-	}
+    // No Global Data yet? create one and upload to the host!
+    if( GDat == None )
+    {
+        GDat = Level.Game.CreateDataObject( Class'BTServer_GlobalData', "BestTimes_GlobalData", "BestTimes_GlobalData" );
+        UploadGlobalData();
+    }
 }
 
 Function SaveGlobalData()
 {
-	Level.Game.SavePackage( "BestTimes_GlobalData" );
-	UploadGlobalData();
+    Level.Game.SavePackage( "BestTimes_GlobalData" );
+    UploadGlobalData();
 }
 
 Function CreateGlobalRecord()
 {
-	local int j;
+    local int j;
 
-	BTimesMute(Owner).FullLog( "GlobalData:CreateGlobalRecord" );
+    BTimesMute(Owner).FullLog( "GlobalData:CreateGlobalRecord" );
 
-	j = GDat.GRL.Length;
-	GDat.GRL.Length = j + 1;
-	GDat.GRL[j].GRT = -1;
-	GDat.GRL[j].GRN = BTimesMute(Owner).CurrentMapName;
+    j = GDat.GRL.Length;
+    GDat.GRL.Length = j + 1;
+    GDat.GRL[j].GRT = -1;
+    GDat.GRL[j].GRN = BTimesMute(Owner).CurrentMapName;
 }
 
 Function float GetGlobalRecordTime()
 {
-	return GDat.GRL[CurrentGlobalRecordIndex].GRT;
+    return GDat.GRL[CurrentGlobalRecordIndex].GRT;
 }
 
 Function int GetGlobalRecordOwner( string Map )
 {
-	return GDat.GRL[CurrentGlobalRecordIndex].GRA;
+    return GDat.GRL[CurrentGlobalRecordIndex].GRA;
 }
 
 Function SetGlobalRecord( float Time, string Owner )
 {
-	GDat.GRL[CurrentGlobalRecordIndex].GRT = Time;
-	GDat.GRL[CurrentGlobalRecordIndex].GRA = Owner;
-	SaveGlobalData();
+    GDat.GRL[CurrentGlobalRecordIndex].GRT = Time;
+    GDat.GRL[CurrentGlobalRecordIndex].GRA = Owner;
+    SaveGlobalData();
 }
 
 // download GlobalData.uvx from the host
 Function DownloadGlobalData()
 {
-	local HttpSock Socket;
+    local HttpSock Socket;
 
-	Socket = Spawn( Class'HttpSock' );
-	Socket.OnComplete = DownloadComplete;
-	Socket.OnError = DownloadError;
-	Socket.SetFormData( "GlobalData", "Download" );
-	Socket.SetFormData( "Pass", GlobalHostPW );
-	Socket.Post( GlobalHost );
+    Socket = Spawn( Class'HttpSock' );
+    Socket.OnComplete = DownloadComplete;
+    Socket.OnError = DownloadError;
+    Socket.SetFormData( "GlobalData", "Download" );
+    Socket.SetFormData( "Pass", GlobalHostPW );
+    Socket.Post( GlobalHost );
 }
 
 Function DownloadComplete( HttpSock Sender )
 {
-	if( Sender == None )
-		return;
+    if( Sender == None )
+        return;
 
-	BTimesMute(Owner).FullLog( "GlobalData:DownloadComplete, Re-Loading GlobalData" );
-	LoadGlobalData();
-	Sender.Destroy();
+    BTimesMute(Owner).FullLog( "GlobalData:DownloadComplete, Re-Loading GlobalData" );
+    LoadGlobalData();
+    Sender.Destroy();
 }
 
 Function DownloadError( HttSock Sender )
 {
-	if( Sender == None )
-		return;
+    if( Sender == None )
+        return;
 
-	BTimesMute(Owner).FullLog( "GlobalData:DownloadError, Reason:Perhaps no GlobalData found!" );
-	if( GDat == None )
-		LoadGlobalData();
-	Sender.Destroy();
+    BTimesMute(Owner).FullLog( "GlobalData:DownloadError, Reason:Perhaps no GlobalData found!" );
+    if( GDat == None )
+        LoadGlobalData();
+    Sender.Destroy();
 }
 
 // upload GlobalData.uvx to the host
 Function UploadGlobalData()
 {
-	local HttpSock Socket;
+    local HttpSock Socket;
 
-	Socket = Spawn( Class'HttpSock' );
-	Socket.OnComplete = UploadComplete;
-	Socket.OnError = UploadError;
-	Socket.SetFormData( "GlobalData", "Upload" );
-	Socket.SetFormData( "Pass", GlobalHostPW );
-	Socket.Post( GlobalHost );
+    Socket = Spawn( Class'HttpSock' );
+    Socket.OnComplete = UploadComplete;
+    Socket.OnError = UploadError;
+    Socket.SetFormData( "GlobalData", "Upload" );
+    Socket.SetFormData( "Pass", GlobalHostPW );
+    Socket.Post( GlobalHost );
 }
 
 Function UploadComplete( HttpSock Sender )
 {
-	if( Sender == None )
-		return;
+    if( Sender == None )
+        return;
 
-	BTimesMute(Owner).FullLog( "GlobalData:UploadComplete" );
-	Sender.Destroy();
+    BTimesMute(Owner).FullLog( "GlobalData:UploadComplete" );
+    Sender.Destroy();
 }
 
 Function UploadError( HttSock Sender )
 {
-	if( Sender == None )
-		return;
+    if( Sender == None )
+        return;
 
-	BTimesMute(Owner).FullLog( "GlobalData:UploadError, Reason:Unknown" );
-	Sender.Destroy();
+    BTimesMute(Owner).FullLog( "GlobalData:UploadError, Reason:Unknown" );
+    Sender.Destroy();
 }
 
 DefaultProperties

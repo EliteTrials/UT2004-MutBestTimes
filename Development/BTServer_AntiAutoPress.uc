@@ -11,46 +11,46 @@ Event PreBeginPlay();
 
 Event PostBeginPlay()
 {
-	SetTimer( 1.0f, True );
+    SetTimer( 1.0f, True );
 }
 
 Event UsedBy( Pawn user )
 {
-	if( user != None )
-	{
-		//xPawn(user).ClientMessage( "Usedby!" );
+    if( user != None )
+    {
+        //xPawn(user).ClientMessage( "Usedby!" );
 
-		if( Level.TimeSeconds-LastUseTime > 1.0 )
-		{
-			LastUseTime = Level.TimeSeconds;
-			Uses = 0;
-		}
-		++ Uses;
+        if( Level.TimeSeconds-LastUseTime > 1.0 )
+        {
+            LastUseTime = Level.TimeSeconds;
+            Uses = 0;
+        }
+        ++ Uses;
 
-		if( Uses > 20 )
-		{
-			//xPawn(user).ClientMessage( "AutoPress Detected!" );
-			user.bCanUse = False;	// till suicide
-			Destroy();
-			return;
-		}
-	}
+        if( Uses > 20 )
+        {
+            //xPawn(user).ClientMessage( "AutoPress Detected!" );
+            user.bCanUse = False;   // till suicide
+            Destroy();
+            return;
+        }
+    }
 }
 
 Event Tick( float delta )
 {
-	if( Owner == None )
-	{
-		Destroy();
-		return;
-	}
-	SetLocation( Owner.Location );
+    if( Owner == None )
+    {
+        Destroy();
+        return;
+    }
+    SetLocation( Owner.Location );
 }
 
 DefaultProperties
 {
-	bHidden=True
+    bHidden=True
     CollisionRadius=+00040.000000
-	CollisionHeight=+00040.000000
-	bCollideActors=True
+    CollisionHeight=+00040.000000
+    bCollideActors=True
 }

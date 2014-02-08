@@ -12,60 +12,60 @@ event PreBeginPlay();
 
 event Tick( float dt )
 {
-	local GameObjective Obj;
-	local Triggers T;
-	local int i, j;
+    local GameObjective Obj;
+    local Triggers T;
+    local int i, j;
 
-	if( xPawn(Owner) == None )
-	{
-		Destroy();
-		return;
-	}
+    if( xPawn(Owner) == None )
+    {
+        Destroy();
+        return;
+    }
 
-	j = M.Objectives.Length;
-	for( i = 0; i < j; ++ i )
-	{
-		if( xPawn(Owner) == None )	// Secure
-		{
-			Destroy();
-			return;
-		}
+    j = M.Objectives.Length;
+    for( i = 0; i < j; ++ i )
+    {
+        if( xPawn(Owner) == None )  // Secure
+        {
+            Destroy();
+            return;
+        }
 
-		Obj = M.Objectives[i];
-		if( Obj != None && Obj.bActive )
-		{
-			if( VSize( Owner.Location - Obj.Location ) <= (Obj.CollisionRadius + Owner.CollisionRadius)*4
-			&& Obj.Location.Z - Owner.Location.Z <= (Obj.CollisionHeight + Owner.CollisionHeight)*4 )
-			{
-				xPawn(Owner).ClientMessage( "You were killed by this Objective. Delete your 'Client Spawn' to continue" );
-				xPawn(Owner).Suicide();
-				break;
-			}
-		}
-	}
+        Obj = M.Objectives[i];
+        if( Obj != None && Obj.bActive )
+        {
+            if( VSize( Owner.Location - Obj.Location ) <= (Obj.CollisionRadius + Owner.CollisionRadius)*4
+            && Obj.Location.Z - Owner.Location.Z <= (Obj.CollisionHeight + Owner.CollisionHeight)*4 )
+            {
+                xPawn(Owner).ClientMessage( "You were killed by this Objective. Delete your 'Client Spawn' to continue" );
+                xPawn(Owner).Suicide();
+                break;
+            }
+        }
+    }
 
-	if( M.bTriggersKillClientSpawnPlayers || M.bAlwaysKillClientSpawnPlayersNearTriggers )
-	{
-		j = M.Triggers.Length;
-		for( i = 0; i < j; ++ i )
-		{
-			if( xPawn(Owner) == None )	// Secure
-			{
-				Destroy();
-				return;
-			}
+    if( M.bTriggersKillClientSpawnPlayers || M.bAlwaysKillClientSpawnPlayersNearTriggers )
+    {
+        j = M.Triggers.Length;
+        for( i = 0; i < j; ++ i )
+        {
+            if( xPawn(Owner) == None )  // Secure
+            {
+                Destroy();
+                return;
+            }
 
-			T = M.Triggers[i];
-			if( T != None && T.bBlockNonZeroExtentTraces )
-			{
-				if( VSize( Owner.Location - T.Location ) <= (T.CollisionRadius + Owner.CollisionRadius)*4
-				&& T.Location.Z - Owner.Location.Z <= (T.CollisionHeight + Owner.CollisionHeight)*4 )
-				{
-					xPawn(Owner).ClientMessage( "You were killed by this Trigger. Delete your 'Client Spawn' to continue" );
-					xPawn(Owner).Suicide();
-					break;
-				}
-			}
-		}
-	}
+            T = M.Triggers[i];
+            if( T != None && T.bBlockNonZeroExtentTraces )
+            {
+                if( VSize( Owner.Location - T.Location ) <= (T.CollisionRadius + Owner.CollisionRadius)*4
+                && T.Location.Z - Owner.Location.Z <= (T.CollisionHeight + Owner.CollisionHeight)*4 )
+                {
+                    xPawn(Owner).ClientMessage( "You were killed by this Trigger. Delete your 'Client Spawn' to continue" );
+                    xPawn(Owner).Suicide();
+                    break;
+                }
+            }
+        }
+    }
 }

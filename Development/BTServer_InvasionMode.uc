@@ -5,18 +5,18 @@ class BTServer_InvasionMode extends BTServer_Mode;
 
 static function bool DetectMode( MutBestTimes M )
 {
-	return Invasion(M.Level.Game) != none;
+    return Invasion(M.Level.Game) != none;
 }
 
 protected function InitializeMode()
 {
-	super.InitializeMode();
+    super.InitializeMode();
 }
 
 defaultproperties
 {
-	ModeName="Inv"
-	ModePrefix="DM"
+    ModeName="Inv"
+    ModePrefix="DM"
 
-	ExperienceBonus=5
+    ExperienceBonus=5
 }

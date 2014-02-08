@@ -2,58 +2,58 @@
 // Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class BTStore extends Object
-	config(BTStore);
+    config(BTStore);
 
 enum ETarget
 {
-	T_Pawn,
-	T_Vehicle,
-	T_Player
+    T_Pawn,
+    T_Vehicle,
+    T_Player
 };
 
 struct sItem
 {
-	var() string Name;
-	var() string ID;
-	var() string Type;
-	var() string ItemClass;
-	var() int Cost;
-	var() string Desc;
-	var() string IMG;
-	var() bool bAdminGiven;
-	var() bool bPassive;
-	var() string Conditions;
-	var() array<string> Vars;
+    var() string Name;
+    var() string ID;
+    var() string Type;
+    var() string ItemClass;
+    var() int Cost;
+    var() string Desc;
+    var() string IMG;
+    var() bool bAdminGiven;
+    var() bool bPassive;
+    var() string Conditions;
+    var() array<string> Vars;
 
-	/** Additional dropchance added on top of the default dropchance. */
-	var() private float DropChance;
-	
-	var() enum EAccess
-	{
-		/** Default. Standard buying. */
-		Buy,
-		
-		/** Has zero cost. */
-		Free,
-		
-		/** Requires admin activation or anything below this. */
-		Admin,
-		
-		/** The item is for premium players only. */
-		Premium,
-		
-		/** The item is exclusive. */
-		Private,
+    /** Additional dropchance added on top of the default dropchance. */
+    var() private float DropChance;
 
-		/** The item can only be found as a drop. */
-		Drop,
-	} Access;
+    var() enum EAccess
+    {
+        /** Default. Standard buying. */
+        Buy,
 
-	var() ETarget ApplyOn;
+        /** Has zero cost. */
+        Free,
 
-	var transient Material CachedIMG;
-	var transient string CachedCategory;
-	var transient class<Actor> CachedClass;
+        /** Requires admin activation or anything below this. */
+        Admin,
+
+        /** The item is for premium players only. */
+        Premium,
+
+        /** The item is exclusive. */
+        Private,
+
+        /** The item can only be found as a drop. */
+        Drop,
+    } Access;
+
+    var() ETarget ApplyOn;
+
+    var transient Material CachedIMG;
+    var transient string CachedCategory;
+    var transient class<Actor> CachedClass;
 };
 
 var() array<sItem> Items;
@@ -62,528 +62,528 @@ var() globalconfig float DefaultDropChance;
 
 struct sCategory
 {
-	/** Name of the category. */
-	var string Name;
+    /** Name of the category. */
+    var string Name;
 
-	/** All types that belong in the category. */
-	var array<string> Types;
+    /** All types that belong in the category. */
+    var array<string> Types;
 };
 
 var() globalconfig array<sCategory> Categories;
 
 struct sMapLocker
 {
-	var string ItemID;
-	var string MapName;
+    var string ItemID;
+    var string MapName;
 };
 
 var() globalconfig array<sMapLocker> LockedMaps;
 
 final function bool Evaluate( MutBestTimes BT, int itemSlot )
 {
-	local array<string> conditions;
-	local string prop, val;
-	local int i, colon, not;
-	local bool breverse;
+    local array<string> conditions;
+    local string prop, val;
+    local int i, colon, not;
+    local bool breverse;
 
-	if( Items[itemSlot].Conditions == "" )
-	{
-		return true;
-	}
+    if( Items[itemSlot].Conditions == "" )
+    {
+        return true;
+    }
 
-	Split( Items[itemSlot].Conditions, "?", conditions );
-	if( conditions.Length == 0 )
-	{
-		conditions[conditions.Length] = Items[itemSlot].Conditions;
-	}
+    Split( Items[itemSlot].Conditions, "?", conditions );
+    if( conditions.Length == 0 )
+    {
+        conditions[conditions.Length] = Items[itemSlot].Conditions;
+    }
 
-	for( i = 0; i < conditions.Length; ++ i )
-	{
-		colon = InStr( conditions[i], ":" );
-		if( colon == -1 )
-		{
-			not = InStr( conditions[i], "!" );
-			if( not == -1 )
-			{
-				continue;
-			}
+    for( i = 0; i < conditions.Length; ++ i )
+    {
+        colon = InStr( conditions[i], ":" );
+        if( colon == -1 )
+        {
+            not = InStr( conditions[i], "!" );
+            if( not == -1 )
+            {
+                continue;
+            }
 
-			colon = not;
-		}
+            colon = not;
+        }
 
-		breverse = not != -1;
+        breverse = not != -1;
 
-		prop = Left( conditions[i], colon );
-		val = Mid( conditions[i], colon );
-		switch( prop )
-		{
-			case "game":
-           		if( (breverse && BT.Level.Game.GameName ~= val) || (!breverse && !(BT.Level.Game.GameName ~= val)) )
-           		{
-					return false;
-           		}
-           		break;
+        prop = Left( conditions[i], colon );
+        val = Mid( conditions[i], colon );
+        switch( prop )
+        {
+            case "game":
+                if( (breverse && BT.Level.Game.GameName ~= val) || (!breverse && !(BT.Level.Game.GameName ~= val)) )
+                {
+                    return false;
+                }
+                break;
 
-           	case "map":
-           		if( (breverse && BT.CurrentMapName ~= val) || (!breverse && !(BT.CurrentMapName ~= val)) )
-           		{
-					return false;
-           		}
-           		break;
-		}
-	}
-	return true;
+            case "map":
+                if( (breverse && BT.CurrentMapName ~= val) || (!breverse && !(BT.CurrentMapName ~= val)) )
+                {
+                    return false;
+                }
+                break;
+        }
+    }
+    return true;
 }
 
 final static function BTStore Load()
 {
-	local BTStore this;
-	local int i, j;
+    local BTStore this;
+    local int i, j;
 
-	StaticSaveConfig();
-	this = new(none) default.Class;
+    StaticSaveConfig();
+    this = new(none) default.Class;
 
-	if( this.CustomItems.Length > 0 )
-	{
-		j = this.Items.Length;
-		this.Items.Insert( j, this.CustomItems.Length );
-		for( i = 0; i < this.CustomItems.Length; ++ i )
-		{
-			this.Items[j + i] = this.CustomItems[i];
-			this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
-		}
-	}
-	return this;
+    if( this.CustomItems.Length > 0 )
+    {
+        j = this.Items.Length;
+        this.Items.Insert( j, this.CustomItems.Length );
+        for( i = 0; i < this.CustomItems.Length; ++ i )
+        {
+            this.Items[j + i] = this.CustomItems[i];
+            this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
+        }
+    }
+    return this;
 }
 
 final function Cache()
 {
-	local int i, j;
-	local string outCategoryName;
-	
-	for( i = 0; i < Items.Length; ++ i )
-	{
-		Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
-		// Cache the cateogry in which each item resists.
-		// (This operation is quite expensive, takes about 100ms per request(300+ items).
-		for( j = 0; j < Categories.Length; ++ j )
-		{
-			outCategoryName = Categories[j].Name; 
-			if( ItemIsInCategory( Items[i].Type, outCategoryName ) )
-			{				
-				Items[i].CachedCategory $= "&"$Categories[j].Name;
-			}			
-		}		
+    local int i, j;
+    local string outCategoryName;
 
-		if( Items[i].bAdminGiven )
-		{
-			Items[i].Access = Admin;
-		}
-	}	
+    for( i = 0; i < Items.Length; ++ i )
+    {
+        Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
+        // Cache the cateogry in which each item resists.
+        // (This operation is quite expensive, takes about 100ms per request(300+ items).
+        for( j = 0; j < Categories.Length; ++ j )
+        {
+            outCategoryName = Categories[j].Name;
+            if( ItemIsInCategory( Items[i].Type, outCategoryName ) )
+            {
+                Items[i].CachedCategory $= "&"$Categories[j].Name;
+            }
+        }
+
+        if( Items[i].bAdminGiven )
+        {
+            Items[i].Access = Admin;
+        }
+    }
 }
 
 final function int FindCategory( string categoryName )
 {
-	local int i;
+    local int i;
 
-	for( i = 0; i < Categories.Length; ++ i )
-	{
-		if( Categories[i].Name ~= categoryName )
-		{
-			return i;
-		}
-	}
-	return -1;
+    for( i = 0; i < Categories.Length; ++ i )
+    {
+        if( Categories[i].Name ~= categoryName )
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 final function bool ItemIsInCategory( string itemType, out string categoryName )
 {
-	local int categoryIndex, i;
-	local int asterik;
+    local int categoryIndex, i;
+    local int asterik;
 
-	categoryIndex = FindCategory( categoryName );
-	if( categoryIndex == -1 )
-		return false;
-		
-	if( categoryName == "" || (categoryName ~= "All" || categoryName ~= "Admin") )
-	{
-		return true;
-	}
-	else if( ((itemType == "" || !HasCategory( itemType )) && categoryName ~= "Other") )
-	{
-		categoryName = "Other";
-		return true;
-	}
+    categoryIndex = FindCategory( categoryName );
+    if( categoryIndex == -1 )
+        return false;
 
-	for( i = 0; i < Categories[categoryIndex].Types.Length; ++ i )
-	{
-		asterik = InStr( Categories[categoryIndex].Types[i], "*" );
-		if( 
-			Categories[categoryIndex].Types[i] ~= itemType 
-			|| 
-			(
-				asterik != -1 
-				&& 
-				Left( Categories[categoryIndex].Types[i], asterik ) ~= Left( itemType, asterik )
-			) 
-		)
-		{
-			return true;
-		}
-	}
-	return false;
+    if( categoryName == "" || (categoryName ~= "All" || categoryName ~= "Admin") )
+    {
+        return true;
+    }
+    else if( ((itemType == "" || !HasCategory( itemType )) && categoryName ~= "Other") )
+    {
+        categoryName = "Other";
+        return true;
+    }
+
+    for( i = 0; i < Categories[categoryIndex].Types.Length; ++ i )
+    {
+        asterik = InStr( Categories[categoryIndex].Types[i], "*" );
+        if(
+            Categories[categoryIndex].Types[i] ~= itemType
+            ||
+            (
+                asterik != -1
+                &&
+                Left( Categories[categoryIndex].Types[i], asterik ) ~= Left( itemType, asterik )
+            )
+        )
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 final function bool HasCategory( string itemType )
 {
-	local int i, j;
-	local int asterik;
+    local int i, j;
+    local int asterik;
 
-	for( i = 0; i < Categories.Length; ++ i )
-	{
-		for( j = 0; j < Categories[i].Types.Length; ++ j )
-		{
-			asterik = InStr( Categories[i].Types[j], "*" );
-			if( Categories[i].Types[j] ~= itemType || 
-				(asterik != -1 && Left( Categories[i].Types[j], asterik ) ~= Left( itemType, asterik )) )
-				return true;
-		}
-	}
+    for( i = 0; i < Categories.Length; ++ i )
+    {
+        for( j = 0; j < Categories[i].Types.Length; ++ j )
+        {
+            asterik = InStr( Categories[i].Types[j], "*" );
+            if( Categories[i].Types[j] ~= itemType ||
+                (asterik != -1 && Left( Categories[i].Types[j], asterik ) ~= Left( itemType, asterik )) )
+                return true;
+        }
+    }
 }
 
 final function int FindItemByID( string id )
 {
-	local int i;
+    local int i;
 
-	for( i = 0; i < Items.Length; ++ i )
-	{
-		if( Items[i].ID ~= id )
-		{
-			return i;
-		}
-	}
-	return -1;
+    for( i = 0; i < Items.Length; ++ i )
+    {
+        if( Items[i].ID ~= id )
+        {
+            return i;
+        }
+    }
+    return -1;
 }
 
 final function float GetItemDropChance( int itemIndex )
 {
-	local float bonus;
+    local float bonus;
 
-	if( Items[itemIndex].Access == Drop )
-	{
-		bonus += 0.25;
-	}
-	return DefaultDropChance + bonus + Items[itemIndex].DropChance;
+    if( Items[itemIndex].Access == Drop )
+    {
+        bonus += 0.25;
+    }
+    return DefaultDropChance + bonus + Items[itemIndex].DropChance;
 }
 
 final function int GetRandomItem()
 {
-	local int randomIndex, tries;
+    local int randomIndex, tries;
 
 tryagain:
-	randomIndex = Rand(Items.Length);
-	if( Items[randomIndex].Access != Buy || Items[randomIndex].Access == Drop )
-	{
-		if( tries >= Items.Length )
-		{
-			return -1;
-		}
-		++ tries;
-		goto tryagain;
-	}
-	return randomIndex;
+    randomIndex = Rand(Items.Length);
+    if( Items[randomIndex].Access != Buy || Items[randomIndex].Access == Drop )
+    {
+        if( tries >= Items.Length )
+        {
+            return -1;
+        }
+        ++ tries;
+        goto tryagain;
+    }
+    return randomIndex;
 }
 
 final function float GetResalePrice( int itemIndex )
 {
-	return Items[itemIndex].Cost*0.25;
+    return Items[itemIndex].Cost*0.25;
 }
 
 /** Called when an item is activated/deactivated either through the store or via a programmatic function. */
 final function ItemToggled( BTServer_PlayersData data, int playerSlot, string itemID, bool status )
 {
-	local PlayerController PC;
-	local BTClient_ClientReplication CRI;
+    local PlayerController PC;
+    local BTClient_ClientReplication CRI;
 
-	PC = data.BT.FindPCByPlayerSlot( playerSlot, CRI );
-	if( PC != none )
-	{
-		switch( itemID )
-		{
-			case "perk_dodge_assistance":
-				CRI.bAllowDodgePerk = status;
-				break;		
+    PC = data.BT.FindPCByPlayerSlot( playerSlot, CRI );
+    if( PC != none )
+    {
+        switch( itemID )
+        {
+            case "perk_dodge_assistance":
+                CRI.bAllowDodgePerk = status;
+                break;
 
-			case "perk_press_assistance":
-				CRI.bAutoPress = status;
-				break;
-		}
-	}
-	// Handle toggling of items for non-living players.
+            case "perk_press_assistance":
+                CRI.bAutoPress = status;
+                break;
+        }
+    }
+    // Handle toggling of items for non-living players.
 }
-	
+
 /** Called when an item is removed from a player either through selling or removal by an admin. */
 final function ItemRemoved( BTServer_PlayersData data, int playerSlot, string itemID )
 {
-	switch( itemID )
-	{
-		case "perk_dodge_assistance":
-			// Stimulate as if the item got toggled off.
-			ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
-			break;		
+    switch( itemID )
+    {
+        case "perk_dodge_assistance":
+            // Stimulate as if the item got toggled off.
+            ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+            break;
 
-		case "perk_press_assistance":
-			// Stimulate as if the item got toggled off.
-			ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
-			break;
-	}
+        case "perk_press_assistance":
+            // Stimulate as if the item got toggled off.
+            ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+            break;
+    }
 }
 
-/** 
- * Called when an item becomes active either through possesing a Pawn, entering a Vehicle, or joing the game as a PlayerController. 
+/**
+ * Called when an item becomes active either through possesing a Pawn, entering a Vehicle, or joing the game as a PlayerController.
  * @other Actor the item is supposed to get applied to.
  */
 final function ItemActivated( Actor other, BTClient_ClientReplication CRI, string itemID )
 {
-	local LinkedReplicationInfo customRep;
+    local LinkedReplicationInfo customRep;
 
-	switch( itemID )
-	{
-		case "MNAFAccess":
-			for( customRep = Controller(other).PlayerReplicationInfo.CustomReplicationInfo; customRep != none; customRep = customRep.NextReplicationInfo )
-			{
-				if( customRep.IsA('MNAFLinkedRep') )
-				{
-					customRep.SetPropertyText( "bIsUnique", "1" );
-					break;
-				}
-			}
-			break;
+    switch( itemID )
+    {
+        case "MNAFAccess":
+            for( customRep = Controller(other).PlayerReplicationInfo.CustomReplicationInfo; customRep != none; customRep = customRep.NextReplicationInfo )
+            {
+                if( customRep.IsA('MNAFLinkedRep') )
+                {
+                    customRep.SetPropertyText( "bIsUnique", "1" );
+                    break;
+                }
+            }
+            break;
 
-		case "perks_dodge_assistance":
-			CRI.bAllowDodgePerk = true;
-			break;	
+        case "perks_dodge_assistance":
+            CRI.bAllowDodgePerk = true;
+            break;
 
-		case "perk_press_assistance":
-			CRI.bAutoPress = true;
-			break;
-	}
+        case "perk_press_assistance":
+            CRI.bAutoPress = true;
+            break;
+    }
 }
 
 final function ModifyPawn( Pawn other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( other, data, CRI, ETarget.T_Pawn );
+    ApplyOwnedItems( other, data, CRI, ETarget.T_Pawn );
 }
 
 final function ModifyVehicle( Pawn other, Vehicle v, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( v, data, CRI, ETarget.T_Vehicle );
+    ApplyOwnedItems( v, data, CRI, ETarget.T_Vehicle );
 }
 
 final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-	ApplyOwnedItems( other, data, CRI, ETarget.T_Player );
+    ApplyOwnedItems( other, data, CRI, ETarget.T_Player );
 }
 
 private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, BTClient_ClientReplication CRI, ETarget target )
 {
-	local int i, j, itemSlot, curType;
-	local bool bIsKnown;
-	local array<string> addedTypes;
-	local int playerSlot;
+    local int i, j, itemSlot, curType;
+    local bool bIsKnown;
+    local array<string> addedTypes;
+    local int playerSlot;
 
-	// data.BT.FullLog( "ApplyOwnedItems(" @ other @ CRI @ target @ ")" );
-	playerSlot = CRI.myPlayerSlot;
- 	j = data.Player[playerSlot].Inventory.BoughtItems.Length;
- 	for( i = 0; i < j; ++ i )
- 	{
- 		if( !data.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
- 		{
- 			continue;
- 		}
+    // data.BT.FullLog( "ApplyOwnedItems(" @ other @ CRI @ target @ ")" );
+    playerSlot = CRI.myPlayerSlot;
+    j = data.Player[playerSlot].Inventory.BoughtItems.Length;
+    for( i = 0; i < j; ++ i )
+    {
+        if( !data.Player[playerSlot].Inventory.BoughtItems[i].bEnabled )
+        {
+            continue;
+        }
 
-  		itemSlot = FindItemByID( data.Player[playerSlot].Inventory.BoughtItems[i].ID );
- 		if( itemSlot != -1 && Items[itemSlot].ApplyOn == target )
- 		{
- 			if( Items[itemSlot].Type != "" )
-			{
-	        	for( curType = 0; curType < addedTypes.Length; ++ curType )
-	        	{
-			  		if( addedTypes[curType] == Items[itemSlot].Type )
-			  		{
-						bIsKnown = true;
-			  			break;
-			  		}
-	        	}
+        itemSlot = FindItemByID( data.Player[playerSlot].Inventory.BoughtItems[i].ID );
+        if( itemSlot != -1 && Items[itemSlot].ApplyOn == target )
+        {
+            if( Items[itemSlot].Type != "" )
+            {
+                for( curType = 0; curType < addedTypes.Length; ++ curType )
+                {
+                    if( addedTypes[curType] == Items[itemSlot].Type )
+                    {
+                        bIsKnown = true;
+                        break;
+                    }
+                }
 
-	        	if( bIsKnown )
-	        	{
-	        		bIsKnown = false;
-	        		continue;
-	        	}
-	        	addedTypes[addedTypes.Length] = Items[itemSlot].Type;
-	        }
+                if( bIsKnown )
+                {
+                    bIsKnown = false;
+                    continue;
+                }
+                addedTypes[addedTypes.Length] = Items[itemSlot].Type;
+            }
 
-	        if( ActivateItem( other, itemSlot, playerSlot ) )
-	        {
-	        	ItemActivated( other, CRI, Items[itemSlot].ID );
-			}
-		}
-	}
+            if( ActivateItem( other, itemSlot, playerSlot ) )
+            {
+                ItemActivated( other, CRI, Items[itemSlot].ID );
+            }
+        }
+    }
 }
 
 private final function bool ActivateItem( Actor other, int itemSlot, int playerSlot )
 {
-	local class<Actor> itemClass;
-	local Actor itemObject;
+    local class<Actor> itemClass;
+    local Actor itemObject;
 
-	// Log( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
-	if( Items[itemSlot].ItemClass != "" )
-	{
-		if( Items[itemSlot].CachedClass == none )
-		{
-			Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Items[itemSlot].ItemClass, class'Class', true ));
-		}
-		
-		itemClass = Items[itemSlot].CachedClass;
-		if( itemClass == none )
-		{
-			Log( "Failed to load ItemClass" @ Items[itemSlot].ItemClass @ "for" @ Items[itemSlot].ID );
-			return false;
-		}
-		
-		// Apply the vars on the pawn's instance if the item's class equals the target(@other)
-		if( other.Class == itemClass || ClassIsChildOf( other.Class, itemClass ) )
-		{
-			itemObject = other;
-		}
-		else
-		{
-			itemObject = other.Spawn( itemClass, other,, other.Location, other.Rotation );
-			// Failed to spawn or it destroyed itself in BeginPlay.
-			if( itemObject == none )
-			{
-				return false;
-			}
-		}
-		ApplyVariablesOn( itemObject, Items[itemSlot].Vars );
-	}
-	return true;
+    // Log( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
+    if( Items[itemSlot].ItemClass != "" )
+    {
+        if( Items[itemSlot].CachedClass == none )
+        {
+            Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Items[itemSlot].ItemClass, class'Class', true ));
+        }
+
+        itemClass = Items[itemSlot].CachedClass;
+        if( itemClass == none )
+        {
+            Log( "Failed to load ItemClass" @ Items[itemSlot].ItemClass @ "for" @ Items[itemSlot].ID );
+            return false;
+        }
+
+        // Apply the vars on the pawn's instance if the item's class equals the target(@other)
+        if( other.Class == itemClass || ClassIsChildOf( other.Class, itemClass ) )
+        {
+            itemObject = other;
+        }
+        else
+        {
+            itemObject = other.Spawn( itemClass, other,, other.Location, other.Rotation );
+            // Failed to spawn or it destroyed itself in BeginPlay.
+            if( itemObject == none )
+            {
+                return false;
+            }
+        }
+        ApplyVariablesOn( itemObject, Items[itemSlot].Vars );
+    }
+    return true;
 }
 
 private final function ApplyVariablesOn( Actor other, array<string> variables )
 {
-	local array<string> s;
-	local int i;
-	
-	for( i = 0; i < variables.Length; ++ i )
-	{
-		Split( variables[i], ":", s );	
-		switch( Locs(s[0]) )
-		{
-			case "overlaymat":
-				other.SetOverlayMaterial( Material(DynamicLoadObject( s[1], class'Material', true )), 9999.00, true );
-				break;
-				
-			default:
-				other.SetPropertyText( s[0], s[1] );
-				break;
-		}	
-	}
+    local array<string> s;
+    local int i;
+
+    for( i = 0; i < variables.Length; ++ i )
+    {
+        Split( variables[i], ":", s );
+        switch( Locs(s[0]) )
+        {
+            case "overlaymat":
+                other.SetOverlayMaterial( Material(DynamicLoadObject( s[1], class'Material', true )), 9999.00, true );
+                break;
+
+            default:
+                other.SetPropertyText( s[0], s[1] );
+                break;
+        }
+    }
 }
 
 final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData data, int playerSlot, int itemSlot, out string msg )
 {
-	if( data.HasItem( playerSlot, Items[itemSlot].Id ) )
-	{
-		msg = "You already own" @ Items[itemSlot].Name;
-		return false;
-	}
-		   		
-	if( buyer.PlayerReplicationInfo.bAdmin || buyer.Level.NetMode == NM_Standalone )
-		return true;
-		
-	switch( Items[itemSlot].Access )
-	{
-		case Buy:	
-			if( !data.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
-			{
-				msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
-				return false;
-			}		
-			break;
-			
-		case Free:
-			break;
-			
-		case Admin:
-			msg = "Sorry" @ Items[itemSlot].Name @ "can only be given by admins!";
-			return false;
-			break;
-			
-		case Premium:
-			if( !data.Player[playerSlot].bHasPremium )
-			{
-				msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
-				return false;
-			}
-			break;
-			
-		case Private:
-			msg = "Sorry" @ Items[itemSlot].Name @ "is an exclusive item!";
-			return false;
-			break;
+    if( data.HasItem( playerSlot, Items[itemSlot].Id ) )
+    {
+        msg = "You already own" @ Items[itemSlot].Name;
+        return false;
+    }
 
-		case Drop:
-			msg = "Sorry" @ Items[itemSlot].Name @ "is drop only item!";
-			return false;
-			break;
-	}
-	return true;
+    if( buyer.PlayerReplicationInfo.bAdmin || buyer.Level.NetMode == NM_Standalone )
+        return true;
+
+    switch( Items[itemSlot].Access )
+    {
+        case Buy:
+            if( !data.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
+            {
+                msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
+                return false;
+            }
+            break;
+
+        case Free:
+            break;
+
+        case Admin:
+            msg = "Sorry" @ Items[itemSlot].Name @ "can only be given by admins!";
+            return false;
+            break;
+
+        case Premium:
+            if( !data.Player[playerSlot].bHasPremium )
+            {
+                msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
+                return false;
+            }
+            break;
+
+        case Private:
+            msg = "Sorry" @ Items[itemSlot].Name @ "is an exclusive item!";
+            return false;
+            break;
+
+        case Drop:
+            msg = "Sorry" @ Items[itemSlot].Name @ "is drop only item!";
+            return false;
+            break;
+    }
+    return true;
 }
 
 defaultproperties
 {
-	DefaultDropChance=0.25
+    DefaultDropChance=0.25
 
-	/** All items. */
-	Categories(0)=(Name="All")
+    /** All items. */
+    Categories(0)=(Name="All")
 
-	/** Any item with no type. */
-	Categories(1)=(Name="Other")
+    /** Any item with no type. */
+    Categories(1)=(Name="Other")
 
-	/** Any adminonly item. */
-	Categories(2)=(Name="Admin")
-	Categories(3)=(Name="Premium")
+    /** Any adminonly item. */
+    Categories(2)=(Name="Admin")
+    Categories(3)=(Name="Premium")
 
-	/** Any item type of Trailer. */
-	Categories(4)=(Name="Trailers",Types=("Trailer","FeetTrailer"))
+    /** Any item type of Trailer. */
+    Categories(4)=(Name="Trailers",Types=("Trailer","FeetTrailer"))
 
-	/** Any item that is an upgrade e.g. EXP boost etc. */
-	Categories(5)=(Name="Upgrades",Types=("UP_*"))
+    /** Any item that is an upgrade e.g. EXP boost etc. */
+    Categories(5)=(Name="Upgrades",Types=("UP_*"))
 
-	/** Any item that effects gameplay either practically or visually. */
-	Categories(6)=(Name="Perks",Types=("Perk_*"))
+    /** Any item that effects gameplay either practically or visually. */
+    Categories(6)=(Name="Perks",Types=("Perk_*"))
 
-	// Upgrades
-	Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
-	Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
+    // Upgrades
+    Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
+    Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
 
-	// Upgrades - Bonuses
-	Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
-	Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
-	Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-	Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
-	
-	// Player Skins
-	Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
-	Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
-	Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+    // Upgrades - Bonuses
+    Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
+    Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
+    Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
+    Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
 
-	// Player Perks
-	Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
-	Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
+    // Player Skins
+    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 
-	// Vehicle Skins
-	Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",itemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+    // Player Perks
+    Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
+    Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
+
+    // Vehicle Skins
+    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",itemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 }

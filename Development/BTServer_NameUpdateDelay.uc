@@ -10,15 +10,15 @@ Event PostBeginPlay();
 
 Event Timer()
 {
-	local int Slot;
+    local int Slot;
 
-	if( Client != None )
-	{
-		Slot = MutBestTimes(Owner).FastFindPlayerSlot( Client );
-		if( Slot > 0 )
-		{
-  			MutBestTimes(Owner).UpdatePlayerSlot( Client, Slot - 1, True );
-  		}
-  	}
-	Destroy();
+    if( Client != None )
+    {
+        Slot = MutBestTimes(Owner).FastFindPlayerSlot( Client );
+        if( Slot > 0 )
+        {
+            MutBestTimes(Owner).UpdatePlayerSlot( Client, Slot - 1, True );
+        }
+    }
+    Destroy();
 }

@@ -14,28 +14,28 @@ function ClientReset();
 
 function Reset()
 {
-	Super.Reset();
+    Super.Reset();
 
-	if( Pawn != None )
-	{
-		Pawn.SetCollision( False, False, False );
-	}
+    if( Pawn != None )
+    {
+        Pawn.SetCollision( False, False, False );
+    }
 }
 
 state GameEnded
 {
 ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
 
-	function BeginState()
-	{
-	}
+    function BeginState()
+    {
+    }
 }
 
 state RoundEnded
 {
 ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
 
-	function BeginState()
-	{
-	}
+    function BeginState()
+    {
+    }
 }

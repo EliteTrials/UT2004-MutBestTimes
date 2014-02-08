@@ -2,16 +2,16 @@ class BTAchievement_SirDicky extends Triggers;
 
 event Touch( Actor A )
 {
-	super.Touch( A );
+    super.Touch( A );
 
-	if( xPawn(A) == none )
-		return;
+    if( xPawn(A) == none )
+        return;
 
- 	MutBestTimes(Owner).ProcessSirDickyAchievement( Pawn(A) );
+    MutBestTimes(Owner).ProcessSirDickyAchievement( Pawn(A) );
 }
 
 defaultproperties
 {
-	CollisionHeight=64
-	CollisionRadius=64
+    CollisionHeight=64
+    CollisionRadius=64
 }
