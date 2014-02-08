@@ -93,7 +93,7 @@ function DrawItem(Canvas Canvas, int i, float X, float Y, float W, float H, bool
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		timeTxt, FontScale );    
+		timeTxt, FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,

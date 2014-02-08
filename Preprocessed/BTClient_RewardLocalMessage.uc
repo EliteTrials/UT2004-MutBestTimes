@@ -5,11 +5,11 @@ class BTClient_RewardLocalMessage extends BTClient_PremLocalMessage;
 
 defaultproperties
 {
-	Lifetime=10
+    Lifetime=10
 
-	DrawColor=(R=128,G=0,B=255,A=255)
-	FontSize=-1
+    DrawColor=(R=128,G=0,B=255,A=255)
+    FontSize=-1
 
-	StackMode=SM_Down
-	PosY=0.30
+    StackMode=SM_Down
+    PosY=0.30
 }

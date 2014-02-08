@@ -4,20 +4,20 @@ var int MoveIndex;
 
 replication
 {
-	reliable if( bNetInitial )
-		MoveIndex;
+    reliable if( bNetInitial )
+        MoveIndex;
 }
 
 defaultproperties
 {
-	RemoteRole=ROLE_DumbProxy
-	bStatic=false
-	bNoDelete=false
-	Texture=none
-	// bAlwaysRelevant=true
-	bReplicateMovement=true
+    RemoteRole=ROLE_DumbProxy
+    bStatic=false
+    bNoDelete=false
+    Texture=none
+    // bAlwaysRelevant=true
+    bReplicateMovement=true
 
-	NetUpdateFrequency=0.3
-	NetPriority=0.5
+    NetUpdateFrequency=0.3
+    NetPriority=0.5
 }
 

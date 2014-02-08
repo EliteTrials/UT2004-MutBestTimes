@@ -4,8 +4,8 @@ var() editinline BTClient_Menu MyMenu;
 
 event Free()
 {
-	MyMenu = none;
-	super.Free();
+    MyMenu = none;
+    super.Free();
 }
 
 function PostInitPanel()
@@ -14,10 +14,10 @@ function PostInitPanel()
 
 function ShowPanel( bool bShow )
 {
-	super.ShowPanel( bShow );
+    super.ShowPanel( bShow );
 
-	if( bShow && PlayerOwner().Level.NetMode == NM_Standalone )
-	{
-		PlayerOwner().SetPause( false );
-	}
+    if( bShow && PlayerOwner().Level.NetMode == NM_Standalone )
+    {
+        PlayerOwner().SetPause( false );
+    }
 }

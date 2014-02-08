@@ -7,35 +7,35 @@ class BTStore_ItemsMultiColumnListBox extends GUIMultiColumnListBox;
 
 function InitComponent( GUIController MyController, GUIComponent MyOwner )
 {
-	super(GUIListBoxBase).InitComponent( MyController, MyOwner );
+    super(GUIListBoxBase).InitComponent( MyController, MyOwner );
 }
 
 final function InitListClass( string listClass, BTClient_ClientReplication CRI )
 {
-	if( listClass == "" )
-	{
-		Warn( "No listClass Specified!" );
-		return;
-	}
+    if( listClass == "" )
+    {
+        Warn( "No listClass Specified!" );
+        return;
+    }
 
-	List = BTStore_ItemsMultiColumnList( AddComponent( listClass ) );
-	BTStore_ItemsMultiColumnList(List).CRI = CRI;
-	BTStore_ItemsMultiColumnList(List).UpdateList();
-	InitBaseList( List );
+    List = BTStore_ItemsMultiColumnList( AddComponent( listClass ) );
+    BTStore_ItemsMultiColumnList(List).CRI = CRI;
+    BTStore_ItemsMultiColumnList(List).UpdateList();
+    InitBaseList( List );
 
-	if( bFullHeightStyle )
-	{
-		List.Style = none;
-	}
+    if( bFullHeightStyle )
+    {
+        List.Style = none;
+    }
 }
 
 defaultproperties
 {
-	Begin Object Class=GUIContextMenu Name=oContextMenu
-		ContextItems(0)="Buy this item"
-		ContextItems(1)="Toggle this item"
-		ContextItems(2)="Sell this item"
-		//ContextItems(2)="Sell this item"
-	End Object
-	ContextMenu=oContextMenu
+    Begin Object Class=GUIContextMenu Name=oContextMenu
+        ContextItems(0)="Buy this item"
+        ContextItems(1)="Toggle this item"
+        ContextItems(2)="Sell this item"
+        //ContextItems(2)="Sell this item"
+    End Object
+    ContextMenu=oContextMenu
 }
