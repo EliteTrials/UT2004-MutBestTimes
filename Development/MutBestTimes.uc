@@ -7065,9 +7065,7 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
 final function CreateReplication( PlayerController PC, string SS, int Slot )
 {
     local BTClient_ClientReplication CR;
-    local int i, j, PacketNum;
-    local array<string> EventLines;
-    local string mapname;
+    local int i, PacketNum;
     local BTStatsReplicator RR;
 
     CR = GetRep( PC );
