@@ -1817,7 +1817,7 @@ final function RenderTables( Canvas C )
 {
     RenderRankingsTable( C );
 
-    if( MRI.bSoloMap ){
+    if( GetRecordsCount() > 0 ){
         RenderRecordsTable( C );
     }
 }
@@ -2885,10 +2885,6 @@ function DrawRecordWidget( Canvas C )
         if( !MRI.bSoloMap )
         {
             s = RecordTimeMsg $ " " $ FormatTime( MRI.MapBestTime );
-            if( MRI.PreviousBestTime > 0 )
-            {
-                s $= " / " $ FormatTime( MRI.PreviousBestTime );
-            }
             C.StrLen( s, width, height );
             width = FMax( width, minWidth );
             DrawElementTile( C, drawX - width, drawY, width, height );
@@ -2897,10 +2893,6 @@ function DrawRecordWidget( Canvas C )
             DrawElementText( C, drawX - width, drawY, s );
 
             s = FormatTime( MRI.MapBestTime );
-            if( MRI.PreviousBestTime > 0 )
-            {
-                s $= " / " $ FormatTime( MRI.PreviousBestTime );
-            }
             C.StrLen( s, xl, yl );
             C.DrawColor = Options.CGoldText;
             DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );

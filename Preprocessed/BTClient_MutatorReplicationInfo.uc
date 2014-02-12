@@ -19,7 +19,6 @@ var string
 
 var float
     MapBestTime,
-    PreviousBestTime,
     GhostPercent,
     ObjectiveTotalTime,
     MatchStartTime;
@@ -60,7 +59,7 @@ var float TeamTime[2];
 replication
 {
     reliable if( Role == ROLE_Authority )
-        PlayersBestTimes, MapBestTime, PreviousBestTime,
+        PlayersBestTimes, MapBestTime,
         RecordState, EndMsg, ObjectiveTotalTime,
         MaxMoves, SoloRecords, bCompetitiveMode;
 
@@ -158,7 +157,6 @@ function SetBestTime( float NewTime )
         return;
     }
 
-    PreviousBestTime = MapBestTime;
     MapBestTime = NewTime;
 }
 
