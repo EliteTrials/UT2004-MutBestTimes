@@ -17,10 +17,29 @@ const RMovCode = 3;
 
 var() globalconfig string Host;
 var() globalconfig string SecurityHash;
+var() globalconfig bool bStripNameColors;
 
 var protected HttpSock Socket;
 
 var protected array<string> Params;
+
+/** Strips all color tags from A. */
+static final preoperator string %( string A )
+{
+    local int i;
+
+    while( true )
+    {
+        i = InStr( A, Chr( 0x1B ) );
+        if( i != -1 )
+        {
+            A = Left( A, i ) $ Mid( A, i + 4 );
+            continue;
+        }
+        break;
+    }
+    return A;
+}
 
 final function AddParam( coerce string Option, coerce string Value )
 {
@@ -69,29 +88,8 @@ function NotifyRecordSet( int playerSlot, float newTime )
     AddParam( TrialMapName, RDat.Rec[UsedSlot].TMN );
     AddParam( TrialMapTime, newTime );                              // in float i.e. 61323.74
     //class'HttpUtil'.static.ReplaceChar( PDat.Player[playerSlot-1].PLNAME, "&", "&amp;");
-    AddParam( TrialPlayerName, PDat.Player[playerSlot-1].PLNAME );
+    AddParam( TrialPlayerName, Eval( bStripNameColors, %PDat.Player[playerSlot-1].PLNAME, PDat.Player[playerSlot-1].PLNAME ) );
     AddParam( TrialPlayerGUID, PDat.Player[playerSlot-1].PLID );
-    Send();
-}
-
-/** Notify that a regular record was set/updated. */
-function NotifyRegularRecordSet( int playerSlot[4], float newTime )
-{
-    local int i;
-
-    SetCode( RSetCode );
-    AddParam( TrialMode, CurMode.ModePrefix );                      // STR, GTR, RTR
-    AddParam( TrialMapName, RDat.Rec[UsedSlot].TMN );
-    AddParam( TrialMapTime, newTime );                              // in float i.e. 61323.74
-
-    for( i = 0; i < 4; ++ i )
-    {
-        if( playerSlot[i] > 0 )
-        {
-            AddParam( TrialPlayerName $ i, PDat.Player[playerSlot[i]-1].PLNAME );
-            AddParam( TrialPlayerGUID $ i, PDat.Player[playerSlot[i]-1].PLID );
-        }
-    }
     Send();
 }
 
