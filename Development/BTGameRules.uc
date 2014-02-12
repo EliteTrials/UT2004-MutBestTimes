@@ -57,8 +57,6 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
                 Injureds.Length = 0;
                 LastHitsBy.Length = 0;
             }
-            // Note the time this objective was completed in.
-            BT.AddObjectiveTime( BT.AssaultGame.LastDisabledObjective );
         }
         // Double the score reward but cap to 10 incase the Level Designer did input a ridiculous number!
         Scorer.Score += Min( Score, 10 );
