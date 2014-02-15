@@ -291,7 +291,9 @@ var() globalconfig
     bSavePreviousGhost,
     bAddGhostTimerPaths,
     bAllowCompetitiveMode,
-    bDontEndGameOnRecord;
+    bDontEndGameOnRecord,
+    bDisableWeaponBoosting,
+    bEnableInstigatorEmpathy;
 
 var() globalconfig
     string
@@ -7882,6 +7884,12 @@ DefaultProperties
     ConfigurableProperties(21)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
     ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
     ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
-    ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Remove PlayerStart Locking",Weight=1,Hint="If Checked: BTimes will no longer force everyone to be spawned on one PlayerStart location.")
+    ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
     ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+
+    bDisableWeaponBoosting=true
+    ConfigurableProperties(26)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
+
+    bEnableInstigatorEmpathy=true
+    ConfigurableProperties(27)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
 }
