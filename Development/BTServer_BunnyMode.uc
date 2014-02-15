@@ -1,5 +1,7 @@
 //=============================================================================
 // Copyright 2005-2012 Eliot Van Uytfanghe. All Rights Reserved.
+// GameInfo.bPlayersMustBeReady is recommended for this game.
+// Do not enable Translocators.
 //=============================================================================
 class BTServer_BunnyMode extends BTServer_TrialMode;
 
@@ -13,6 +15,8 @@ protected function InitializeMode()
     super.InitializeMode();
     bSoloMap = true;
     MRI.bSoloMap = true;
+
+    CTFGame(Level.Game).bDefaultTranslocator = false;
 }
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )

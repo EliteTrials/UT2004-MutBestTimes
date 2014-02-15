@@ -6,6 +6,8 @@ var CTFFlag ResemblantFlag;
 
 var class<CTFFlag> TeamFlagClasses[2];
 
+var localized string ClientSpawnWarningMessage;
+
 event PostBeginPlay()
 {
     super.PostBeginPlay();
@@ -36,13 +38,11 @@ event Touch( Actor other )
     if( CRI == none )
         return;
 
-    if( pawn.LastStartSpot.IsA( 'BTServer_ClientStartPoint' ) )
+    if( BT.IsClientSpawnPlayer( pawn ) )
     {
-        PC.ClientMessage( "You cannot cap flags. Please turn off ClientSpawn and suicide!" );
+        PC.ClientMessage( ClientSpawnWarningMessage );
         return;
     }
-
-    Level.Game.Broadcast( self, "Flag touched!" );
 
     flag = HasFlag( pawn.PlayerReplicationInfo );
     if( flag != none )
@@ -102,4 +102,6 @@ defaultproperties
     bStatic=false
     bHidden=true
     bCollideActors=true
+
+    ClientSpawnWarningMessage="You cannot cap flags. Please turn off ClientSpawn and suicide!"
 }

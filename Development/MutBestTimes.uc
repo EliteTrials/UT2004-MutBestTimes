@@ -496,6 +496,11 @@ final function bool IsTrials()
     return ASGameInfo(Level.Game) != none;
 }
 
+final function bool IsClientSpawnPlayer( Pawn player )
+{
+    return player.LastStartSpot != none && player.LastStartSpot.IsA( ClientStartPointClass.Name );
+}
+
 final function NotifyObjectiveAccomplished( PlayerController PC, float score )
 {
     local int playerSlot;
@@ -506,7 +511,7 @@ final function NotifyObjectiveAccomplished( PlayerController PC, float score )
         return;
 
     playerSlot = CRI.myPlayerSlot;
-    if( playerSlot != -1 && (PC.Pawn != none && !PC.Pawn.LastStartSpot.IsA( ClientStartPointClass.Name )) )
+    if( playerSlot != -1 && (PC.Pawn != none && !IsClientSpawnPlayer( PC.Pawn )) )
     {
         ++ PDat.Player[playerSlot].PLObjectives;
         if( PDat.Player[playerSlot].PLObjectives >= 10000 )
@@ -1116,7 +1121,7 @@ function ModifyPlayer( Pawn Other )
                     CheckPointHandler.RestoreStats( Other, CheckPointIndex );
                 }
             }
-            else if( !Other.LastStartSpot.IsA( ClientStartPointClass.Name ) )
+            else if( !IsClientSpawnPlayer( Other ) )
             {
                 // Start timer
                 CRI.PlayerSpawned();
@@ -4736,7 +4741,7 @@ function Trigger( Actor Other, Pawn EventInstigator )
     if( IsTrials() )
     {
         // Extra protection against 'Client Spawn' players using/touching a objective
-        if( !bClientSpawnPlayersCanCompleteMap && EventInstigator.LastStartSpot.IsA( ClientStartPointClass.Name ) )
+        if( !bClientSpawnPlayersCanCompleteMap && IsClientSpawnPlayer( EventInstigator ) )
         {
             EventInstigator.Destroy();
 
