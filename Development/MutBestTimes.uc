@@ -5066,7 +5066,14 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     ++ PDat.Player[PLs - 1].PLSF;               // Amount of times this user finished a solo map.
     ++ RDat.Rec[UsedSlot].TMFinish;
 
-    numObjectives = GetPlayerObjectives( PC );
+    if( bSoloMap && !bKeyMap && !bGroupMap )
+    {
+        numObjectives = 1;
+    }
+    else
+    {
+        numObjectives = GetPlayerObjectives( PC );
+    }
     CurMode.PlayerCompletedMap( PC, PLs-1, CurrentPlaySeconds );
     j = RDat.Rec[UsedSlot].PSRL.Length;
     if( j > 0 )
