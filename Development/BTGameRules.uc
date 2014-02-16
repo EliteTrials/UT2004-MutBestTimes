@@ -158,7 +158,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
             if( PlayerController(Killed.Controller).Player == None )
                 return False;
 
-            if( (!BT.IsCompetitive() && Killed.GetTeamNum() != BTimesMute(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
+            if( (!BT.IsCompetitiveModeActive() && Killed.GetTeamNum() != BTimesMute(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
                 return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
             C = Killed.Controller;
@@ -272,7 +272,7 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
         {
             if( BT.bEnableInstigatorEmpathy && Instigatedby.GetTeam() != injured.GetTeam() )
             {
-                if( !BT.IsCompetitive() )
+                if( !BT.IsCompetitiveModeActive() )
                 {
                     instigatedBy.TakeDamage( Damage, instigatedBy, HitLocation, vect(0,0,0), damageType );
                 }

@@ -3299,11 +3299,11 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             break;
 
         case "competitivemode":
-            if( IsCompetitive() )
+            if( IsCompetitiveModeActive() )
             {
                 break;
             }
-            EnableCompetitiveMode();
+            ActivateCompetitiveMode();
             break;
 
         case "setmaxrankedplayers":
@@ -4290,23 +4290,22 @@ final function bool EnableCompetitiveMode()
         return false;
     }
 
-    if( AssaultGame.Teams[0].Size < 4 )
+    if( AssaultGame.Teams[0].Size + AssaultGame.Teams[1].Size < 4 )
     {
         Level.Game.Broadcast( self, "CompetitiveMode denied! Need more than 3 players!" );
         return false;
     }
 
-    MRI.bCompetitiveMode = true;
-
     ActivateCompetitiveMode();
     return true;
 }
 
-final function ActivateCompetitiveMode()
+private function ActivateCompetitiveMode()
 {
     local Mutator m;
 
-    FullLog( "BTimes CompetitiveMode is enabled!" );
+    MRI.bCompetitiveMode = true;
+    FullLog( "CompetitiveMode has started!" );
 
     // Restore the team related sounds
     AssaultGame.DrawGameSound = AssaultGame.default.DrawGameSound;
@@ -4337,9 +4336,9 @@ final function bool AllowCompetitiveMode()
 }
 
 /** Returns TRUE if the Competitive Mode is active, FALSE if not. */
-final function bool IsCompetitive()
+final function bool IsCompetitiveModeActive()
 {
-    return MRI.bCompetitiveMode && (bSoloMap && !bGroupMap);
+    return MRI.bCompetitiveMode;
 }
 
 final function KillAllPawns( optional bool bSkipState )
@@ -4526,7 +4525,7 @@ function MatchStarting()
         {
             SetMatchStartingTime( Level.TimeSeconds );
             SetClientMatchStartingTime();
-            if( !IsCompetitive() )
+            if( !IsCompetitiveModeActive() )
             {
                 if( (bEnhancedTime || bSoloMap) && BestPlaySeconds != -1 && Level.NetMode != NM_StandAlone )
                 {
@@ -4714,7 +4713,7 @@ function NotifyGameEnd( Actor other, Pawn eventInstigator )
     //  Round ended due time or the player was an idiot!
     //}
     FullLog("BT::NotifyGameEnd" @ other @ eventInstigator );
-    if( IsCompetitive() && !AssaultGame.IsPracticeRound() )
+    if( IsCompetitiveModeActive() && !AssaultGame.IsPracticeRound() )
     {
         FullLog( "* Round ended! *" );
         RewardWinningTeam();

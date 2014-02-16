@@ -208,7 +208,7 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
         return;
     }
 
-    if( IsCompetitive() )
+    if( IsCompetitiveModeActive() )
     {
         TeamFinishedMap( player );
     }

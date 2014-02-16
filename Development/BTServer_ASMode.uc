@@ -74,7 +74,7 @@ function ModeReset()
         // Reset!
         //ObjCompT = RDat.Rec[UsedSlot].ObjCompT;
 
-        if( IsCompetitive() )
+        if( IsCompetitiveModeActive() )
         {
             MRI.TeamTime[0] = 0.0f;
             MRI.TeamTime[1] = 0.0f;
