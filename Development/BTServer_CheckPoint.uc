@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_CheckPoint extends Actor
+class BTServer_CheckPoint extends Info
     notplaceable;
 
 struct sCheckPoint
@@ -20,7 +20,7 @@ struct sPawnStats
     var int Health;
     var int Shield;
 
-    var array< Class<Weapon> > Weapons;
+    var array< class<Weapon> > Weapons;
     var array<string> Keys;
 
     var vector Location;
@@ -41,36 +41,36 @@ struct sSavedCheckPoint
 var array<sSavedCheckPoint> SavedCheckPoints; // In-Use CheckPoints
 
 // Don't need to call CheckReplacement.
-Event PreBeginPlay();
+event PreBeginPlay();
 
 // Must change Tag on Run-Time!
-Event PostBeginPlay()
+event PostBeginPlay()
 {
     Tag = 'BTimes_SoloCheckPointVolume';
 }
 
-Function Reset()
+function Reset()
 {
     Super.Reset();
     SavedCheckPoints.Length = 0;
 }
 
-Final Function bool CheckPointMade( Actor Other, optional out int SlotIndex )
+final function bool CheckPointMade( Actor other, optional out int slotIndex )
 {
-    local int CurCP;
+    local int i;
 
-    for( CurCP = 0; CurCP < CheckPoints.Length; ++ CurCP )
+    for( i = 0; i < CheckPoints.Length; ++ i )
     {
-        if( CheckPoints[CurCP].CheckPointActor == Other )
+        if( CheckPoints[i].CheckPointActor == other )
         {
-            SlotIndex = CurCP;
-            return True;
+            slotIndex = i;
+            return true;
         }
     }
-    return False;
+    return false;
 }
 
-Final Function AddCheckPointLocation( Actor Other )
+final function AddCheckPointLocation( Actor other )
 {
     local int j;
     local Rotator destRotation;
@@ -80,7 +80,7 @@ Final Function AddCheckPointLocation( Actor Other )
     j = CheckPoints.Length;
     CheckPoints.Length = j + 1;
 
-    remoteLocation = Volume(Other);
+    remoteLocation = Volume(other);
     if( remoteLocation != none && remoteLocation.AssociatedActor != none )
     {
         destRotation = remoteLocation.AssociatedActor.Rotation;
@@ -88,8 +88,8 @@ Final Function AddCheckPointLocation( Actor Other )
     }
     else
     {
-        destRotation = Other.Rotation;
-        destLocation = Other.Location;
+        destRotation = other.Rotation;
+        destLocation = other.Location;
     }
     CheckPoints[j].Location = Spawn( class'BTServer_CheckPointNavigation', Other,, destLocation, destRotation );
     if( CheckPoints[j].Location == none )
@@ -102,11 +102,11 @@ Final Function AddCheckPointLocation( Actor Other )
 }
 
 // Someone enetered a CheckPoint!
-Function Trigger( Actor Other, Pawn Player )
+function Trigger( Actor Other, Pawn Player )
 {
     local int SlotIndex;
 
-    if( Player != None && Player.Controller != None )
+    if( Player != none && Player.Controller != none )
     {
         // Look if the checkpoint location is created!
         if( !CheckPointMade( Other ) )
@@ -133,9 +133,7 @@ Function Trigger( Actor Other, Pawn Player )
                 // Update!
                 SavedCheckPoints[SlotIndex].CheckPointActor = Other;
                 SavedCheckPoints[SlotIndex].CheckPointSetTime = Level.TimeSeconds;
-
-                SaveStatsFor( Player, SlotIndex );
-
+                CapturePlayerState( Player, SavedCheckPoints[SlotIndex].CheckPointActor, SavedCheckPoints[SlotIndex].SavedStats );
                 MutBestTimes(Owner).NotifyCheckPointChange( Player.Controller );
             }
             return;
@@ -146,111 +144,70 @@ Function Trigger( Actor Other, Pawn Player )
 
             // Create a checkpoint for this player
             AddSavedCheckPoint( Player.Controller, Other );
-
             MutBestTimes(Owner).NotifyCheckPointChange( Player.Controller );
             return;
         }
     }
 }
 
-Final Function bool HasSavedCheckPoint( Controller C, optional out int SlotIndex )
+final function bool HasSavedCheckPoint( Controller player, optional out int slotIndex )
 {
-    local int CurCP;
+    local int i;
 
-    for( CurCP = 0; CurCP < SavedCheckPoints.Length; ++ CurCP )
+    for( i = 0; i < SavedCheckPoints.Length; ++ i )
     {
-        if( SavedCheckPoints[CurCP].Owner == C && (SavedCheckPoints[CurCP].TeamIndex == -1 || (C.PlayerReplicationInfo.Team != none && SavedCheckPoints[CurCP].TeamIndex == C.PlayerReplicationInfo.Team.TeamIndex)) )
+        if( SavedCheckPoints[i].Owner == player && (SavedCheckPoints[i].TeamIndex == -1 || (player.PlayerReplicationInfo.Team != none && SavedCheckPoints[i].TeamIndex == player.PlayerReplicationInfo.Team.TeamIndex)) )
         {
-            SlotIndex = CurCP;
-            return True;
+            slotIndex = i;
+            return true;
         }
     }
-    return False;
+    return false;
 }
 
-Final Function AddSavedCheckPoint( Controller C, Actor Other )
+final function AddSavedCheckPoint( Controller player, Actor Other )
 {
     local int j;
 
     j = SavedCheckPoints.Length;
     SavedCheckPoints.Length = j + 1;
-    SavedCheckPoints[j].Owner = C;
+    SavedCheckPoints[j].Owner = player;
     SavedCheckPoints[j].CheckPointSetTime = Level.TimeSeconds;
     SavedCheckPoints[j].CheckPointActor = Other;
-    if( C.PlayerReplicationInfo.Team != none )
+    if( player.PlayerReplicationInfo.Team != none )
     {
-        SavedCheckPoints[j].TeamIndex = C.PlayerReplicationInfo.Team.TeamIndex;
+        SavedCheckPoints[j].TeamIndex = player.PlayerReplicationInfo.Team.TeamIndex;
     }
     else
     {
         SavedCheckPoints[j].TeamIndex = -1;
     }
-    SaveStatsFor( C.Pawn, j );
+    CapturePlayerState( player.Pawn, SavedCheckPoints[j].CheckPointActor, SavedCheckPoints[j].SavedStats );
 }
 
-Final Function SaveStatsFor( Pawn Other, int SlotIndex )
-{
-    local Inventory Inv;
-    local Volume remoteLocation;
-
-    SavedCheckPoints[SlotIndex].SavedStats.Health = Other.Health;
-    SavedCheckPoints[SlotIndex].SavedStats.Shield = Other.ShieldStrength;
-
-    SavedCheckPoints[SlotIndex].SavedStats.Weapons.Length = 0;
-    SavedCheckPoints[SlotIndex].SavedStats.Keys.Length = 0;
-
-    for( Inv = Other.Inventory; Inv != None; Inv = Inv.Inventory )
-    {
-        if( Inv.IsA('Weapon') )
-        {
-            SavedCheckPoints[SlotIndex].SavedStats.Weapons[SavedCheckPoints[SlotIndex].SavedStats.Weapons.Length] = Weapon(Inv).Class;
-        }
-        else if( Inv.IsA('LCAKeyInventory') || Inv.IsA('LCA_KeyInventory') )
-        {
-            if( KeyClass == none )
-            {
-                KeyClass = Inv.Class;
-            }
-            SavedCheckPoints[SlotIndex].SavedStats.Keys[SavedCheckPoints[SlotIndex].SavedStats.Keys.Length] = Inv.GetPropertyText( "KeyName" );
-        }
-    }
-
-    remoteLocation = Volume(SavedCheckPoints[SlotIndex].CheckPointActor);
-    if( remoteLocation != none && remoteLocation.AssociatedActor != none )
-    {
-        SavedCheckPoints[SlotIndex].SavedStats.Rotation = remoteLocation.AssociatedActor.Rotation;
-        SavedCheckPoints[SlotIndex].SavedStats.Location = remoteLocation.AssociatedActor.Location;
-    }
-    else
-    {
-        SavedCheckPoints[SlotIndex].SavedStats.Rotation = Other.Rotation;
-        SavedCheckPoints[SlotIndex].SavedStats.Location = Other.Location;
-    }
-}
-
-Final Function RemoveSavedCheckPoint( Controller C )
+final function RemoveSavedCheckPoint( Controller player )
 {
     local int SlotIndex;
 
-    if( HasSavedCheckPoint( C, SlotIndex ) )
+    if( HasSavedCheckPoint( player, SlotIndex ) )
     {
         SavedCheckPoints.Remove( SlotIndex, 1 );
     }
 }
 
 // Check if user has made a checkpoint, if so then spawn him there, this is called by BTServer_GameRules!
-Final Function NavigationPoint FindCheckPointStart( Controller Player )
+final function NavigationPoint FindCheckPointStart( Controller player )
 {
     local int SlotIndex, CheckPointIndex;
 
-    if( HasSavedCheckPoint( Player, SlotIndex ) )
+    if( HasSavedCheckPoint( player, SlotIndex ) )
     {
         if( CheckPointMade( SavedCheckPoints[SlotIndex].CheckPointActor, CheckPointIndex ) )
         {
             if( CheckPoints[CheckPointIndex].CheckPointUses > 0 && SavedCheckPoints[SlotIndex].Used >= CheckPoints[CheckPointIndex].CheckPointUses )
             {
-                RemoveSavedCheckPoint( Player );
-                return None;
+                RemoveSavedCheckPoint( player );
+                return none;
             }
             else
             {
@@ -265,54 +222,79 @@ Final Function NavigationPoint FindCheckPointStart( Controller Player )
                 }
                 else
                 {
-                    Log( "Error failed to spawn player" @ Player.GetHumanReadableName() @ "on checkpoint" @ SavedCheckPoints[SlotIndex].CheckPointActor @ "due invalid location", Name );
+                    Log( "Error failed to spawn player" @ player.GetHumanReadableName() @ "on checkpoint" @ SavedCheckPoints[SlotIndex].CheckPointActor @ "due invalid location", Name );
                 }
             }
         }
     }
-    return None;
+    return none;
 }
 
-Final Function RestoreStats( Pawn Other, int SlotIndex )
+static function CapturePlayerState( Pawn player, Actor destination, out sPawnStats stats )
 {
-    local bool b;
-    local int CurWeap, NumWeaps;
-    local class<Weapon> WeapClass;
-    local inventory Key;
+    local Inventory inv;
+    local Volume remoteLocation;
 
-    Other.Health = SavedCheckPoints[SlotIndex].SavedStats.Health;
-    Other.ShieldStrength = SavedCheckPoints[SlotIndex].SavedStats.Shield;
+    stats.Health = player.Health;
+    stats.Shield = player.ShieldStrength;
+    stats.Weapons.Length = 0;
+    stats.Keys.Length = 0;
 
-    NumWeaps = SavedCheckPoints[SlotIndex].SavedStats.Weapons.Length;
-    for( CurWeap = 0; CurWeap < NumWeaps; ++ CurWeap )
+    for( inv = player.Inventory; inv != none; inv = inv.Inventory )
     {
-        // Reference shortcut
-        WeapClass = SavedCheckPoints[SlotIndex].SavedStats.Weapons[CurWeap];
-
-        // Backup
-        b = WeapClass.Default.bCanThrow;
-        WeapClass.Default.bCanThrow = False;
-
-        Other.GiveWeapon( string( WeapClass ) );
-
-        // Restore
-        WeapClass.Default.bCanThrow = b;
-    }
-
-    if( KeyClass != None )
-    {
-        NumWeaps = SavedCheckPoints[SlotIndex].SavedStats.Keys.Length;
-        for( CurWeap = 0; CurWeap < NumWeaps; ++ CurWeap )
+        if( inv.IsA('Weapon') )
         {
-            Key = Spawn( KeyClass, Other );
-            Key.SetPropertyText( "KeyName", SavedCheckPoints[SlotIndex].SavedStats.Keys[CurWeap] );
-            Other.AddInventory( Key );
+            stats.Weapons[stats.Weapons.Length] = Weapon(inv).Class;
+        }
+        else if( inv.IsA('LCAKeyInventory') || inv.IsA('LCA_KeyInventory') )
+        {
+            if( default.KeyClass == none )
+            {
+                default.KeyClass = inv.Class;
+            }
+            stats.Keys[stats.Keys.Length] = inv.GetPropertyText( "KeyName" );
         }
     }
+
+    remoteLocation = Volume(destination);
+    if( remoteLocation != none && remoteLocation.AssociatedActor != none )
+    {
+        stats.Rotation = remoteLocation.AssociatedActor.Rotation;
+        stats.Location = remoteLocation.AssociatedActor.Location;
+    }
+    else
+    {
+        stats.Rotation = player.Rotation;
+        stats.Location = player.Location;
+    }
 }
 
-DefaultProperties
+static function ApplyPlayerState( Pawn other, out sPawnStats stats )
 {
-    bStatic=False
-    bNoDelete=False
+    local bool couldThrow;
+    local int i;
+    local class<Weapon> weaponClass;
+    local inventory savedKey;
+
+    other.Health = Max( stats.Health, 1 );
+    other.ShieldStrength = stats.Shield;
+
+    for( i = 0; i < stats.Weapons.Length; ++ i )
+    {
+        weaponClass = stats.Weapons[i];
+        couldThrow = weaponClass.Default.bCanThrow;
+        weaponClass.Default.bCanThrow = false;
+            other.GiveWeapon( string( weaponClass ) );
+        weaponClass.Default.bCanThrow = couldThrow;
+    }
+
+    if( default.KeyClass != none )
+    {
+        for( i = 0; i < stats.Keys.Length; ++ i )
+        {
+            savedKey = other.Spawn( default.KeyClass, other );
+            savedKey.SetPropertyText( "KeyName", stats.Keys[i] );
+            other.AddInventory( savedKey );
+        }
+    }
 }

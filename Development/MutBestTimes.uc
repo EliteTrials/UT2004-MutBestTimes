@@ -8,7 +8,8 @@ class MutBestTimes extends Mutator
     dependson(BTServer_RecordsData)
     dependson(BTAchievements)
     dependson(BTChallenges)
-    dependson(BTActivateKey);
+    dependson(BTActivateKey)
+    dependson(BTServer_CheckPoint);
 
 #exec obj load file="..\System\TrialGroup.u"
 // #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
@@ -92,19 +93,14 @@ struct KeepScoreSE                                                              
 
 struct sClientSpawn                                                             // structure holding a player his own playerstart
 {
-    var int TeamIndex;
-    var int
-        PHealth,
-        PShield;
-
     var BTServer_ClientStartPoint
         PStart;
 
-    var array< class<Weapon> >
-        PWeapons;
-
+    var int TeamIndex;
     var PlayerController
         PC;
+
+    var BTServer_CheckPoint.sPawnStats SavedStats;
 };
 
 struct sCmdInfo
@@ -1118,10 +1114,11 @@ function ModifyPlayer( Pawn Other )
                  */
                 if( CheckPointHandler.HasSavedCheckPoint( Other.Controller, CheckPointIndex ) )
                 {
-                    CheckPointHandler.RestoreStats( Other, CheckPointIndex );
+                    CheckPointHandler.ApplyPlayerState( Other, CheckPointHandler.SavedCheckPoints[CheckPointIndex].SavedStats );
                 }
             }
-            else if( !IsClientSpawnPlayer( Other ) )
+            // Check if a clientspawn is registered, not if we spawned on one, because we don't want to reset the time if a player switches team while having a clientspawn!
+            else if( GetClientSpawnIndex( Other.Controller ) == -1 /**!IsClientSpawnPlayer( Other )*/ )
             {
                 // Start timer
                 CRI.PlayerSpawned();
@@ -1199,13 +1196,6 @@ function ModifyPlayer( Pawn Other )
 
     if( ModeIsTrials() )
     {
-        // Keys are lost after a dead!, except not if your're using a CheckPoint!
-        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
-        {
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
-        }
-
         if( bAllowClientSpawn )
         {
             //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
@@ -1220,7 +1210,15 @@ function ModifyPlayer( Pawn Other )
                     // No family
                     PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'holiday_0' );
                 }
+                return; // Don't reset objectives (see below)
             }
+        }
+
+        // Keys are lost after a dead!, except not if your're using a CheckPoint!
+        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
+        {
+            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
+            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
         }
     }
 }
@@ -4059,7 +4057,6 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
     local int i, j;
     local vector v;
     local float d;
-    local Inventory Inv;
 
     // Secure code...
     j = Objectives.Length;
@@ -4117,21 +4114,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
                     return;
                 }
                 ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
-                ClientPlayerStarts[i].PHealth = Sender.Pawn.Health;
-                ClientPlayerStarts[i].PShield = Sender.Pawn.ShieldStrength;
-
-                ClientPlayerStarts[i].PWeapons.Length = 0;
-                for( Inv = Sender.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
-                {
-                    if( Weapon(Inv) != None )
-                    {
-                        j = ClientPlayerStarts[i].PWeapons.Length;
-                        ClientPlayerStarts[i].PWeapons.Length = j + 1;
-                        ClientPlayerStarts[i].PWeapons[j] = Weapon(Inv).Class;
-                        continue;
-                    }
-                }
-
+                CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[i].SavedStats );
                 SendSucceedMessage( Sender, lzCS_Set );
                 return;
             }
@@ -4148,20 +4131,8 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
         ClientPlayerStarts.Remove( j, 1 );
         return;
     }
-    ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
-    ClientPlayerStarts[j].PHealth = Sender.Pawn.Health;
-    ClientPlayerStarts[j].PShield = Sender.Pawn.ShieldStrength;
-
-    for( Inv = Sender.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
-    {
-        if( Weapon(Inv) != None )
-        {
-            i = ClientPlayerStarts[j].PWeapons.Length;
-            ClientPlayerStarts[j].PWeapons.Length = i + 1;
-            ClientPlayerStarts[j].PWeapons[i] = Weapon(Inv).Class;
-            continue;
-        }
-    }
+    ClientPlayerStarts[j].TeamIndex = Sender.Pawn.GetTeamNum();
+    CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[j].SavedStats );
 
     if( bClientSpawnPlayersCanCompleteMap )
     {
@@ -4229,44 +4200,27 @@ final function FindClientSpawn( Controller C, out NavigationPoint S )
     }
 }
 
-final function PimpClientSpawn( int index, Pawn Other )
+final function PimpClientSpawn( int index, Pawn other )
 {
-    local int i, j;
     local BTServer_ClientSpawnInfo CS;
-    local bool b;
 
     if( ClientPlayerStarts[index].PStart == None )
     {
         return;
     }
 
-    Other.Health = ClientPlayerStarts[index].PHealth;
-    Other.ShieldStrength = ClientPlayerStarts[index].PShield;
-
+    CheckPointHandlerClass.static.ApplyPlayerState( other, ClientPlayerStarts[index].SavedStats );
     if( !bClientSpawnPlayersCanCompleteMap )
     {
-        Other.bCanUse = false;                                  // Cannot use Actors
-        Other.SetCollision( true, false, false );               // Cannot Block
-        Other.bBlockZeroExtentTraces = false;                   // Cannot Block
-        Other.bBlockNonZeroExtentTraces = false;                // Cannot Block
+        other.bCanUse = false;                                  // Cannot use Actors
+        other.SetCollision( true, false, false );               // Cannot Block
+        other.bBlockZeroExtentTraces = false;                   // Cannot Block
+        other.bBlockNonZeroExtentTraces = false;                // Cannot Block
 
         // Avoid this user from touching any objectives!.
-        CS = Spawn( Class'BTServer_ClientSpawnInfo', Other );
+        CS = Spawn( class'BTServer_ClientSpawnInfo', other );
         if( CS != none )
             CS.M = self;
-    }
-
-    j = ClientPlayerStarts[index].PWeapons.Length;
-    for( i = 0; i < j; ++ i )
-    {
-        // Make sure given weapons cannot be thrown!
-        b = ClientPlayerStarts[index].PWeapons[i].default.bCanThrow;
-        ClientPlayerStarts[index].PWeapons[i].default.bCanThrow = false;
-
-        Other.GiveWeapon( string(ClientPlayerStarts[index].PWeapons[i]) );
-
-        // And make sure that the original condition is restored...
-        ClientPlayerStarts[index].PWeapons[i].default.bCanThrow = b;
     }
 }
 
