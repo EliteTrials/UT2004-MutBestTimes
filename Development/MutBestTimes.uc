@@ -24,16 +24,11 @@ class MutBestTimes extends Mutator
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
 const BTVersion                         = "4.0.0.0";
-const MaxPlayers                        = 3;                                    // Note: Setting this higher than 4 will cause the extra players to not receive any points for the record!.
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
 const MaxHistoryLength                  = 25;
 const MaxRecentMaps                     = 20;
-const BTCredits                         = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";     // copyright
 const BTAuthor                          = "2e216ede3cf7a275764b04b5ccdd005d";   // Author guid, gives access to some admin commands...
-
-// Points Related.
-const PointsPerObjective                = 0.25f;
 
 const EXP_ImprovedRecord                = 25;
 const EXP_FirstRecord                   = 40;
@@ -309,6 +304,10 @@ var() globalconfig
     MinExchangeableTrophies,
     MaxExchangeableTrophies,
     DaysCountToConsiderPlayerInactive;
+
+var() globalconfig
+    float
+    PointsPerObjective;
 
 var() globalconfig
     name
@@ -1283,7 +1282,7 @@ event PreBeginPlay()
     local GameObjective Obj;
 
     FullLog( "====================================" );
-    FullLog( string(Name) @ BTVersion @ BTCredits );
+    FullLog( string(Name) @ BTVersion @ META_DECOMPILER_VAR_COPYRIGHT );
     // Make sure 'self' is not in ServerPckages!
     FullLog( "Checking ServerPackages for ServerBTimes.u" );
     if( IsInServerPackages() )
@@ -1332,7 +1331,7 @@ event PreBeginPlay()
         }
     }*/
 
-    Credits = BTCredits;
+    Credits = META_DECOMPILER_VAR_COPYRIGHT;
     Credits = Repl( Credits, "Eliot", Class'HUD'.Default.GoldColor $ "Eliot" $ Class'HUD'.Default.WhiteColor );
     Credits = Repl( Credits, ".:..:", Class'HUD'.Default.GoldColor $ ".:..:" $ Class'HUD'.Default.WhiteColor );
     MRI.Credits = "v" $ Class'HUD'.Default.GoldColor $ BTVersion $ Class'HUD'.Default.WhiteColor @ Credits;
@@ -1831,16 +1830,6 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
                     }
                 }
             }
-            else    // Not solo!
-            {
-                j = MapInfo.Length;
-                MapInfo.Length = j+1;
-                MapInfo[j] = lzRecordTime$":"$TimeToStr( RDat.Rec[i].TMT );
-
-                j = MapInfo.Length;
-                MapInfo.Length = j+1;
-                MapInfo[j] = lzRecordAuthor$":"$GetBestPlayersText( i, MaxPlayers );
-            }
             break;
         }
     }
@@ -1984,7 +1973,7 @@ Final Function GetBadRecords( PlayerController PC, out array<string> RecordsInfo
         {
             if( RDat.Rec[CurRec].PSRL[CurPos].PLs == PlayerSlot )
             {
-                if( CurPos >= MaxPlayers )
+                if( CurPos >= MaxRankedPlayers )
                 {
                     RecordsInfo[RecordsInfo.Length] = RDat.Rec[CurRec].TMN@cDarkGray$TimeToStr( RDat.Rec[CurRec].PSRL[CurPos].SRT-RDat.Rec[CurRec].PSRL[0].SRT );
                     ++ NumBad;
@@ -6117,7 +6106,7 @@ final function CreateWebBTimes()                                                
     "<div id="$T$"d_Server"$T$" class="$T$"hidden"$T$" align="$T$"center"$T$"><table id="$T$"t_Server"$T$">"
     $"<tr><th><b>Name</b></th><th><b>Description</b></th></tr>"
     $"<tr><td><p>Version</p></td><td><p>"$BTVersion$"</p></td><tr>"
-    $"<tr><td><p>Authors</p></td><td><p>"$BTCredits$"</p></td><tr>"
+    $"<tr><td><p>Authors</p></td><td><p>"$META_DECOMPILER_VAR_COPYRIGHT$"</p></td><tr>"
     $"<tr><td><p>Records</p></td><td><p>"$MRI.RecordsCount$"</p></td><tr>"
     $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>"
     $"<tr><td><p>Points Rewarded for 1P Record</p></td><td><p>P1("$PPoints.PlayerPoints[0].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>"
@@ -6581,10 +6570,10 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
     Level.Game.AddServerDetail( ServerState, "BTimes", "Version:"@BTVersion );
     if( ModeIsTrials() )
     {
+        Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Ghost Enabled:"@bSpawnGhost );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Rankings Enabled:"@bShowRankings );
         Level.Game.AddServerDetail( ServerState, "BTimes", lzClientSpawn $ " Allowed:"@bAllowClientSpawn );
-        Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
 
         if( RDat != none && MRI != none )
         {
@@ -6595,9 +6584,6 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
         {
             Level.Game.AddServerDetail( ServerState, "BTimes", "Players:"@PDat.Player.Length );
         }
-
-        if( bShowRankings )
-            Level.Game.AddServerDetail( ServerState, "BTimes", "Max Ranked Players:"@MaxRankedPlayers );
     }
 }
 
@@ -6908,43 +6894,6 @@ Final Function ClientForcePacketUpdate()
             }
         }
     }
-}
-
-//==============================================================================
-// Returns a line with the Record Owner name and some stats
-// TODO: Replace me.
-Final Function string GetBestPlayersText( int Slot, int NumPlayers, optional bool bNoExtraInfo )
-{
-    local int i;
-    local string Text;
-
-    if( NumPlayers > MaxPlayers )
-        NumPlayers = 0;
-
-    if( RDat.Rec[Slot].PLs[0]-1 == -1 )
-        return "None";
-
-    Text = PDat.Player[RDat.Rec[Slot].PLs[0]-1].PLNAME;
-    if( RDat.Rec[Slot].Objs[0] > 0 )
-        Text $= "["$RDat.Rec[Slot].Objs[i]$"]";
-
-    for( i = 1; i < NumPlayers; ++ i )
-    {
-        if( RDat.Rec[Slot].PLs[i] <= 0 )
-            break;
-
-        Text $= ", "$PDat.Player[RDat.Rec[Slot].PLs[i]-1].PLNAME;
-        if( RDat.Rec[Slot].Objs[i] > 0 )
-            Text $= "["$RDat.Rec[Slot].Objs[i]$"]";
-    }
-
-    if( bNoExtraInfo )
-        return Text;
-
-    if( RDat.Rec[Slot].TMContributors > 3 )
-        Text @= "C["$RDat.Rec[Slot].TMContributors$"]";
-
-    return Text;//@"H["$RDat.Rec[Slot].TMHijacks$"]"@"P["$RDat.Rec[Slot].TMPoints$"]";
 }
 
 //==============================================================================
@@ -7727,6 +7676,7 @@ DefaultProperties
     RPScale(8)=3.000
     RPScale(9)=3.500
 
+    PointsPerObjective=0.25
     PPoints=(PlayerPoints[0]=(PPlayer[0]=5),PlayerPoints[1]=(PPlayer[0]=3,PPlayer[1]=3),PlayerPoints[2]=(PPlayer[0]=1,PPlayer[1]=1,PPlayer[2]=1))
 
     PointsPerLevel=5
