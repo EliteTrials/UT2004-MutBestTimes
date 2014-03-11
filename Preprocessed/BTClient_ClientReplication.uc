@@ -1,5 +1,5 @@
 //==============================================================================
-// BTClient_ClientReplication.uc (C) 2005-2009 Eliot and .:..:. All Rights Reserved
+// BTClient_ClientReplication.uc (C) 2005-2014 Eliot and .:..:. All Rights Reserved
 /* Tasks:
             Receive all personal data from MutBestTimes
 */
@@ -65,20 +65,10 @@ struct sAchievementState
     var int Count;
 
     var int Points;
-
     var bool bEarned;
-};
 
-/** A structure that defines an completable challenge. */
-struct sChallengeClient
-{
-    /** Title of the challenge e.g. "STR-SoloMap" */
-    var string Title;
-
-    /** Description explaining what to do to complete this challenge. */
-    var string Description;
-
-    var int Points;
+    var string CatId;
+    var Color EffectColor;
 };
 
 /** A structure that defines a trophy. */
@@ -111,6 +101,20 @@ struct sCategoryClient
 
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;    // SERVER and LOCAL
+
+// TODO: FIXME ugly dupe of BTAchievements.sCategory
+var(DEBUG) array<struct sAchievementCategory
+{
+    /** Name of the category. */
+    var string Name;
+
+    /** Id of the category, this is the id that achievements can bind to using @CategoryId. */
+    var string Id;
+
+    /** The @Id of a parent sCategory for treenode building of categories. */
+    var string ParentId;
+}> AchievementCategories;
+var(DEBUG) bool bReceivedAchievementCategories;
 //==============================================================================
 
 //==============================================================================
@@ -129,9 +133,6 @@ var(DEBUG) sGlobalPacket MyOverallTop;      // Global
 /** The states of all achievements that this player is working on. */
 var(DEBUG) array<sAchievementState> AchievementsStates;
 var sAchievementState LastAchievementEvent;
-
-/** The currently available challenges that this player may work on. */
-var(DEBUG) array<sChallengeClient> Challenges;
 
 /** The Trophies that this player has earned via Challenges. */
 var(DEBUG) array<sTrophyClient> Trophies;
@@ -246,9 +247,8 @@ replication
 
         // Stats
         ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
-        ClientSendChallenge,
         ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
-        ClientSendItem, ClientSendCategory,
+        ClientSendItem, ClientSendStoreCategory, ClientSendAchievementCategory,
         ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
 
     // unreliable
@@ -259,7 +259,8 @@ replication
         ServerSetClientFlags;
 
     reliable if( Role < ROLE_Authority )
-        ServerSetPreferedColor;
+        ServerSetPreferedColor,
+        ServerRequestAchievementCategories, ServerRequestAchievementsByCategory;
 }
 
 simulated function InitializeClient( optional BTClient_Interaction myInter )
@@ -554,25 +555,57 @@ simulated function ClientMatchStarting( float serverTime )
     ClientMatchStartTime = serverTime - Level.TimeSeconds;
 }
 
-simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points )
+final function ServerRequestAchievementCategories()
 {
-    AchievementsStates.Insert( 0, 1 );
-    AchievementsStates[0].Title = title;
-    AchievementsStates[0].Description = description;
-    AchievementsStates[0].Icon = icon;
-    AchievementsStates[0].Progress = progress;
-    AchievementsStates[0].Count = count;
-    AchievementsStates[0].Points = points;
-    AchievementsStates[0].bEarned = progress == -1 || (count > 0 && progress >= count);
+    OnRequestAchievementCategories( PlayerController(Owner), self );
 }
 
-simulated final function ClientSendChallenge( string title, string description, int points )
+final function ServerRequestAchievementsByCategory( string catID )
 {
-    Challenges.Insert( 0, 1 );
-    Challenges[0].Title = title;
-    Challenges[0].Description = description;
-    Challenges[0].Points = points;
+    OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
 }
+
+delegate OnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI );
+delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
+
+simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )
+{
+    local int i;
+
+    i = AchievementsStates.Length;
+    AchievementsStates.Length = i + 1;
+    AchievementsStates[i].Title = title;
+    AchievementsStates[i].Description = description;
+    AchievementsStates[i].Icon = icon;
+    AchievementsStates[i].Progress = progress;
+    AchievementsStates[i].Count = count;
+    AchievementsStates[i].Points = points;
+    AchievementsStates[i].bEarned = progress == -1 || (count > 0 && progress >= count);
+    if( effectColor.A == 0 )
+    {
+        // FIXME: Set to white when the effectMaterial has been recolored as gray.
+        effectColor.A = 255;
+        effectColor.R = 0;
+        effectColor.G = 255;
+        effectColor.B = 0;
+    }
+    AchievementsStates[i].EffectColor = effectColor;
+    OnAchievementStateReceived( i );
+}
+
+delegate OnAchievementStateReceived( int index );
+
+simulated final function ClientSendAchievementCategory( sAchievementCategory cat )
+{
+    local int i;
+
+    i = AchievementCategories.Length;
+    AchievementCategories.Length = i + 1;
+    AchievementCategories[i] = cat;
+    OnAchievementCategoryReceived( i );
+}
+
+delegate OnAchievementCategoryReceived( int index );
 
 simulated final function ClientSendTrophy( string title )
 {
@@ -717,7 +750,7 @@ simulated final function ClientSendItemData( string id, int data )
     }
 }
 
-simulated final function ClientSendCategory( string categoryName )
+simulated final function ClientSendStoreCategory( string categoryName )
 {
     Categories.Insert( 0, 1 );
     Categories[0].Name = categoryName;
@@ -726,6 +759,20 @@ simulated final function ClientSendCategory( string categoryName )
 simulated final function ClientSendItemsCompleted()
 {
     bItemsTransferComplete = true;
+}
+
+static function BTClient_ClientReplication GetRep( PlayerController PC )
+{
+    local LinkedReplicationInfo LRI;
+
+    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+    {
+        if( BTClient_ClientReplication(LRI) != none )
+        {
+            return BTClient_ClientReplication(LRI);
+        }
+    }
+    return none;
 }
 
 event Tick( float deltaTime )

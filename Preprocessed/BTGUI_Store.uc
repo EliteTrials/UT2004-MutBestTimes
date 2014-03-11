@@ -12,7 +12,7 @@ var automated GUIScrollTextBox eb_ItemDescription;
 var automated moComboBox cb_Filter;
 
 var protected editconst noexport class<BTStore_ItemsMultiColumnList> ColumnListClass;
-var() editinline protected BTClient_ClientReplication ClientData;
+var() editinline protected BTClient_ClientReplication CRI;
 var protected bool bWaitingForResponse;
 
 var int lastSelectedItemIndex;
@@ -20,24 +20,24 @@ var transient int ItemsNum;
 
 event Free()
 {
-    ClientData = none;
+    CRI = none;
     MyInteraction = none;
     super.Free();
 }
 
 function PostInitPanel()
 {
-    ClientData = MyInteraction.MRI.CR;
-    cb_Filter.INIDefault = Eval( ClientData.Options.StoreFilter != "", ClientData.Options.StoreFilter, "Other" );
+    CRI = MyInteraction.MRI.CR;
+    cb_Filter.INIDefault = Eval( CRI.Options.StoreFilter != "", CRI.Options.StoreFilter, "Other" );
 }
 
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
 
-    if( bShow && ClientData != none )
+    if( bShow && CRI != none )
     {
-        BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).CRI = ClientData;
+        BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).CRI = CRI;
         LoadData();
     }
 }
@@ -45,20 +45,20 @@ function ShowPanel( bool bShow )
 function LoadData()
 {
     // No need to request the items for this category, because we've got it cached!
-    if( LoadCachedCategory( ClientData.Options.StoreFilter ) )
+    if( LoadCachedCategory( CRI.Options.StoreFilter ) )
     {
-        ItemsNum = ClientData.Items.Length;
+        ItemsNum = CRI.Items.Length;
         BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
         return;
     }
 
     if( !bWaitingForResponse && PlayerOwner().Level.TimeSeconds > 5 )
     {
-        ItemsNum = ClientData.Items.Length;
-        ClientData.Items.Length = 0;
+        ItemsNum = CRI.Items.Length;
+        CRI.Items.Length = 0;
 
         bWaitingForResponse = true;
-        PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), ClientData.Options.StoreFilter ) );
+        PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), CRI.Options.StoreFilter ) );
 
         DisableComponent( cb_Filter );
         SetTimer( 0.2, true );
@@ -70,19 +70,19 @@ function LoadComplete()
     local int i;
 
     // Try again?
-    if( ClientData.Categories.Length == 0 )
+    if( CRI.Categories.Length == 0 )
     {
-        ClientData.bReceivedCategories = false;
+        CRI.bReceivedCategories = false;
     }
 
-    if( !ClientData.bReceivedCategories && ClientData.Categories.Length > 0 )
+    if( !CRI.bReceivedCategories && CRI.Categories.Length > 0 )
     {
-        for( i = ClientData.Categories.Length-1; i >= 0; -- i )
+        for( i = CRI.Categories.Length-1; i >= 0; -- i )
         {
-            cb_Filter.AddItem( ClientData.Categories[i].Name );
+            cb_Filter.AddItem( CRI.Categories[i].Name );
         }
         cb_Filter.MyComboBox.List.OnChange = FilterChanged;
-        i = cb_Filter.FindIndex( ClientData.Options.StoreFilter );
+        i = cb_Filter.FindIndex( CRI.Options.StoreFilter );
         if( i != -1 )
         {
             cb_Filter.SetIndex( i );
@@ -91,7 +91,7 @@ function LoadComplete()
         {
             cb_Filter.SetIndex( 0 );
         }
-        ClientData.bReceivedCategories = true;
+        CRI.bReceivedCategories = true;
     }
     BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
 
@@ -100,9 +100,9 @@ function LoadComplete()
 
 event Timer()
 {
-    if( ClientData.bItemsTransferComplete )
+    if( CRI.bItemsTransferComplete )
     {
-        ClientData.bItemsTransferComplete = false;
+        CRI.bItemsTransferComplete = false;
         LoadComplete();
         SetTimer( 0.0, false );
         bWaitingForResponse = false;
@@ -112,7 +112,7 @@ event Timer()
 function InitComponent( GUIController MyController, GUIComponent MyOwner )
 {
     super.InitComponent( MyController, MyOwner );
-    lb_ItemsListBox.InitListClass( string(ColumnListClass), ClientData );
+    lb_ItemsListBox.InitListClass( string(ColumnListClass), CRI );
     lb_ItemsListBox.ContextMenu.OnSelect = InternalOnSelect;
     lb_ItemsListBox.List.OnDblClick = InternalOnDblClick;
 }
@@ -152,26 +152,26 @@ final function bool BuySelectedItem()
     i = lb_ItemsListBox.List.CurrentListId();
     if( i != -1 )
     {
-        if( ClientData.Items[i].bBought )
+        if( CRI.Items[i].bBought )
             return false;
 
         if( !PlayerOwner().PlayerReplicationInfo.bAdmin )
         {
             // 2 = Admin, 4 = Private
-            if( ClientData.Items[i].Access == 2 || ClientData.Items[i].Access == 4 )
+            if( CRI.Items[i].Access == 2 || CRI.Items[i].Access == 4 )
             {
                 if( PlayerOwner().Level.NetMode == NM_Client )
                 {
                     Log( "Attempt to donate for an item in progress!" );
-                    BuyItemOnline( Repl( ClientData.Items[i].Name, " ", "_" ), ClientData.Items[i].ID );
+                    BuyItemOnline( Repl( CRI.Items[i].Name, " ", "_" ), CRI.Items[i].ID );
                     return false;
                 }
             }
-            else if( ClientData.Items[i].Cost > ClientData.BTPoints )
+            else if( CRI.Items[i].Cost > CRI.BTPoints )
                 return false;
         }
 
-        PlayerOwner().ConsoleCommand( "Store Buy" @ ClientData.Items[i].ID );
+        PlayerOwner().ConsoleCommand( "Store Buy" @ CRI.Items[i].ID );
         //LoadData();
         return true;
     }
@@ -185,10 +185,10 @@ final function bool ToggleSelectedItem()
     i = lb_ItemsListBox.List.CurrentListId();
     if( i != -1 )
     {
-        if( !ClientData.Items[i].bBought )
+        if( !CRI.Items[i].bBought )
             return false;
 
-        PlayerOwner().ConsoleCommand( "Store ToggleItem" @ ClientData.Items[i].ID );
+        PlayerOwner().ConsoleCommand( "Store ToggleItem" @ CRI.Items[i].ID );
         //LoadData();
         return true;
     }
@@ -202,10 +202,10 @@ final function bool SellSelectedItem()
     i = lb_ItemsListBox.List.CurrentListId();
     if( i != -1 )
     {
-        if( !ClientData.Items[i].bBought )
+        if( !CRI.Items[i].bBought )
             return false;
 
-        PlayerOwner().ConsoleCommand( "Store Sell" @ ClientData.Items[i].ID );
+        PlayerOwner().ConsoleCommand( "Store Sell" @ CRI.Items[i].ID );
         //LoadData();
         return true;
     }
@@ -239,7 +239,7 @@ function bool InternalOnClick( GUIComponent Sender )
         i = lb_ItemsListBox.List.CurrentListId();
         if( i != -1 )
         {
-            PlayerOwner().ConsoleCommand( "Store Edit" @ ClientData.Items[i].ID );
+            PlayerOwner().ConsoleCommand( "Store Edit" @ CRI.Items[i].ID );
         }
         return true;
     }
@@ -273,33 +273,33 @@ function bool InternalOnDraw( Canvas C )
 {
     local int i;
 
-    C.DrawText( "Currency:" $ ClientData.BTPoints, true );
+    C.DrawText( "Currency:" $ CRI.BTPoints, true );
 
     i = lb_ItemsListBox.List.CurrentListId();
     if( i == -1 )
         return true;
 
-    if( i > ClientData.Items.Length-1 )
+    if( i > CRI.Items.Length-1 )
         return true;
 
     // Update the list length dynamically
-    if( ClientData.Items.Length != ItemsNum )
+    if( CRI.Items.Length != ItemsNum )
     {
-        ItemsNum = ClientData.Items.Length;
+        ItemsNum = CRI.Items.Length;
         BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
         return true;
     }
 
     if( i != lastSelectedItemIndex || lastSelectedItemIndex == -1 )
     {
-        if( !ClientData.Items[i].bHasMeta && !bWaitingForResponse )
+        if( !CRI.Items[i].bHasMeta && !bWaitingForResponse )
         {
-            //Log( "Requesting item meta data for:" @ ClientData.Items[i].ID );
-            PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItemMeta" @ ClientData.Items[i].ID );
+            //Log( "Requesting item meta data for:" @ CRI.Items[i].ID );
+            PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItemMeta" @ CRI.Items[i].ID );
         }
         lastSelectedItemIndex = i;
 
-        if( ClientData.Items[i].bHasMeta )
+        if( CRI.Items[i].bHasMeta )
         {
             UpdateItemDescription( i );
         }
@@ -309,18 +309,18 @@ function bool InternalOnDraw( Canvas C )
     C.DrawColor = class'HUD'.default.WhiteColor;
     C.Font = C.SmallFont;
     C.Style = 3;
-    C.DrawText( ClientData.Items[i].ID );
+    C.DrawText( CRI.Items[i].ID );
 
-    if( ClientData.Items[i].IconTexture != none )
+    if( CRI.Items[i].IconTexture != none )
     {
         C.SetPos( i_ItemIcon.ActualLeft(), i_ItemIcon.ActualTop() );
         C.Style = 5;
-        C.DrawTileJustified( ClientData.Items[i].IconTexture, 1, i_ItemIcon.ActualWidth(), i_ItemIcon.ActualHeight() );
+        C.DrawTileJustified( CRI.Items[i].IconTexture, 1, i_ItemIcon.ActualWidth(), i_ItemIcon.ActualHeight() );
     }
 
-    if( ClientData.Items[i].bSync )
+    if( CRI.Items[i].bSync )
     {
-        ClientData.Items[i].bSync = false;
+        CRI.Items[i].bSync = false;
         UpdateItemDescription( i );
     }
     return true;
@@ -328,7 +328,7 @@ function bool InternalOnDraw( Canvas C )
 
 final function UpdateItemDescription( int itemIndex )
 {
-    eb_ItemDescription.MyScrollText.SetContent( ClientData.Items[itemIndex].Desc );
+    eb_ItemDescription.MyScrollText.SetContent( CRI.Items[itemIndex].Desc );
     eb_ItemDescription.MyScrollBar.AlignThumb();
     eb_ItemDescription.MyScrollBar.UpdateGripPosition( 0 );
 }
@@ -336,9 +336,9 @@ final function UpdateItemDescription( int itemIndex )
 function FilterChanged( GUIComponent sender )
 {
     cb_Filter.MyComboBox.ItemChanged( sender );
-    CacheCategory( ClientData.Options.StoreFilter );
-    ClientData.Options.StoreFilter = cb_Filter.GetText();
-    ClientData.Options.SaveConfig();
+    CacheCategory( CRI.Options.StoreFilter );
+    CRI.Options.StoreFilter = cb_Filter.GetText();
+    CRI.Options.SaveConfig();
     LoadData();
 }
 
@@ -346,11 +346,11 @@ final function CacheCategory( string categoryName )
 {
     local int i;
 
-    for( i = 0; i < ClientData.Categories.Length; ++ i )
+    for( i = 0; i < CRI.Categories.Length; ++ i )
     {
-        if( ClientData.Categories[i].Name ~= categoryName )
+        if( CRI.Categories[i].Name ~= categoryName )
         {
-            ClientData.Categories[i].CachedItems = ClientData.Items;
+            CRI.Categories[i].CachedItems = CRI.Items;
             break;
         }
     }
@@ -360,14 +360,14 @@ final function bool LoadCachedCategory( string categoryName )
 {
     local int i;
 
-    for( i = 0; i < ClientData.Categories.Length; ++ i )
+    for( i = 0; i < CRI.Categories.Length; ++ i )
     {
-        if( ClientData.Categories[i].Name ~= categoryName )
+        if( CRI.Categories[i].Name ~= categoryName )
         {
-            if( ClientData.Categories[i].CachedItems.Length == 0 )
+            if( CRI.Categories[i].CachedItems.Length == 0 )
                 return false;
 
-            ClientData.Items = ClientData.Categories[i].CachedItems;
+            CRI.Items = CRI.Categories[i].CachedItems;
             return true;
         }
     }
@@ -523,7 +523,7 @@ defaultproperties
         WinHeight=0.08
         OnClick=InternalOnClick
         StyleName="BTButton"
-        Hint="Here you can donate to the admins who are working vigorously to update and add new things to the store to show appreciation for all the new things the server has. You can also make requests for personal items if you have made a donation. ÿIf you want to donate make sure you ALERT an admin who can verify it."
+        Hint="Here you can donate to the admins who are working vigorously to update and add new things to the store to show appreciation for all the new things the server has. You can also make requests for personal items if you have made a donation. If you want to donate make sure you ALERT an admin who can verify it."
     end object
     b_Donate=oDonate
 

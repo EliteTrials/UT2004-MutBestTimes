@@ -9,7 +9,7 @@ class BTClient_Interaction extends Interaction;
 
 #Exec obj load file="UT2003Fonts.utx"
 #Exec obj load file="MenuSounds.uax"
-#Exec obj load file="Content/ClientBTimes.utx" package="ClientBTimesV5"
+#Exec obj load file="ClientBTimes.utx" package="ClientBTimesV5"
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
@@ -1149,6 +1149,7 @@ Final Function ModifyMenu()
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
     local BTGUI_Store storeMenu;
+    local BTGUI_Rewards rewardsMenu;
 
     Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
     if( Menu != None )
@@ -1167,6 +1168,15 @@ Final Function ModifyMenu()
             storeMenu.MyButton.StyleName = "StoreButton";
             storeMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", storeMenu.FontScale );
             storeMenu.PostInitPanel();
+        }
+
+        rewardsMenu = BTGUI_Rewards(Menu.c_Main.AddTab( "Rewards", string(Class'BTGUI_Rewards'),, "Exchange and collect trophies" ));
+        if( rewardsMenu != none )
+        {
+            rewardsMenu.MyInteraction = self;
+            rewardsMenu.MyButton.StyleName = "StoreButton";
+            rewardsMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", rewardsMenu.FontScale );
+            rewardsMenu.PostInitPanel();
         }
 
         myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
