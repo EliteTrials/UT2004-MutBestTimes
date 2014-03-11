@@ -371,6 +371,17 @@ var const string InvalidAccessMessage;
 var private editconst const color cDarkGray;
 var private editconst const color BlackColor;
 
+final static preoperator Color #( int rgbInt )
+{
+    local Color c;
+
+    c.R = rgbInt >> 24;
+    c.G = rgbInt >> 16;
+    c.B = rgbInt >> 8;
+    c.A = (rgbInt & 255);
+    return c;
+}
+
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
 {
@@ -765,7 +776,7 @@ final function AchievementEarned( int playerSlot, name id )
     rep.ClientAchievementAccomplished( ach.Title, ach.Icon );
 
     NotifyPlayers( PC,
-     PC.GetHumanReadableName() @ "has earned the achievement" @ $0x60CB45 $ ach.Title,
+     PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "currency points for achievement" @ $0x60CB45 $ ach.Title,
       "You earned the achievement" @ $0x60CB45 $ ach.Title );
 }
 
@@ -836,27 +847,86 @@ final function ProcessMap2Achievement( int playerSlot )
     PDat.ProgressAchievementByID( playerSlot, 'map_2' );
 }
 
-final function SendAchievementsStates( PlayerController requester )
+function InternalOnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI )
 {
-    local int i, achSlot;
-    local BTClient_ClientReplication Rep;
+    local int i;
 
-    //FullLog( "Sending achievements to:" @ requester.GetHumanReadableName() );
-    Rep = GetRep( requester );
-    if( Rep == none )
+    if( CRI.bReceivedAchievementCategories )
+    {
         return;
+    }
 
-    Rep.ClientCleanAchievements();
+    for( i = 0; i < AchievementsManager.Categories.Length; ++ i )
+    {
+        if( AchievementsManager.Categories[i].ID == "cat_challenges"
+            && (ChallengesManager == none || ChallengesManager.Challenges.Length == 0) )
+        {
+            continue;
+        }
+        else if( AchievementsManager.Categories[i].ID == "cat_trophies"
+            && (ChallengesManager == none || ChallengesManager.TodayChallenges.Length == 0) )
+        {
+            continue;
+        }
+        CRI.ClientSendAchievementCategory( AchievementsManager.Categories[i] );
+    }
+    CRI.bReceivedAchievementCategories = true;
+}
+
+function InternalOnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID )
+{
+    local int i, j, achSlot;
+    local BTAchievements.sAchievement ach;
+    local string trophyID;
+    local int progress;
+
+    // Hardcoded support for legacy daily challenges.
+    if( catID == "cat_trophies" )
+    {
+        for( i = 0; i < ChallengesManager.TodayChallenges.Length; ++ i )
+        {
+            progress = 0;
+            for( j = 0; j < PDat.Player[CRI.myPlayerSlot].Trophies.Length; ++ j )
+            {
+                trophyID = PDat.Player[CRI.myPlayerSlot].Trophies[j].ID;
+                if( Left( trophyID, 3 ) == "MAP" && Mid( trophyID, 4 ) == ChallengesManager.TodayChallenges[i] )
+                {
+                    progress = -1;
+                }
+            }
+
+            ach.Title = Repl( ChallengesManager.DailyChallenge.Title, "%MAPNAME%", ChallengesManager.TodayChallenges[i] );
+            ach.Description = Repl( ChallengesManager.DailyChallenge.Description, "%MAPNAME%", ChallengesManager.TodayChallenges[i] );
+            ach.Points = ChallengesManager.DailyChallenge.Points;
+            ach.EffectColor = #0xFFFF00FF;
+            CRI.ClientSendAchievementState( ach.Title, ach.Description, ach.Icon, progress, 0, ach.Points, ach.EffectColor );
+        }
+    }
+    else if( catID == "cat_challenges" )
+    {
+        for( i = 0; i < ChallengesManager.Challenges.Length; ++ i )
+        {
+            ach.Title = ChallengesManager.Challenges[i].Title;
+            ach.Description = ChallengesManager.Challenges[i].Description;
+            ach.Points = ChallengesManager.Challenges[i].Points;
+            ach.EffectColor = #0xFF0000FF;
+            CRI.ClientSendAchievementState( ach.Title, ach.Description, ach.Icon, 0, 0, ach.Points, ach.EffectColor );
+        }
+    }
+
     for( i = 0; i < AchievementsManager.Achievements.Length; ++ i )
     {
-        achSlot = PDat.FindAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+        if( AchievementsManager.Achievements[i].CatID != catID )
+            continue;
+
+        achSlot = PDat.FindAchievementByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
         if( achSlot != -1 )
         {
-            achSlot = PDat.Player[Rep.myPlayerSlot].Achievements[achSlot].Progress;
+            achSlot = PDat.Player[CRI.myPlayerSlot].Achievements[achSlot].Progress;
         }
         else achSlot = 0;
 
-        Rep.ClientSendAchievementState( AchievementsManager.Achievements[i].Title, AchievementsManager.Achievements[i].Description, AchievementsManager.Achievements[i].Icon, Min( achSlot, AchievementsManager.Achievements[i].Count ), AchievementsManager.Achievements[i].Count, AchievementsManager.Achievements[i].Points );
+        CRI.ClientSendAchievementState( AchievementsManager.Achievements[i].Title, AchievementsManager.Achievements[i].Description, AchievementsManager.Achievements[i].Icon, Min( achSlot, AchievementsManager.Achievements[i].Count ), AchievementsManager.Achievements[i].Count, AchievementsManager.Achievements[i].Points, AchievementsManager.Achievements[i].EffectColor );
     }
 }
 
@@ -885,33 +955,6 @@ final function SendTrophies( PlayerController requester )
             chall = ChallengesManager.GetChallenge( trophyID );
             Rep.ClientSendTrophy( chall.Title );
         }
-    }
-}
-
-final function SendChallenges( PlayerController requester )
-{
-    local int i;
-    local BTClient_ClientReplication Rep;
-
-    //FullLog( "Sending challenges to:" @ requester.GetHumanReadableName() );
-    Rep = GetRep( requester );
-    if( Rep == none )
-        return;
-
-    for( i = 0; i < ChallengesManager.TodayChallenges.Length; ++ i )
-    {
-        Rep.ClientSendChallenge(
-            Repl( ChallengesManager.DailyChallenge.Title, "%MAPNAME%", ChallengesManager.TodayChallenges[i] ),
-            Repl( ChallengesManager.DailyChallenge.Description, "%MAPNAME%", ChallengesManager.TodayChallenges[i] ),
-            ChallengesManager.DailyChallenge.Points );
-    }
-
-    for( i = 0; i < ChallengesManager.Challenges.Length; ++ i )
-    {
-        Rep.ClientSendChallenge(
-            ChallengesManager.Challenges[i].Title,
-            ChallengesManager.Challenges[i].Description,
-            ChallengesManager.Challenges[i].Points );
     }
 }
 
@@ -955,7 +998,7 @@ final function SendStoreItems( PlayerController requester, string filter )
             {
                 continue;
             }
-            Rep.ClientSendCategory( Store.Categories[i].Name );
+            Rep.ClientSendStoreCategory( Store.Categories[i].Name );
         }
 
         if( Level.NetMode != NM_Standalone )
@@ -3827,19 +3870,9 @@ function Mutate( string MutateString, PlayerController Sender )
         }
         return;
     }*/
-    else if( MutateString == "BTClient_RequestAchievementsStates" )
-    {
-        SendAchievementsStates( Sender );
-        return;
-    }
-    else if( MutateString == "BTClient_RequestTrophies" )
+    if( MutateString == "BTClient_RequestTrophies" )
     {
         SendTrophies( Sender );
-        return;
-    }
-    else if( MutateString == "BTClient_RequestChallenges" )
-    {
-        SendChallenges( Sender );
         return;
     }
     else if( Left( MutateString, Len("BTClient_RequestStoreItems") ) == "BTClient_RequestStoreItems" )
@@ -5551,6 +5584,8 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
         if( Other.Owner != None && MessagingSpectator(Other.Owner) == None )
         {
             CR = Spawn( Class'BTClient_ClientReplication', Other.Owner );
+            CR.OnRequestAchievementCategories = InternalOnRequestAchievementCategories;
+            CR.OnRequestAchievementsByCategory = InternalOnRequestAchievementsByCategory;
             CR.NextReplicationInfo = PlayerReplicationInfo(Other).CustomReplicationInfo;
             PlayerReplicationInfo(Other).CustomReplicationInfo = CR;
         }
@@ -7679,7 +7714,7 @@ DefaultProperties
     PointsPerObjective=0.25
     PPoints=(PlayerPoints[0]=(PPlayer[0]=5),PlayerPoints[1]=(PPlayer[0]=3,PPlayer[1]=3),PlayerPoints[2]=(PPlayer[0]=1,PPlayer[1]=1,PPlayer[2]=1))
 
-    PointsPerLevel=5
+    PointsPerLevel=1
     MaxLevel=100
     ObjectivesEXPDelay=10
     DropChanceCooldown=60
