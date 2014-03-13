@@ -9,6 +9,9 @@ class BTServer_PlayersData extends Object
 
 struct sBTPlayerInfo
 {
+    // Temporary reference to this players controller, if currently ingame.
+    var transient PlayerController Controller;
+
     var string
         PLID,                                                                   // GUID
         PLNAME,                                                                 // NAME
@@ -91,6 +94,12 @@ struct sBTPlayerInfo
 
     var bool bHasPremium;
     var string Title;
+
+    /** Amount of points this player has scored for his voted team. */
+    var float TeamPointsContribution;
+
+    /** Whether this player had voted, contributed and that team won. When joining a reward will be given based on this. */
+    var bool bPendingTeamReward;
 };
 
 var array<sBTPlayerInfo> Player;
@@ -200,10 +209,10 @@ final function GiveItem( int playerSlot, string id )
     Player[playerSlot].Inventory.BoughtItems.Length = j + 1;
     Player[playerSlot].Inventory.BoughtItems[j].ID = id;
     ToggleItem( playerSlot, id );
-
     ++ TotalItemsBought;
     // MRI
     BT.A123341.TotalItemsBought = TotalItemsBought;
+    BT.Store.ItemBought( playerSlot, id );
 }
 
 final function RemoveItem( int playerSlot, string id )
@@ -215,7 +224,7 @@ final function RemoveItem( int playerSlot, string id )
 
     if( HasItem( playerSlot, id, i ) )
     {
-        BT.Store.ItemRemoved( self, playerSlot, id );
+        BT.Store.ItemRemoved( playerSlot, id );
         Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
     }
 }
@@ -230,7 +239,7 @@ final function ToggleItem( int playerSlot, string id )
         for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
         {
             Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
-            BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
+            BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
         }
         return;
     }
@@ -238,7 +247,7 @@ final function ToggleItem( int playerSlot, string id )
     if( HasItem( playerSlot, id, itemSlot ) )
     {
         Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled = !Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled;
-        BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[itemSlot].ID, Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled );
+        BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[itemSlot].ID, Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled );
 
         // Disable all other items of the same Type!
         if( Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled )
@@ -263,7 +272,7 @@ final function ToggleItem( int playerSlot, string id )
                 if( BT.Store.Items[storeSlot].Type ~= type )
                 {
                     Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
-                    BT.Store.ItemToggled( self, playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
+                    BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
                 }
             }
         }

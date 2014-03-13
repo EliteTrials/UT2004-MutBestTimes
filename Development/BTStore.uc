@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
-class BTStore extends Object
+class BTStore extends Object within MutBestTimes
     config(BTStore);
 
 enum ETarget
@@ -79,6 +79,157 @@ struct sMapLocker
 
 var() globalconfig array<sMapLocker> LockedMaps;
 
+/** A list of selectable teams, maximum is 3. */
+var() globalconfig array<struct sTeam{
+    /** Name of the team. */
+    var string Name;
+
+    /** Earned points by the team. */
+    var float Points;
+
+    /** Amount of earned votes for the team. */
+    var int Voters;
+
+    /** The id of an item, which is the item needed(and activate) to be part of the team. */
+    var string ItemID;
+}> Teams;
+
+/** When this goal is reached by a team, all points and voters will be reset, the winning team's supporters will receive benefits. */
+var() globalconfig int TeamPointsGoal;
+var() globalconfig bool bEnabled;
+
+final function int FindPlayerTeam( BTClient_ClientReplication CRI )
+{
+    local int i;
+
+    for( i = 0; i < Teams.Length; ++ i )
+    {
+        if( PDat.UseItem( CRI.myPlayerSlot, Teams[i].ItemID ) )
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+final function bool AddPointsForTeam( BTClient_ClientReplication CRI, int teamIndex, float points )
+{
+    Teams[teamIndex].Points += points;
+    MRI.Teams[teamIndex].Points = Teams[teamIndex].Points;
+    SaveConfig();
+
+    PDat.Player[CRI.myPlayerSlot].TeamPointsContribution += points;
+    if( Teams[teamIndex].Points >= TeamPointsGoal )
+    {
+        TeamWon( teamIndex );
+    }
+    return true;
+}
+
+final function TeamWon( int teamIndex )
+{
+    local int i;
+    local Controller C;
+    local PlayerController PC;
+    local BTClient_ClientReplication CRI;
+
+    for( i = 0; i < PDat.Player.Length; ++ i )
+    {
+        // Reward this player?
+        if( !PDat.HasItem( i, Teams[teamIndex].ItemID ) )
+        {
+            continue;
+        }
+
+        PDat.RemoveItem( i, Teams[teamIndex].ItemID );
+        PDat.Player[i].bPendingTeamReward = PDat.Player[i].TeamPointsContribution > 0;
+    }
+    SaveAll();
+
+    for( i = 0; i < Teams.Length; ++ i )
+    {
+        Teams[i].Voters = 0;
+        Teams[i].Points = 0.00;
+
+        MRI.Teams[i].Voters = 0;
+        MRI.Teams[i].Points = 0.0;
+    }
+    SaveConfig();
+
+    Level.Game.Broadcast( Outer, Teams[teamIndex].Name @ "has won!, all players have pending rewards!");
+
+    // Reward all players currently ingame. The rest will be rewarded upon connecting.
+    for( C = Level.ControllerList; C != none; C = C.NextController )
+    {
+        PC = PlayerController(C);
+        if( PC == none )
+            continue;
+
+        CRI = GetRep( PC );
+        if( CRI == none )
+            continue;
+
+        if( !PDat.Player[CRI.myPlayerSlot].bPendingTeamReward )
+            continue;
+
+        CRI.EventTeamIndex = -1;
+        RewardTeamPlayer( CRI );
+        PDat.Player[CRI.myPlayerSlot].bPendingTeamReward = false;
+        PDat.Player[CRI.myPlayerSlot].TeamPointsContribution = 0;
+    }
+}
+
+final function RewardTeamPlayer( BTClient_ClientReplication CRI )
+{
+    local int playerSlot;
+    local float rewardScaling;
+
+    playerSlot = CRI.myPlayerSlot;
+    rewardScaling = PDat.Player[playerSlot].TeamPointsContribution / 10F;
+    PDat.GiveCurrencyPoints( playerSlot, 100*rewardScaling, true );
+    PDat.AddExperience( playerSlot, 200*rewardScaling );
+    BTServer_TrialMode(CurMode).PerformItemDrop( PlayerController(CRI.Owner), FMin( 15.00*rewardScaling, 99.00 ) );
+}
+
+final function bool AddVoteForTeam( int teamIndex )
+{
+    ++ Teams[teamIndex].Voters;
+    MRI.Teams[teamIndex].Voters = Teams[teamIndex].Voters;
+    SaveConfig();
+    return true;
+}
+
+final function bool IsTeamItem( string itemID, optional out int teamIndex )
+{
+    local int i;
+
+    for( i = 0; i < Teams.Length; ++ i )
+    {
+        if( Teams[i].ItemID ~= itemID )
+        {
+            teamIndex = i;
+            return true;
+        }
+    }
+    teamIndex = -1;
+    return false;
+}
+
+// Checks if player has a team item ignoring the active status.
+final function bool HasATeamItem( BTClient_ClientReplication CRI )
+{
+    local int i;
+
+    for( i = 0; i < Teams.Length; ++ i )
+    {
+        if( PDat.HasItem( CRI.myPlayerSlot, Teams[i].ItemID ) )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 final function bool Evaluate( MutBestTimes BT, int itemSlot )
 {
     local array<string> conditions;
@@ -135,13 +286,19 @@ final function bool Evaluate( MutBestTimes BT, int itemSlot )
     return true;
 }
 
-final static function BTStore Load()
+// Load in PreBeginPlay.
+final static function BTStore Load( MutBestTimes newOuter )
 {
     local BTStore this;
     local int i, j;
 
+    if( !default.bEnabled )
+    {
+        return none;
+    }
+
     StaticSaveConfig();
-    this = new(none) default.Class;
+    this = new(newOuter) default.Class;
 
     if( this.CustomItems.Length > 0 )
     {
@@ -153,6 +310,7 @@ final static function BTStore Load()
             this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
         }
     }
+    this.Cache();
     return this;
 }
 
@@ -180,6 +338,7 @@ final function Cache()
             Items[i].Access = Admin;
         }
     }
+    AddToPackageMap( "TextureBTimes" );
 }
 
 final function int FindCategory( string categoryName )
@@ -300,12 +459,13 @@ final function float GetResalePrice( int itemIndex )
 }
 
 /** Called when an item is activated/deactivated either through the store or via a programmatic function. */
-final function ItemToggled( BTServer_PlayersData data, int playerSlot, string itemID, bool status )
+final function ItemToggled( int playerSlot, string itemID, bool status )
 {
     local PlayerController PC;
     local BTClient_ClientReplication CRI;
+    local int outTeamIndex;
 
-    PC = data.BT.FindPCByPlayerSlot( playerSlot, CRI );
+    PC = FindPCByPlayerSlot( playerSlot, CRI );
     if( PC != none )
     {
         switch( itemID )
@@ -317,25 +477,50 @@ final function ItemToggled( BTServer_PlayersData data, int playerSlot, string it
             case "perk_press_assistance":
                 CRI.bAutoPress = status;
                 break;
+
+        default:
+            if( IsTeamItem( itemID, outTeamIndex ) )
+            {
+                if( status )
+                {
+                    CRI.EventTeamIndex = outTeamIndex;
+                }
+                else
+                {
+                    CRI.EventTeamIndex = -1;
+                }
+            }
+            break;
         }
     }
     // Handle toggling of items for non-living players.
 }
 
 /** Called when an item is removed from a player either through selling or removal by an admin. */
-final function ItemRemoved( BTServer_PlayersData data, int playerSlot, string itemID )
+final function ItemRemoved( int playerSlot, string itemID )
 {
     switch( itemID )
     {
         case "perk_dodge_assistance":
             // Stimulate as if the item got toggled off.
-            ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+            ItemToggled( playerSlot, itemID, false ); // FIXME: Dangerous code.
             break;
 
         case "perk_press_assistance":
             // Stimulate as if the item got toggled off.
-            ItemToggled( data, playerSlot, itemID, false ); // FIXME: Dangerous code.
+            ItemToggled( playerSlot, itemID, false ); // FIXME: Dangerous code.
             break;
+    }
+}
+
+/** Called when an item was bought by a player or through the "GiveItem" function. */
+final function ItemBought( int playerSlot, string itemID )
+{
+    local int outTeamIndex;
+
+    if( IsTeamItem( itemID, outTeamIndex ) )
+    {
+        AddVoteForTeam( outTeamIndex );
     }
 }
 
@@ -346,6 +531,7 @@ final function ItemRemoved( BTServer_PlayersData data, int playerSlot, string it
 final function ItemActivated( Actor other, BTClient_ClientReplication CRI, string itemID )
 {
     local LinkedReplicationInfo customRep;
+    local int outTeamIndex;
 
     switch( itemID )
     {
@@ -366,6 +552,14 @@ final function ItemActivated( Actor other, BTClient_ClientReplication CRI, strin
 
         case "perk_press_assistance":
             CRI.bAutoPress = true;
+            break;
+
+        default:
+            if( IsTeamItem( itemID, outTeamIndex ) )
+            {
+                CRI.EventTeamIndex = outTeamIndex;
+                Level.Game.Broadcast( Outer, Controller(other).GetHumanReadableName() @ "is supporting" @ Store.Teams[outTeamIndex].Name );
+            }
             break;
     }
 }
@@ -492,11 +686,20 @@ private final function ApplyVariablesOn( Actor other, array<string> variables )
     }
 }
 
-final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData data, int playerSlot, int itemSlot, out string msg )
+final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplication CRI, int itemSlot, out string msg )
 {
-    if( data.HasItem( playerSlot, Items[itemSlot].Id ) )
+    local int playerSlot;
+
+    playerSlot = CRI.myPlayerSlot;
+    if( PDat.HasItem( playerSlot, Items[itemSlot].Id ) )
     {
         msg = "You already own" @ Items[itemSlot].Name;
+        return false;
+    }
+
+    if( IsTeamItem( Items[itemSlot].Id ) && HasATeamItem( CRI ) )
+    {
+        msg = "You already voted a team!";
         return false;
     }
 
@@ -506,7 +709,7 @@ final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData dat
     switch( Items[itemSlot].Access )
     {
         case Buy:
-            if( !data.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
+            if( !PDat.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
             {
                 msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
                 return false;
@@ -522,7 +725,7 @@ final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData dat
             break;
 
         case Premium:
-            if( !data.Player[playerSlot].bHasPremium )
+            if( !PDat.Player[playerSlot].bHasPremium )
             {
                 msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
                 return false;
@@ -544,7 +747,12 @@ final function bool CanBuyItem( PlayerController buyer, BTServer_PlayersData dat
 
 defaultproperties
 {
+    bEnabled=true
     DefaultDropChance=0.25
+
+    Teams(0)=(Name="Team Netliot",ItemId="team_netliot")
+    Teams(1)=(Name="Team BigBad",ItemId="team_bigbad")
+    TeamPointsGoal=1000
 
     /** All items. */
     Categories(0)=(Name="All")
@@ -576,14 +784,17 @@ defaultproperties
     Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
 
     // Player Skins
-    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",itemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
-    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",itemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
-    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",itemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",ItemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",ItemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 
     // Player Perks
     Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
     Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
 
     // Vehicle Skins
-    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",itemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+
+    Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
+    Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
 }

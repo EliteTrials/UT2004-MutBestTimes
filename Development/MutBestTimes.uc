@@ -1314,9 +1314,6 @@ event PreBeginPlay()
     MRI = Spawn( Class'BTClient_MutatorReplicationInfo' );
     MRI.AddToPackageMap();  // Temporary ServerPackage
 
-    Store = class'BTStore'.static.Load();
-    Store.Cache();
-    AddToPackageMap( "TextureBTimes" );
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
     {
@@ -1365,8 +1362,23 @@ event PreBeginPlay()
         }
     }
 
+    Store = class'BTStore'.static.Load( self );
+    FullLog( "Store:" @ Store );
+
+    // WARNING: Do not add any code below!
     if( ModeIsTrials() )
     {
+        if( Store != none && Store.Teams.Length > 0 )
+        {
+            // Replicate all teams to the client side and its state.
+            for( i = 0; i < Min( Store.Teams.Length, 3 ); ++ i )
+            {
+                MRI.Teams[i].Name = Store.Teams[i].Name;
+                MRI.Teams[i].Points = Store.Teams[i].Points;
+                MRI.Teams[i].Voters = Store.Teams[i].Points;
+            }
+        }
+
         // Initialize TMRating for all maps
         for( i = 0; i < RDat.Rec.Length; ++ i )
         {
@@ -2757,7 +2769,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             i = Store.FindItemByID( s );
             if( i != -1 )
             {
-                if( !Store.CanBuyItem( sender, PDat, Rep.myPlayerSlot, i, s ) )
+                if( !Store.CanBuyItem( sender, Rep, i, s ) )
                 {
                     SendErrorMessage( sender, s );
                     break;
@@ -4996,7 +5008,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     local bool b;
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
-    local int i, j, PLs, PLi, y, z;
+    local int i, j, PLs, PLi, y, z, l;
     local float TimeBoost;
     local Pawn P;
     local int numObjectives;
@@ -5141,6 +5153,21 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         {
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
+                if( Store != none )
+                {
+                    l = Store.FindPlayerTeam( CR );
+                    if( l != -1 )
+                    {
+                        Store.AddPointsForTeam( CR, l, 1 );
+                        Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "has earned extra points for" @ Store.Teams[l].Name );
+                        PDat.GiveCurrencyPoints( CR.myPlayerSlot, 2 );
+                    }
+                    else
+                    {
+                        SendErrorMessage( PC, "You haven't voted for a team! Please vote a team to get extra rewards!" );
+                    }
+                }
+
                 // Earn 20 points from one record.
                 if( CalcRecordPoints( UsedSlot, i ) >= 20 )
                 {
@@ -6724,6 +6751,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
         return;
 
     CR.myPlayerSlot = Slot;
+    PDat.Player[Slot].Controller = PC; // not saved
 
     CR.Title = PDat.Player[Slot].Title;
     CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
@@ -6736,6 +6764,12 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
     if( Store != none )
     {
+        if( ModeIsTrials() && PDat.Player[Slot].bPendingTeamReward )
+        {
+            Store.RewardTeamPlayer( CR );
+            PDat.Player[Slot].bPendingTeamReward = false;
+            PDat.Player[Slot].TeamPointsContribution = 0;
+        }
         Store.ModifyPlayer( PC, PDat, CR );
     }
 
