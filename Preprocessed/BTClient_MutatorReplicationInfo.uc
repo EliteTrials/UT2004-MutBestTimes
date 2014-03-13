@@ -56,12 +56,19 @@ var int TotalItemsBought;
 
 var float TeamTime[2];
 
+// Maybe abit bandwith expensive, but no big deal.
+var struct sTeam{
+    var string Name;
+    var float Points;
+    var int Voters;
+} Teams[3];
+
 replication
 {
     reliable if( Role == ROLE_Authority )
         PlayersBestTimes, MapBestTime,
         RecordState, EndMsg, ObjectiveTotalTime,
-        MaxMoves, SoloRecords, bCompetitiveMode;
+        MaxMoves, SoloRecords, bCompetitiveMode, Teams;
 
     reliable if( bNetDirty /*&& EndMsg != ""*/ )
         PointsReward;

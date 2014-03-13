@@ -196,6 +196,9 @@ var private int ClientFlags;
 var Pawn ProhibitedCappingPawn;
 var Pawn ClientSpawnPawn;
 
+/** This player team's index, @MRI.Teams. */
+var int EventTeamIndex;
+
 //==============================================================================
 
 //==============================================================================
@@ -220,7 +223,7 @@ replication
         myPawn, PersonalTime,
         Rank, ClientFlags, SoloRank,
         BTLevel, BTExperience, BTPoints, BTWage,
-        PreferedColor, bIsPremiumMember, Title;
+        PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
         bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
@@ -757,4 +760,5 @@ defaultproperties
     LastDropChanceTime=-60
     LastObjectiveCompletedTime=-10
     myPlayerSlot=-1
+    EventTeamIndex=-1
 }
