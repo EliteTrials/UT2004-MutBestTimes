@@ -5,6 +5,8 @@
 class BTClient_MapVotingPage extends MapVotingPage;
 
 var automated GUIButton b_Random;
+var automated GUIEditBox MapNameFilter;
+var automated GUILabel FilterLabel;
 
 function OnOkButtonClick(byte bButton)
 {
@@ -95,6 +97,14 @@ function RandomClicked()
     MVRI.SendMapVote( randomMapIndex, GameConfigIndex );
 }
 
+function InternalOnFilterChange( GUIComponent sender )
+{
+    local string filter;
+
+    filter = MapNameFilter.GetText();
+    BTClient_MapVoteMultiColumnList(lb_MaplistBox.List).OnFilterVotingList( sender, filter );
+}
+
 defaultproperties
 {
     WinLeft=0.05
@@ -135,9 +145,9 @@ defaultproperties
 
     Begin Object Class=MapVoteCountMultiColumnListBox Name=VoteCountListBox
         WinWidth=0.42
-        WinHeight=0.291406
+        WinHeight=0.251406
         WinLeft=0.02
-        WinTop=0.686457
+        WinTop=0.726457
         bVisibleWhenEmpty=true
         StyleName="NoBackground"
         bScaleToParent=True
@@ -149,11 +159,34 @@ defaultproperties
     End Object
     lb_VoteCountListBox = VoteCountListBox
 
+    begin object class=GUILabel name=oFilterLabel
+        WinTop=0.686457
+        WinHeight=0.037500
+        WinWidth=0.1
+        WinLeft=0.02
+        bScaleToParent=True
+        bBoundToParent=True
+        Caption="Filter:"
+        TextColor=(R=255,G=255,B=255,A=255)
+    end object
+    FilterLabel=oFilterLabel
+
+    begin object class=GUIEditBox name=oMapNameFilter
+        WinTop=0.686457
+        WinHeight=0.037500
+        WinWidth=0.86
+        WinLeft=0.12
+        bScaleToParent=True
+        bBoundToParent=True
+        OnChange=InternalOnFilterChange
+    end object
+    MapNameFilter=oMapNameFilter
+
     Begin Object Class=BTClient_MapVoteFooter Name=MatchSetupFooter
         WinWidth=0.530000
-        WinHeight=0.291406
+        WinHeight=0.251406
         WinLeft=0.450000
-        WinTop=0.686457
+        WinTop=0.726457
         TabOrder=10
         RenderWeight=0.5
         bBoundToParent=True
