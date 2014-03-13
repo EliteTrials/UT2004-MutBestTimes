@@ -1,5 +1,8 @@
 class BTClient_MapVoteMultiColumnList extends MapVoteMultiColumnList;
 
+var private int _LastGameTypeIndex;
+var private string _CurrentFilter;
+
 function string GetSelectedMapName()
 {
 	if( index == -1 )
@@ -116,12 +119,54 @@ function string GetSortString( int i )
 	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt);
 
 	ColumnData[0] = left(Caps(mapTxt),20);
-	ColumnData[1] = right("000000" $ timeTxt,6);
-	ColumnData[2] = right("000000" $ float(VRI.MapList[MapVoteData[i]].PlayCount)/100F,6);
+	ColumnData[1] = timeTxt;
+	ColumnData[2] = string(float(VRI.MapList[MapVoteData[i]].PlayCount)/100F);
 	ColumnData[3] = right("000000" $ VRI.MapList[MapVoteData[i]].Sequence,6);
 	ColumnData[4] = right("000000" $ recordsCountTxt,6);
 
 	return ColumnData[SortColumn] $ ColumnData[PrevSortColumn];
+}
+
+delegate OnFilterVotingList( GUIComponent sender, string filter );
+
+function InternalOnFilterVotingList( GUIComponent sender, string filter )
+{
+    _CurrentFilter = filter;
+    Clear();
+    LoadList( VRI, _LastGameTypeIndex );
+}
+
+// Copy from parent, to add filtering of map names.
+function LoadList(VotingReplicationInfo LoadVRI, int GameTypeIndex)
+{
+    local int m,p,l;
+    local array<string> PrefixList;
+    local string filter;
+
+    VRI = LoadVRI;
+
+    Split(VRI.GameConfig[GameTypeIndex].Prefix, ",", PrefixList);
+    filter = Locs(_CurrentFilter);
+    for( m=0; m<VRI.MapList.Length; m++)
+    {
+        if( filter != "" && InStr(Locs(VRI.MapList[m].MapName), filter) == -1 )
+            continue;
+
+        for( p=0; p<PreFixList.Length; p++)
+        {
+            if( left(VRI.MapList[m].MapName, len(PrefixList[p])) ~= PrefixList[p] )
+            {
+                l = MapVoteData.Length;
+                MapVoteData.Insert(l,1);
+                MapVoteData[l] = m;
+                AddedItem();
+                break;
+            }
+        } //p
+    } //m
+    OnDrawItem  = DrawItem;
+
+    _LastGameTypeIndex = GameTypeIndex;
 }
 
 defaultproperties
@@ -141,4 +186,6 @@ defaultproperties
 	ColumnHeadingHints(2)="Number of hours this map has been played for."
 	ColumnHeadingHints(3)="Sequence, The number of games that have been played since this map was last played."
 	ColumnHeadingHints(4)="Number of records this map has."
+
+    OnFilterVotingList=InternalOnFilterVotingList
 }
