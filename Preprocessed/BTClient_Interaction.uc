@@ -2709,6 +2709,7 @@ function RenderHUDElements( Canvas C )
     local Vector v;
     local string s;
     local Color backupColor;
+    local int i;
 
     drawX = COLUMN_PADDING_X;
     drawY = (C.ClipY * 0.5);
@@ -2807,6 +2808,36 @@ function RenderHUDElements( Canvas C )
 
     s = "Currency";
     DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints );
+
+    // render team status on right side of hud centered vertically.
+    if( MRI.Teams[0].Name != "" )
+    {
+        drawX = C.ClipX*0.5;
+        drawY = C.ClipY*0.6;
+        if( SpectatedClient.EventTeamIndex == -1 )
+        {
+            drawY +=DrawElement( C, drawX, drawY, "Please vote for a team in the store!",, true, 200,, class'HUD'.default.WhiteColor, #0x44444488 ).Y*1.2;
+
+            drawY +=DrawElement( C, drawX, drawY, "Earn points for a team by improving records!",, true, 200,, class'HUD'.default.WhiteColor, #0x88884488 ).Y*1.2;
+
+            drawY +=DrawElement( C, drawX, drawY, "Members whom have supported its team will receive rewards!",, true, 200,, class'HUD'.default.WhiteColor, #0x88884488 ).Y*1.2;
+        }
+
+        drawX = C.ClipX - 250;
+        drawY = C.ClipY*0.5 - ArrayCount(MRI.Teams)*(YL*(COLUMN_PADDING_Y*2)*1.2);
+        for( i = 0; i < ArrayCount(MRI.Teams); ++ i )
+        {
+            if( MRI.Teams[i].Name == "" )
+                continue;
+
+            s = MRI.Teams[i].Name;
+            if( SpectatedClient.EventTeamIndex == i )
+            {
+                s = ">" @ s;
+            }
+            drawY += DrawElement( C, drawX, drawY, s, int(MRI.Teams[i].Points),, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
+        }
+    }
 }
 
 function DrawRecordWidget( Canvas C )
