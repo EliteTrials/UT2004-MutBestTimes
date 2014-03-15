@@ -2830,12 +2830,12 @@ function RenderHUDElements( Canvas C )
             if( MRI.Teams[i].Name == "" )
                 continue;
 
-            s = MRI.Teams[i].Name;
+            s = MRI.Teams[i].Name $ "[" $ MRI.Teams[i].Voters $ "]";
             if( SpectatedClient.EventTeamIndex == i )
             {
                 s = ">" @ s;
             }
-            drawY += DrawElement( C, drawX, drawY, s, int(MRI.Teams[i].Points),, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
+            drawY += DrawElement( C, drawX, drawY, s, MRI.Teams[i].Points,, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
         }
     }
 }
