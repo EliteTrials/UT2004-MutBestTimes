@@ -265,18 +265,40 @@ replication
         ServerSetPreferedColor;
 }
 
+simulated event PostBeginPlay()
+{
+    super.PostBeginPlay();
+
+    if( Level.NetMode != NM_DedicatedServer )
+    {
+        Options = class'BTClient_Config'.static.FindSavedData();
+        if( Options == none )
+        {
+            Log( "BTClient_Config not found!", Name );
+        }
+
+        if( Role == ROLE_Authority ) // e.g. offline client
+        {
+            InitializeClient();
+        }
+    }
+}
+
 simulated function InitializeClient( optional BTClient_Interaction myInter )
 {
-    Options = Class'BTClient_Config'.Static.FindSavedData();
-    if( Options == None )
-    {
-        Log( "BTClient_Config not found!", Name );
-    }
-
-    SetOwner( Level.GetLocalPlayerController() );
-
     ReplicateResetGhost();
     ServerSetPreferedColor( Options.PreferedColor );
+}
+
+simulated event PostNetBeginPlay()
+{
+    super.PostNetBeginPlay();
+
+    if( Role < ROLE_Authority )
+    {
+        SetOwner( Level.GetLocalPlayerController() );
+        InitializeClient();
+    }
 }
 
 final function bool IsClient()

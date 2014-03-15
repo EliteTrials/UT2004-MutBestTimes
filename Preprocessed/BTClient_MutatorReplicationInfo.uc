@@ -146,7 +146,6 @@ simulated function InitializeClient()
                     {
                         CR = BTClient_ClientReplication(LRI);
                         CR.MRI = Self;
-                        CR.InitializeClient( Inter );
                         break;
                     }
                 }
