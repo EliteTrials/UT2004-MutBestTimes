@@ -25,7 +25,7 @@ simulated function OpenWindow()
 }
 
 // Hooked by BTServer_VotingHandler.
-delegate string InjectMapNameData(int mapIndex);
+delegate string InjectMapNameData(VotingReplicationInfo VRI, int mapIndex);
 
 // Ugly copy from parent, modified to, inject data into the MapName variable.
 function TickedReplication_MapList(int Index, bool bDedicated)
@@ -36,7 +36,7 @@ function TickedReplication_MapList(int Index, bool bDedicated)
     MapInfo = VH.GetMapList(Index);
     DebugLog("___Sending " $ Index $ " - " $ MapInfo.MapName);
 
-    data = InjectMapNameData(index);
+    data = InjectMapNameData(self, index);
     if( data != "" )
     {
         MapInfo.MapName $= "$$" $ data;

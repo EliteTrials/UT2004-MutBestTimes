@@ -39,9 +39,6 @@ var enum ERecordState
     RS_QuickStart,
 } RecordState;
 
-var string ADMessage;
-var string ADURL;
-
 /* Local, ClientReplication */
 var BTClient_ClientReplication CR;                                              // Client Only
 
@@ -88,9 +85,6 @@ replication
         Credits, RankingPage,
         bSoloMap, bKeyMap,
         RecordsCount, MaxRecords, PlayersCount;
-
-    reliable if( bNetInitial /*bNetDirty && RecordState != RS_Active*/ )
-        ADMessage, ADURL;
 
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )

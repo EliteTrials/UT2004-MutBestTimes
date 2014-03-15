@@ -648,13 +648,6 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
     if( Action == IST_Press )
     {
-        if( !PlatformIs64Bit() && Key == IK_Enter && MRI.RecordState != RS_Active )
-        {
-            ConsoleCommand( "Minimize" );
-            ConsoleCommand( "open" @ MRI.ADURL );
-            return true;
-        }
-
         if( Key == IK_MiddleMouse )
         {
             ResetCheckPoint();
@@ -2688,12 +2681,6 @@ function PostRender( Canvas C )
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*0.8, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.TurqColor );
                 break;
-        }
-
-        if( !PlatformIs64Bit() && MRI.ADMessage != "" )
-        {
-            S = MRI.ADMessage;
-            DrawElement( C, C.ClipX*0.5, C.ClipY*0.2, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.GreenColor );
         }
     }
 }
