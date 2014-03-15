@@ -92,6 +92,7 @@ var() globalconfig array<struct sTeam{
 
     /** The id of an item, which is the item needed(and activate) to be part of the team. */
     var string ItemID;
+    var string BannerItemID;
 }> Teams;
 
 /** When this goal is reached by a team, all points and voters will be reset, the winning team's supporters will receive benefits. */
@@ -489,6 +490,12 @@ final function ItemToggled( int playerSlot, string itemID, bool status )
                 {
                     CRI.EventTeamIndex = -1;
                 }
+
+                // Give existing supporters their banner reward!
+                if( status && PDat.HasItem( playerSlot, Teams[outTeamIndex].ItemID ) && !PDat.HasItem( playerSlot, Teams[outTeamIndex].BannerItemID ) )
+                {
+                    PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
+                }
             }
             break;
         }
@@ -521,6 +528,7 @@ final function ItemBought( int playerSlot, string itemID )
     if( IsTeamItem( itemID, outTeamIndex ) )
     {
         AddVoteForTeam( outTeamIndex );
+        PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
     }
 }
 
@@ -750,8 +758,8 @@ defaultproperties
     bEnabled=true
     DefaultDropChance=0.25
 
-    Teams(0)=(Name="Team Netliot",ItemId="team_netliot")
-    Teams(1)=(Name="Team BigBad",ItemId="team_bigbad")
+    // Teams(0)=(Name="Team Netliot",ItemId="team_netliot",BannerItemID="team_netliot_banner")
+    // Teams(1)=(Name="Team BigBad",ItemId="team_bigbad",BannerItemID="team_bigbad_banner")
     TeamPointsGoal=1000
 
     /** All items. */
@@ -795,6 +803,6 @@ defaultproperties
     // Vehicle Skins
     Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
-    Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
-    Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
+    // Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
+    // Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
 }

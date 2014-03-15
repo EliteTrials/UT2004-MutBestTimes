@@ -1375,7 +1375,7 @@ event PreBeginPlay()
             {
                 MRI.Teams[i].Name = Store.Teams[i].Name;
                 MRI.Teams[i].Points = Store.Teams[i].Points;
-                MRI.Teams[i].Voters = Store.Teams[i].Points;
+                MRI.Teams[i].Voters = Store.Teams[i].Voters;
             }
         }
 
@@ -5158,8 +5158,8 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     l = Store.FindPlayerTeam( CR );
                     if( l != -1 )
                     {
-                        Store.AddPointsForTeam( CR, l, 1 );
-                        Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "has earned extra points for" @ Store.Teams[l].Name );
+                        Store.AddPointsForTeam( CR, l, 1*(numObjectives*PointsPerObjective) );
+                        Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "has earned an extra" @ 1*(numObjectives*PointsPerObjective) @ "points for" @ Store.Teams[l].Name );
                         PDat.GiveCurrencyPoints( CR.myPlayerSlot, 2 );
                     }
                     else
