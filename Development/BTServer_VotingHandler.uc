@@ -373,7 +373,7 @@ function LoadMapList()
     Loader.Destroy();
 }
 
-function string InjectMapNameData( int mapIndex )
+function string InjectMapNameData( VotingReplicationInfo VRI, int mapIndex )
 {
     local int recordIndex;
     local string data;
@@ -384,19 +384,16 @@ function string InjectMapNameData( int mapIndex )
         return "";
     }
 
-    if( BT.RDat.Rec[recordIndex].PSRL.length == 0 )
+    if( BT.RDat.Rec[recordIndex].PSRL.Length > 0 )
     {
-        data = BT.TimeToStr( BT.RDat.Rec[recordIndex].TMT );
-        if( BT.RDat.Rec[recordIndex].TMT >= 0 )
-        {
-            data $= ";1";
-        }
+        data = "T:" $ BT.RDat.Rec[recordIndex].PSRL[0].SRT;
     }
     else
     {
-        data = BT.TimeToStr( BT.RDat.Rec[recordIndex].PSRL[0].SRT );
-        data $= ";" $ BT.RDat.Rec[recordIndex].PSRL.Length;
+        data = "T:";
     }
+    data $= ";N:" $ BT.RDat.Rec[recordIndex].PSRL.Length;
+    data $= ";R:" $ BT.RDat.GetMapRating( recordIndex );
     return data;
 }
 
