@@ -136,10 +136,11 @@ defaultproperties
         bBoundToParent=True
         FontScale=FNS_Small
         HeaderColumnPerc(0)=0.40
-        HeaderColumnPerc(1)=0.20
-        HeaderColumnPerc(2)=0.20
+        HeaderColumnPerc(1)=0.15
+        HeaderColumnPerc(2)=0.15
         HeaderColumnPerc(3)=0.10
         HeaderColumnPerc(4)=0.10
+        HeaderColumnPerc(5)=0.10
     End Object
     lb_MapListBox = MapListBox
 

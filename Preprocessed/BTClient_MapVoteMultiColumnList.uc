@@ -25,30 +25,52 @@ final static function string ParseMapName(string mapName)
 }
 
 // STR-MapName$$TIME;COUNT
-final static function string ParseMapNameData(string mapName, out string timeString, out string recordsCount)
+final static function string ParseMapNameData(string mapName, out string timeString, out string recordsCount, out string mapRating)
 {
-	local int idx, semiIdx;
+    local int i;
 	local string data;
+    local array<string> props, prop;
 
-	idx = InStr(mapName, "$$");
-    if( idx != -1 )
+    i = InStr(mapName, "$$");
+    if( i != -1 )
     {
-    	data = Mid(mapName, idx + 2);
-    	semiIdx = InStr(data, ";");
-    	if( semiIdx != -1 )
-    	{
-    		timeString = Left(data, semiIdx);
-    		recordsCount = Mid(data, semiIdx + 1);
-    	}
-    	else
-    	{
-    		timeString = data;
-    		recordsCount = "0";
-    	}
-    	return Left(mapName, idx);
+        data = Mid(mapName, i + 2);
+        mapName = Left(mapName, i);
+        Split(data, ";", props);
+        for( i = 0; i < props.Length; ++ i )
+        {
+            Split(props[i], ":", prop);
+            switch( prop[0] )
+            {
+                case "T":
+                    timeString = class'BTClient_Interaction'.static.FormatTime(float(prop[1]));
+                    break;
+
+                case "N":
+                    recordsCount = prop[1];
+                    break;
+
+                case "R":
+                    mapRating = prop[1];
+                    break;
+            }
+        }
     }
-    timeString = "00:00:00.00";
-    recordsCount = "0";
+
+    if( timeString == "" )
+    {
+        timeString = class'BTClient_Interaction'.static.FormatTime(0.00);
+    }
+
+    if( recordsCount == "" )
+    {
+        recordsCount = "0";
+    }
+
+    if( mapRating == "" )
+    {
+        mapRating = "0.00";
+    }
     return mapName;
 }
 
@@ -58,7 +80,7 @@ function DrawItem(Canvas Canvas, int i, float X, float Y, float W, float H, bool
     local float CellLeft, CellWidth;
     local eMenuState MState;
     local GUIStyles DrawStyle;
-    local string mapTxt, timeTxt, recordsCountTxt;
+    local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
 
 	if( VRI == none )
 		return;
@@ -88,7 +110,7 @@ function DrawItem(Canvas Canvas, int i, float X, float Y, float W, float H, bool
     else
     	MState = MenuState;
 
-    mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[SortData[i].SortItem]].MapName, timeTxt, recordsCountTxt);
+    mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[SortData[i].SortItem]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);
 
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
@@ -108,21 +130,26 @@ function DrawItem(Canvas Canvas, int i, float X, float Y, float W, float H, bool
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		recordsCountTxt, FontScale );
+        recordsCountTxt, FontScale );
+
+    GetCellLeftWidth( 5, CellLeft, CellWidth );
+    DrawStyle.DrawText( Canvas, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+		mapRatingTxt, FontScale );
 }
 
 function string GetSortString( int i )
 {
 	local string ColumnData[5];
-	local string mapTxt, timeTxt, recordsCountTxt;
+	local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
 
-	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt);
+	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);
 
 	ColumnData[0] = left(Caps(mapTxt),20);
 	ColumnData[1] = timeTxt;
 	ColumnData[2] = string(float(VRI.MapList[MapVoteData[i]].PlayCount)/100F);
 	ColumnData[3] = right("000000" $ VRI.MapList[MapVoteData[i]].Sequence,6);
-	ColumnData[4] = right("000000" $ recordsCountTxt,6);
+    ColumnData[4] = right("000000" $ recordsCountTxt,6);
+	ColumnData[5] = right("000000" $ mapRatingTxt,6);
 
 	return ColumnData[SortColumn] $ ColumnData[PrevSortColumn];
 }
@@ -174,18 +201,21 @@ defaultproperties
 	ColumnHeadings(1)="Time"
 	ColumnHeadings(2)="Played Hours"
 	ColumnHeadings(3)="Seq"
-	ColumnHeadings(4)="Records"
+    ColumnHeadings(4)="Records"
+	ColumnHeadings(5)="Rating"
 
     InitColumnPerc(0)=0.40
     InitColumnPerc(1)=0.2
-    InitColumnPerc(2)=0.2
+    InitColumnPerc(2)=0.1
     InitColumnPerc(3)=0.1
     InitColumnPerc(4)=0.1
+    InitColumnPerc(5)=0.1
 
 	ColumnHeadingHints(1)="Best time record on this map."
 	ColumnHeadingHints(2)="Number of hours this map has been played for."
 	ColumnHeadingHints(3)="Sequence, The number of games that have been played since this map was last played."
-	ColumnHeadingHints(4)="Number of records this map has."
+    ColumnHeadingHints(4)="Number of records this map has."
+	ColumnHeadingHints(5)="Players rating of this map."
 
     OnFilterVotingList=InternalOnFilterVotingList
 }
