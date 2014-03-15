@@ -102,8 +102,17 @@ struct long sBTRecordInfo
     /** Various booleans for this record. */
     var int RecordFlags;
 
-    // A cached average of record times.
-    var float AverageRecordTIme;
+    /** [Cached] The average record time of this map. Calculated from @PSRL. */
+    var float AverageRecordTime;
+
+    /** [Cached] Players rating of this map. Calculated from @Dislikers and @Likers. */
+    var float Rating;
+
+    /** List of players (index) whom rated this map as "like". */
+    var array<int> Dislikers;
+
+    /** List of players (index) whom rated this map as "dislike". */
+    var array<int> Likers;
 };
 
 /** The list of all records made on this server. */
@@ -195,6 +204,68 @@ final function int FindRecord( string mapName )
     }
 
     return -1;
+}
+
+final function bool PlayerLikeMap( int recordSlot, int playerSlot )
+{
+    local int i;
+
+    for( i = 0; i < Rec[recordSlot].Likers.Length; ++ i )
+    {
+        if( Rec[recordSlot].Likers[i] == playerSlot )
+        {
+            return false;
+        }
+    }
+
+    for( i = 0; i < Rec[recordSlot].Dislikers.Length; ++ i )
+    {
+        if( Rec[recordSlot].Dislikers[i] == playerSlot )
+        {
+            Rec[recordSlot].Dislikers.Remove( i, 1 );
+            break;
+        }
+    }
+
+    Rec[recordSlot].Likers[Rec[recordSlot].Likers.Length] = playerSlot;
+    UpdateMapRating( recordSlot );
+    return true;
+}
+
+final function bool PlayerDislikeMap( int recordSlot, int playerSlot )
+{
+    local int i;
+
+    for( i = 0; i < Rec[recordSlot].Dislikers.Length; ++ i )
+    {
+        if( Rec[recordSlot].Dislikers[i] == playerSlot )
+        {
+            return false;
+        }
+    }
+
+    for( i = 0; i < Rec[recordSlot].Likers.Length; ++ i )
+    {
+        if( Rec[recordSlot].Likers[i] == playerSlot )
+        {
+            Rec[recordSlot].Likers.Remove( i, 1 );
+            break;
+        }
+    }
+
+    Rec[recordSlot].Dislikers[Rec[recordSlot].Dislikers.Length] = playerSlot;
+    UpdateMapRating( recordSlot );
+    return true;
+}
+
+private function UpdateMapRating( int recordSlot )
+{
+    Rec[recordSlot].Rating = Rec[recordSlot].Likers.Length/(Rec[recordSlot].Dislikers.Length + Rec[recordSlot].Likers.Length);
+}
+
+final function string GetMapRating( int recordSlot )
+{
+    return string(Rec[recordSlot].Rating*10);
 }
 
 defaultproperties
