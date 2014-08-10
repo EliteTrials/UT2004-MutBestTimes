@@ -522,7 +522,7 @@ defaultproperties
         WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
-        StyleName="BTButton"
+        StyleName="AdvancedButton"
         Hint="Here you can donate to the admins who are working vigorously to update and add new things to the store to show appreciation for all the new things the server has. You can also make requests for personal items if you have made a donation. ÿIf you want to donate make sure you ALERT an admin who can verify it."
     end object
     b_Donate=oDonate

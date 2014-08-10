@@ -117,7 +117,6 @@ var bool bTimerPaused, bSoundTicking;
 var const
     texture
     AlphaLayer,
-    Layer,
     RankBeacon;
 
 // DODGEPERK DATA
@@ -1064,6 +1063,13 @@ Event Initialized()
     {
         bNoRenderZoneActors = true;
     }
+
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_HUD', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_MultiColumnList', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Header', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2EditBox', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2SectionHeaderTop', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Button', true );
 }
 
 static final function string ReverseString( string s )
@@ -1120,24 +1126,33 @@ Final Function ObjectsInitialized()
     }*/
 }
 
-final function ReplaceVotingMenu()
+private function ReplaceVotingMenu()
 {
     local GUIController c;
     local VotingReplicationInfo vri;
+    local int menuIndex;
+
+    vri = VotingReplicationInfo(ViewportOwner.Actor.VoteReplicationInfo);
+    if( vri == none || !vri.bMapVote )
+        return;
 
     c = GUIController(ViewportOwner.Actor.Player.GUIController);
-    if( c.ActivePage != none && c.ActivePage.Class == class'MapVotingPage' )
+    if( c == none )
+        return;
+
+    menuIndex = c.FindMenuIndexByName( c.MapVotingMenu );
+    if( menuIndex != -1 )
     {
-        vri = VotingReplicationInfo(ViewportOwner.Actor.VoteReplicationInfo);
-        if( vri != none && !(vri.GameConfig.Length < vri.GameConfigCount || vri.MapList.Length < vri.MapCount) && vri.bMapVote )
+        if( GUIQuestionPage(c.TopPage()) != none )
         {
             c.CloseMenu( true );
-            c.OpenMenu( string(class'BTClient_MapVotingPage') );
         }
+        c.RemoveMenuAt( menuIndex, true );
+        c.OpenMenu( string(class'BTClient_MapVotingPage') );
     }
 }
 
-Final Function ModifyMenu()
+private function ModifyMenu()
 {
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
@@ -1148,7 +1163,8 @@ Final Function ModifyMenu()
     {
         Menu.BackgroundRStyle = MSTY_None;
         Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
-        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BTButton', True );
+        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_AdvancedButton', True );
+        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_Button', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
@@ -1166,8 +1182,8 @@ Final Function ModifyMenu()
         if( myMenu != None )
         {
             myMenu.MyInteraction = self;
-            myMenu.MyButton.StyleName = "BTButton";
-            myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "BTButton", myMenu.FontScale );
+            myMenu.MyButton.StyleName = "AdvancedButton";
+            myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "AdvancedButton", myMenu.FontScale );
             myMenu.PostInitPanel();
         }
 
@@ -3267,7 +3283,6 @@ DefaultProperties
 
     RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
     AlphaLayer=Texture'BTScoreBoardBG'
-    Layer=Texture'BTScoreBoardBG'
 
     PlayersRankingColumns(0)=(Title="#",Format="0000")
     PlayersRankingColumns(1)=(Title="Score",Format="00000")
