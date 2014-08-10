@@ -7,21 +7,45 @@ class BTClient_MapVotingPage extends MapVotingPage;
 var automated GUIButton b_Random;
 var automated GUIEditBox MapNameFilter;
 var automated GUILabel FilterLabel;
+var automated BTClient_MapPanel MapPanel;
 
-function OnOkButtonClick(byte bButton)
+var automated GUILabel GameTypeFilter;
+var automated GUIComboBox ComboGameType;
+
+// Ugly ugly ugly...
+function bool InternalOnBackgroundDraw( Canvas C )
 {
-    if( bButton != QBTN_OK )
-        Controller.CloseMenu( True );
+    C.DrawColor = class'BTClient_Config'.default.CTable;
+    C.DrawTile( i_FrameBG.Image, i_FrameBG.ActualWidth(), i_FrameBG.ActualHeight(), 0, 0, 256, 256 );
+    return true;
 }
 
+// Ugly ugly ugly...
+function bool InternalOnPanelBackgroundDraw( Canvas C )
+{
+    C.SetPos( MapPanel.ActualLeft(), MapPanel.ActualTop() );
+    C.DrawColor = class'BTClient_Config'.default.CTable;
+    C.DrawTile( Texture'BTScoreBoardBG', MapPanel.ActualWidth(), MapPanel.ActualHeight(), 0, 0, 256, 256 );
+    return true;
+}
+
+function InternalOnReceiveMapInfo( VotingHandler.MapVoteMapList mapInfo )
+{
+    local int l;
+
+    if( BTClient_MapVoteMultiColumnList(lb_MapListBox.List).IsFiltered( MVRI, ComboGameType.GetIndex(), mapInfo.MapName ) )
+        return;
+
+    l = BTClient_MapVoteMultiColumnList(lb_MapListBox.List).MapVoteData.Length;
+    BTClient_MapVoteMultiColumnList(lb_MapListBox.List).MapVoteData.Insert(l,1);
+    BTClient_MapVoteMultiColumnList(lb_MapListBox.List).MapVoteData[l] = MVRI.MapList.Length - 1;
+    BTClient_MapVoteMultiColumnList(lb_MapListBox.List).AddedItem();
+}
+
+// >> Ugly copy from MapVotingPage, necessary to add a few specific modifications to it!.
 function InternalOnOpen()
 {
-    // >> Ugly copy from MapVotingPage, necessary to add a few specific modifications to it!.
-
     local int i, d;
-
-    BackgroundRStyle = MSTY_None;
-    i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
 
     if( MVRI == none || (MVRI != none && !MVRI.bMapVote) )
     {
@@ -31,17 +55,24 @@ function InternalOnOpen()
         return;
     }
 
-    if( MVRI.GameConfig.Length < MVRI.GameConfigCount || MVRI.MapList.Length < MVRI.MapCount )
+    if( MVRI.GameConfig.Length < MVRI.GameConfigCount )
     {
         Controller.OpenMenu("GUI2K4.GUI2K4QuestionPage");
-        GUIQuestionPage( Controller.TopPage() ).SetupQuestion( lmsgReplicationNotFinished@string( MVRI.MapList.Length / MVRI.MapCount * 100 )$"% Completed", QBTN_Ok, QBTN_Ok );
+        GUIQuestionPage( Controller.TopPage() ).SetupQuestion( lmsgReplicationNotFinished, QBTN_Ok, QBTN_Ok );
         GUIQuestionPage( Controller.TopPage() ).OnButtonClick = OnOkButtonClick;
         return;
     }
 
+    BackgroundRStyle = MSTY_None;
+    // i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
+    i_FrameBG.Image = Texture'BTScoreBoardBG';
+    i_FrameBG.OnDraw = InternalOnBackgroundDraw;
+    MapPanel.OnPreDraw = InternalOnPanelBackgroundDraw;
+    BTClient_VRI(MVRI).OnReceiveMapInfo = InternalOnReceiveMapInfo;
+
     for( i=0; i<MVRI.GameConfig.Length; i++ )
-        co_GameType.AddItem( MVRI.GameConfig[i].GameName, none, string(i));
-    co_GameType.MyComboBox.List.SortList();
+        ComboGameType.AddItem( MVRI.GameConfig[i].GameName, none, string(i));
+    ComboGameType.List.SortList();
 
     t_WindowTitle.Caption = t_WindowTitle.Caption@"("$lmsgMode[MVRI.Mode]$")";
 
@@ -54,47 +85,69 @@ function InternalOnOpen()
 
     lb_MapListBox.List.OnDblClick = MapListDblClick;
     lb_MaplistBox.List.bDropSource = True;
-    co_GameType.OnChange = GameTypeChanged;
-    f_Chat.OnSubmit = Submit;
+    lb_MaplistBox.List.OnChange = MapSelectionChanged;
+    ComboGameType.Edit.bAlwaysNotify = true;
+    ComboGameType.OnChange = GameTypeChanged;
+    // f_Chat.OnSubmit = Submit;
 
     // set starting gametype to current
-    d = co_GameType.MyComboBox.List.FindExtra(string(MVRI.CurrentGameConfig));
+    d = ComboGameType.List.FindExtra(string(MVRI.CurrentGameConfig));
     if( d > -1 )
-        co_GameType.SetIndex(d);
+        ComboGameType.SetIndex(d);
 
-    VotingOpened();
+    ComboGameType.Edit.Style = Controller.GetStyle("BTEditBox", ComboGameType.Edit.FontScale);
+    ComboGameType.MyShowListBtn.Style = Controller.GetStyle("BTButton", ComboGameType.MyShowListBtn.FontScale);
+    ComboGameType.List.Style = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
+    ComboGameType.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
+
+    lb_MaplistBox.MyScrollBar.MyIncreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyIncreaseButton.FontScale);
+    lb_MaplistBox.MyScrollBar.MyDecreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyDecreaseButton.FontScale);
+    lb_MaplistBox.MyScrollBar.MyGripButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyGripButton.FontScale);
+    lb_MaplistBox.MyScrollBar.MyScrollZone.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyScrollZone.FontScale);
 }
 
-function VotingOpened()
+function GameTypeChanged(GUIComponent Sender)
 {
-    local BTClient_MapVoteFooter footer;
+    local int GameTypeIndex;
 
-    footer = BTClient_MapVoteFooter(f_Chat);
-    footer.OnRandom = RandomClicked;
+    GameTypeIndex = int(ComboGameType.GetExtra());
+    if( GameTypeIndex > -1 )
+    {
+        lb_MapListBox.ChangeGameType( GameTypeIndex );
+        lb_MapListBox.List.OnDblClick = MapListDblClick;
+        MapNameFilter.SetText( "" );
+    }
 }
 
-function RandomClicked()
+function bool RandomClicked( GUIComponent sender )
 {
     local int GameConfigIndex;
     local int randomMapIndex;
     local int generationAttempts;
+    local BTClient_MapVoteMultiColumnList list;
+
+    list = BTClient_MapVoteMultiColumnList(lb_MaplistBox.List);
 
     rng:
-    randomMapIndex = Rand( MVRI.MapList.Length );
-    if( !MVRI.MapList[randomMapIndex].bEnabled )
+    randomMapIndex = Rand( list.MapVoteData.Length );
+    if( !MVRI.MapList[list.MapVoteData[randomMapIndex]].bEnabled && !PlayerOwner().PlayerReplicationInfo.bAdmin )
     {
-        if( generationAttempts >= 10 )
+        if( generationAttempts >= 100 )
         {
             PlayerOwner().ClientMessage(lmsgMapDisabled);
-            return;
+            return false;
         }
 
         ++ generationAttempts;
         goto rng;
     }
 
-    GameConfigIndex = int(co_GameType.GetExtra());
-    MVRI.SendMapVote( randomMapIndex, GameConfigIndex );
+    GameConfigIndex = int(ComboGameType.GetExtra());
+    if( GameConfigIndex > -1 )
+    {
+        MVRI.SendMapVote( list.MapVoteData[randomMapIndex], GameConfigIndex );
+    }
+    return true;
 }
 
 function InternalOnFilterChange( GUIComponent sender )
@@ -102,7 +155,17 @@ function InternalOnFilterChange( GUIComponent sender )
     local string filter;
 
     filter = MapNameFilter.GetText();
-    BTClient_MapVoteMultiColumnList(lb_MaplistBox.List).OnFilterVotingList( sender, filter );
+    BTClient_MapVoteMultiColumnList(lb_MaplistBox.List).OnFilterVotingList( sender, filter, int(ComboGameType.GetExtra()) );
+}
+
+function MapSelectionChanged( GUIComponent sender )
+{
+    MapPanel.OnMapSelected( sender, BTClient_MapVoteMultiColumnList(lb_MapListBox.List).GetSelectedMapName() );
+}
+
+function bool AlignBK(Canvas C)
+{
+    return false;
 }
 
 defaultproperties
@@ -112,107 +175,156 @@ defaultproperties
     WinWidth=0.9
     WinHeight=0.9
 
-     Begin Object class=moComboBox Name=GameTypeCombo
-        WinWidth=0.48
-        WinHeight=0.037500
-        WinLeft=0.5
-        WinTop=0.04
-        Caption="Filter Game Type:"
-        CaptionWidth=0.35
-        bScaleToParent=True
-        bBoundToParent=true
-    End Object
-    co_GameType=GameTypeCombo
-
     Begin Object Class=BTClient_MapVoteMultiColumnListBox Name=MapListBox
-        WinWidth=0.96
-        WinHeight=0.60
-        WinLeft=0.02
-        WinTop=0.08
+        WinWidth=0.980000
+        WinHeight=0.624000
+        WinLeft=0.010000
+        WinTop=0.060000
         bVisibleWhenEmpty=true
-        StyleName="NoBackground"
-        //StyleName="ServerBrowserGrid"
         bScaleToParent=True
         bBoundToParent=True
         FontScale=FNS_Small
-        HeaderColumnPerc(0)=0.40
-        HeaderColumnPerc(1)=0.15
+        HeaderColumnPerc(0)=0.10
+        HeaderColumnPerc(1)=0.40
         HeaderColumnPerc(2)=0.15
-        HeaderColumnPerc(3)=0.10
+        HeaderColumnPerc(3)=0.15
         HeaderColumnPerc(4)=0.10
         HeaderColumnPerc(5)=0.10
+        begin object class=BTClient_MultiColumnListHeader name=oHeader
+            BarStyleName=""
+        end object
+        Header=oHeader
     End Object
-    lb_MapListBox = MapListBox
+    lb_MapListBox=MapListBox
 
-    Begin Object Class=MapVoteCountMultiColumnListBox Name=VoteCountListBox
-        WinWidth=0.42
-        WinHeight=0.251406
-        WinLeft=0.02
-        WinTop=0.726457
+    begin object class=BTClient_MapPanel name=oMapInfo
+        WinWidth=0.560000
+        WinHeight=0.240000
+        WinLeft=0.010000
+        WinTop=0.730000
+        bScaleToParent=True
+        bBoundToParent=True
+    end object
+    MapPanel=oMapInfo
+
+    Begin Object Class=BTClient_MapVoteCountMultiColumnListBox Name=VoteCountListBox
+        WinWidth=0.41
+        WinHeight=0.24
+        WinLeft=0.58
+        WinTop=0.73
         bVisibleWhenEmpty=true
-        StyleName="NoBackground"
         bScaleToParent=True
         bBoundToParent=True
         FontScale=FNS_Small
         HeaderColumnPerc(0)=0.30
         HeaderColumnPerc(1)=0.40
         HeaderColumnPerc(2)=0.30
+        begin object class=BTClient_MultiColumnListHeader name=oHeaderTwo
+            BarStyleName=""
+        end object
+        Header=oHeaderTwo
     End Object
-    lb_VoteCountListBox = VoteCountListBox
+    lb_VoteCountListBox=VoteCountListBox
 
     begin object class=GUILabel name=oFilterLabel
-        WinTop=0.686457
-        WinHeight=0.037500
-        WinWidth=0.1
-        WinLeft=0.02
+        WinTop=0.69
+        WinHeight=0.035000
+        WinWidth=0.07
+        WinLeft=0.01
         bScaleToParent=True
         bBoundToParent=True
-        Caption="Filter:"
+        Caption="Search"
         TextColor=(R=255,G=255,B=255,A=255)
+        TextAlign=TXTA_Center
+        bTransparent=false
+        FontScale=FNS_Small
+        StyleName="BTHeader"
     end object
     FilterLabel=oFilterLabel
 
     begin object class=GUIEditBox name=oMapNameFilter
-        WinTop=0.686457
-        WinHeight=0.037500
-        WinWidth=0.86
-        WinLeft=0.12
+        WinTop=0.69
+        WinHeight=0.035000
+        WinWidth=0.485
+        WinLeft=0.085
         bScaleToParent=True
         bBoundToParent=True
         OnChange=InternalOnFilterChange
+        StyleName="BTEditBox"
     end object
     MapNameFilter=oMapNameFilter
 
-    Begin Object Class=BTClient_MapVoteFooter Name=MatchSetupFooter
-        WinWidth=0.530000
-        WinHeight=0.251406
-        WinLeft=0.450000
-        WinTop=0.726457
-        TabOrder=10
-        RenderWeight=0.5
-        bBoundToParent=True
+    begin object class=GUILabel name=oGameTypeFilter
+        WinWidth=0.065
+        WinHeight=0.035000
+        WinLeft=0.58
+        WinTop=0.69
         bScaleToParent=True
-    End Object
-    f_Chat=MatchSetupFooter
+        bBoundToParent=True
+        Caption="Mode"
+        TextColor=(R=255,G=255,B=255,A=255)
+        TextAlign=TXTA_Center
+        bTransparent=false
+        FontScale=FNS_Small
+        StyleName="BTHeader"
+    end object
+    GameTypeFilter=oGameTypeFilter
 
-    Begin Object Class=GUIImage Name=MapCountListBackground
-        WinWidth=0.98
-        WinHeight=0.223770
-        WinLeft=0.01
-        WinTop=0.052930
-        Image=none
-        ImageStyle=ISTY_Stretched
-        OnDraw=AlignBK
+    Begin Object class=GUIComboBox Name=GameTypeCombo
+        WinWidth=0.235000
+        WinHeight=0.035000
+        WinLeft=0.650000
+        WinTop=0.690000
+        bScaleToParent=true
+        bBoundToParent=true
+        bIgnoreChangeWhenTyping=true
     End Object
-    i_MapCountListBackground=MapCountListBackground
+    ComboGameType=GameTypeCombo
+    co_Gametype=none
 
-    Begin Object Class=GUIImage Name=MapListBackground
-        WinWidth=0.98
-        WinHeight=0.316542
-        WinLeft=0.01
-        WinTop=0.371020
-        Image=none
-        ImageStyle=ISTY_Stretched
+    Begin Object class=GUIButton Name=oRandomButton
+        WinWidth=0.100000
+        WinHeight=0.035000
+        WinLeft=0.890000
+        WinTop=0.690000
+        Caption="Random"
+        bScaleToParent=True
+        bBoundToParent=true
+        OnClick=RandomClicked
+        StyleName="BTButton"
     End Object
-    i_MapListBackground=MapListBackground
+    b_Random=oRandomButton
+
+    // Begin Object Class=BTClient_MapVoteFooter Name=MatchSetupFooter
+    //     WinWidth=0.530000
+    //     WinHeight=0.251406
+    //     WinLeft=0.450000
+    //     WinTop=0.726457
+    //     TabOrder=10
+    //     RenderWeight=0.5
+    //     bBoundToParent=True
+    //     bScaleToParent=True
+    // End Object
+    f_Chat=none
+    i_MapCountListBackground=none
+    i_MapListBackground=none
+
+    Begin Object Class=GUIHeader Name=TitleBar
+        WinWidth=0.980000
+        WinHeight=0.034286
+        WinLeft=0.010000
+        WinTop=0.010000
+        RenderWeight=0.1
+        FontScale=FNS_Small
+        bUseTextHeight=True
+        bAcceptsInput=True
+        bNeverFocus=False
+        bBoundToParent=true
+        bScaleToParent=true
+        OnMousePressed=FloatingMousePressed
+        OnMouseRelease=FloatingMouseRelease
+        ScalingType=SCALE_X
+        StyleName="BTHeader"
+    End Object
+    t_WindowTitle=TitleBar
 }
