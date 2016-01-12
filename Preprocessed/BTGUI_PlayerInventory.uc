@@ -7,8 +7,9 @@ class BTGUI_PlayerInventory extends BTGUI_StatsTab
 var Texture TileMat;
 
 var automated GUITreeListBox        CategoriesListBox;
-var automated GUISectionBackground  AchievementsBackground, CategoriesBackground;
+var automated GUISectionBackground  ItemsBackground, CategoriesBackground;
 var automated GUIVertImageListBox   ItemsListBox;
+var GUIContextMenu                  ItemsContextMenu;
 
 function ShowPanel( bool bShow )
 {
@@ -21,10 +22,14 @@ function ShowPanel( bool bShow )
     }
 
     ItemsListBox.List.OnDrawItem = InternalOnDrawItem;
+    ItemsListBox.List.OnRightClick = InternalOnListRightClick;
+    ItemsListBox.List.OnDblClick = InternalOnListDblClick;
     if( bShow && CRI.PlayerItems.Length == 0 )
     {
         CRI.OnPlayerItemReceived = InternalOnPlayerItemReceived;
         CRI.ServerRequestPlayerItems();
+        CRI.OnPlayerItemRemoved = InternalOnPlayerItemRemoved;
+        CRI.OnPlayerItemUpdated = InternalOnPlayerItemUpdated;
     }
 }
 
@@ -43,6 +48,22 @@ function InternalOnPlayerItemReceived( int index )
     ItemsListBox.List.Add( icon, index, 0 );
 }
 
+// Assuming the list represents that exact order of CRI.PlayerItems
+function InternalOnPlayerItemRemoved( int index )
+{
+    local int i;
+
+    ItemsListBox.List.Remove( index );
+    for( i = index; i < ItemsListBox.List.Elements.Length; ++ i )
+    {
+        -- ItemsListBox.List.Elements[i].Item;
+    }
+}
+
+function InternalOnPlayerItemUpdated( int index )
+{
+}
+
 final static preoperator Color #( int rgbInt )
 {
     local Color c;
@@ -56,10 +77,9 @@ final static preoperator Color #( int rgbInt )
 
 function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, float H, bool bSelected, bool bPending )
 {
-    local BTClient_ClientReplication.sAchievementState achievement;
+    local BTClient_ClientReplication.sPlayerItemClient playerItem;
     local float XL, YL;
     local GUIVertImageList list;
-    local Texture icon;
     local float iconSize;
     local float oldClipX, oldClipY;
     local float footerHeight;
@@ -67,9 +87,9 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     list = ItemsListBox.List;
     X += int((float(Item - list.Top)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
     Y += int(((float(Item - list.Top)/float(list.NoVisibleCols)%float(list.NoVisibleRows))))*(h+list.VertBorder);
-    w -= list.HorzBorder;
-    h -= list.VertBorder;
-    achievement = CRI.AchievementsStates[Item];
+    w -= list.HorzBorder*list.NoVisibleCols;
+    h -= list.VertBorder*list.VertBorder;
+    playerItem = CRI.PlayerItems[Item];
 
     oldClipX = C.ClipX;
     oldClipY = C.ClipY;
@@ -78,130 +98,128 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.Font = Font'UT2003Fonts.jFontSmallText800x600';
     C.Style = 1;
 
+    C.StrLen( "T", XL, YL );
+    footerHeight = YL + 4;
+
+    // RENDER: Background
     C.DrawColor = CRI.Options.CTable;
     if( bSelected || bPending )
     {
-        C.DrawColor = #0x00529668;
+        C.DrawColor = #0x8E8EFEFF;
     }
-    C.SetPos( int(X), int(Y) );
-    C.DrawTileClipped( TileMat, int(w), int(h), 0, 0, 256, 256 );
-
-    if( achievement.bEarned )
-    {
-        C.OrgX = X;
-        C.OrgY = Y;
-        C.SetPos( -100, -64 );
-        C.DrawColor = achievement.EffectColor;
-        C.DrawTileClipped( Shader'Achievement_Effect', w + 100, h + 64, 0, 0, 110, 128 );
-        C.OrgX = 0;
-        C.OrgY = 0;
-    }
+    else C.DrawColor = #0xEEEEEE88;
+    C.OrgX = int(X);
+    C.OrgY = int(Y);
+    C.SetPos( 0, 0 );
+    C.DrawTileClipped( TileMat, int(w), int(h), 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
 
     // RENDER: Icon
     C.DrawColor = class'HUD'.default.WhiteColor;
-    if( !achievement.bEarned )
+    iconSize = h - 16 - footerHeight;
+    C.OrgX = X;
+    C.OrgY = Y;
+    C.SetPos( w*0.5 - iconSize*0.5 + 2, 12 );
+    C.DrawTileClipped( playerItem.IconTexture, iconSize - 8, iconSize - 8, 0.0, 0.0, playerItem.IconTexture.MaterialUSize(), playerItem.IconTexture.MaterialVSize() );
+
+    C.TextSize( "X", XL, YL );
+    C.OrgX = X;
+    C.OrgY = Y;
+    C.ClipX = W;
+    C.SetPos( w - 8 - XL, 8 );
+    C.DrawColor = class'HUD'.default.BlackColor;
+    C.DrawTileClipped( TileMat, XL, YL, 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
+    C.SetPos( w - 8 - XL, 8 );
+    C.DrawColor = #0x222222FF;
+    C.DrawBox( C, XL, YL );
+
+    if( playerItem.bEnabled )
     {
-        C.DrawColor.A = 70;
-    }
-    if( achievement.Icon == "" )
-    {
-        icon = class'BTUI_AchievementState'.default.AchievementDefaultIcon;
-    }
-    else
-    {
-        icon = Texture(DynamicLoadObject( achievement.Icon, class'Texture' ));
-    }
-    iconSize = w/3;
-    C.SetPos( X + 4, Y + h*0.5 - iconSize*0.5 + 4 );
-    C.DrawTileClipped( icon, iconSize - 8, iconSize - 8, 0.0, 0.0, 128, 128 );
-
-    C.TextSize( string(achievement.Points), XL, YL );
-    C.SetPos( X + iconSize*0.5 - XL*0.5, Y + h*0.5 - YL*0.5 );
-    C.DrawTextClipped( string(achievement.Points) );
-
-    // C.SetPos( X, Y );
-    // C.DrawBox( C, iconSize, h );
-
-    C.StrLen( "T", XL, YL );
-    footerHeight = YL + 8;
-
-    // RENDER: Progress
-    if( achievement.Count > 0 )
-    {
-        C.TextSize( achievement.Progress $ "/" $ achievement.Count, XL, YL );
-
-        C.SetPos( X + 4, Y + h - footerHeight - 6 );
-        C.DrawColor = class'HUD'.default.BlackColor;
-        C.DrawColor.A = 80;
-        C.DrawTileClipped( TileMat, iconSize - 8, footerHeight, 0, 0, 256, 256 );
-
-        C.SetPos( X + 4, Y + h - footerHeight - 6 );
-        C.DrawColor = achievement.EffectColor;
-        C.DrawColor.A = 80;
-        C.DrawTileClipped
-        (
-            TileMat,
-            iconSize * (float(Min( achievement.Progress, achievement.Count )) / float(achievement.Count)) - 8,
-            footerHeight,
-            0, 0, 256, 256
-        );
-
-        C.SetPos( X + iconSize*0.5 - XL*0.5 + 4, Y + h - footerHeight - 2 );
+        // TODO: Checked icon
+        C.SetPos( w - 8 - XL, 8 );
         C.DrawColor = class'HUD'.default.WhiteColor;
-        C.DrawTextClipped( achievement.Progress $ "/" $ achievement.Count );
-
-        // RENDER: Title
-        C.TextSize( achievement.Title, XL, YL );
-        C.SetPos( (X + iconSize) + (w - iconSize)*0.5 - XL*0.5 + 4, Y + h - footerHeight - 2 );
-        C.ClipX -= 8;
-        C.DrawColor = class'HUD'.default.WhiteColor;
-        C.DrawTextClipped( achievement.Title );
-        C.ClipX += 8;
-    }
-    else
-    {
-        // RENDER: Title
-        C.TextSize( achievement.Title, XL, YL );
-        C.OrgX = X + 8;
-        C.OrgY = Y + h - footerHeight;
-        C.ClipX = W - 16;
-        C.SetPos( w*0.5 - XL*0.5, 0 );
-        C.DrawColor = class'HUD'.default.WhiteColor;
-        C.DrawTextClipped( achievement.Title );
-        C.OrgX = X + W;
-        C.OrgY = Y + H;
-
+        C.DrawTextClipped( "X" );
     }
 
-    // RENDER: Description
-    C.OrgX = X + iconSize + 8;
-    C.OrgY = Y + 8;
-    C.ClipX = W - (iconSize + 8) - 8;
-    C.ClipY = H - 8 - 8;
+    // RENDER: Name
+    // Footer
+    C.TextSize( playerItem.Name, XL, YL );
+    C.OrgX = int(X);
+    C.OrgY = int(Y) + h - footerHeight;
+    C.ClipX = w;
     C.SetPos( 0, 0 );
-    C.DrawColor = #0x22222266;
-    C.StrLen( achievement.Description, XL, YL );
-    C.DrawTileClipped( TileMat, XL + 8, YL + 8, 0, 0, 256, 256 );
-    C.OrgX += 4;
-    C.ClipX -= 8;
-    C.OrgY += 4;
-    C.ClipY -= 8;
+    C.DrawColor = #0x3C3935CC;
+    C.DrawTileClipped( TileMat, w, footerHeight, 0, 0, 256, 256 );
+
+    C.OrgX = X + 4;
+    C.OrgY = Y + h - footerHeight;
+    C.ClipX = W - 8;
+    C.SetPos( w*0.5 - XL*0.5, 0 );
+    C.DrawColor = class'HUD'.default.WhiteColor;
+    C.DrawTextClipped( playerItem.Name );
+
+    C.OrgX = X-2;
+    C.OrgY = Y-2;
+    C.ClipX = W;
+    C.ClipY = H;
     C.SetPos( 0, 0 );
-    C.DrawColor = class'HUD'.default.WhiteColor; // reset
-    C.DrawText( achievement.Description );
-    C.OrgX = 0;
-    C.OrgY = 0;
-    C.ClipX = X + W;
-    C.ClipY = Y + H;
-
-    // C.SetPos( X + iconSize, Y + h - footerHeight );
-    // C.DrawBox( C, w - iconSize, footerHeight );
-
-    // C.SetPos( X, Y );
-    // C.DrawBox( C, w, h );
+    C.DrawColor = #0x222222FF;
+    C.DrawBox( C, w, h );
 
     C.ClipX = oldClipX;
     C.ClipY = oldClipY;
+    C.OrgX = X + W;
+    C.OrgY = Y + H;
+}
+
+function bool InternalOnListRightClick( GUIComponent sender )
+{
+    return false;
+}
+
+function bool InternalOnListDblClick( GUIComponent sender )
+{
+    return ToggleSelectedItem();
+}
+
+function InternalOnSelect( GUIContextMenu sender, int clickIndex )
+{
+    switch( clickIndex )
+    {
+        case 0:
+            ToggleSelectedItem();
+            break;
+
+        case 1:
+            SellSelectedItem();
+            break;
+    }
+}
+
+
+final function bool ToggleSelectedItem()
+{
+    local int i;
+
+    i = ItemsListBox.List.GetItem();
+    if( i != -1 )
+    {
+        CRI.ServerToggleItem( CRI.PlayerItems[i].ID );
+        return true;
+    }
+    return false;
+}
+
+final function bool SellSelectedItem()
+{
+    local int i;
+
+    i = ItemsListBox.List.GetItem();
+    if( i != -1 )
+    {
+        CRI.ServerSellItem( CRI.PlayerItems[i].ID );
+        return true;
+    }
+    return false;
 }
 
 defaultproperties
@@ -209,7 +227,7 @@ defaultproperties
     OnKeyEvent=OnKeyEvent
     TileMat=Texture'BTScoreBoardBG'
 
-    begin object class=GUISectionBackground name=oAchievementsBackground
+    begin object class=GUISectionBackground name=oItemsBackground
         WinWidth=0.700000
         WinHeight=0.92
         WinLeft=0.300000
@@ -217,14 +235,15 @@ defaultproperties
         bBoundToParent=true
         bScaleToParent=true
         Caption="Your Items"
-        HeaderBase=Material'2K4Menus.NewControls.Display99'
+        HeaderBar=none
+        HeaderBase=none
     end object
-    AchievementsBackground=oAchievementsBackground
+    ItemsBackground=oItemsBackground
 
     begin object class=GUIVertImageListBox name=oItemsListBox
-        WinWidth=0.660000
-        WinHeight=0.790000
-        WinLeft=0.320000
+        WinWidth=0.690000
+        WinHeight=0.820000
+        WinLeft=0.300000
         WinTop=0.070000
         bBoundToParent=true
         bScaleToParent=true
@@ -234,8 +253,16 @@ defaultproperties
         NoVisibleCols=6
         TabOrder=0
 
-        VertBorder=8
-        HorzBorder=4
+        VertBorder=2
+        HorzBorder=1
+
     end object
     ItemsListBox=oItemsListBox
+
+    begin object class=GUIContextMenu name=oContextMenu
+        ContextItems(0)="Equip/Unequip Item"
+        ContextItems(1)="Sell Item"
+        OnSelect=InternalOnSelect
+    end object
+    ContextMenu=oContextMenu
 }

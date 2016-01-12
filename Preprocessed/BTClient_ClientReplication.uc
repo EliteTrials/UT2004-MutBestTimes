@@ -270,7 +270,8 @@ replication
         ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
         ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
         ClientSendItem, ClientSendStoreCategory, ClientSendAchievementCategory,
-        ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
+        ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData,
+        ClientNotifyItemUpdated, ClientNotifyItemRemoved;
 
     // unreliable
     reliable if( Role == ROLE_Authority )
@@ -284,6 +285,20 @@ replication
         ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
         ServerRequestPlayerItems;
 }
+
+// Server hooks
+delegate OnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI );
+delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
+
+delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter );
+
+// UI hooks
+delegate OnAchievementStateReceived( int index );
+delegate OnAchievementCategoryReceived( int index );
+
+delegate OnPlayerItemReceived( int index );
+delegate OnPlayerItemRemoved( int index );
+delegate OnPlayerItemUpdated( int index );
 
 simulated event PostBeginPlay()
 {
@@ -603,9 +618,6 @@ final function ServerRequestAchievementsByCategory( string catID )
     OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
 }
 
-delegate OnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI );
-delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
-
 simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )
 {
     local int i;
@@ -631,8 +643,6 @@ simulated final function ClientSendAchievementState( string title, string descri
     OnAchievementStateReceived( i );
 }
 
-delegate OnAchievementStateReceived( int index );
-
 simulated final function ClientSendAchievementCategory( sAchievementCategory cat )
 {
     local int i;
@@ -643,16 +653,10 @@ simulated final function ClientSendAchievementCategory( sAchievementCategory cat
     OnAchievementCategoryReceived( i );
 }
 
-delegate OnAchievementCategoryReceived( int index );
-
-
-final function ServerRequestPlayerItems()
+final function ServerRequestPlayerItems( optional string filter )
 {
-    OnRequestPlayerItems( PlayerController(Owner), self );
+    OnRequestPlayerItems( PlayerController(Owner), self, filter );
 }
-
-delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI );
-delegate OnPlayerItemReceived( int index );
 
 simulated final function ClientSendPlayerItem( sPlayerItemClient item )
 {
@@ -662,6 +666,38 @@ simulated final function ClientSendPlayerItem( sPlayerItemClient item )
     PlayerItems.Length = i + 1;
     PlayerItems[i] = item;
     OnPlayerItemReceived( i );
+}
+
+// NotifyAdded ^ ClientSendPlayerItem
+simulated function ClientNotifyItemRemoved( string id )
+{
+    local int i;
+
+    for( i = 0; i < PlayerItems.Length; ++ i )
+    {
+        if( PlayerItems[i].Id == id )
+        {
+            OnPlayerItemRemoved( i );
+            PlayerItems.Remove( i, 1 );
+            break;
+        }
+    }
+}
+
+simulated function ClientNotifyItemUpdated( string id, bool bEnabled, byte newCount )
+{
+    local int i;
+
+    for( i = 0; i < PlayerItems.Length; ++ i )
+    {
+        if( PlayerItems[i].Id == id )
+        {
+            PlayerItems[i].bEnabled = bEnabled;
+            PlayerItems[i].Count = newCount;
+            OnPlayerItemUpdated( i );
+            break;
+        }
+    }
 }
 
 simulated final function ClientSendTrophy( string title )
@@ -816,6 +852,21 @@ simulated final function ClientSendStoreCategory( string categoryName )
 simulated final function ClientSendItemsCompleted()
 {
     bItemsTransferComplete = true;
+}
+
+simulated function ServerToggleItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store ToggleItem" @ id );
+}
+
+simulated function ServerBuyItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store BuyItem" @ id );
+}
+
+simulated function ServerSellItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store SellItem" @ id );
 }
 
 static function BTClient_ClientReplication GetRep( PlayerController PC )
