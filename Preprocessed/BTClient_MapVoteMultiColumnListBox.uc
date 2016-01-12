@@ -19,4 +19,12 @@ function LoadList(VotingReplicationInfo LoadVRI)
 defaultproperties
 {
     DefaultListClass="BTClient_MapVoteMultiColumnList"
+
+    // Note: Removed view screenshot and map description
+    Begin Object Class=GUIContextMenu Name=oRCMenu
+        ContextItems(0)="Vote for this Map"
+        OnSelect=InternalOnClick
+    End Object
+    ContextMenu=oRCMenu
+    StyleName="NoBackground"
 }

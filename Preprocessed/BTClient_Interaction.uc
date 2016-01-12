@@ -117,7 +117,6 @@ var bool bTimerPaused, bSoundTicking;
 var const
     texture
     AlphaLayer,
-    Layer,
     RankBeacon;
 
 // DODGEPERK DATA
@@ -128,6 +127,8 @@ var float LastLandedTime;
 var bool bPerformedDodge;
 var bool bPreDodgeReady;
 var bool bDodgeReady;
+
+var bool bPromodeWasPerformed;
 
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
@@ -648,13 +649,6 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
     if( Action == IST_Press )
     {
-        if( !PlatformIs64Bit() && Key == IK_Enter && MRI.RecordState != RS_Active )
-        {
-            ConsoleCommand( "Minimize" );
-            ConsoleCommand( "open" @ MRI.ADURL );
-            return true;
-        }
-
         if( Key == IK_MiddleMouse )
         {
             ResetCheckPoint();
@@ -1071,6 +1065,13 @@ Event Initialized()
     {
         bNoRenderZoneActors = true;
     }
+
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_HUD', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_MultiColumnList', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Header', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2EditBox', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2SectionHeaderTop', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Button', true );
 }
 
 static final function string ReverseString( string s )
@@ -1127,24 +1128,33 @@ Final Function ObjectsInitialized()
     }*/
 }
 
-final function ReplaceVotingMenu()
+private function ReplaceVotingMenu()
 {
     local GUIController c;
     local VotingReplicationInfo vri;
+    local int menuIndex;
+
+    vri = VotingReplicationInfo(ViewportOwner.Actor.VoteReplicationInfo);
+    if( vri == none || !vri.bMapVote )
+        return;
 
     c = GUIController(ViewportOwner.Actor.Player.GUIController);
-    if( c.ActivePage != none && c.ActivePage.Class == class'MapVotingPage' )
+    if( c == none )
+        return;
+
+    menuIndex = c.FindMenuIndexByName( c.MapVotingMenu );
+    if( menuIndex != -1 )
     {
-        vri = VotingReplicationInfo(ViewportOwner.Actor.VoteReplicationInfo);
-        if( vri != none && !(vri.GameConfig.Length < vri.GameConfigCount || vri.MapList.Length < vri.MapCount) && vri.bMapVote )
+        if( GUIQuestionPage(c.TopPage()) != none )
         {
             c.CloseMenu( true );
-            c.OpenMenu( string(class'BTClient_MapVotingPage') );
         }
+        c.RemoveMenuAt( menuIndex, true );
+        c.OpenMenu( string(class'BTClient_MapVotingPage') );
     }
 }
 
-Final Function ModifyMenu()
+private function ModifyMenu()
 {
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
@@ -1156,7 +1166,8 @@ Final Function ModifyMenu()
     {
         Menu.BackgroundRStyle = MSTY_None;
         Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
-        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BTButton', True );
+        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_AdvancedButton', True );
+        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_Button', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
@@ -1183,8 +1194,8 @@ Final Function ModifyMenu()
         if( myMenu != None )
         {
             myMenu.MyInteraction = self;
-            myMenu.MyButton.StyleName = "BTButton";
-            myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "BTButton", myMenu.FontScale );
+            myMenu.MyButton.StyleName = "AdvancedButton";
+            myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "AdvancedButton", myMenu.FontScale );
             myMenu.PostInitPanel();
         }
 
@@ -2484,6 +2495,7 @@ function PostRender( Canvas C )
     local float FXL, FYL;
     local float rXL;
     local LinkedReplicationInfo LRI;
+    local xPawn p;
 
     if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
         return;
@@ -2501,6 +2513,43 @@ function PostRender( Canvas C )
         RenderGhostMarkings( C );
     }
     RenderTitle( C );
+    if( Options.bProfesionalMode || bPromodeWasPerformed )
+    {
+        foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
+        {
+            if( p.PlayerReplicationInfo == none )
+            {
+                continue;
+            }
+
+            if( p == ViewportOwner.Actor.ViewTarget )
+            {
+                if( p.bHidden )
+                {
+                    p.SoundVolume = p.default.SoundVolume;
+                    p.bHidden = false;
+                }
+                continue;
+            }
+
+            if( !p.bHidden )
+            {
+                p.SoundVolume = 0;
+                p.bHidden = true;
+                bPromodeWasPerformed = true;
+            }
+            else if( !Options.bProfesionalMode && bPromodeWasPerformed )
+            {
+                p.SoundVolume = p.default.SoundVolume;
+                p.bHidden = false;
+            }
+        }
+
+        if( bPromodeWasPerformed && !Options.bProfesionalMode )
+        {
+            bPromodeWasPerformed = false;
+        }
+    }
 
     // Look for our ClientReplication object
     if( MRI.CR == None )
@@ -2699,12 +2748,6 @@ function PostRender( Canvas C )
                 DrawElement( C, C.ClipX*0.5, C.ClipY*0.8, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.TurqColor );
                 break;
         }
-
-        if( !PlatformIs64Bit() && MRI.ADMessage != "" )
-        {
-            S = MRI.ADMessage;
-            DrawElement( C, C.ClipX*0.5, C.ClipY*0.2, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.GreenColor );
-        }
     }
 }
 
@@ -2719,6 +2762,7 @@ function RenderHUDElements( Canvas C )
     local Vector v;
     local string s;
     local Color backupColor;
+    local int i;
 
     drawX = COLUMN_PADDING_X;
     drawY = (C.ClipY * 0.5);
@@ -2817,6 +2861,36 @@ function RenderHUDElements( Canvas C )
 
     s = "Currency";
     DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints );
+
+    // render team status on right side of hud centered vertically.
+    if( MRI.Teams[0].Name != "" )
+    {
+        drawX = C.ClipX*0.5;
+        drawY = C.ClipY*0.6;
+        if( SpectatedClient.EventTeamIndex == -1 )
+        {
+            drawY +=DrawElement( C, drawX, drawY, "Please vote for a team in the store!",, true, 200,, class'HUD'.default.WhiteColor, #0x44444488 ).Y*1.2;
+
+            drawY +=DrawElement( C, drawX, drawY, "Earn points for a team by improving records!",, true, 200,, class'HUD'.default.WhiteColor, #0x88884488 ).Y*1.2;
+
+            drawY +=DrawElement( C, drawX, drawY, "Members whom have supported its team will receive rewards!",, true, 200,, class'HUD'.default.WhiteColor, #0x88884488 ).Y*1.2;
+        }
+
+        drawX = C.ClipX - 250;
+        drawY = C.ClipY*0.5 - ArrayCount(MRI.Teams)*(YL*(COLUMN_PADDING_Y*2)*1.2);
+        for( i = 0; i < ArrayCount(MRI.Teams); ++ i )
+        {
+            if( MRI.Teams[i].Name == "" )
+                continue;
+
+            s = MRI.Teams[i].Name $ "[" $ MRI.Teams[i].Voters $ "]";
+            if( SpectatedClient.EventTeamIndex == i )
+            {
+                s = ">" @ s;
+            }
+            drawY += DrawElement( C, drawX, drawY, s, MRI.Teams[i].Points,, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
+        }
+    }
 }
 
 function DrawRecordWidget( Canvas C )
@@ -3259,7 +3333,6 @@ DefaultProperties
 
     RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
     AlphaLayer=Texture'BTScoreBoardBG'
-    Layer=Texture'BTScoreBoardBG'
 
     PlayersRankingColumns(0)=(Title="#",Format="0000")
     PlayersRankingColumns(1)=(Title="Score",Format="00000")
