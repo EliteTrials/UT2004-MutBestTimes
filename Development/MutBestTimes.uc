@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2016 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
     config(MutBestTimes)
@@ -23,7 +23,7 @@ class MutBestTimes extends Mutator
 //  Minor Version  // minor new features
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
-const BTVersion                         = "4.0.0.0";
+const BTVersion                         = "4.0.1.0";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
 const MaxHistoryLength                  = 25;
@@ -37,7 +37,7 @@ const EXP_FailRecord                    = 3;
 const EXP_Objective                     = 4;
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2016 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE      = "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 const groupNum = 2;
@@ -258,11 +258,6 @@ var globalconfig
 
 var globalconfig int MaxItemsToReplicatePerTick;
 
-var globalconfig int GroupFinishAchievementUnlockedNum;
-var bool bBlockSake;
-const UnlockBlockSakeCount = 10;
-
-
 // Options
 var() globalconfig
     bool
@@ -285,11 +280,6 @@ var() globalconfig
     bDontEndGameOnRecord,
     bDisableWeaponBoosting,
     bEnableInstigatorEmpathy;
-
-var() globalconfig
-    string
-    ADMessage,
-    ADURL;
 
 var() globalconfig
     int
@@ -1106,6 +1096,13 @@ function ModifyPlayer( Pawn Other )
     {
         CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
     }
+
+    if( CRI.myPawn == Other )
+    {
+        // We have already modified this player.
+        return;
+    }
+
     CRI.myPawn = Other;
 
     CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
@@ -1357,9 +1354,6 @@ event PreBeginPlay()
     MRI = Spawn( Class'BTClient_MutatorReplicationInfo' );
     MRI.AddToPackageMap();  // Temporary ServerPackage
 
-    Store = class'BTStore'.static.Load();
-    Store.Cache();
-    AddToPackageMap( "TextureBTimes" );
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
     {
@@ -1380,8 +1374,6 @@ event PreBeginPlay()
     MRI.Credits = "v" $ Class'HUD'.Default.GoldColor $ BTVersion $ Class'HUD'.Default.WhiteColor @ Credits;
     MRI.PlayersCount = PDat.Player.Length;
     MRI.MaxRecords = RDat.Rec.Length;
-    MRI.ADMessage = ADMessage;
-    MRI.ADURL = ADURL;
     MRI.TotalCurrencySpent = PDat.TotalCurrencySpent;
     MRI.TotalItemsBought = PDat.TotalItemsBought;
 
@@ -1408,8 +1400,23 @@ event PreBeginPlay()
         }
     }
 
+    Store = class'BTStore'.static.Load( self );
+    FullLog( "Store:" @ Store );
+
+    // WARNING: Do not add any code below!
     if( ModeIsTrials() )
     {
+        if( Store != none && Store.Teams.Length > 0 )
+        {
+            // Replicate all teams to the client side and its state.
+            for( i = 0; i < Min( Store.Teams.Length, 3 ); ++ i )
+            {
+                MRI.Teams[i].Name = Store.Teams[i].Name;
+                MRI.Teams[i].Points = Store.Teams[i].Points;
+                MRI.Teams[i].Voters = Store.Teams[i].Voters;
+            }
+        }
+
         // Initialize TMRating for all maps
         for( i = 0; i < RDat.Rec.Length; ++ i )
         {
@@ -2800,7 +2807,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             i = Store.FindItemByID( s );
             if( i != -1 )
             {
-                if( !Store.CanBuyItem( sender, PDat, Rep.myPlayerSlot, i, s ) )
+                if( !Store.CanBuyItem( sender, Rep, i, s ) )
                 {
                     SendErrorMessage( sender, s );
                     break;
@@ -4781,16 +4788,6 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
 final function ProcessGroupFinishAchievement( int playerSlot )
 {
     PDat.ProgressAchievementByID( playerSlot, 'mode_1' );
-
-    if( bBlockSake )
-    {
-        ++ GroupFinishAchievementUnlockedNum;
-
-        if( GroupFinishAchievementUnlockedNum == 10 )
-        {
-            Level.Game.Broadcast( self, "GTR-GeometryBasics just got unlocked! Thanks for playing and have a good time! Please vote another map first!" );
-        }
-    }
 }
 
 final function bool HasRegularRecordOn( int recordSlot, int playerSlot )
@@ -5029,7 +5026,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     local bool b;
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
-    local int i, j, PLs, PLi, y, z;
+    local int i, j, PLs, PLi, y, z, l;
     local float TimeBoost;
     local Pawn P;
     local int numObjectives;
@@ -5174,6 +5171,21 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         {
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
+                if( Store != none )
+                {
+                    l = Store.FindPlayerTeam( CR );
+                    if( l != -1 )
+                    {
+                        Store.AddPointsForTeam( CR, l, 1*(numObjectives*PointsPerObjective) );
+                        Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "has earned an extra" @ 1*(numObjectives*PointsPerObjective) @ "points for" @ Store.Teams[l].Name );
+                        PDat.GiveCurrencyPoints( CR.myPlayerSlot, 2 );
+                    }
+                    else
+                    {
+                        SendErrorMessage( PC, "You haven't voted for a team! Please vote a team to get extra rewards!" );
+                    }
+                }
+
                 // Earn 20 points from one record.
                 if( CalcRecordPoints( UsedSlot, i ) >= 20 )
                 {
@@ -6759,6 +6771,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
         return;
 
     CR.myPlayerSlot = Slot;
+    PDat.Player[Slot].Controller = PC; // not saved
 
     CR.Title = PDat.Player[Slot].Title;
     CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
@@ -6771,6 +6784,12 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
     if( Store != none )
     {
+        if( ModeIsTrials() && PDat.Player[Slot].bPendingTeamReward )
+        {
+            Store.RewardTeamPlayer( CR );
+            PDat.Player[Slot].bPendingTeamReward = false;
+            PDat.Player[Slot].TeamPointsContribution = 0;
+        }
         Store.ModifyPlayer( PC, PDat, CR );
     }
 
@@ -6810,22 +6829,6 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
     {
         SendEventDescription( CR );
     }
-
-    if( bBlockSake && GroupFinishAchievementUnlockedNum < 10 )
-    {
-        CR.ClientSendText( $0xFF0000 $ "A new map for Group trials has been released! However the map is locked." );
-        CR.ClientSendText( $0xFF0000 $ "At least 10 people have to finish a Group map, to get the map unlocked!" );
-        CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
-    }
-
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0xFF8800 $ "Welcome to this server, a new MutBestTimes version is currently being tested, here are the changes:" );
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" For every time you complete an objective you have a small chance to receive a random item!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" Recent donators will receive a premium activation code, giving them access to exclusive features!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" The MutBestTimes HUD/Scoreboard and pretty much everything has a new look!" );
-    CR.ClientSendText( $0xFFFF00 $ "  New!"$$0x888800$" !title <AchievementTitle>, for premium players: !title <Title>" );
-    CR.ClientSendText( "" );
 
     if( bShowRankings && ModeIsTrials() )
     {
@@ -7806,9 +7809,6 @@ DefaultProperties
     Commands(35)=(Cmd="CompetitiveMode",Params=("None"),Help="Starts the competitive mode")
     Commands(36)=(Cmd="SetEventDesc",Params=("Message(1024)"),Help="Sets the BTimes MOTD")
 
-    ADMessage="Become a fan of our 'Unreal Trials' page on Facebook: Press Enter to visit it now"
-    ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
-
     InvalidAccessMessage="Sorry! This server is not permitted to use MutBestTimes!"
 
     ConfigurableProperties(0)=(Property=BoolProperty'bGenerateBTWebsite',Description="Generate a WebBTimes.html File",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will create a WebBTimes.html file under Saves folder when a new record is set.")
@@ -7826,21 +7826,19 @@ DefaultProperties
     ConfigurableProperties(12)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
     ConfigurableProperties(13)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
     ConfigurableProperties(14)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
-    ConfigurableProperties(15)=(Property=StrProperty'ADMessage',Description="Advertise Message",AccessLevel=255,Weight=1,Rules="255",Hint="Input an advertisement message, that will be displayed to every player, when QuickStart is active or when the map is completed.")
-    ConfigurableProperties(16)=(Property=StrProperty'ADURL',Description="Advertise URL",AccessLevel=255,Weight=1,Rules="255",Hint="The web link, the players will go to when hitting Enter while the Advertise Message is displayed.")
-    ConfigurableProperties(17)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
-    ConfigurableProperties(18)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(19)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(20)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(21)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
-    ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
-    ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+    ConfigurableProperties(16)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
+    ConfigurableProperties(17)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(18)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(19)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(20)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(21)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(22)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
+    ConfigurableProperties(23)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
+    ConfigurableProperties(24)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
 
     bDisableWeaponBoosting=true
-    ConfigurableProperties(26)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
+    ConfigurableProperties(25)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
 
     bEnableInstigatorEmpathy=true
-    ConfigurableProperties(27)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
+    ConfigurableProperties(26)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
 }
