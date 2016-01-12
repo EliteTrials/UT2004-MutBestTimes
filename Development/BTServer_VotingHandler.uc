@@ -356,16 +356,6 @@ function LoadMapList()
     // NEW
     for( i = 0; i < MapCount; ++ i )
     {
-        if( MapList[i].MapName ~= "GTR-GeometryBasics" )
-        {
-            if( BT.GroupFinishAchievementUnlockedNum < 10 )
-            {
-                MapList[i].bEnabled = false;
-            }
-            BT.bBlockSake = true;
-            break;
-        }
-
         AddMapInfoFor( i );
     }
     // ..

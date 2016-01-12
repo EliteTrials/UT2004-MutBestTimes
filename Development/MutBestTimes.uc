@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2016 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
     config(MutBestTimes)
@@ -23,7 +23,7 @@ class MutBestTimes extends Mutator
 //  Minor Version  // minor new features
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
-const BTVersion                         = "4.0.0.0";
+const BTVersion                         = "4.0.1.0";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
 const MaxHistoryLength                  = 25;
@@ -37,7 +37,7 @@ const EXP_FailRecord                    = 3;
 const EXP_Objective                     = 4;
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2016 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE      = "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 const groupNum = 2;
@@ -257,11 +257,6 @@ var globalconfig
     History;
 
 var globalconfig int MaxItemsToReplicatePerTick;
-
-var globalconfig int GroupFinishAchievementUnlockedNum;
-var bool bBlockSake;
-const UnlockBlockSakeCount = 10;
-
 
 // Options
 var() globalconfig
@@ -1058,6 +1053,13 @@ function ModifyPlayer( Pawn Other )
     {
         CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
     }
+
+    if( CRI.myPawn == Other )
+    {
+        // We have already modified this player.
+        return;
+    }
+
     CRI.myPawn = Other;
 
     CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
@@ -4753,16 +4755,6 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
 final function ProcessGroupFinishAchievement( int playerSlot )
 {
     PDat.ProgressAchievementByID( playerSlot, 'mode_1' );
-
-    if( bBlockSake )
-    {
-        ++ GroupFinishAchievementUnlockedNum;
-
-        if( GroupFinishAchievementUnlockedNum == 10 )
-        {
-            Level.Game.Broadcast( self, "GTR-GeometryBasics just got unlocked! Thanks for playing and have a good time! Please vote another map first!" );
-        }
-    }
 }
 
 final function bool HasRegularRecordOn( int recordSlot, int playerSlot )
@@ -6802,22 +6794,6 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
     {
         SendEventDescription( CR );
     }
-
-    if( bBlockSake && GroupFinishAchievementUnlockedNum < 10 )
-    {
-        CR.ClientSendText( $0xFF0000 $ "A new map for Group trials has been released! However the map is locked." );
-        CR.ClientSendText( $0xFF0000 $ "At least 10 people have to finish a Group map, to get the map unlocked!" );
-        CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
-    }
-
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0xFF8800 $ "Welcome to this server, a new MutBestTimes version is currently being tested, here are the changes:" );
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" For every time you complete an objective you have a small chance to receive a random item!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" Recent donators will receive a premium activation code, giving them access to exclusive features!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" The MutBestTimes HUD/Scoreboard and pretty much everything has a new look!" );
-    CR.ClientSendText( $0xFFFF00 $ "  New!"$$0x888800$" !title <AchievementTitle>, for premium players: !title <Title>" );
-    CR.ClientSendText( "" );
 
     if( bShowRankings && ModeIsTrials() )
     {
