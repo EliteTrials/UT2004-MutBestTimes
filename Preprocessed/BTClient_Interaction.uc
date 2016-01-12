@@ -2869,8 +2869,12 @@ function RenderHUDElements( Canvas C )
         }
     drawY += v.y*1.2;
 
-    s = "Currency";
-    DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints );
+    s = "$";
+    DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints,,,, class'HUD'.default.GreenColor );
+    drawY += v.y*1.2;
+
+    s = "AP";
+    DrawElement( C, drawX, drawY, s, SpectatedClient.APoints,,,, class'HUD'.default.WhiteColor, #0x91A79D88 );
 
     // render team status on right side of hud centered vertically.
     if( MRI.Teams[0].Name != "" )

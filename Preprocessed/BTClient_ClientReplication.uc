@@ -188,6 +188,7 @@ var private Pawn DeadPawn;
 var int BTLevel;
 // Not to be confused with actual Ranking Points!
 var int BTPoints;
+var int APoints;
 var int BTWage;
 var bool bIsPremiumMember;
 
@@ -241,7 +242,7 @@ replication
     reliable if( Role == ROLE_Authority )
         myPawn, PersonalTime,
         Rank, ClientFlags, SoloRank,
-        BTLevel, BTExperience, BTPoints, BTWage,
+        BTLevel, BTExperience, BTPoints, APoints, BTWage,
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
