@@ -78,7 +78,7 @@ struct sTrophyClient
     var string Title;
 };
 
-struct sItemClient
+struct sStoreItemClient
 {
     var string Name;
     var string ID;
@@ -96,11 +96,29 @@ struct sItemClient
 struct sCategoryClient
 {
     var string Name;
-    var array<sItemClient> CachedItems;
+    var array<sStoreItemClient> CachedItems;
 };
 
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;    // SERVER and LOCAL
+
+struct sPlayerItemClient
+{
+    var string Name;
+    var string ID;
+    var bool bEnabled;
+    var byte Access;
+    var string Desc;
+    var Material IconTexture;
+
+    var transient bool bSync;
+    var transient bool bHasMeta;
+
+    var byte Count;
+};
+
+
+var(DEBUG) array<sPlayerItemClient> PlayerItems;
 
 // TODO: FIXME ugly dupe of BTAchievements.sCategory
 var(DEBUG) array<struct sAchievementCategory
@@ -139,7 +157,7 @@ var(DEBUG) array<sTrophyClient> Trophies;
 var sTrophyClient LastTrophyEvent;
 
 /** The availabe items for sale and bought. */
-var(DEBUG) array<sItemClient> Items;
+var(DEBUG) array<sStoreItemClient> Items;
 
 // --NOT REPLICATED
 var(DEBUG) transient bool bItemsTransferComplete;
@@ -263,7 +281,8 @@ replication
 
     reliable if( Role < ROLE_Authority )
         ServerSetPreferedColor,
-        ServerRequestAchievementCategories, ServerRequestAchievementsByCategory;
+        ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
+        ServerRequestPlayerItems;
 }
 
 simulated event PostBeginPlay()
@@ -625,6 +644,25 @@ simulated final function ClientSendAchievementCategory( sAchievementCategory cat
 }
 
 delegate OnAchievementCategoryReceived( int index );
+
+
+final function ServerRequestPlayerItems()
+{
+    OnRequestPlayerItems( PlayerController(Owner), self );
+}
+
+delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI );
+delegate OnPlayerItemReceived( int index );
+
+simulated final function ClientSendPlayerItem( sPlayerItemClient item )
+{
+    local int i;
+
+    i = PlayerItems.Length;
+    PlayerItems.Length = i + 1;
+    PlayerItems[i] = item;
+    OnPlayerItemReceived( i );
+}
 
 simulated final function ClientSendTrophy( string title )
 {

@@ -1158,6 +1158,7 @@ private function ModifyMenu()
 {
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
+    local BTGUI_PlayerInventory invMenu;
     local BTGUI_Store storeMenu;
     local BTGUI_Rewards rewardsMenu;
 
@@ -1171,6 +1172,15 @@ private function ModifyMenu()
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
+
+        invMenu = BTGUI_PlayerInventory(Menu.c_Main.AddTab( "Inventory", string(Class'BTGUI_PlayerInventory'),, "Manage your items" ));
+        if( invMenu != none )
+        {
+            // invMenu.MyInteraction = self;
+            invMenu.MyButton.StyleName = "StoreButton";
+            invMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", invMenu.FontScale );
+            invMenu.PostInitPanel();
+        }
 
         storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Store", string(Class'BTGUI_Store'),, "Buy and manage items" ));
         if( storeMenu != none )
