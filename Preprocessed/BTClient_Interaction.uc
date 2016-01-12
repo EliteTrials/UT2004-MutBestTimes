@@ -2192,13 +2192,13 @@ final function RenderRankingsTable( Canvas C )
                     }
                     break;
 
-                case 5: // "Tasks (Overall)"
-                    C.DrawColor = #0x555555FF;
+                case 1: // "Achievement Points (Overall)"
+                    C.DrawColor = #0x91A79DFF;
                     if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[i].Objectives);
+                        value = string(MRI.CR.OverallTop[i].AP);
                     break;
 
-                case 2: // "Player (All)"
+                case 3: // "Player (All)"
                     C.DrawColor = #0xFFFFFFFF;
                     if( Options.GlobalSort == 0 )
                         value = MRI.CR.OverallTop[i].Name;
@@ -2208,7 +2208,7 @@ final function RenderRankingsTable( Canvas C )
                         value = MRI.CR.DailyTop[i].Name;
                     break;
 
-                case 1: // "Score (All)"
+                case 2: // "Score (All)"
                     C.DrawColor = #0xFFFFF0FF;
                     if( Options.GlobalSort == 0 )
                         value = string(int(MRI.CR.OverallTop[i].Points));
@@ -2218,7 +2218,7 @@ final function RenderRankingsTable( Canvas C )
                         value = string(int(MRI.CR.DailyTop[i].Points));
                     break;
 
-                case 3: // "Records (All)"
+                case 4: // "Records (All)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[i].Hijacks & 0x0000FFFF);
@@ -2228,7 +2228,7 @@ final function RenderRankingsTable( Canvas C )
                         value = string(MRI.CR.DailyTop[i].Records);
                     break;
 
-                case 4: // "Hijacks (Overall)"
+                case 5: // "Hijacks (Overall)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[i].Hijacks >> 16);
@@ -2584,28 +2584,21 @@ function PostRender( Canvas C )
     }
 
     // See if client is spectating someone!
-    if( MRI.bSoloMap )
+    SpectatedClient = None;
+    if( Pawn(ViewportOwner.Actor.ViewTarget) != None && ViewportOwner.Actor.ViewTarget != ViewportOwner.Actor.Pawn )
     {
-        SpectatedClient = None;
-        if( Pawn(ViewportOwner.Actor.ViewTarget) != None && ViewportOwner.Actor.ViewTarget != ViewportOwner.Actor.Pawn )
+        for( LRI = Pawn(ViewportOwner.Actor.ViewTarget).PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
         {
-            for( LRI = Pawn(ViewportOwner.Actor.ViewTarget).PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+            if( BTClient_ClientReplication(LRI) != None )
             {
-                if( BTClient_ClientReplication(LRI) != None )
-                {
-                    SpectatedClient = BTClient_ClientReplication(LRI);
-                    break;
-                }
+                SpectatedClient = BTClient_ClientReplication(LRI);
+                break;
             }
         }
-
-        // Not spectating anyone, assign to myself!
-        if( SpectatedClient == None )
-        {
-            SpectatedClient = MRI.CR;
-        }
     }
-    else
+
+    // Not spectating anyone, assign to myself!
+    if( SpectatedClient == None )
     {
         SpectatedClient = MRI.CR;
     }
@@ -2741,7 +2734,7 @@ function PostRender( Canvas C )
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Holder", S, true, C.ClipX*0.65, 4.5 );
 
                 S = MRI.PointsReward;
-                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Reward", S, true, C.ClipX*0.65, 4.5 );
+                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Rank Points", S, true, C.ClipX*0.65, 4.5 );
                 break;
 
             case RS_Failure:
@@ -3346,7 +3339,7 @@ DefaultProperties
     RecordTimeMsg="Time"
     RecordPrevTimeMsg="Previous Time"
     RecordHolderMsg="Holder"
-    RecordTimeLeftMsg="Timer"
+    RecordTimeLeftMsg="Record"
     RecordEmptyMsg="No record available"
     RecordTimeElapsed="Time"
     RankingKeyMsg="Escape/%KEY%"
@@ -3366,11 +3359,11 @@ DefaultProperties
     AlphaLayer=Texture'BTScoreBoardBG'
 
     PlayersRankingColumns(0)=(Title="#",Format="0000")
-    PlayersRankingColumns(1)=(Title="Score",Format="00000")
-    PlayersRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    PlayersRankingColumns(3)=(Title="Records",Format="0000")
-    PlayersRankingColumns(4)=(Title="Hijacks",Format="0000")
-    PlayersRankingColumns(5)=(Title="Objectives",Format="00000")
+    PlayersRankingColumns(1)=(Title="AP",Format="0000")
+    PlayersRankingColumns(2)=(Title="Score",Format="00000")
+    PlayersRankingColumns(3)=(Title="Player",Format="WWWWWWWWWWWW")
+    PlayersRankingColumns(4)=(Title="Records",Format="0000")
+    PlayersRankingColumns(5)=(Title="Hijacks",Format="0000")
 
     RecordsRankingColumns(0)=(Title="#",Format="000")
     RecordsRankingColumns(1)=(Title="Score",Format="00.00")

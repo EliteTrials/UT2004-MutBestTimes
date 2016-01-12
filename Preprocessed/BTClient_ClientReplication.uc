@@ -16,6 +16,7 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 struct sGlobalPacket
 {
     var string name;
+    var int AP;
     var float Points;
     var int Objectives;
     var int Hijacks;
