@@ -75,14 +75,14 @@ function PerformItemDrop( PlayerController player, float bonus )
         {
             resalcePrice = Store.GetResalePrice( itemIndex );
             PDat.GiveCurrencyPoints( LRI.myPlayerSlot, resalcePrice );
-            SendSucceedMessage( player, "You won" @ resalcePrice @ "currency by random chance" );
-            s = "%PLAYER% has won" @ resalcePrice @ "currency by random chance";
+            SendSucceedMessage( player, "You found" @ resalcePrice$"$" );
+            s = "%PLAYER% found" @ resalcePrice$"$";
         }
         else
         {
             PDat.GiveItem( LRI, Store.Items[itemIndex].ID );
-            SendSucceedMessage( player, "You won item" @ Store.Items[itemIndex].Name @ "by random chance" );
-            s = "%PLAYER% has won item" @ itemName @ "by random chance";
+            SendSucceedMessage( player, "You found an item" @ Store.Items[itemIndex].Name$"!" );
+            s = "%PLAYER% has found an item" @ itemName$"!";
         }
         BroadcastLocalMessage( player, class'BTClient_RewardLocalMessage', s );
         BroadcastSound( Sound'AnnouncerSEXY.GodLike', SLOT_Misc );
