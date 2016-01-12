@@ -118,8 +118,8 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     local float footerHeight;
 
     list = AchievementsListBox.List;
-    X += int((float(Item)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
-    Y += int(((float(Item)/float(list.NoVisibleCols)%float(list.NoVisibleRows))))*(h+list.VertBorder);
+    X += int((float(Item - list.Top)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
+    Y += int(((float(Item - list.Top)/float(list.NoVisibleCols)%float(list.NoVisibleRows))))*(h+list.VertBorder);
     w -= list.HorzBorder;
     h -= list.VertBorder;
     achievement = CRI.AchievementsStates[Item];
