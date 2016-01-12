@@ -128,6 +128,8 @@ var bool bPerformedDodge;
 var bool bPreDodgeReady;
 var bool bDodgeReady;
 
+var bool bPromodeWasPerformed;
+
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
 {
@@ -2483,6 +2485,7 @@ function PostRender( Canvas C )
     local float FXL, FYL;
     local float rXL;
     local LinkedReplicationInfo LRI;
+    local xPawn p;
 
     if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
         return;
@@ -2500,6 +2503,43 @@ function PostRender( Canvas C )
         RenderGhostMarkings( C );
     }
     RenderTitle( C );
+    if( Options.bProfesionalMode || bPromodeWasPerformed )
+    {
+        foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
+        {
+            if( p.PlayerReplicationInfo == none )
+            {
+                continue;
+            }
+
+            if( p == ViewportOwner.Actor.ViewTarget )
+            {
+                if( p.bHidden )
+                {
+                    p.SoundVolume = p.default.SoundVolume;
+                    p.bHidden = false;
+                }
+                continue;
+            }
+
+            if( !p.bHidden )
+            {
+                p.SoundVolume = 0;
+                p.bHidden = true;
+                bPromodeWasPerformed = true;
+            }
+            else if( !Options.bProfesionalMode && bPromodeWasPerformed )
+            {
+                p.SoundVolume = p.default.SoundVolume;
+                p.bHidden = false;
+            }
+        }
+
+        if( bPromodeWasPerformed && !Options.bProfesionalMode )
+        {
+            bPromodeWasPerformed = false;
+        }
+    }
 
     // Look for our ClientReplication object
     if( MRI.CR == None )

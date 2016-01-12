@@ -271,13 +271,7 @@ simulated event PostBeginPlay()
 
     if( Level.NetMode != NM_DedicatedServer )
     {
-        Options = class'BTClient_Config'.static.FindSavedData();
-        if( Options == none )
-        {
-            Log( "BTClient_Config not found!", Name );
-        }
-
-        if( Role == ROLE_Authority ) // e.g. offline client
+        if( Role == ROLE_Authority && Level.GetLocalPlayerController() == Owner ) // e.g. offline client
         {
             InitializeClient();
         }
@@ -286,6 +280,12 @@ simulated event PostBeginPlay()
 
 simulated function InitializeClient( optional BTClient_Interaction myInter )
 {
+	Options = class'BTClient_Config'.static.FindSavedData();
+    if( Options == none )
+    {
+        Log( "BTClient_Config not found!", Name );
+    }
+
     ReplicateResetGhost();
     ServerSetPreferedColor( Options.PreferedColor );
 }
@@ -294,9 +294,8 @@ simulated event PostNetBeginPlay()
 {
     super.PostNetBeginPlay();
 
-    if( Role < ROLE_Authority )
+    if( Role < ROLE_Authority && Level.GetLocalPlayerController() == Owner )
     {
-        SetOwner( Level.GetLocalPlayerController() );
         InitializeClient();
     }
 }
@@ -313,20 +312,11 @@ simulated function PostNetReceive()
     // Using Options to know whether were executing this on my own CRI
     if( Level.NetMode == NM_Client )
     {
-        if( Options == None && (Owner == None || Viewport(PlayerController(Owner).Player) == None) )
+        if( Options == none && (Owner == none || Viewport(PlayerController(Owner).Player) == none) )
         {
             // Pawn changed?
-            if( myPawn != None && myPawn != DeadPawn )
+            if( myPawn != none && myPawn != DeadPawn )
             {
-                if( Class'BTClient_Config'.static.FindSavedData().bProfesionalMode )
-                {
-                    myPawn.SoundVolume = 0;
-                    myPawn.TransientSoundVolume = 0;
-                    myPawn.SoundRadius = 0;
-                    myPawn.TransientSoundRadius = 0;
-                    myPawn.bHidden = true;
-                }
-
                 if( !HasClientFlags( CFCLIENTSPAWN | CFCHECKPOINT ) )
                 {
                     ClientSpawn();
@@ -385,8 +375,12 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
     optional PlayerReplicationInfo PRI2
     )
 {
+	if( Options == none )
+	{
+		Log( "Received an early client message: " $ message );
+	}
     // HACK: Respect the options specifically for record messages.
-    if( messageClass == class'BTClient_SoloFinish' && Options.bDisplayCompletingMessages )
+    if( messageClass == class'BTClient_SoloFinish' && Options != none && Options.bDisplayCompletingMessages )
     {
         if( (switch == 0 || switch == 2) && Options.bDisplayFail )
         {
@@ -783,4 +777,5 @@ defaultproperties
     LastObjectiveCompletedTime=-10
     myPlayerSlot=-1
     EventTeamIndex=-1
+    bSkipActorPropertyReplication=false
 }
