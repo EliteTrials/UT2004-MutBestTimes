@@ -2777,6 +2777,7 @@ function RenderHUDElements( Canvas C )
     drawX = COLUMN_PADDING_X;
     drawY = (C.ClipY * 0.5);
     C.Style = 1;
+    C.StrLen( "9", xl, yl );
     if( MRI.CR.ClientSpawnPawn != none )
     {
         if( MRI.Level.GRI != none && MRI.Level.GRI.GameName == "Capture the Flag" )
@@ -2855,7 +2856,7 @@ function RenderHUDElements( Canvas C )
 
         if( SpectatedClient.Level.TimeSeconds - SpectatedClient.BTExperienceChangeTime <= 1.5f && SpectatedClient.BTExperienceDiff != 0f )
         {
-            C.SetPos( drawX + v.x, drawY + v.y*0.5 );
+            C.SetPos( drawX + v.x, drawY + v.y*0.5 - YL*0.5);
             if( SpectatedClient.BTExperienceDiff > 0 )
             {
                 C.DrawColor = Class'HUD'.default.GreenColor;
@@ -2870,11 +2871,11 @@ function RenderHUDElements( Canvas C )
     drawY += v.y*1.2;
 
     s = "$";
-    DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints,,,, class'HUD'.default.GreenColor );
+    DrawElement( C, drawX, drawY, s, Decimal(SpectatedClient.BTPoints),,,, class'HUD'.default.GreenColor );
     drawY += v.y*1.2;
 
     s = "AP";
-    DrawElement( C, drawX, drawY, s, SpectatedClient.APoints,,,, class'HUD'.default.WhiteColor, #0x91A79D88 );
+    DrawElement( C, drawX, drawY, s, Decimal(SpectatedClient.APoints),,,, class'HUD'.default.WhiteColor, #0x91A79D88 );
 
     // render team status on right side of hud centered vertically.
     if( MRI.Teams[0].Name != "" )
@@ -2905,6 +2906,22 @@ function RenderHUDElements( Canvas C )
             drawY += DrawElement( C, drawX, drawY, s, MRI.Teams[i].Points,, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
         }
     }
+}
+
+final function string Decimal( int number )
+{
+    local string s, ns;
+    local int i;
+    local byte l;
+
+    s = string(number);
+    ns = s;
+    l = Len( s );
+    for( i = 0; i < (l-1)/3; ++ i )
+    {
+        ns = Left( s, l - 3*(i+1) ) $ "," $ Right( ns, 3*(i+1)+i );
+    }
+    return ns;
 }
 
 function DrawRecordWidget( Canvas C )
