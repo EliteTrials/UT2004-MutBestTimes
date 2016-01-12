@@ -21,7 +21,8 @@ struct sBTPlayerInfo
         PLObjectives,                                                           // OBJECTIVES
         PLHijacks,                                                              // BROKEN RECORDS
         PLSF,                                                                   // SOLO FINISH
-        PLAP;
+        PLAP,
+        PLAchiev;
 
     /** Index to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
@@ -362,6 +363,12 @@ final function GiveCurrencyPoints( int playerSlot, int amount, optional bool sho
     }
     Player[playerSlot].LevelData.BTPoints += amount;
     BT.NotifyGiveCurrency( playerSlot, amount );
+}
+
+final function GiveAchievementPoints( int playerSlot, int amount )
+{
+    Player[playerSlot].PLAchiev += amount;
+    BT.NotifyAchievementPointsEarned( playerSlot, amount );
 }
 
 /** Make sure the playerSlot's are incremented by 1 when calling. */

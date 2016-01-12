@@ -727,6 +727,11 @@ final function NotifyCheckPointChange( Controller C )
     PDat.ProgressAchievementByType( GetRep( C ).myPlayerSlot, 'CheckpointUses', 1 );
 }
 
+final function NotifyAchievementPointsEarned( int playerSlot, int amount )
+{
+
+}
+
 final function AchievementEarned( int playerSlot, name id )
 {
     local BTClient_ClientReplication rep;
@@ -738,7 +743,7 @@ final function AchievementEarned( int playerSlot, name id )
     earntAchievements = PDat.CountEarnedAchievements( playerSlot );
     // Above PC == none because currency should always be given even for offline players!.
     ach = AchievementsManager.GetAchievementByID( id );
-    PDat.GiveCurrencyPoints( playerSlot, ach.Points + earntAchievements );
+    PDat.GiveAchievementPoints( playerSlot, ach.Points );
 
     if( PDat.FindAchievementByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
     {
@@ -767,8 +772,8 @@ final function AchievementEarned( int playerSlot, name id )
     rep.ClientAchievementAccomplished( ach.Title, ach.Icon );
 
     NotifyPlayers( PC,
-     PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "currency points for achievement" @ $0x60CB45 $ ach.Title,
-      "You earned the achievement" @ $0x60CB45 $ ach.Title );
+     PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "points for achieving" @ $0x60CB45 $ ach.Title,
+      "You earned" @ ach.points @ "points for achievement" @ $0x60CB45 $ ach.Title );
 
     if( ach.ItemRewardId != "" )
     {
