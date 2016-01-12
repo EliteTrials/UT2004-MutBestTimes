@@ -433,7 +433,7 @@ final function float GetItemDropChance( int itemIndex )
     {
         bonus += 0.25;
     }
-    return DefaultDropChance + bonus + Items[itemIndex].DropChance;
+    return DefaultDropChance*(1.0 + bonus + Items[itemIndex].DropChance);
 }
 
 final function int GetRandomItem()
@@ -756,7 +756,7 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
 defaultproperties
 {
     bEnabled=true
-    DefaultDropChance=0.25
+    DefaultDropChance=0.05
 
     // Teams(0)=(Name="Team Netliot",ItemId="team_netliot",BannerItemID="team_netliot_banner")
     // Teams(1)=(Name="Team BigBad",ItemId="team_bigbad",BannerItemID="team_bigbad_banner")
