@@ -431,7 +431,7 @@ final function float GetItemDropChance( int itemIndex )
 
     if( Items[itemIndex].Access == Drop )
     {
-        bonus += 0.25;
+        bonus += 0.05;
     }
     return DefaultDropChance*(1.0 + bonus + Items[itemIndex].DropChance);
 }
@@ -789,7 +789,7 @@ defaultproperties
     Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
     Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
     Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-    Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
+    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
 
     // Player Skins
     Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
