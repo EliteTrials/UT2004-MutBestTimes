@@ -142,7 +142,7 @@ final function TeamWon( int teamIndex )
             continue;
         }
 
-        PDat.RemoveItem( i, Teams[teamIndex].ItemID );
+        PDat.SilentRemoveItem( i, Teams[teamIndex].ItemID );
         PDat.Player[i].bPendingTeamReward = PDat.Player[i].TeamPointsContribution > 0;
     }
     SaveAll();
@@ -494,7 +494,7 @@ final function ItemToggled( int playerSlot, string itemID, bool status )
                 // Give existing supporters their banner reward!
                 if( status && PDat.HasItem( playerSlot, Teams[outTeamIndex].ItemID ) && !PDat.HasItem( playerSlot, Teams[outTeamIndex].BannerItemID ) )
                 {
-                    PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
+                    PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
                 }
             }
             break;
@@ -521,14 +521,14 @@ final function ItemRemoved( int playerSlot, string itemID )
 }
 
 /** Called when an item was bought by a player or through the "GiveItem" function. */
-final function ItemBought( int playerSlot, string itemID )
+final function ItemBought( BTClient_ClientReplication CRI, string itemID )
 {
     local int outTeamIndex;
 
     if( IsTeamItem( itemID, outTeamIndex ) )
     {
         AddVoteForTeam( outTeamIndex );
-        PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
+        PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
     }
 }
 
@@ -701,13 +701,13 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
     playerSlot = CRI.myPlayerSlot;
     if( PDat.HasItem( playerSlot, Items[itemSlot].Id ) )
     {
-        msg = "You already own" @ Items[itemSlot].Name;
+        msg = "You do already own" @ Items[itemSlot].Name;
         return false;
     }
 
     if( IsTeamItem( Items[itemSlot].Id ) && HasATeamItem( CRI ) )
     {
-        msg = "You already voted a team!";
+        msg = "You have already voten for a team!";
         return false;
     }
 

@@ -80,7 +80,7 @@ function PerformItemDrop( PlayerController player, float bonus )
         }
         else
         {
-            PDat.GiveItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID );
+            PDat.GiveItem( LRI, Store.Items[itemIndex].ID );
             SendSucceedMessage( player, "You won item" @ Store.Items[itemIndex].Name @ "by random chance" );
             s = "%PLAYER% has won item" @ itemName @ "by random chance";
         }

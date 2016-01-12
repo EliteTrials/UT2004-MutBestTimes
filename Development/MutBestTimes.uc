@@ -1006,6 +1006,11 @@ final function SendStoreItems( PlayerController requester, string filter )
     // Store discovery
     // PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
 }
+
+final function InternalOnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter )
+{
+    Spawn( class'BTPlayerItemsReplicator', self ).Initialize( CRI, filter );
+}
 //==============================================================================
 
 final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
@@ -2724,7 +2729,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                             PDat.Player[Rep.myPlayerSlot].Inventory.TrailerSettings.TrailerColor[1] = class'HUD'.default.WhiteColor;
                         }
 
-                        PDat.GiveItem( Rep.myPlayerSlot, s );
+                        PDat.GiveItem( Rep, s );
                         SendSucceedMessage( sender, "Gave item" @ Store.Items[i].Name @ "to" @ C.PlayerReplicationInfo.PlayerName );
                         SendSucceedMessage( PlayerController(C), "You received item" @ Store.Items[i].Name @ "from" @ sender.PlayerReplicationInfo.PlayerName );
                         break;
@@ -2773,7 +2778,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                         if( PDat.HasItem( Rep.myPlayerSlot, s ) )
                         {
-                            PDat.RemoveItem( Rep.myPlayerSlot, s );
+                            PDat.RemoveItem( Rep, s );
                             SendSucceedMessage( sender, "Removed item" @ Store.Items[i].Name @ "from" @ C.PlayerReplicationInfo.PlayerName );
                             SendSucceedMessage( PlayerController(C), sender.PlayerReplicationInfo.PlayerName @ "removed your item" @ Store.Items[i].Name );
                         }
@@ -2821,7 +2826,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
 
                 NotifyItemBought( Rep.myPlayerSlot );
-                PDat.GiveItem( Rep.myPlayerSlot, Store.Items[i].ID );
+                PDat.GiveItem( Rep, Store.Items[i].ID );
                 // bBought, bEnabled
                 Rep.ClientSendItemData( Store.Items[i].ID,
                     class'BTClient_ClientReplication'.static.CompressStoreData(
@@ -2878,7 +2883,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                         break;
                     }
 
-                    PDat.RemoveItem( Rep.myPlayerSlot, s );
+                    PDat.RemoveItem( Rep, s );
                     if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
                     {
                         PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
@@ -2926,14 +2931,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                 // bBought, bEnabled
                 PDat.GetItemState( Rep.myPlayerSlot, Store.Items[i].ID, byteOne, byteTwo );
-                Rep.ClientSendItemData( Store.Items[i].ID,
-                    class'BTClient_ClientReplication'.static.CompressStoreData(
-                        Store.Items[i].Cost,
-                        bool(byteOne),
-                        bool(byteTwo),
-                        Store.Items[i].Access
-                    )
-                );
+                Rep.ClientNotifyItemUpdated( Store.Items[i].ID, bool(byteTwo), 0 );
             }
             break;
 
@@ -3197,7 +3195,7 @@ private final function ConsumeKey( BTActivateKey handler )
                 SendErrorMessage( handler.Requester, "Cannot use this key because you already own the reward!" );
                 break;
             }
-            PDat.GiveItem( Rep.myPlayerSlot, handler.Serial.Code );
+            PDat.GiveItem( Rep, handler.Serial.Code );
             SendSucceedMessage( handler.Requester, "You were given the following item" @ Store.items[itemStoreSlot].Name );
             break;
 
@@ -5598,6 +5596,7 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
             CR = Spawn( Class'BTClient_ClientReplication', Other.Owner );
             CR.OnRequestAchievementCategories = InternalOnRequestAchievementCategories;
             CR.OnRequestAchievementsByCategory = InternalOnRequestAchievementsByCategory;
+            CR.OnRequestPlayerItems = InternalOnRequestPlayerItems;
             CR.NextReplicationInfo = PlayerReplicationInfo(Other).CustomReplicationInfo;
             PlayerReplicationInfo(Other).CustomReplicationInfo = CR;
         }
@@ -5678,7 +5677,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 4.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "exp_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_1" );
                 }
             }
 
@@ -5687,7 +5686,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "exp_bonus_2" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_2" );
                 }
             }
 
@@ -5696,7 +5695,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
                 }
             }
 
@@ -5705,7 +5704,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
                 }
             }
         }
