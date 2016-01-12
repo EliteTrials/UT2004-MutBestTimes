@@ -803,6 +803,11 @@ defaultproperties
     // Vehicle Skins
     Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
+    // Map medals
+    Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(13)=(Name="Geometry Basics",ID="md_gemb",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Geometry Basics",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(14)=(Name="Mothership Kran",ID="md_mok",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Mothership Kran",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+
     // Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
     // Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
 }

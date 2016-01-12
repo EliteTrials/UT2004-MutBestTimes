@@ -38,6 +38,9 @@ struct sAchievement
 
     /** The GUI color for the special effects. */
     var Color EffectColor;
+
+    /** Reward to be given on completion of this achievement. Add multiple rewards by splitting with a semicolon. */
+    var string ItemRewardId;
 };
 
 /** Collection of achievements that players are able to achieve. */
@@ -142,57 +145,57 @@ defaultproperties
 
     // Record Count kinds
     Achievements(0)=(Title="Newbie Recwhore",ID=recwhore_0,CatID="cat_records",Type=RecordsCount,Count=1,Description="Achieve one record",Points=1,EffectColor=(B=255,A=255))
-    Achievements(1)=(Title="Noob Recwhore",ID=recwhore_1,CatID="cat_records",Type=RecordsCount,Count=5,Description="Achieve five records",Points=5,EffectColor=(B=255,A=255))
-    Achievements(2)=(Title="Experienced Recwhore",ID=recwhore_2,CatID="cat_records",Type=RecordsCount,Count=20,Description="Achieve twenty records",Points=10,EffectColor=(B=255,A=255))
-    Achievements(3)=(Title="Hardcore Recwhore",ID=recwhore_3,CatID="cat_records",Type=RecordsCount,Count=50,Description="Achieve fifty records",Points=15,EffectColor=(B=255,A=255))
-    Achievements(4)=(Title="Recwhore",ID=recwhore_4,CatID="cat_records",Type=RecordsCount,Count=100,Description="Achieve a hundred records",Points=25,EffectColor=(B=255,A=255))
+    Achievements(1)=(Title="Noob Recwhore",ID=recwhore_1,CatID="cat_records",Type=RecordsCount,Count=5,Description="Achieve five records",Points=2,EffectColor=(B=255,A=255))
+    Achievements(2)=(Title="Experienced Recwhore",ID=recwhore_2,CatID="cat_records",Type=RecordsCount,Count=20,Description="Achieve twenty records",Points=2,EffectColor=(B=255,A=255))
+    Achievements(3)=(Title="Hardcore Recwhore",ID=recwhore_3,CatID="cat_records",Type=RecordsCount,Count=50,Description="Achieve fifty records",Points=5,EffectColor=(B=255,A=255))
+    Achievements(4)=(Title="Recwhore",ID=recwhore_4,CatID="cat_records",Type=RecordsCount,Count=100,Description="Achieve a hundred records",Points=10,EffectColor=(B=255,A=255))
 
-    Achievements(5)=(Title="TechChallenge whore",ID=map_1,Count=50,CatID="cat_map",Type=FinishTech,Description="Complete any TechChallenge map 50 times",Points=10,EffectColor=(R=255,G=165,A=255))
-    Achievements(6)=(Title="Another fan",ID=map_2,CatID="cat_map",Description="Set a record on Eliot'sTrial of 4 minutes or less",Points=20,EffectColor=(R=255,G=165,A=255))
+    Achievements(5)=(Title="TechChallenge whore",ID=map_1,Count=50,CatID="cat_map",Type=FinishTech,Description="Complete any TechChallenge map 50 times",Points=2,EffectColor=(R=255,G=165,A=255))
+    Achievements(6)=(Title="Another fan",ID=map_2,CatID="cat_map",Description="Set a record on Eliot'sTrial of 4 minutes or less",Points=10,EffectColor=(R=255,G=165,A=255))
     Achievements(7)=(Title="What's a Checkpoint?",ID=checkpoint_1,CatID="cat_other",Type=CheckpointUses,Count=10,Description="Reach 10 Checkpoints",Points=1,EffectColor=(G=128,B=128,A=255))
     Achievements(8)=(Title="Epic failer",ID=clientspawn_1,CatID="cat_other",Description="Set a 'Client Spawn' by using 'SetClientSpawn'",Points=1,EffectColor=(G=128,B=128,A=255))
     Achievements(9)=(Title="Jani maps hater",ID=jani_1,CatID="cat_other",Description="Insult a jani's map while playing one",Points=1,EffectColor=(G=128,B=128,A=255))    // Done
-    Achievements(10)=(Title="Group lover",ID=mode_1,CatID="cat_other",Description="Complete a Group map",Points=15,EffectColor=(G=128,B=128,A=255))    // Done
-    Achievements(11)=(Title="I like it Regular",ID=mode_2,CatID="cat_other",Description="Complete a Regular map",Points=10,EffectColor=(G=128,B=128,A=255)) // Done
+    Achievements(10)=(Title="Group lover",ID=mode_1,CatID="cat_other",Description="Complete a Group map",Points=5,EffectColor=(G=128,B=128,A=255))    // Done
+    Achievements(11)=(Title="I like it Regular",ID=mode_2,CatID="cat_other",Description="Complete a Regular map",Points=2,EffectColor=(G=128,B=128,A=255)) // Done
     Achievements(12)=(Title="ForeverAlone.jpg",ID=mode_3,CatID="cat_other",Type=FinishSolo,Count=20,Description="Complete a Solo map 20 times",Points=5,EffectColor=(G=128,B=128,A=255)) // Done
-    Achievements(13)=(Title="Newbie",ID=level_0,CatID="cat_game",Type=LevelUp,Count=2,Description="Level up 2 times",Points=5)
-    Achievements(14)=(Title="Noob",ID=level_2,CatID="cat_game",Type=LevelUp,Count=8,Description="Level up 8 times",Points=10)
-    Achievements(15)=(Title="Experienced",ID=level_3,CatID="cat_game",Type=LevelUp,Count=20,Description="Level up 20 times",Points=20)
+    Achievements(13)=(Title="Newbie",ID=level_0,CatID="cat_game",Type=LevelUp,Count=2,Description="Level up 2 times",Points=1)
+    Achievements(14)=(Title="Noob",ID=level_2,CatID="cat_game",Type=LevelUp,Count=8,Description="Level up 8 times",Points=2)
+    Achievements(15)=(Title="Experienced",ID=level_3,CatID="cat_game",Type=LevelUp,Count=20,Description="Level up 20 times",Points=2)
     Achievements(16)=(Title="Experience lover",ID=experience_0,CatID="cat_game",Description="Earn 64 experience from one action",Points=2)
     Achievements(17)=(Title="I bought an Item!",ID=store_0,CatID="cat_other",Description="Buy your first item from the Store",Points=1,EffectColor=(G=128,B=128,A=255))
     // Achievements(18)=(Title="BTimes explorer",ID=store_1,Description="Find the Store",Points=1)
-    Achievements(19)=(Title="Dedicated noob",ID=level_4,CatID="cat_game",Description="Reach level 50",Points=100)
-    Achievements(20)=(Title="Dedicated gamer",ID=level_5,CatID="cat_game",Description="Reach level 100",Points=500)
-    Achievements(22)=(Title="Map loveist",ID=finish_0,CatID="cat_other",Type=Finish,Count=200,Description="Finish 200 times any trial map",Points=50,EffectColor=(G=128,B=128,A=255))
-    Achievements(23)=(Title="Lucky lucker",ID=tie_0,CatID="cat_records",Type=Tied,Count=5,Description="Tie a record on a Solo map 5 times",Points=25,EffectColor=(B=255,A=255))
+    Achievements(19)=(Title="Dedicated noob",ID=level_4,CatID="cat_game",Description="Reach level 50",Points=5)
+    Achievements(20)=(Title="Dedicated gamer",ID=level_5,CatID="cat_game",Description="Reach level 100",Points=5)
+    Achievements(22)=(Title="Map loveist",ID=finish_0,CatID="cat_other",Type=Finish,Count=200,Description="Finish 200 times any trial map",Points=5,EffectColor=(G=128,B=128,A=255))
+    Achievements(23)=(Title="Lucky lucker",ID=tie_0,CatID="cat_records",Type=Tied,Count=5,Description="Tie a record on a Solo map 5 times",Points=5,EffectColor=(B=255,A=255))
     Achievements(24)=(Title="Ghoster",ID=ghost_0,CatID="cat_other",Description="Get your first ghost",Points=5,EffectColor=(G=128,B=128,A=255))
     Achievements(25)=(Title="I'm no muffin",ID=points_0,CatID="cat_records",Description="Earn 20 points from one record",Points=2,EffectColor=(B=255,A=255))
     Achievements(26)=(Title="Loner",ID=holiday_0,CatID="cat_other",Description="Spawn on a 'Client Spawn' on a BTimes holiday",Points=1,EffectColor=(G=128,B=128,A=255))
-    Achievements(27)=(Title="Robin Hood",ID=records_0,CatID="cat_records",Type=StealRecord,Count=50,Description="Steal 50 first place records not owned by you",Points=100,EffectColor=(B=255,A=255))
-    Achievements(28)=(Title="Who's bad?",ID=map_3,CatID="cat_map",Description="Set a record on Blood On The Floor",Points=100,EffectColor=(R=255,G=165,A=255))
-    Achievements(29)=(Title="A prelude rusher",ID=map_4,CatID="cat_map",Description="Set a record on EgyptianRush-Prelude of 5 minutes or less",Points=25,EffectColor=(R=255,G=165,A=255))
-    Achievements(30)=(Title="Classic lovelist",ID=map_5,CatID="cat_map",Description="Set a record on a RoomTrials map of 4 minutes or less",Points=10,EffectColor=(R=255,G=165,A=255))
-    Achievements(31)=(Title="(no homo)",ID=sirdicky,CatID="cat_other",Description="Find dicky and touch him(no homo)",Points=15,EffectColor=(G=128,B=128,A=255))
-    Achievements(32)=(Title="Night whore",ID=mode_3_night,CatID="cat_other",Description="Complete a Solo map at night",Points=10,EffectColor=(G=128,B=128,A=255))
-    Achievements(21)=(Title="Server loveist",ID=playtime_0,CatID="cat_server",Description="Play for over 10 hours on this server",Points=50,EffectColor=(R=255,B=255,A=255))
-    Achievements(33)=(Title="Home sweet home",ID=playtime_1,CatID="cat_server",Description="Play for over 1000 hours on this server",Points=500,EffectColor=(R=255,B=255,A=255))
+    Achievements(27)=(Title="Robin Hood",ID=records_0,CatID="cat_records",Type=StealRecord,Count=50,Description="Steal 50 first place records not owned by you",Points=20,EffectColor=(B=255,A=255))
+    Achievements(28)=(Title="Who's bad?",ID=map_3,CatID="cat_map",Description="Set a record on Blood On The Floor",Points=10,EffectColor=(R=255,G=165,A=255))
+    Achievements(29)=(Title="A prelude rusher",ID=map_4,CatID="cat_map",Description="Set a record on EgyptianRush-Prelude of 5 minutes or less",Points=10,EffectColor=(R=255,G=165,A=255))
+    Achievements(30)=(Title="Classic lovelist",ID=map_5,CatID="cat_map",Description="Set a record on a RoomTrials map of 4 minutes or less",Points=5,EffectColor=(R=255,G=165,A=255))
+    Achievements(31)=(Title="(no homo)",ID=sirdicky,CatID="cat_other",Description="Find dicky and touch him(no homo)",Points=1,EffectColor=(G=128,B=128,A=255))
+    Achievements(32)=(Title="Night whore",ID=mode_3_night,CatID="cat_other",Description="Complete a Solo map at night",Points=1,EffectColor=(G=128,B=128,A=255))
+    Achievements(21)=(Title="Server loveist",ID=playtime_0,CatID="cat_server",Description="Play for over 10 hours on this server",Points=2,EffectColor=(R=255,B=255,A=255))
+    Achievements(33)=(Title="Home sweet home",ID=playtime_1,CatID="cat_server",Description="Play for over 1000 hours on this server",Points=10,EffectColor=(R=255,B=255,A=255))
     Achievements(34)=(Title="Fan of Haydon",ID=quality_0,CatID="cat_other",Type=FinishQuality,Count=10,Description="Finish 10 times a map that's designed by Eliot or Haydon",Points=5,EffectColor=(G=128,B=128,A=255))
-    Achievements(35)=(Title="Challenges master",ID=challenge_0,CatID="cat_challenges",Type=FinishDailyChallenge,Count=25,Description="Earn 25 trophies from daily challenges",Points=25)
-    Achievements(36)=(Title="Perfectionist",ID=prelude_1,CatID="cat_map",Description="Finish EgyptianRush-Prelude with maximum health",Points=75,EffectColor=(R=255,G=165,A=255))
-    Achievements(37)=(Title="High achiever",ID=ach_0,CatID="cat_game",Description="Achieve 30 achievements",Points=250)
-    Achievements(38)=(Title="Ragequitter",ID=records_1,CatID="cat_records",Description="Lose 5 records since your last visit",Points=25,EffectColor=(B=255,A=255))
-    Achievements(39)=(Title="Hatist",ID=store_2,CatID="cat_other",Description="Buy 10 items",Points=5,EffectColor=(G=128,B=128,A=255))
-    Achievements(40)=(Title="EgyptRuin whore",ID=map_6,CatID="cat_map",Type=FinishRuin,Count=15,Description="Complete any EgyptRuin map 15 times",Points=20,EffectColor=(R=255,G=165,A=255))
-    Achievements(41)=(Title="Immune to failure",ID=records_2,CatID="cat_records",Description="Hijack a Solo record that players had failed 50 times to achieve",Points=100,EffectColor=(B=255,A=255))
+    Achievements(35)=(Title="Challenges master",ID=challenge_0,CatID="cat_challenges",Type=FinishDailyChallenge,Count=25,Description="Earn 25 trophies from daily challenges",Points=10)
+    Achievements(36)=(Title="Perfectionist",ID=prelude_1,CatID="cat_map",Description="Finish EgyptianRush-Prelude with maximum health",Points=10,EffectColor=(R=255,G=165,A=255))
+    Achievements(37)=(Title="High achiever",ID=ach_0,CatID="cat_game",Description="Achieve 30 achievements",Points=5)
+    Achievements(38)=(Title="Ragequitter",ID=records_1,CatID="cat_records",Description="Lose 5 records since your last visit",Points=1,EffectColor=(B=255,A=255))
+    Achievements(39)=(Title="Hatist",ID=store_2,CatID="cat_other",Description="Buy 10 items",Points=2,EffectColor=(G=128,B=128,A=255))
+    Achievements(40)=(Title="EgyptRuin whore",ID=map_6,CatID="cat_map",Type=FinishRuin,Count=15,Description="Complete any EgyptRuin map 15 times",Points=5,EffectColor=(R=255,G=165,A=255))
+    Achievements(41)=(Title="Immune to failure",ID=records_2,CatID="cat_records",Description="Hijack a Solo record that players had failed 50 times to achieve",Points=1,EffectColor=(B=255,A=255))
     Achievements(42)=(Title="Birthday wisher",ID=eliot_0,CatID="cat_other",Description="Say Happy Birthday Eliot! on August 26th",Points=1,EffectColor=(G=128,B=128,A=255))
-    Achievements(43)=(Title="Objectives farmer",ID=obj_0,CatID="cat_game",Description="Complete 10000 objectives",Points=15)
-    Achievements(44)=(Title="Solo gamer",ID=records_3,CatID="cat_records",Description="Own 50 Solo records",Points=25,EffectColor=(B=255,A=255))
-    Achievements(45)=(Title="Regular gamer",ID=records_4,CatID="cat_records",Description="Own 10 Regular records",Points=40,EffectColor=(B=255,A=255))
-    Achievements(46)=(Title="Group gamer",ID=records_5,CatID="cat_records",Description="Own 4 Group records",Points=70,EffectColor=(B=255,A=255))
-    Achievements(47)=(Title="Trials master",ID=ach_1,CatID="cat_records",Description="Earn all four gamer achievements",Points=50,EffectColor=(B=255,A=255))
-    Achievements(48)=(Title="Freeman",ID=map_7,CatID="cat_map",Description="Eliminate the queen, and escape Mothership Kran",Points=50,EffectColor=(R=255,G=165,A=255))
-    Achievements(49)=(Title="Fast and heavy lander",ID=map_8,CatID="cat_map",Description="Set a record on Geometry Basics of 3 minutes or less",Points=25,EffectColor=(R=255,G=165,A=255))
-    Achievements(50)=(Title="Naliman",ID=map_9,CatID="cat_map",Description="Survive through the Eldora passages",Points=20,EffectColor=(R=255,G=165,A=255))
+    Achievements(43)=(Title="Objectives farmer",ID=obj_0,CatID="cat_game",Description="Complete 10000 objectives",Points=5)
+    Achievements(44)=(Title="Solo gamer",ID=records_3,CatID="cat_records",Description="Own 50 Solo records",Points=5,EffectColor=(B=255,A=255))
+    Achievements(45)=(Title="Regular gamer",ID=records_4,CatID="cat_records",Description="Own 10 Regular records",Points=5,EffectColor=(B=255,A=255))
+    Achievements(46)=(Title="Group gamer",ID=records_5,CatID="cat_records",Description="Own 4 Group records",Points=5,EffectColor=(B=255,A=255))
+    Achievements(47)=(Title="Trials master",ID=ach_1,CatID="cat_records",Description="Earn all four gamer achievements",Points=10,EffectColor=(B=255,A=255))
+    Achievements(48)=(Title="Freeman",ID=map_7,CatID="cat_map",Description="Eliminate the queen, and escape Mothership Kran",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_mok")
+    Achievements(49)=(Title="Fast and heavy lander",ID=map_8,CatID="cat_map",Description="Set a record on Geometry Basics of 3 minutes or less",Points=5,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_gemb")
+    Achievements(50)=(Title="Naliman",ID=map_9,CatID="cat_map",Description="Survive through the Eldora passages",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_eldor")
 
     MapTests(0)=(MapTitle="Eliot's Trial",Time=240,Target=map_2)
     MapTests(1)=(MapTitle="Blood On The Floor",Time=-1,Target=map_3)

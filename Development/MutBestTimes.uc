@@ -732,7 +732,8 @@ final function AchievementEarned( int playerSlot, name id )
     local BTClient_ClientReplication rep;
     local PlayerController PC;
     local BTAchievements.sAchievement ach;
-    local int earntAchievements;
+    local int earntAchievements, i;
+    local array<string> rewards;
 
     earntAchievements = PDat.CountEarnedAchievements( playerSlot );
     // Above PC == none because currency should always be given even for offline players!.
@@ -768,6 +769,15 @@ final function AchievementEarned( int playerSlot, name id )
     NotifyPlayers( PC,
      PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "currency points for achievement" @ $0x60CB45 $ ach.Title,
       "You earned the achievement" @ $0x60CB45 $ ach.Title );
+
+    if( ach.ItemRewardId != "" )
+    {
+        Split( ach.ItemRewardId, ";", rewards );
+        for( i = 0; i < rewards.Length; ++ i )
+        {
+            PDat.GiveItem( rep, rewards[i] );
+        }
+    }
 }
 
 final function PlayerEarnedTrophy( int playerSlot, BTChallenges.sChallenge challenge )
@@ -3481,6 +3491,23 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                             PlayerController(C).ClientMessage( Class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ params[1] @ "currency!" );
                         }
                         break;
+                    }
+                }
+            }
+            break;
+
+        case "bt_completeachievement":
+            if( params.Length == 1 )
+            {
+                Rep = GetRep( sender );
+                if( Rep != None )
+                {
+                    for( i = 0; i < AchievementsManager.Achievements.Length; ++ i )
+                    {
+                        if( string(AchievementsManager.Achievements[i].ID) ~= params[0] )
+                        {
+                            PDat.ProgressAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+                        }
                     }
                 }
             }
