@@ -5977,6 +5977,7 @@ final Function UpdateScoreboard( PlayerController PC )
 
     if( myCR.Rank-1 >= 0 && myCR.Rank <= MaxRankedPlayers )
     {
+        NewPacket.AP            = PDat.Player[myCR.myPlayerSlot].PLAchiev;
         NewPacket.Points        = SortedOverallTop[myCR.Rank-1].PLPoints;
         NewPacket.Objectives    = PDat.Player[myCR.myPlayerSlot].PLObjectives;
         NewPacket.Hijacks       = PDat.Player[myCR.myPlayerSlot].PLHijacks << 16 | SortedOverallTop[myCR.Rank-1].PLRecords;

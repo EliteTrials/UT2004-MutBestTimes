@@ -54,6 +54,7 @@ final function InitGlobalPacket( int index, optional out BTClient_ClientReplicat
     else GP.Name = P.PDat.Player[pSlot].PLName;
 
     GP.Points       = P.SortedOverallTop[index].PLPoints;
+    GP.AP           = P.PDat.Player[pSlot].PLAchiev;
     GP.Objectives   = P.PDat.Player[pSlot].PLObjectives;
     GP.Hijacks      = P.PDat.Player[pSlot].PLHijacks << 16 | P.SortedOverallTop[index].PLRecords;
 }
