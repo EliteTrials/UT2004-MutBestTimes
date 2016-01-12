@@ -770,6 +770,7 @@ final function AchievementEarned( int playerSlot, name id )
     }
 
     rep.ClientAchievementAccomplished( ach.Title, ach.Icon );
+    rep.APoints = PDat.Player[playerSlot].PLAchiev;
 
     NotifyPlayers( PC,
      PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "points for achieving" @ $0x60CB45 $ ach.Title,
@@ -6807,6 +6808,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
     CR.Title = PDat.Player[Slot].Title;
     CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
     CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
+    CR.APoints = PDat.Player[Slot].PLAchiev;
     CR.bIsPremiumMember = PDat.Player[Slot].bHasPremium;
     if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {

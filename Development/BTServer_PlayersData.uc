@@ -22,7 +22,7 @@ struct sBTPlayerInfo
         PLHijacks,                                                              // BROKEN RECORDS
         PLSF,                                                                   // SOLO FINISH
         PLAP,
-        PLAchiev;
+        PLAchiev;                                                               // Achievement points
 
     /** Index to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
@@ -61,7 +61,7 @@ struct sBTPlayerInfo
         var int Experience;
 
         /** The amount of not-spent points this player has. */
-        var int BTPoints;
+        var int BTPoints; // *Currency
     };
 
     var sLevel LevelData;
