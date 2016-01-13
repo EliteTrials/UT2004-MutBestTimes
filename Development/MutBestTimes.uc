@@ -6924,7 +6924,7 @@ Static Final Function string FixDate( int Date[3] )
         FixedDate $= "/0"$Date[1];
     else FixedDate $= "/"$Date[1];
 
-    return FixedDate$"/"$Date[2];
+    return FixedDate$"/"$Right( Date[2], 2 );
 }
 
 final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR )
