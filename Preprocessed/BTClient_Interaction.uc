@@ -3368,8 +3368,8 @@ DefaultProperties
     RecordsRankingColumns(0)=(Title="#",Format="000")
     RecordsRankingColumns(1)=(Title="Score",Format="00.00")
     RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    RecordsRankingColumns(3)=(Title="Time",Format="00:00:00.00")
-    RecordsRankingColumns(4)=(Title="Date",Format="0000/00/00")
+    RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00")
+    RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
 
     RankingRanges(0)="All Time"
     RankingRanges(1)="Monthly"
