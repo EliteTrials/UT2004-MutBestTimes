@@ -31,7 +31,7 @@ function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
 
-    if( bShow && ClientData != none && PlayerOwner().Level.TimeSeconds > 5 )
+    if( bShow && CRI != none && PlayerOwner().Level.TimeSeconds > 5 )
     {
         LoadData();
     }
@@ -56,7 +56,7 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
 
 function LoadData()
 {
-    //ClientData.Trophies.Length = 0;
+    //CRI.Trophies.Length = 0;
     PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestTrophies" );
 }
 
@@ -95,14 +95,14 @@ function bool InternalOnDraw( Canvas C )
     local int i;
     local float YPos, XPos, XL, YL, orgCurY;
 
-    if( ClientData == none )
+    if( CRI == none )
         return false;
 
     //C.Font = Font'UT2003Fonts.jFontMedium800x600';
     C.Font = Font'UT2003Fonts.jFontSmallText800x600';
     YPos = Region.ActualTop();
     C.StrLen( "T", XL, YL );
-    for( i = CurPos; i < ClientData.Trophies.Length; ++ i )
+    for( i = CurPos; i < CRI.Trophies.Length; ++ i )
     {
         XPos = Region.ActualLeft();
         orgCurY = C.CurY;
@@ -120,7 +120,7 @@ function bool InternalOnDraw( Canvas C )
         XPos += YL + 8;
         C.SetPos( XPos, YPos + 4 );
         C.Style = 3;
-        C.DrawText( ClientData.Trophies[i].Title );
+        C.DrawText( CRI.Trophies[i].Title );
 
         YPos += (YL + 8) + 8;
 
@@ -141,7 +141,7 @@ function bool OnKeyEvent( out byte Key, out byte State, float delta )
         }
         else if( Key == 0xED )
         {
-            CurPos = Min( CurPos + 1, ClientData.Trophies.Length - 1 );
+            CurPos = Min( CurPos + 1, CRI.Trophies.Length - 1 );
             return true;
         }
     }

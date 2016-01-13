@@ -1,5 +1,5 @@
 //==============================================================================
-// BTClient_ClientReplication.uc (C) 2005-2009 Eliot and .:..:. All Rights Reserved
+// BTClient_ClientReplication.uc (C) 2005-2014 Eliot and .:..:. All Rights Reserved
 /* Tasks:
             Receive all personal data from MutBestTimes
 */
@@ -16,6 +16,7 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 struct sGlobalPacket
 {
     var string name;
+    var int AP;
     var float Points;
     var int Objectives;
     var int Hijacks;
@@ -65,20 +66,10 @@ struct sAchievementState
     var int Count;
 
     var int Points;
-
     var bool bEarned;
-};
 
-/** A structure that defines an completable challenge. */
-struct sChallengeClient
-{
-    /** Title of the challenge e.g. "STR-SoloMap" */
-    var string Title;
-
-    /** Description explaining what to do to complete this challenge. */
-    var string Description;
-
-    var int Points;
+    var string CatId;
+    var Color EffectColor;
 };
 
 /** A structure that defines a trophy. */
@@ -88,7 +79,7 @@ struct sTrophyClient
     var string Title;
 };
 
-struct sItemClient
+struct sStoreItemClient
 {
     var string Name;
     var string ID;
@@ -106,11 +97,43 @@ struct sItemClient
 struct sCategoryClient
 {
     var string Name;
-    var array<sItemClient> CachedItems;
+    var array<sStoreItemClient> CachedItems;
 };
 
 var(DEBUG) array<sCategoryClient> Categories;
 var(DEBUG) bool bReceivedCategories;    // SERVER and LOCAL
+
+struct sPlayerItemClient
+{
+    var string Name;
+    var string ID;
+    var bool bEnabled;
+    var byte Access;
+    var string Desc;
+    var Material IconTexture;
+
+    var transient bool bSync;
+    var transient bool bHasMeta;
+
+    var byte Count;
+};
+
+
+var(DEBUG) array<sPlayerItemClient> PlayerItems;
+
+// TODO: FIXME ugly dupe of BTAchievements.sCategory
+var(DEBUG) array<struct sAchievementCategory
+{
+    /** Name of the category. */
+    var string Name;
+
+    /** Id of the category, this is the id that achievements can bind to using @CategoryId. */
+    var string Id;
+
+    /** The @Id of a parent sCategory for treenode building of categories. */
+    var string ParentId;
+}> AchievementCategories;
+var(DEBUG) bool bReceivedAchievementCategories;
 //==============================================================================
 
 //==============================================================================
@@ -130,15 +153,12 @@ var(DEBUG) sGlobalPacket MyOverallTop;      // Global
 var(DEBUG) array<sAchievementState> AchievementsStates;
 var sAchievementState LastAchievementEvent;
 
-/** The currently available challenges that this player may work on. */
-var(DEBUG) array<sChallengeClient> Challenges;
-
 /** The Trophies that this player has earned via Challenges. */
 var(DEBUG) array<sTrophyClient> Trophies;
 var sTrophyClient LastTrophyEvent;
 
 /** The availabe items for sale and bought. */
-var(DEBUG) array<sItemClient> Items;
+var(DEBUG) array<sStoreItemClient> Items;
 
 // --NOT REPLICATED
 var(DEBUG) transient bool bItemsTransferComplete;
@@ -169,6 +189,7 @@ var private Pawn DeadPawn;
 var int BTLevel;
 // Not to be confused with actual Ranking Points!
 var int BTPoints;
+var int APoints;
 var int BTWage;
 var bool bIsPremiumMember;
 
@@ -222,7 +243,7 @@ replication
     reliable if( Role == ROLE_Authority )
         myPawn, PersonalTime,
         Rank, ClientFlags, SoloRank,
-        BTLevel, BTExperience, BTPoints, BTWage,
+        BTLevel, BTExperience, BTPoints, APoints, BTWage,
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
@@ -249,10 +270,10 @@ replication
 
         // Stats
         ClientSendAchievementState, ClientAchievementAccomplished, ClientAchievementProgressed, ClientCleanAchievements,
-        ClientSendChallenge,
         ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
-        ClientSendItem, ClientSendCategory,
-        ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData;
+        ClientSendItem, ClientSendStoreCategory, ClientSendAchievementCategory,
+        ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData,
+        ClientSendPlayerItem, ClientNotifyItemUpdated, ClientNotifyItemRemoved;
 
     // unreliable
     reliable if( Role == ROLE_Authority )
@@ -262,8 +283,24 @@ replication
         ServerSetClientFlags;
 
     reliable if( Role < ROLE_Authority )
-        ServerSetPreferedColor;
+        ServerSetPreferedColor,
+        ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
+        ServerRequestPlayerItems;
 }
+
+// Server hooks
+delegate OnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI );
+delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
+
+delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter );
+
+// UI hooks
+delegate OnAchievementStateReceived( int index );
+delegate OnAchievementCategoryReceived( int index );
+
+delegate OnPlayerItemReceived( int index );
+delegate OnPlayerItemRemoved( int index );
+delegate OnPlayerItemUpdated( int index );
 
 simulated event PostBeginPlay()
 {
@@ -573,24 +610,96 @@ simulated function ClientMatchStarting( float serverTime )
     ClientMatchStartTime = serverTime - Level.TimeSeconds;
 }
 
-simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points )
+final function ServerRequestAchievementCategories()
 {
-    AchievementsStates.Insert( 0, 1 );
-    AchievementsStates[0].Title = title;
-    AchievementsStates[0].Description = description;
-    AchievementsStates[0].Icon = icon;
-    AchievementsStates[0].Progress = progress;
-    AchievementsStates[0].Count = count;
-    AchievementsStates[0].Points = points;
-    AchievementsStates[0].bEarned = progress == -1 || (count > 0 && progress >= count);
+    OnRequestAchievementCategories( PlayerController(Owner), self );
 }
 
-simulated final function ClientSendChallenge( string title, string description, int points )
+final function ServerRequestAchievementsByCategory( string catID )
 {
-    Challenges.Insert( 0, 1 );
-    Challenges[0].Title = title;
-    Challenges[0].Description = description;
-    Challenges[0].Points = points;
+    OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
+}
+
+simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )
+{
+    local int i;
+
+    i = AchievementsStates.Length;
+    AchievementsStates.Length = i + 1;
+    AchievementsStates[i].Title = title;
+    AchievementsStates[i].Description = description;
+    AchievementsStates[i].Icon = icon;
+    AchievementsStates[i].Progress = progress;
+    AchievementsStates[i].Count = count;
+    AchievementsStates[i].Points = points;
+    AchievementsStates[i].bEarned = progress == -1 || (count > 0 && progress >= count);
+    if( effectColor.A == 0 )
+    {
+        // FIXME: Set to white when the effectMaterial has been recolored as gray.
+        effectColor.A = 255;
+        effectColor.R = 0;
+        effectColor.G = 255;
+        effectColor.B = 0;
+    }
+    AchievementsStates[i].EffectColor = effectColor;
+    OnAchievementStateReceived( i );
+}
+
+simulated final function ClientSendAchievementCategory( sAchievementCategory cat )
+{
+    local int i;
+
+    i = AchievementCategories.Length;
+    AchievementCategories.Length = i + 1;
+    AchievementCategories[i] = cat;
+    OnAchievementCategoryReceived( i );
+}
+
+final function ServerRequestPlayerItems( optional string filter )
+{
+    OnRequestPlayerItems( PlayerController(Owner), self, filter );
+}
+
+simulated final function ClientSendPlayerItem( sPlayerItemClient item )
+{
+    local int i;
+
+    i = PlayerItems.Length;
+    PlayerItems.Length = i + 1;
+    PlayerItems[i] = item;
+    OnPlayerItemReceived( i );
+}
+
+// NotifyAdded ^ ClientSendPlayerItem
+simulated function ClientNotifyItemRemoved( string id )
+{
+    local int i;
+
+    for( i = 0; i < PlayerItems.Length; ++ i )
+    {
+        if( PlayerItems[i].Id == id )
+        {
+            OnPlayerItemRemoved( i );
+            PlayerItems.Remove( i, 1 );
+            break;
+        }
+    }
+}
+
+simulated function ClientNotifyItemUpdated( string id, bool bEnabled, byte newCount )
+{
+    local int i;
+
+    for( i = 0; i < PlayerItems.Length; ++ i )
+    {
+        if( PlayerItems[i].Id == id )
+        {
+            PlayerItems[i].bEnabled = bEnabled;
+            PlayerItems[i].Count = newCount;
+            OnPlayerItemUpdated( i );
+            break;
+        }
+    }
 }
 
 simulated final function ClientSendTrophy( string title )
@@ -736,7 +845,7 @@ simulated final function ClientSendItemData( string id, int data )
     }
 }
 
-simulated final function ClientSendCategory( string categoryName )
+simulated final function ClientSendStoreCategory( string categoryName )
 {
     Categories.Insert( 0, 1 );
     Categories[0].Name = categoryName;
@@ -745,6 +854,35 @@ simulated final function ClientSendCategory( string categoryName )
 simulated final function ClientSendItemsCompleted()
 {
     bItemsTransferComplete = true;
+}
+
+simulated function ServerToggleItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store ToggleItem" @ id );
+}
+
+simulated function ServerBuyItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store BuyItem" @ id );
+}
+
+simulated function ServerSellItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store SellItem" @ id );
+}
+
+static function BTClient_ClientReplication GetRep( PlayerController PC )
+{
+    local LinkedReplicationInfo LRI;
+
+    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+    {
+        if( BTClient_ClientReplication(LRI) != none )
+        {
+            return BTClient_ClientReplication(LRI);
+        }
+    }
+    return none;
 }
 
 event Tick( float deltaTime )

@@ -62,7 +62,6 @@ defaultproperties
     BTTabs(0)=(Caption="Account",TabClass=class'BTGUI_Account',Hint="")
     BTTabs(1)=(Caption="Settings",TabClass=class'BTGUI_Settings',Hint="Edit your BestTimes settings!")
     BTTabs(2)=(Caption="Commands",TabClass=class'BTGUI_Commands',Hint="Execute useful BestTimes commands!")
-    BTTabs(3)=(Caption="Gimmicks",TabClass=class'BTGUI_Gimmicks',Hint="View achievements, challenges, trophies and perks!")
 
     Begin Object class=GUITabControl name=oPageTabs
         WinWidth=0.98

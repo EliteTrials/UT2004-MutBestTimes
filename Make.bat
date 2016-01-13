@@ -13,7 +13,7 @@ del %project_name%.int
 
 cd..
 cd %project_name%
-xcopy Preprocessed Classes /Y /Q  
+xcopy Preprocessed Classes /Y /Q
 
 cd Preprocessed
 for %%F in (*.uc) do (

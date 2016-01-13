@@ -5,7 +5,7 @@ var automated GUIImage Region;
 var automated GUIScrollTextBox Summary;
 var private string SummaryText;
 
-var() editinline protected BTClient_ClientReplication ClientData;
+var() editinline protected BTClient_ClientReplication CRI;
 
 const RegionHeight = 128;
 const IconSize = 64;
@@ -18,13 +18,13 @@ var() texture RegionImage;
 
 event Free()
 {
-    ClientData = none;
+    CRI = none;
     super.Free();
 }
 
 function PostInitPanel()
 {
-    ClientData = MyMenu.MyInteraction.MRI.CR;
+    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
 }
 
 function InitComponent( GUIController InController, GUIComponent InOwner )

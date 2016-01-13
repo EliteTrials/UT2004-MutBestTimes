@@ -5,8 +5,6 @@
  */
 class BTStore_ItemsMultiColumnList extends GUIMultiColumnList;
 
-#exec texture import name=positiveIcon file=Images/positive.tga group="icons" mips=off DXT=5 alpha=1
-
 var Texture PositiveIcon;
 
 var editconst noexport BTClient_ClientReplication CRI;

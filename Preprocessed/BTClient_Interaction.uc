@@ -9,7 +9,7 @@ class BTClient_Interaction extends Interaction;
 
 #Exec obj load file="UT2003Fonts.utx"
 #Exec obj load file="MenuSounds.uax"
-#Exec obj load file="Content/ClientBTimes.utx" package="ClientBTimesV5"
+#Exec obj load file="ClientBTimes.utx" package="ClientBTimesV5"
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
@@ -1158,7 +1158,9 @@ private function ModifyMenu()
 {
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
+    local BTGUI_PlayerInventory invMenu;
     local BTGUI_Store storeMenu;
+    local BTGUI_Rewards rewardsMenu;
 
     Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
     if( Menu != None )
@@ -1171,6 +1173,15 @@ private function ModifyMenu()
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
 
+        invMenu = BTGUI_PlayerInventory(Menu.c_Main.AddTab( "Inventory", string(Class'BTGUI_PlayerInventory'),, "Manage your items" ));
+        if( invMenu != none )
+        {
+            // invMenu.MyInteraction = self;
+            invMenu.MyButton.StyleName = "StoreButton";
+            invMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", invMenu.FontScale );
+            invMenu.PostInitPanel();
+        }
+
         storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Store", string(Class'BTGUI_Store'),, "Buy and manage items" ));
         if( storeMenu != none )
         {
@@ -1178,6 +1189,15 @@ private function ModifyMenu()
             storeMenu.MyButton.StyleName = "StoreButton";
             storeMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", storeMenu.FontScale );
             storeMenu.PostInitPanel();
+        }
+
+        rewardsMenu = BTGUI_Rewards(Menu.c_Main.AddTab( "Rewards", string(Class'BTGUI_Rewards'),, "Exchange and collect trophies" ));
+        if( rewardsMenu != none )
+        {
+            rewardsMenu.MyInteraction = self;
+            rewardsMenu.MyButton.StyleName = "StoreButton";
+            rewardsMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", rewardsMenu.FontScale );
+            rewardsMenu.PostInitPanel();
         }
 
         myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
@@ -1572,7 +1592,7 @@ final static function Font GetScreenFont( Canvas C )
 {
     local int FontSize;
 
-    FontSize = 8 - class'BTClient_Config'.static.FindSavedData().ScreenFontSize;
+    FontSize = 7 - class'BTClient_Config'.static.FindSavedData().ScreenFontSize;
     if( C.ClipX < 640 )
         ++ FontSize;
     if( C.ClipX < 800 )
@@ -2172,13 +2192,13 @@ final function RenderRankingsTable( Canvas C )
                     }
                     break;
 
-                case 5: // "Tasks (Overall)"
-                    C.DrawColor = #0x555555FF;
+                case 1: // "Achievement Points (Overall)"
+                    C.DrawColor = #0x91A79DFF;
                     if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[i].Objectives);
+                        value = string(MRI.CR.OverallTop[i].AP);
                     break;
 
-                case 2: // "Player (All)"
+                case 3: // "Player (All)"
                     C.DrawColor = #0xFFFFFFFF;
                     if( Options.GlobalSort == 0 )
                         value = MRI.CR.OverallTop[i].Name;
@@ -2188,7 +2208,7 @@ final function RenderRankingsTable( Canvas C )
                         value = MRI.CR.DailyTop[i].Name;
                     break;
 
-                case 1: // "Score (All)"
+                case 2: // "Score (All)"
                     C.DrawColor = #0xFFFFF0FF;
                     if( Options.GlobalSort == 0 )
                         value = string(int(MRI.CR.OverallTop[i].Points));
@@ -2198,7 +2218,7 @@ final function RenderRankingsTable( Canvas C )
                         value = string(int(MRI.CR.DailyTop[i].Points));
                     break;
 
-                case 3: // "Records (All)"
+                case 4: // "Records (All)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[i].Hijacks & 0x0000FFFF);
@@ -2208,7 +2228,7 @@ final function RenderRankingsTable( Canvas C )
                         value = string(MRI.CR.DailyTop[i].Records);
                     break;
 
-                case 4: // "Hijacks (Overall)"
+                case 5: // "Hijacks (Overall)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[i].Hijacks >> 16);
@@ -2438,27 +2458,27 @@ function RenderFooter( Canvas C )
     drawY = tableY;
 
     // DRAW BACKGROUND
-    C.DrawColor = Options.CTable;
-    DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth, tableHeight + TABLE_PADDING );
+    // C.DrawColor = Options.CTable;
+    // DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth, tableHeight + TABLE_PADDING );
 
     drawX += TABLE_PADDING;
 
-    // Advertisement
-    s = "MutBestTimes";
-    C.StrLen( s, xl, yl );
-    width = xl + TABLE_PADDING*2;
-    height = (tableHeight - TABLE_PADDING*2)*0.5;
-    C.DrawColor = #0x0072C688;
-    DrawColumnTile( C, drawX, drawY, width, height );
-    DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
+    // // Advertisement
+    // s = "MutBestTimes";
+    // C.StrLen( s, xl, yl );
+    // width = xl + TABLE_PADDING*2;
+    // height = (tableHeight - TABLE_PADDING*2)*0.5;
+    // C.DrawColor = #0x0072C688;
+    // DrawColumnTile( C, drawX, drawY, width, height );
+    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 
-    s = "www.EliotVU.com";
-    C.StrLen( s, xl, yl );
-    width = xl + TABLE_PADDING*2;
-    drawY = tableY + tableHeight - height - TABLE_PADDING;
-    C.DrawColor = #0x0072C688;
-    DrawColumnTile( C, drawX, drawY, width, height );
-    DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
+    // s = "www.EliotVU.com";
+    // C.StrLen( s, xl, yl );
+    // width = xl + TABLE_PADDING*2;
+    // drawY = tableY + tableHeight - height - TABLE_PADDING;
+    // C.DrawColor = #0x0072C688;
+    // DrawColumnTile( C, drawX, drawY, width, height );
+    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 
     // Press F12 or Escape to hide this.
     s = RankingKeyMsg @ RankingHideMsg;
@@ -2564,28 +2584,21 @@ function PostRender( Canvas C )
     }
 
     // See if client is spectating someone!
-    if( MRI.bSoloMap )
+    SpectatedClient = None;
+    if( Pawn(ViewportOwner.Actor.ViewTarget) != None && ViewportOwner.Actor.ViewTarget != ViewportOwner.Actor.Pawn )
     {
-        SpectatedClient = None;
-        if( Pawn(ViewportOwner.Actor.ViewTarget) != None && ViewportOwner.Actor.ViewTarget != ViewportOwner.Actor.Pawn )
+        for( LRI = Pawn(ViewportOwner.Actor.ViewTarget).PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
         {
-            for( LRI = Pawn(ViewportOwner.Actor.ViewTarget).PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+            if( BTClient_ClientReplication(LRI) != None )
             {
-                if( BTClient_ClientReplication(LRI) != None )
-                {
-                    SpectatedClient = BTClient_ClientReplication(LRI);
-                    break;
-                }
+                SpectatedClient = BTClient_ClientReplication(LRI);
+                break;
             }
         }
-
-        // Not spectating anyone, assign to myself!
-        if( SpectatedClient == None )
-        {
-            SpectatedClient = MRI.CR;
-        }
     }
-    else
+
+    // Not spectating anyone, assign to myself!
+    if( SpectatedClient == None )
     {
         SpectatedClient = MRI.CR;
     }
@@ -2721,7 +2734,7 @@ function PostRender( Canvas C )
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Holder", S, true, C.ClipX*0.65, 4.5 );
 
                 S = MRI.PointsReward;
-                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Reward", S, true, C.ClipX*0.65, 4.5 );
+                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Rank Points", S, true, C.ClipX*0.65, 4.5 );
                 break;
 
             case RS_Failure:
@@ -2757,6 +2770,7 @@ function RenderHUDElements( Canvas C )
     drawX = COLUMN_PADDING_X;
     drawY = (C.ClipY * 0.5);
     C.Style = 1;
+    C.StrLen( "9", xl, yl );
     if( MRI.CR.ClientSpawnPawn != none )
     {
         if( MRI.Level.GRI != none && MRI.Level.GRI.GameName == "Capture the Flag" )
@@ -2835,7 +2849,7 @@ function RenderHUDElements( Canvas C )
 
         if( SpectatedClient.Level.TimeSeconds - SpectatedClient.BTExperienceChangeTime <= 1.5f && SpectatedClient.BTExperienceDiff != 0f )
         {
-            C.SetPos( drawX + v.x, drawY + v.y*0.5 );
+            C.SetPos( drawX + v.x, drawY + v.y*0.5 - YL*0.5);
             if( SpectatedClient.BTExperienceDiff > 0 )
             {
                 C.DrawColor = Class'HUD'.default.GreenColor;
@@ -2849,8 +2863,12 @@ function RenderHUDElements( Canvas C )
         }
     drawY += v.y*1.2;
 
-    s = "Currency";
-    DrawElement( C, drawX, drawY, s, SpectatedClient.BTPoints );
+    s = "$";
+    DrawElement( C, drawX, drawY, s, Decimal(SpectatedClient.BTPoints),,,, class'HUD'.default.GreenColor );
+    drawY += v.y*1.2;
+
+    s = "AP";
+    DrawElement( C, drawX, drawY, s, Decimal(SpectatedClient.APoints),,,, class'HUD'.default.WhiteColor, #0x91A79D88 );
 
     // render team status on right side of hud centered vertically.
     if( MRI.Teams[0].Name != "" )
@@ -2881,6 +2899,22 @@ function RenderHUDElements( Canvas C )
             drawY += DrawElement( C, drawX, drawY, s, MRI.Teams[i].Points,, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
         }
     }
+}
+
+final function string Decimal( int number )
+{
+    local string s, ns;
+    local int i;
+    local byte l;
+
+    s = string(number);
+    ns = s;
+    l = Len( s );
+    for( i = 0; i < (l-1)/3; ++ i )
+    {
+        ns = Left( s, l - 3*(i+1) ) $ "," $ Right( ns, 3*(i+1)+i );
+    }
+    return ns;
 }
 
 function DrawRecordWidget( Canvas C )
@@ -3305,7 +3339,7 @@ DefaultProperties
     RecordTimeMsg="Time"
     RecordPrevTimeMsg="Previous Time"
     RecordHolderMsg="Holder"
-    RecordTimeLeftMsg="Timer"
+    RecordTimeLeftMsg="Record"
     RecordEmptyMsg="No record available"
     RecordTimeElapsed="Time"
     RankingKeyMsg="Escape/%KEY%"
@@ -3325,17 +3359,17 @@ DefaultProperties
     AlphaLayer=Texture'BTScoreBoardBG'
 
     PlayersRankingColumns(0)=(Title="#",Format="0000")
-    PlayersRankingColumns(1)=(Title="Score",Format="00000")
-    PlayersRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    PlayersRankingColumns(3)=(Title="Records",Format="0000")
-    PlayersRankingColumns(4)=(Title="Hijacks",Format="0000")
-    PlayersRankingColumns(5)=(Title="Objectives",Format="00000")
+    PlayersRankingColumns(1)=(Title="AP",Format="0000")
+    PlayersRankingColumns(2)=(Title="Score",Format="00000")
+    PlayersRankingColumns(3)=(Title="Player",Format="WWWWWWWWWWWW")
+    PlayersRankingColumns(4)=(Title="Records",Format="0000")
+    PlayersRankingColumns(5)=(Title="Hijacks",Format="0000")
 
     RecordsRankingColumns(0)=(Title="#",Format="000")
     RecordsRankingColumns(1)=(Title="Score",Format="00.00")
     RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    RecordsRankingColumns(3)=(Title="Time",Format="00:00:00.00")
-    RecordsRankingColumns(4)=(Title="Date",Format="0000/00/00")
+    RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00")
+    RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
 
     RankingRanges(0)="All Time"
     RankingRanges(1)="Monthly"
