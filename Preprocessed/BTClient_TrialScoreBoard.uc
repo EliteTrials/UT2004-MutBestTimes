@@ -523,14 +523,11 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     }
 
     // Draw Time
-    if( CRI != none && myInter.MRI.bSoloMap )
+    if( CRI != none && CRI.PersonalTime > 0 )
     {
-        if( CRI.PersonalTime > 0 )
-        {
-            C.SetPos( TX, rowTextY+rowSegmentHeight );
-            C.DrawColor = SecondaryColor;
-            C.DrawText( Class'BTClient_Interaction'.Static.Strl( CRI.PersonalTime ) );
-        }
+        C.SetPos( TX, rowTextY+rowSegmentHeight );
+        C.DrawColor = SecondaryColor;
+        C.DrawText( Class'BTClient_Interaction'.Static.Strl( CRI.PersonalTime ) );
     }
 
     if( (GRI.ElapsedTime > 0 && GRI.Winner == None) || SavedElapsedTime == 0 )

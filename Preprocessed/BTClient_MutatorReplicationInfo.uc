@@ -19,7 +19,6 @@ var string
 
 var float
     MapBestTime,
-    PreviousBestTime,
     GhostPercent,
     ObjectiveTotalTime,
     MatchStartTime;
@@ -40,9 +39,6 @@ var enum ERecordState
     RS_QuickStart,
 } RecordState;
 
-var string ADMessage;
-var string ADURL;
-
 /* Local, ClientReplication */
 var BTClient_ClientReplication CR;                                              // Client Only
 
@@ -57,12 +53,19 @@ var int TotalItemsBought;
 
 var float TeamTime[2];
 
+// Maybe abit bandwith expensive, but no big deal.
+var struct sTeam{
+    var string Name;
+    var float Points;
+    var int Voters;
+} Teams[3];
+
 replication
 {
     reliable if( Role == ROLE_Authority )
-        PlayersBestTimes, MapBestTime, PreviousBestTime,
+        PlayersBestTimes, MapBestTime,
         RecordState, EndMsg, ObjectiveTotalTime,
-        MaxMoves, SoloRecords, bCompetitiveMode;
+        MaxMoves, SoloRecords, bCompetitiveMode, Teams;
 
     reliable if( bNetDirty /*&& EndMsg != ""*/ )
         PointsReward;
@@ -82,9 +85,6 @@ replication
         Credits, RankingPage,
         bSoloMap, bKeyMap,
         RecordsCount, MaxRecords, PlayersCount;
-
-    reliable if( bNetInitial /*bNetDirty && RecordState != RS_Active*/ )
-        ADMessage, ADURL;
 
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )
@@ -140,7 +140,6 @@ simulated function InitializeClient()
                     {
                         CR = BTClient_ClientReplication(LRI);
                         CR.MRI = Self;
-                        CR.InitializeClient( Inter );
                         break;
                     }
                 }
@@ -158,7 +157,6 @@ function SetBestTime( float NewTime )
         return;
     }
 
-    PreviousBestTime = MapBestTime;
     MapBestTime = NewTime;
 }
 
