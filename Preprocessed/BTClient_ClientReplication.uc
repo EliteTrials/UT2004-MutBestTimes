@@ -273,7 +273,7 @@ replication
         ClientSendTrophy, ClientTrophyEarned, ClientCleanTrophies,
         ClientSendItem, ClientSendStoreCategory, ClientSendAchievementCategory,
         ClientSendItemsCompleted, ClientSendItemMeta, ClientSendItemData,
-        ClientNotifyItemUpdated, ClientNotifyItemRemoved;
+        ClientSendPlayerItem, ClientNotifyItemUpdated, ClientNotifyItemRemoved;
 
     // unreliable
     reliable if( Role == ROLE_Authority )
