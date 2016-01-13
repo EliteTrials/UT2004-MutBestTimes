@@ -2458,27 +2458,27 @@ function RenderFooter( Canvas C )
     drawY = tableY;
 
     // DRAW BACKGROUND
-    C.DrawColor = Options.CTable;
-    DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth, tableHeight + TABLE_PADDING );
+    // C.DrawColor = Options.CTable;
+    // DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth, tableHeight + TABLE_PADDING );
 
     drawX += TABLE_PADDING;
 
-    // Advertisement
-    s = "MutBestTimes";
-    C.StrLen( s, xl, yl );
-    width = xl + TABLE_PADDING*2;
-    height = (tableHeight - TABLE_PADDING*2)*0.5;
-    C.DrawColor = #0x0072C688;
-    DrawColumnTile( C, drawX, drawY, width, height );
-    DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
+    // // Advertisement
+    // s = "MutBestTimes";
+    // C.StrLen( s, xl, yl );
+    // width = xl + TABLE_PADDING*2;
+    // height = (tableHeight - TABLE_PADDING*2)*0.5;
+    // C.DrawColor = #0x0072C688;
+    // DrawColumnTile( C, drawX, drawY, width, height );
+    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 
-    s = "www.EliotVU.com";
-    C.StrLen( s, xl, yl );
-    width = xl + TABLE_PADDING*2;
-    drawY = tableY + tableHeight - height - TABLE_PADDING;
-    C.DrawColor = #0x0072C688;
-    DrawColumnTile( C, drawX, drawY, width, height );
-    DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
+    // s = "www.EliotVU.com";
+    // C.StrLen( s, xl, yl );
+    // width = xl + TABLE_PADDING*2;
+    // drawY = tableY + tableHeight - height - TABLE_PADDING;
+    // C.DrawColor = #0x0072C688;
+    // DrawColumnTile( C, drawX, drawY, width, height );
+    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 
     // Press F12 or Escape to hide this.
     s = RankingKeyMsg @ RankingHideMsg;
