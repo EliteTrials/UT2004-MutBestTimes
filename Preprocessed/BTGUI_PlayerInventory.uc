@@ -4,12 +4,24 @@
 class BTGUI_PlayerInventory extends BTGUI_StatsTab
     dependson(BTClient_ClientReplication);
 
+#exec texture import name=positiveIcon file=Images/positive.tga group="icons" mips=off DXT=5 alpha=1 LODSet=5
+
+var Texture PositiveIcon;
 var Texture TileMat;
 
 var automated GUITreeListBox        CategoriesListBox;
 var automated GUISectionBackground  ItemsBackground, CategoriesBackground;
 var automated GUIVertImageListBox   ItemsListBox;
 var GUIContextMenu                  ItemsContextMenu;
+
+var automated BTGUI_ComPetPanel     PetPanel;
+
+event Free()
+{
+    super.Free();
+    PositiveIcon = none;
+    TileMat = none;
+}
 
 function ShowPanel( bool bShow )
 {
@@ -24,6 +36,7 @@ function ShowPanel( bool bShow )
     ItemsListBox.List.OnDrawItem = InternalOnDrawItem;
     ItemsListBox.List.OnRightClick = InternalOnListRightClick;
     ItemsListBox.List.OnDblClick = InternalOnListDblClick;
+    ItemsListBox.List.OnChange = InternalOnListChange;
     if( bShow && CRI.PlayerItems.Length == 0 )
     {
         CRI.OnPlayerItemReceived = InternalOnPlayerItemReceived;
@@ -31,6 +44,8 @@ function ShowPanel( bool bShow )
         CRI.OnPlayerItemRemoved = InternalOnPlayerItemRemoved;
         CRI.OnPlayerItemUpdated = InternalOnPlayerItemUpdated;
     }
+
+    PetPanel.mInv = self;
 }
 
 function InternalOnPlayerItemReceived( int index )
@@ -121,23 +136,18 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.SetPos( w*0.5 - iconSize*0.5 + 2, 12 );
     C.DrawTileClipped( playerItem.IconTexture, iconSize - 8, iconSize - 8, 0.0, 0.0, playerItem.IconTexture.MaterialUSize(), playerItem.IconTexture.MaterialVSize() );
 
-    C.TextSize( "X", XL, YL );
     C.OrgX = X;
     C.OrgY = Y;
     C.ClipX = W;
-    C.SetPos( w - 8 - XL, 8 );
-    C.DrawColor = class'HUD'.default.BlackColor;
-    C.DrawTileClipped( TileMat, XL, YL, 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
-    C.SetPos( w - 8 - XL, 8 );
-    C.DrawColor = #0x222222FF;
-    C.DrawBox( C, XL, YL );
 
     if( playerItem.bEnabled )
     {
         // TODO: Checked icon
-        C.SetPos( w - 8 - XL, 8 );
+        C.SetPos( w - 16 - 8, 8 );
         C.DrawColor = class'HUD'.default.WhiteColor;
-        C.DrawTextClipped( "X" );
+        C.Style = 5;
+        C.DrawTileClipped( PositiveIcon, 16, 16, 0, 0, PositiveIcon.MaterialUSize(), PositiveIcon.MaterialVSize() );
+        C.Style = 1;
     }
 
     // RENDER: Name
@@ -169,6 +179,18 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.ClipY = oldClipY;
     C.OrgX = X + W;
     C.OrgY = Y + H;
+}
+
+function InternalOnListChange( GUIComponent sender )
+{
+    local int i;
+
+    i = ItemsListBox.List.GetItem();
+    if( i != -1 )
+    {
+        PetPanel.SpinnyDude.PlayNextAnim();
+        PetPanel.SpinnyDude.SetOverlayMaterial( CRI.PlayerItems[i].IconTexture, 999999, true );
+    }
 }
 
 function bool InternalOnListRightClick( GUIComponent sender )
@@ -226,6 +248,17 @@ defaultproperties
 {
     OnKeyEvent=OnKeyEvent
     TileMat=Texture'BTScoreBoardBG'
+    PositiveIcon=positiveIcon
+
+    begin object class=BTGUI_ComPetPanel name=oPetPanel
+        WinWidth=0.300000
+        WinHeight=0.41
+        WinLeft=0.0
+        WinTop=0.48
+        bBoundToParent=true
+        bScaleToParent=true
+    end object
+    PetPanel=oPetPanel
 
     begin object class=GUISectionBackground name=oItemsBackground
         WinWidth=0.700000
@@ -255,7 +288,6 @@ defaultproperties
 
         VertBorder=2
         HorzBorder=1
-
     end object
     ItemsListBox=oItemsListBox
 
