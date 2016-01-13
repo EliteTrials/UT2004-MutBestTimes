@@ -1592,7 +1592,7 @@ final static function Font GetScreenFont( Canvas C )
 {
     local int FontSize;
 
-    FontSize = 8 - class'BTClient_Config'.static.FindSavedData().ScreenFontSize;
+    FontSize = 7 - class'BTClient_Config'.static.FindSavedData().ScreenFontSize;
     if( C.ClipX < 640 )
         ++ FontSize;
     if( C.ClipX < 800 )
