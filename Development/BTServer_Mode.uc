@@ -110,6 +110,14 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 
     switch( command )
     {
+        case "like":
+            InternalOnMapLike( sender );
+            break;
+
+        case "dislike":
+            InternalOnMapDislike( sender );
+            break;
+
         case "vote":
             if( VotingReplicationInfo(sender.VoteReplicationInfo) == none || !sender.VoteReplicationInfo.MapVoteEnabled() )
             {
@@ -211,6 +219,28 @@ function bool ChatMacroCommandExecuted( PlayerController sender, string command,
     return false;
 }
 
+private function InternalOnMapLike( PlayerController player )
+{
+    local BTClient_ClientReplication CRI;
+
+    CRI = GetRep( player );
+    if( RDat.PlayerLikeMap( UsedSlot, CRI.myPlayerSlot ) )
+    {
+        SendSucceedMessage( player, "You have liked this map! New map rating:" @ RDat.GetMapRating( UsedSlot ) );
+    }
+}
+
+private function InternalOnMapDislike( PlayerController player )
+{
+    local BTClient_ClientReplication CRI;
+
+    CRI = GetRep( player );
+    if( RDat.PlayerDislikeMap( UsedSlot, CRI.myPlayerSlot ) )
+    {
+        SendSucceedMessage( player, "You have disliked this map! New map rating:" @ RDat.GetMapRating( UsedSlot ) );
+    }
+}
+
 function bool ClientExecuted( PlayerController sender, string command, optional array<string> params )
 {
     return false;
@@ -234,11 +264,6 @@ final static function BTServer_Mode NewInstance( MutBestTimes M )
     //Mode.Master = M;
     Mode.InitializeMode();
     return Mode;
-}
-
-function bool ShouldEnd()
-{
-    return true;
 }
 
 function Free()

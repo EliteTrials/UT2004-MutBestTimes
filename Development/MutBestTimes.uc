@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2016 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
     config(MutBestTimes)
@@ -8,7 +8,8 @@ class MutBestTimes extends Mutator
     dependson(BTServer_RecordsData)
     dependson(BTAchievements)
     dependson(BTChallenges)
-    dependson(BTActivateKey);
+    dependson(BTActivateKey)
+    dependson(BTServer_CheckPoint);
 
 #exec obj load file="..\System\TrialGroup.u"
 // #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
@@ -22,18 +23,12 @@ class MutBestTimes extends Mutator
 //  Minor Version  // minor new features
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
-const BTVersion                         = "4.0.0.0";
-const MaxPlayers                        = 3;                                    // Note: Setting this higher than 4 will cause the extra players to not receive any points for the record!.
+const BTVersion                         = "4.0.1.0";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
 const MaxHistoryLength                  = 25;
 const MaxRecentMaps                     = 20;
-const BTCredits                         = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";     // copyright
 const BTAuthor                          = "2e216ede3cf7a275764b04b5ccdd005d";   // Author guid, gives access to some admin commands...
-
-// Points Related.
-const PointsPerObjective                = 0.25f;
-const DefaultPoints                     = 5.0f;
 
 const EXP_ImprovedRecord                = 25;
 const EXP_FirstRecord                   = 40;
@@ -42,7 +37,7 @@ const EXP_FailRecord                    = 3;
 const EXP_Objective                     = 4;
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
+const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2016 Eliot and .:..:. All Rights Reserved";
 const META_DECOMPILER_EVENT_ONLOAD_MESSAGE      = "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 const groupNum = 2;
@@ -93,19 +88,14 @@ struct KeepScoreSE                                                              
 
 struct sClientSpawn                                                             // structure holding a player his own playerstart
 {
-    var int TeamIndex;
-    var int
-        PHealth,
-        PShield;
-
     var BTServer_ClientStartPoint
         PStart;
 
-    var array< class<Weapon> >
-        PWeapons;
-
+    var int TeamIndex;
     var PlayerController
         PC;
+
+    var BTServer_CheckPoint.sPawnStats SavedStats;
 };
 
 struct sCmdInfo
@@ -213,13 +203,13 @@ var BTStore                                         Store;
 var bool
     bPracticeRound,                                                             // Asssault is in Practice Round                                                                // Obsolete?
     bRecentRecordsUpdated,
-    bRecordChecked,                                                             // Used for after quickstart when a record was set before that...
     bMaxRoundSet,                                                               // Fixed rounds (default 2 rounds) to 1
     bQuickStart,                                                                // QuickStart is in progress right now
     bLCAMap,                                                                    // Current Map is using LevelConfigActor
     bKeyMap,
     bSoloMap,                                                                   // Map is solo i.e One objective only
     bGroupMap,                                                                  // Map supports group aka team working.
+    bRegularMap,
     bAlwaysKillClientSpawnPlayersNearTriggers;
 
 var enum ERecordTeam
@@ -237,7 +227,6 @@ var float
     StartLevelTimer,                                                            // Level.TimeSeconds when MatchStarting() (!bSolo)
     BestPlaySeconds,                                                            // Record Time of CurrentMap
     CurrentPlaySeconds,                                                         // Current Elapsed Seconds (!bSolo)
-    BonusPoints,
     SecondsTest;                                                                // Obsolete?, Purpose sync Timer() Seconds to MilliSeconds Timer() test
 
 var string
@@ -269,11 +258,6 @@ var globalconfig
 
 var globalconfig int MaxItemsToReplicatePerTick;
 
-var globalconfig int GroupFinishAchievementUnlockedNum;
-var bool bBlockSake;
-const UnlockBlockSakeCount = 10;
-
-
 // Options
 var() globalconfig
     bool
@@ -293,12 +277,9 @@ var() globalconfig
     bSavePreviousGhost,
     bAddGhostTimerPaths,
     bAllowCompetitiveMode,
-    bDontEndGameOnRecord;
-
-var() globalconfig
-    string
-    ADMessage,
-    ADURL;
+    bDontEndGameOnRecord,
+    bDisableWeaponBoosting,
+    bEnableInstigatorEmpathy;
 
 var() globalconfig
     int
@@ -313,6 +294,10 @@ var() globalconfig
     MinExchangeableTrophies,
     MaxExchangeableTrophies,
     DaysCountToConsiderPlayerInactive;
+
+var() globalconfig
+    float
+    PointsPerObjective;
 
 var() globalconfig
     name
@@ -496,6 +481,11 @@ final function bool IsTrials()
     return ASGameInfo(Level.Game) != none;
 }
 
+final function bool IsClientSpawnPlayer( Pawn player )
+{
+    return player.LastStartSpot != none && player.LastStartSpot.IsA( ClientStartPointClass.Name );
+}
+
 final function NotifyObjectiveAccomplished( PlayerController PC, float score )
 {
     local int playerSlot;
@@ -506,7 +496,7 @@ final function NotifyObjectiveAccomplished( PlayerController PC, float score )
         return;
 
     playerSlot = CRI.myPlayerSlot;
-    if( playerSlot != -1 && (PC.Pawn != none && !PC.Pawn.LastStartSpot.IsA( ClientStartPointClass.Name )) )
+    if( playerSlot != -1 && (PC.Pawn != none && !IsClientSpawnPlayer( PC.Pawn )) )
     {
         ++ PDat.Player[playerSlot].PLObjectives;
         if( PDat.Player[playerSlot].PLObjectives >= 10000 )
@@ -1063,6 +1053,13 @@ function ModifyPlayer( Pawn Other )
     {
         CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
     }
+
+    if( CRI.myPawn == Other )
+    {
+        // We have already modified this player.
+        return;
+    }
+
     CRI.myPawn = Other;
 
     CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
@@ -1113,10 +1110,11 @@ function ModifyPlayer( Pawn Other )
                  */
                 if( CheckPointHandler.HasSavedCheckPoint( Other.Controller, CheckPointIndex ) )
                 {
-                    CheckPointHandler.RestoreStats( Other, CheckPointIndex );
+                    CheckPointHandler.ApplyPlayerState( Other, CheckPointHandler.SavedCheckPoints[CheckPointIndex].SavedStats );
                 }
             }
-            else if( !Other.LastStartSpot.IsA( ClientStartPointClass.Name ) )
+            // Check if a clientspawn is registered, not if we spawned on one, because we don't want to reset the time if a player switches team while having a clientspawn!
+            else if( GetClientSpawnIndex( Other.Controller ) == -1 /**!IsClientSpawnPlayer( Other )*/ )
             {
                 // Start timer
                 CRI.PlayerSpawned();
@@ -1194,13 +1192,6 @@ function ModifyPlayer( Pawn Other )
 
     if( ModeIsTrials() )
     {
-        // Keys are lost after a dead!, except not if your're using a CheckPoint!
-        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
-        {
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
-        }
-
         if( bAllowClientSpawn )
         {
             //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
@@ -1215,7 +1206,15 @@ function ModifyPlayer( Pawn Other )
                     // No family
                     PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'holiday_0' );
                 }
+                return; // Don't reset objectives (see below)
             }
+        }
+
+        // Keys are lost after a dead!, except not if your're using a CheckPoint!
+        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
+        {
+            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
+            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
         }
     }
 }
@@ -1280,7 +1279,7 @@ event PreBeginPlay()
     local GameObjective Obj;
 
     FullLog( "====================================" );
-    FullLog( string(Name) @ BTVersion @ BTCredits );
+    FullLog( string(Name) @ BTVersion @ META_DECOMPILER_VAR_COPYRIGHT );
     // Make sure 'self' is not in ServerPckages!
     FullLog( "Checking ServerPackages for ServerBTimes.u" );
     if( IsInServerPackages() )
@@ -1312,9 +1311,6 @@ event PreBeginPlay()
     MRI = Spawn( Class'BTClient_MutatorReplicationInfo' );
     MRI.AddToPackageMap();  // Temporary ServerPackage
 
-    Store = class'BTStore'.static.Load();
-    Store.Cache();
-    AddToPackageMap( "TextureBTimes" );
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
     {
@@ -1329,14 +1325,12 @@ event PreBeginPlay()
         }
     }*/
 
-    Credits = BTCredits;
+    Credits = META_DECOMPILER_VAR_COPYRIGHT;
     Credits = Repl( Credits, "Eliot", Class'HUD'.Default.GoldColor $ "Eliot" $ Class'HUD'.Default.WhiteColor );
     Credits = Repl( Credits, ".:..:", Class'HUD'.Default.GoldColor $ ".:..:" $ Class'HUD'.Default.WhiteColor );
     MRI.Credits = "v" $ Class'HUD'.Default.GoldColor $ BTVersion $ Class'HUD'.Default.WhiteColor @ Credits;
     MRI.PlayersCount = PDat.Player.Length;
     MRI.MaxRecords = RDat.Rec.Length;
-    MRI.ADMessage = ADMessage;
-    MRI.ADURL = ADURL;
     MRI.TotalCurrencySpent = PDat.TotalCurrencySpent;
     MRI.TotalItemsBought = PDat.TotalItemsBought;
 
@@ -1363,8 +1357,23 @@ event PreBeginPlay()
         }
     }
 
+    Store = class'BTStore'.static.Load( self );
+    FullLog( "Store:" @ Store );
+
+    // WARNING: Do not add any code below!
     if( ModeIsTrials() )
     {
+        if( Store != none && Store.Teams.Length > 0 )
+        {
+            // Replicate all teams to the client side and its state.
+            for( i = 0; i < Min( Store.Teams.Length, 3 ); ++ i )
+            {
+                MRI.Teams[i].Name = Store.Teams[i].Name;
+                MRI.Teams[i].Points = Store.Teams[i].Points;
+                MRI.Teams[i].Voters = Store.Teams[i].Voters;
+            }
+        }
+
         // Initialize TMRating for all maps
         for( i = 0; i < RDat.Rec.Length; ++ i )
         {
@@ -1399,75 +1408,38 @@ event PreBeginPlay()
                 InitMapRating();
 
                 bSave = True;
-
-                SkipRating:
-
-                if( bSoloMap )
+            SkipRating:
+                j = RDat.Rec[UsedSlot].PSRL.Length;
+                if( j > 0 )
                 {
-                    if( RDat.Rec[UsedSlot].TMT != 0 && RDat.Rec[UsedSlot].PLs[0] != 0 )
-                    {
-                        FullLog( "Converting record to Solo" );
-                        RDat.Rec[UsedSlot].PSRL.Length = 1;
-                        RDat.Rec[UsedSlot].PSRL[0].PLs = RDat.Rec[UsedSlot].PLs[0];
-                        RDat.Rec[UsedSlot].PSRL[0].SRT = RDat.Rec[UsedSlot].TMT;
-                        RDat.Rec[UsedSlot].PSRL[0].SRD[0] = Level.Day;
-                        RDat.Rec[UsedSlot].PSRL[0].SRD[1] = Level.Month;
-                        RDat.Rec[UsedSlot].PSRL[0].SRD[2] = Level.Year;
+                    MRI.SoloRecords = j;
 
-                        RDat.Rec[UsedSlot].TMT = 0;
-                        RDat.Rec[UsedSlot].PLs[0] = 0;
+                    // Make sure invalid records are all deleted (caused by .ini corruption!)
+                    for( l = 0; l < j; ++ l )
+                    {
+                        if( RDat.Rec[UsedSlot].PSRL[l].SRT > 1.0f )
+                            break;
+
+                        // No longer need however still remains here incase
+
+                        // delete the record
+                        RDat.Rec[UsedSlot].PSRL.Remove( l, 1 );
+                        -- l;
+                        -- j;
+
+                        // Update the uvx files
                         bSave = True;
                     }
 
-                    j = RDat.Rec[UsedSlot].PSRL.Length;
-                    if( j > 0 )
-                    {
-                        MRI.SoloRecords = j;
+                    // Initialize Replication
+                    BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
+                    MRI.MapBestTime = BestPlaySeconds;
 
-                        // Make sure invalid records are all deleted (caused by .ini corruption!)
-                        for( l = 0; l < j; ++ l )
-                        {
-                            if( RDat.Rec[UsedSlot].PSRL[l].SRT > 1.0f )
-                                break;
-
-                            // No longer need however still remains here incase
-
-                            // delete the record
-                            RDat.Rec[UsedSlot].PSRL.Remove( l, 1 );
-                            -- l;
-                            -- j;
-
-                            // Update the uvx files
-                            bSave = True;
-                        }
-
-                        // Initialize Replication
-                        BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
-                        MRI.MapBestTime = BestPlaySeconds;
-
-                        UpdateRecordHoldersMessage();
-                    }
-                    else
-                    {
-                        BestPlaySeconds = -1;
-                    }
+                    UpdateRecordHoldersMessage();
                 }
                 else
                 {
-                    // Has record?
-                    if( RDat.Rec[UsedSlot].TMT > 0 )
-                        BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].TMT );
-                    else BestPlaySeconds = -1;
-
-                    // Replication.
-                    if( RDat.Rec[UsedSlot].TMPT > 0 )
-                        MRI.PreviousBestTime = RDat.Rec[UsedSlot].TMPT;
-
-                    MRI.MapBestTime = BestPlaySeconds;
-                    if( RDat.Rec[UsedSlot].PLs[0] != 0 )
-                    {
-                        MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, MaxPlayers );
-                    }
+                    BestPlaySeconds = -1;
                 }
 
                 // Save was required
@@ -1490,7 +1462,7 @@ event PreBeginPlay()
 final function UpdateRecordHoldersMessage()
 {
     local int i;
-    local string time;
+    local float time;
 
     if( RDat.Rec[UsedSlot].PSRL.Length == 0 )
     {
@@ -1498,18 +1470,29 @@ final function UpdateRecordHoldersMessage()
         return;
     }
 
-    MRI.PlayersBestTimes = PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
-    time = string(RDat.Rec[UsedSlot].PSRL[i].SRT);
-    if( bGroupMap )
+    MRI.PlayersBestTimes = "";
+    time = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
+    for( i = 0; i < RDat.Rec[UsedSlot].PSRL.Length; ++ i )
     {
-        for( i = 1; i < RDat.Rec[UsedSlot].PSRL.Length; ++ i )
+        if( GetFixedTime( RDat.Rec[UsedSlot].PSRL[i].SRT ) != time )
         {
-            if( string(RDat.Rec[UsedSlot].PSRL[i].SRT) != time )
-            {
-                break;
-            }
+            break;
+        }
 
-            MRI.PlayersBestTimes $= ", " $ PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
+        if( i != 0 )
+        {
+            MRI.PlayersBestTimes $= ", ";
+        }
+
+        MRI.PlayersBestTimes $= PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
+        if( RDat.Rec[UsedSlot].PSRL[i].ObjectivesCount > 0 )
+        {
+            MRI.PlayersBestTimes
+                $= "["
+                    $ class'HUD'.default.GoldColor $ RDat.Rec[UsedSlot].PSRL[i].ObjectivesCount
+                    $ class'HUD'.default.WhiteColor
+                $ "]"
+            ;
         }
     }
 }
@@ -1579,7 +1562,6 @@ final function bool IsHoliday()
     else if( Level.Month == 4 && Level.Day == 18 )
     {
         Holiday = "Group mode birthday";
-        BonusPoints = 5;
         return True;
     }
     else if( Level.Month == 5 && Level.Day == 1 )
@@ -1590,7 +1572,6 @@ final function bool IsHoliday()
     else if( Level.Month == 6 && Level.Day == 5 )
     {
         Holiday = "Solo mode birthday";
-        BonusPoints = 5;
         return True;
     }
     else if( Level.Month == 7 && Level.Day == 21 )
@@ -1606,13 +1587,11 @@ final function bool IsHoliday()
     else if( Level.Month == 8 && Level.Day == 26 )
     {
         Holiday = "Eliot's birthday";
-        BonusPoints = 5;
         return True;
     }
     else if( Level.Month == 9 && Level.Day == 19 )
     {
         Holiday = "Haydon's birthday";
-        BonusPoints = 5;
         return True;
     }
     else if( Level.Month == 10 && Level.Day == 31 )
@@ -1635,25 +1614,21 @@ final function bool IsHoliday()
         if( Level.Day == 24 )
         {
             Holiday = "Christmas Eve";
-            BonusPoints = 5;
             return True;
         }
         else if( Level.Day == 25 )
         {
             Holiday = "Christmas Day";
-            BonusPoints = 4;
             return True;
         }
         if( Level.Day == 31 )
         {
             Holiday = "New Year's Eve";
-            BonusPoints = 2;
             return True;
         }
         else
         {
             Holiday = "XMas Month";
-            BonusPoints = 2;
             return True;
         }
     }
@@ -1862,16 +1837,6 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
                     }
                 }
             }
-            else    // Not solo!
-            {
-                j = MapInfo.Length;
-                MapInfo.Length = j+1;
-                MapInfo[j] = lzRecordTime$":"$TimeToStr( RDat.Rec[i].TMT );
-
-                j = MapInfo.Length;
-                MapInfo.Length = j+1;
-                MapInfo[j] = lzRecordAuthor$":"$GetBestPlayersText( i, MaxPlayers );
-            }
             break;
         }
     }
@@ -1882,7 +1847,7 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
 // Return an array with info(i.e Records) about the requested player
 Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, out int Hijacks, out array<string> RLR )
 {
-    local int i, j, PlayerSlot, l, jj;
+    local int i, j, PlayerSlot, jj;
     local string OrgName;
 
     // Cache length, so we don't have to lookup the length every loop!.
@@ -1902,6 +1867,7 @@ Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, o
 
             PlayerSlot = i;
             PlayerInfo[PlayerInfo.Length] = lzPlayerName$":"$PDat.Player[PlayerSlot].PLName;
+            PlayerInfo[PlayerInfo.Length] = "Hours spent on this server:" $ int(PDat.Player[PlayerSlot].PlayHours);
             Hijacks = PDat.Player[PlayerSlot].PLHijacks;
             break;
         }
@@ -1925,8 +1891,7 @@ Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, o
             continue;
         }
 
-        // Solo?
-        if( RDat.Rec[i].PSRL.Length > 0 ) // STR
+        if( RDat.Rec[i].PSRL.Length > 0 )
         {
             // Yep, check if the Number 1 record holder is <PlayerName>.
             if( RDat.Rec[i].PSRL[0].PLs-1 == PlayerSlot )
@@ -1934,24 +1899,6 @@ Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, o
                 jj = PlayerInfo.Length;
                 PlayerInfo.Length = jj+1;
                 PlayerInfo[jj] = RDat.Rec[i].TMN@cDarkGray$TimeToStr( RDat.Rec[i].PSRL[0].SRT );
-            }
-            continue;
-        }
-        else // TTR
-        {
-            // Lets look for <PlayerName> player in TTR
-            for( l = 0; l < MaxPlayers; ++ l )
-            {
-                if( RDat.Rec[i].PLs[l] == 0 )
-                    break;
-
-                if( RDat.Rec[i].PLs[l]-1 == PlayerSlot )
-                {
-                    jj = PlayerInfo.Length;
-                    PlayerInfo.Length = jj+1;
-                    PlayerInfo[jj] = RDat.Rec[i].TMN@cDarkGray$TimeToStr( RDat.Rec[i].TMT );
-                    break;
-                }
             }
             continue;
         }
@@ -2033,7 +1980,7 @@ Final Function GetBadRecords( PlayerController PC, out array<string> RecordsInfo
         {
             if( RDat.Rec[CurRec].PSRL[CurPos].PLs == PlayerSlot )
             {
-                if( CurPos >= MaxPlayers )
+                if( CurPos >= MaxRankedPlayers )
                 {
                     RecordsInfo[RecordsInfo.Length] = RDat.Rec[CurRec].TMN@cDarkGray$TimeToStr( RDat.Rec[CurRec].PSRL[CurPos].SRT-RDat.Rec[CurRec].PSRL[0].SRT );
                     ++ NumBad;
@@ -2817,7 +2764,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             i = Store.FindItemByID( s );
             if( i != -1 )
             {
-                if( !Store.CanBuyItem( sender, PDat, Rep.myPlayerSlot, i, s ) )
+                if( !Store.CanBuyItem( sender, Rep, i, s ) )
                 {
                     SendErrorMessage( sender, s );
                     break;
@@ -3677,7 +3624,6 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
 
             BestPlaySeconds = -1;
 
-            MRI.PreviousBestTime = 0;
             if( MRI.EndMsg != "" )
             {
                 MRI.PlayersBestTimes = "None";
@@ -3686,10 +3632,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             }
             else MRI.PlayersBestTimes = "";
 
-            if( bSoloMap )
-            {
-                ClientForcePacketUpdate();
-            }
+            ClientForcePacketUpdate();
             sender.ClientMessage( Class'HUD'.default.GoldColor $ "Deleted record!" );
             break;
 
@@ -4016,7 +3959,10 @@ function Mutate( string MutateString, PlayerController Sender )
         else if( MutateString ~= "BT_TestRecord" && bDebugMode )
         {
             GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
-            Trigger( Sender, Sender.Pawn );
+            if( bSoloMap )
+            {
+                Trigger( Sender, Sender.Pawn );
+            }
             return;
         }
         else if( MutateString ~= "BT_TestRandomDrop" && bDebugMode )
@@ -4107,7 +4053,6 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
     local int i, j;
     local vector v;
     local float d;
-    local Inventory Inv;
 
     // Secure code...
     j = Objectives.Length;
@@ -4165,21 +4110,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
                     return;
                 }
                 ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
-                ClientPlayerStarts[i].PHealth = Sender.Pawn.Health;
-                ClientPlayerStarts[i].PShield = Sender.Pawn.ShieldStrength;
-
-                ClientPlayerStarts[i].PWeapons.Length = 0;
-                for( Inv = Sender.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
-                {
-                    if( Weapon(Inv) != None )
-                    {
-                        j = ClientPlayerStarts[i].PWeapons.Length;
-                        ClientPlayerStarts[i].PWeapons.Length = j + 1;
-                        ClientPlayerStarts[i].PWeapons[j] = Weapon(Inv).Class;
-                        continue;
-                    }
-                }
-
+                CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[i].SavedStats );
                 SendSucceedMessage( Sender, lzCS_Set );
                 return;
             }
@@ -4196,20 +4127,8 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
         ClientPlayerStarts.Remove( j, 1 );
         return;
     }
-    ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
-    ClientPlayerStarts[j].PHealth = Sender.Pawn.Health;
-    ClientPlayerStarts[j].PShield = Sender.Pawn.ShieldStrength;
-
-    for( Inv = Sender.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
-    {
-        if( Weapon(Inv) != None )
-        {
-            i = ClientPlayerStarts[j].PWeapons.Length;
-            ClientPlayerStarts[j].PWeapons.Length = i + 1;
-            ClientPlayerStarts[j].PWeapons[i] = Weapon(Inv).Class;
-            continue;
-        }
-    }
+    ClientPlayerStarts[j].TeamIndex = Sender.Pawn.GetTeamNum();
+    CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[j].SavedStats );
 
     if( bClientSpawnPlayersCanCompleteMap )
     {
@@ -4277,44 +4196,27 @@ final function FindClientSpawn( Controller C, out NavigationPoint S )
     }
 }
 
-final function PimpClientSpawn( int index, Pawn Other )
+final function PimpClientSpawn( int index, Pawn other )
 {
-    local int i, j;
     local BTServer_ClientSpawnInfo CS;
-    local bool b;
 
     if( ClientPlayerStarts[index].PStart == None )
     {
         return;
     }
 
-    Other.Health = ClientPlayerStarts[index].PHealth;
-    Other.ShieldStrength = ClientPlayerStarts[index].PShield;
-
+    CheckPointHandlerClass.static.ApplyPlayerState( other, ClientPlayerStarts[index].SavedStats );
     if( !bClientSpawnPlayersCanCompleteMap )
     {
-        Other.bCanUse = false;                                  // Cannot use Actors
-        Other.SetCollision( true, false, false );               // Cannot Block
-        Other.bBlockZeroExtentTraces = false;                   // Cannot Block
-        Other.bBlockNonZeroExtentTraces = false;                // Cannot Block
+        other.bCanUse = false;                                  // Cannot use Actors
+        other.SetCollision( true, false, false );               // Cannot Block
+        other.bBlockZeroExtentTraces = false;                   // Cannot Block
+        other.bBlockNonZeroExtentTraces = false;                // Cannot Block
 
         // Avoid this user from touching any objectives!.
-        CS = Spawn( Class'BTServer_ClientSpawnInfo', Other );
+        CS = Spawn( class'BTServer_ClientSpawnInfo', other );
         if( CS != none )
             CS.M = self;
-    }
-
-    j = ClientPlayerStarts[index].PWeapons.Length;
-    for( i = 0; i < j; ++ i )
-    {
-        // Make sure given weapons cannot be thrown!
-        b = ClientPlayerStarts[index].PWeapons[i].default.bCanThrow;
-        ClientPlayerStarts[index].PWeapons[i].default.bCanThrow = false;
-
-        Other.GiveWeapon( string(ClientPlayerStarts[index].PWeapons[i]) );
-
-        // And make sure that the original condition is restored...
-        ClientPlayerStarts[index].PWeapons[i].default.bCanThrow = b;
     }
 }
 
@@ -4441,9 +4343,6 @@ final function Revoted()
     if( bSpawnGhost )
         KillGhostRecorders();
 
-    if( !bRecordChecked )
-        ++ RDat.Rec[UsedSlot].TMFailures;
-
     SaveAll();
     SaveConfig();
 
@@ -4485,12 +4384,7 @@ function ServerTraveling( string URL, bool bItems )
 
     if( UsedSlot != -1 )
     {
-        RDat.Rec[UsedSlot].PlayHours += (Level.TimeSeconds / 60) / 60;
-
-        if( !bRecordChecked )
-        {
-            ++ RDat.Rec[UsedSlot].TMFailures;
-        }
+        RDat.Rec[UsedSlot].PlayHours += Level.TimeSeconds/60 / 60;
     }
 
     // Map is switching, save everything!
@@ -4558,12 +4452,6 @@ function MatchStarting()
     if( UsedSlot != -1 )
     {
         ++ RDat.Rec[UsedSlot].Played;
-
-        if( bRecordChecked && !bSoloMap && RDat.Rec[UsedSlot].PLs[0] > 0 )
-        {
-            MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, MaxPlayers );
-            bRecordChecked = false;
-        }
     }
 
     if( AssaultGame != none )
@@ -4576,10 +4464,6 @@ function MatchStarting()
 
         ASGameReplicationInfo(Level.GRI).bStopCountDown = false;
     }
-
-    //  RDat.Rec[UsedSlot].ObjCompT.Length = ASGameReplicationInfo(AssaultGame.GameReplicationInfo).MaxObjectivePriority+1;
-    //  ObjCompT.Length = RDat.Rec[UsedSlot].ObjCompT.Length;
-    //  ObjCompT = RDat.Rec[UsedSlot].ObjCompT;
 
     CurrentPlaySeconds = 0;
     MRI.ObjectiveTotalTime = 0;
@@ -4664,30 +4548,12 @@ Final Function string GetRankPrefix( int i )
     return RankPrefix[i];
 }
 
-final function SetRecordTime( float newTime )
-{
-    local int i;
-
-    RDat.Rec[UsedSlot].LastRecordedDate = RDat.MakeCompactDate( Level );
-    RDat.Rec[UsedSlot].TMT = newTime;
-
-    if( Notify != none )
-    {
-        Notify.NotifyRegularRecordSet( RDat.Rec[UsedSlot].PLs, newTime );
-    }
-
-    // This increments all the RecordCount kind of Achievements progress!
-    for( i = 0; i < MaxPlayers; ++ i )
-    {
-        PDat.ProgressAchievementByType( RDat.Rec[UsedSlot].PLs[i] - 1, 'RecordsCount', 1 );
-    }
-}
-
 final function SetSoloRecordTime( PlayerController player, int soloSlot, float newTime )
 {
     RDat.Rec[UsedSlot].LastRecordedDate = RDat.MakeCompactDate( Level );
     RDat.Rec[UsedSlot].PSRL[soloSlot].SRT = newTime;
 
+    // Send webservers that a record has been set.
     if( Notify != none )
     {
         Notify.NotifyRecordSet( RDat.Rec[UsedSlot].PSRL[soloSlot].PLs, newTime );
@@ -4696,6 +4562,7 @@ final function SetSoloRecordTime( PlayerController player, int soloSlot, float n
     // This increments all the RecordCount kind of Achievements progress!
     PDat.ProgressAchievementByType( RDat.Rec[UsedSlot].PSRL[soloSlot].PLs - 1, 'RecordsCount', 1 );
 
+    // Notify the current gamemode that a player has set a record. A mode may perform a dropchance for that player.
     CurMode.PlayerMadeRecord( player, soloSlot, 0 );
 }
 
@@ -4776,6 +4643,7 @@ final function RewardWinningTeam()
     }
 }
 
+/** Force ends the game. */
 function GameEnd( ASGameInfo.ERER_Reason roundEndReason, Pawn instigator, string reason )
 {
     if( AssaultGame != none )
@@ -4788,6 +4656,7 @@ function GameEnd( ASGameInfo.ERER_Reason roundEndReason, Pawn instigator, string
     }
 }
 
+/** Called when the game has been ended. */
 function NotifyGameEnd( Actor other, Pawn eventInstigator )
 {
     //if( eventInstigator == none )
@@ -4822,7 +4691,7 @@ function Trigger( Actor Other, Pawn EventInstigator )
     if( IsTrials() )
     {
         // Extra protection against 'Client Spawn' players using/touching a objective
-        if( !bClientSpawnPlayersCanCompleteMap && EventInstigator.LastStartSpot.IsA( ClientStartPointClass.Name ) )
+        if( !bClientSpawnPlayersCanCompleteMap && IsClientSpawnPlayer( EventInstigator ) )
         {
             EventInstigator.Destroy();
 
@@ -4843,11 +4712,11 @@ function Trigger( Actor Other, Pawn EventInstigator )
 
         if( bSoloMap )
         {
-            SoloEndWrp( PlayerController(EventInstigator.Controller) );
+            ProcessSoloEnd( PlayerController(EventInstigator.Controller) );
         }
         else    // Team map
         {
-            NormalEnd( PlayerController(EventInstigator.Controller) );
+            ProcessRegularEnd( PlayerController(EventInstigator.Controller) );
         }
     }
 }
@@ -4886,28 +4755,22 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
 final function ProcessGroupFinishAchievement( int playerSlot )
 {
     PDat.ProgressAchievementByID( playerSlot, 'mode_1' );
-
-    if( bBlockSake )
-    {
-        ++ GroupFinishAchievementUnlockedNum;
-
-        if( GroupFinishAchievementUnlockedNum == 10 )
-        {
-            Level.Game.Broadcast( self, "GTR-GeometryBasics just got unlocked! Thanks for playing and have a good time! Please vote another map first!" );
-        }
-    }
 }
 
 final function bool HasRegularRecordOn( int recordSlot, int playerSlot )
 {
     local int i;
 
-    for( i = 0; i < 4; ++ i )
-    {
-        if( RDat.Rec[recordSlot].PLs[i]-1 == playerSlot )
-            return true;
-    }
+    if( !class'BTServer_RegularMode'.static.IsRegular( RDat.Rec[recordSlot].TMN ) )
+        return false;
 
+    for( i = 0; i < RDat.Rec[recordSlot].PSRL.Length; ++ i )
+    {
+        if( RDat.Rec[recordSlot].PSRL[i].PLs-1 == playerSlot )
+        {
+            return true;
+        }
+    }
     return false;
 }
 
@@ -4957,10 +4820,6 @@ final function int CountRecordsNum( byte trialMode, int playerSlot )
         case 0:
             for( i = 0; i < RDat.Rec.Length; ++ i )
             {
-                // SOLO?
-                if( RDat.Rec[i].PSRL.Length > 0 )
-                    continue;
-
                 if( HasRegularRecordOn( i, playerSlot ) )
                 {
                     ++ recNum;
@@ -4972,10 +4831,6 @@ final function int CountRecordsNum( byte trialMode, int playerSlot )
         case 1:
             for( i = 0; i < RDat.Rec.Length; ++ i )
             {
-                // REGULAR?
-                if( RDat.Rec[i].PSRL.Length == 0 )
-                    continue;
-
                 if( HasSoloRecordOn( i, playerSlot ) )
                 {
                     ++ recNum;
@@ -4987,10 +4842,6 @@ final function int CountRecordsNum( byte trialMode, int playerSlot )
         case 2:
             for( i = 0; i < RDat.Rec.Length; ++ i )
             {
-                // REGULAR?
-                if( RDat.Rec[i].PSRL.Length == 0 )
-                    continue;
-
                 if( HasGroupRecordOn( i, playerSlot ) )
                 {
                     ++ recNum;
@@ -5025,20 +4876,20 @@ final function BunnyScored( BTClient_ClientReplication CRI, PlayerController PC,
             PC.Pawn.Suicide();
         }
 
-        PC.ClientMessage( "You cannot set records. Please turn off !Boost and suicide!" );
+        PC.ClientMessage( "You cannot set records. Please turn off !Boost, then suicide!" );
         return;
     }
-    SoloEndWrp( PC );
+    ProcessSoloEnd( PC );
 }
 
 // Solo/Group/Bunny mode
-final private function SoloEndWrp( PlayerController PC )
+final private function ProcessSoloEnd( PlayerController PC )
 {
     local int i, groupindex, xp;
     local array<Controller> GroupMembers;
     local BTClient_ClientReplication CR;
     local int numFullHealths;
-    local bool bSuccess;
+    local byte hasNewRecord;
 
     CR = GetRep( PC );
     if( CR == None )
@@ -5065,9 +4916,9 @@ final private function SoloEndWrp( PlayerController PC )
             xp = GetGroupTaskPoints( groupindex );
             // Set rec first for the instigator,
             // then for members because members cannot not beat the first record therefor the instigator should be checked for first record first.
-            bSuccess = SoloEndGrpFx( PC, CR, false, xp );
+            CheckPlayerRecord( PC, CR, false, xp, hasNewRecord );
 
-            // DO NOT ADD THIS ABOVE SoloEndGrpFx
+            // DO NOT ADD THIS ABOVE CheckPlayerRecord
             if( Level.Title ~= "EgyptianRush-Prelude" && numFullHealths == GroupMembers.Length )
             {
                 for( i = 0; i < GroupMembers.Length; ++ i )
@@ -5091,19 +4942,22 @@ final private function SoloEndWrp( PlayerController PC )
                         continue;
                     }
 
-                    SoloEndGrpFx( PlayerController(GroupMembers[i]), CR, true, xp );
+                    CheckPlayerRecord( PlayerController(GroupMembers[i]), CR, true, xp );
                 }
             }
 
-            if( bSuccess && GhostManager != none )
+            if( hasNewRecord == 1 )
             {
-                // Clear
-                NewGhostsQue.Length = GroupMembers.Length;
-                for( i = 0; i < GroupMembers.Length; ++ i )
+                if( GhostManager != none  )
                 {
-                    NewGhostsQue[i] = FastFindPlayerSlot( PlayerController(GroupMembers[i]) )-1;
+                    // Clear
+                    NewGhostsQue.Length = GroupMembers.Length;
+                    for( i = 0; i < GroupMembers.Length; ++ i )
+                    {
+                        NewGhostsQue[i] = FastFindPlayerSlot( PlayerController(GroupMembers[i]) )-1;
+                    }
+                    UpdateGhosts();
                 }
-                UpdateGhosts();
                 NotifyNewRecord( FastFindPlayerSlot( PC )-1 );
             }
         }
@@ -5111,26 +4965,40 @@ final private function SoloEndWrp( PlayerController PC )
     else
     {
         CurrentPlaySeconds = GetFixedTime( Level.TimeSeconds - CR.LastSpawnTime );
-        if( SoloEndGrpFx( PC, CR ) && GhostManager != none )
+        CheckPlayerRecord( PC, CR,,, hasNewRecord );
+        if( hasNewRecord == 1 )
         {
-            NewGhostsQue.Length = 1;
-            NewGhostsQue[0] = CR.myPlayerSlot;
-            UpdateGhosts();
+            if( GhostManager != none )
+            {
+                NewGhostsQue.Length = 1;
+                NewGhostsQue[0] = CR.myPlayerSlot;
+                UpdateGhosts();
+            }
             NotifyNewRecord( CR.myPlayerSlot );
         }
     }
+
+    if( hasNewRecord == 1 )
+    {
+        UpdateRecordHoldersMessage();
+    }
 }
 
-final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientReplication CR, optional bool bRecursive, optional int xp )
+final private function bool CheckPlayerRecord( PlayerController PC, BTClient_ClientReplication CR,
+    optional bool bRecursive,
+    optional int xp,
+    optional out byte bNewTopRecord )
 {
     local BTServer_RecordsData.sSoloRecord Tmp;
     local bool b;
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
-    local int i, j, PLs, PLi, y, z;
+    local int i, j, PLs, PLi, y, z, l;
     local float TimeBoost;
     local Pawn P;
     local int numObjectives;
+
+    FullLog( "Processing record for player" @ PC.GetHumanReadableName() @ CurrentPlaySeconds @ "bRecursive:" @ bRecursive );
 
     // macro to playerslot.
     PLs = CR.myPlayerSlot + 1;
@@ -5138,11 +5006,14 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
     ++ PDat.Player[PLs - 1].PLSF;               // Amount of times this user finished a solo map.
     ++ RDat.Rec[UsedSlot].TMFinish;
 
-    if( bKeyMap || bGroupMap )
+    if( bSoloMap && !bKeyMap && !bGroupMap )
+    {
+        numObjectives = 1;
+    }
+    else
     {
         numObjectives = GetPlayerObjectives( PC );
     }
-
     CurMode.PlayerCompletedMap( PC, PLs-1, CurrentPlaySeconds );
     j = RDat.Rec[UsedSlot].PSRL.Length;
     if( j > 0 )
@@ -5173,11 +5044,12 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
             RDat.Rec[UsedSlot].PSRL[i].SRD[0] = Level.Day;
             RDat.Rec[UsedSlot].PSRL[i].SRD[1] = Level.Month;
             RDat.Rec[UsedSlot].PSRL[i].SRD[2] = Level.Year;
-            RDat.Rec[UsedSlot].PSRL[i].ExtraPoints = xp + BonusPoints;
+            RDat.Rec[UsedSlot].PSRL[i].ExtraPoints = xp;
+            RDat.Rec[UsedSlot].PSRL[i].ObjectivesCount = numObjectives;
             CR.ClientSetPersonalTime( CurrentPlaySeconds );
             // Broadcast success, on next if( b ).
 
-            PDat.AddExperience( PLs-1, EXP_ImprovedRecord + numObjectives + BonusPoints );
+            PDat.AddExperience( PLs-1, EXP_ImprovedRecord + numObjectives );
         }
         else
         {
@@ -5195,7 +5067,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
                     $ "Tied his/her record on" @ CurrentMapName );
                 BroadcastFinishMessage( PC, "%PLAYER% tied the personal record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
 
-                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives + BonusPoints );
+                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
                 PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
             }
             // Tied the best record
@@ -5204,7 +5076,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
                 AddHistory( ColourName( PLs, Class'HUD'.Default.GoldColor ) $ "Tied the best record on" @ CurrentMapName );
                 BroadcastFinishMessage( PC, "%PLAYER% tied the best record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
 
-                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives + BonusPoints );
+                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
                 PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
             }
             // Failed record
@@ -5215,7 +5087,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
                 {
                     BTServer_SoloMode(CurMode).WageFailed( CR, CR.BTWage );
                 }
-                //PDat.AddExperience( PLs-1, EXP_FailRecord + xp + BonusPoints );
+                //PDat.AddExperience( PLs-1, EXP_FailRecord + xp );
             }
         }
     }
@@ -5231,11 +5103,12 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
         RDat.Rec[UsedSlot].PSRL[j].SRD[0] = Level.Day;
         RDat.Rec[UsedSlot].PSRL[j].SRD[1] = Level.Month;
         RDat.Rec[UsedSlot].PSRL[j].SRD[2] = Level.Year;
-        RDat.Rec[UsedSlot].PSRL[j].ExtraPoints = xp + BonusPoints;
+        RDat.Rec[UsedSlot].PSRL[j].ExtraPoints = xp;
+        RDat.Rec[UsedSlot].PSRL[j].ObjectivesCount = numObjectives;
         CR.ClientSetPersonalTime( CurrentPlaySeconds );
         b = True;
 
-        PDat.AddExperience( PLs-1, EXP_FirstRecord + numObjectives + BonusPoints );
+        PDat.AddExperience( PLs-1, EXP_FirstRecord + numObjectives );
     }
 
     if( b )
@@ -5265,8 +5138,23 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
         {
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
+                if( Store != none )
+                {
+                    l = Store.FindPlayerTeam( CR );
+                    if( l != -1 )
+                    {
+                        Store.AddPointsForTeam( CR, l, 1*(numObjectives*PointsPerObjective) );
+                        Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "has earned an extra" @ 1*(numObjectives*PointsPerObjective) @ "points for" @ Store.Teams[l].Name );
+                        PDat.GiveCurrencyPoints( CR.myPlayerSlot, 2 );
+                    }
+                    else
+                    {
+                        SendErrorMessage( PC, "You haven't voted for a team! Please vote a team to get extra rewards!" );
+                    }
+                }
+
                 // Earn 20 points from one record.
-                if( GetSoloPoints( UsedSlot, i ) >= 20 )
+                if( CalcRecordPoints( UsedSlot, i ) >= 20 )
                 {
                     PDat.ProgressAchievementByID( PLs-1, 'points_0' );
                 }
@@ -5288,7 +5176,7 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
                 {
                     // Update Personal Record Packet
                     TS.Name = Class'HUD'.Default.WhiteColor $ PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
-                    TS.Points = GetSoloPoints( UsedSlot, i );
+                    TS.Points = CalcRecordPoints( UsedSlot, i );
                     TS.Time = RDat.Rec[UsedSlot].PSRL[i].SRT;
                     TS.Date = FixDate( RDat.Rec[UsedSlot].PSRL[i].SRD );
                     CR.ClientSendPersonalOverallTop( TS );
@@ -5297,7 +5185,8 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
                 if( i == 0 && !bRecursive ) // This is the best one of all...
                 {
-                    if( !bDontEndGameOnRecord )
+                    bNewTopRecord = 1;
+                    if( !bDontEndGameOnRecord && bSoloMap )
                     {
                         // End-Round if a new record!
                         if( PC.PlayerReplicationInfo.Team.TeamIndex == 0 )
@@ -5353,35 +5242,29 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
 
                     // Update map stats.
                     RDat.Rec[UsedSlot].TMFailures = 0;                          // Reset this :)
-                    ++ RDat.Rec[UsedSlot].TMHijacks;                            // Amount of times this map record is been Hijacked.
-                    if( bKeyMap )
-                        RDat.Rec[UsedSlot].Objs[0] = (numObjectives+1);     // +1 because in keymaps people don't get a final objective?
-                    else RDat.Rec[UsedSlot].Objs[0] = 2;                                // nor in solo but its hard coded anyway
+                    ++ RDat.Rec[UsedSlot].TMHijacks;                            // Amount of times this record has been hijacked.
 
                     if( GroupManager != none )
                         RDat.Rec[UsedSlot].TMContributors = GroupManager.MaxGroupSize;
-                    else RDat.Rec[UsedSlot].TMContributors = 1;
+                    else if( bSoloMap )
+                    {
+                        RDat.Rec[UsedSlot].TMContributors = 1;
+                    }
 
                     // Update player stats.
                     ++ PDat.Player[PLs-1].PLHijacks;
 
                     //======================================================
                     // Update clients. .
-
-
-                    // Cut off by 2(the objs) and display objs as +(2)
-                    MRI.PointsReward = "Points for this record "
-                        $ GetSoloPoints( UsedSlot, 0 ) - (PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp)) $ "+(" $ PointsPerObjective * (RDat.Rec[UsedSlot].Objs[0] + xp) $ ")";
-
                     BestPlaySeconds = CurrentPlaySeconds;
                     MRI.MapBestTime = BestPlaySeconds;
+                    MRI.PointsReward = "Earned points this record: " $ CalcRecordPoints( UsedSlot, 0 );
 
                     if( CR.BTWage > 0 )
                     {
                         BTServer_SoloMode(CurMode).WageSuccess( CR, CR.BTWage );
                     }
 
-                    UpdateRecordHoldersMessage();
                     if( !bDontEndGameOnRecord )
                     {
                         MRI.RecordState = RS_Succeed;
@@ -5419,64 +5302,50 @@ final private function bool SoloEndGrpFx( PlayerController PC, BTClient_ClientRe
         }
     }
 
-    if( CheckPointHandler != none )
+    if( bSoloMap )
     {
-        CheckPointHandler.RemoveSavedCheckPoint( PC );
-    }
-
-    // Kill player?
-    P = PC.Pawn;
-    if( P != None )
-    {
-        P.SetCollision( False, False, False );
-        P.bCanUse = False;
-        P.Tag = 'IGNOREQUICKRESPAWN';
-        P.Died( None, Class'Suicided', P.Location );
-    }
-
-    if( !bRecursive )
-    {
-        if( AssaultGame != none )
+        if( CheckPointHandler != none )
         {
-            AssaultGame.LastDisabledObjective.Reset();
-            AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
-            AssaultGame.LastDisabledObjective = None;
+            CheckPointHandler.RemoveSavedCheckPoint( PC );
+        }
+
+        // Kill player?
+        P = PC.Pawn;
+        if( P != None )
+        {
+            P.SetCollision( False, False, False );
+            P.bCanUse = False;
+            P.Tag = 'IGNOREQUICKRESPAWN';
+            P.Died( None, Class'Suicided', P.Location );
+        }
+
+        if( !bRecursive )
+        {
+            if( AssaultGame != none )
+            {
+                AssaultGame.LastDisabledObjective.Reset();
+                AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
+                AssaultGame.LastDisabledObjective = None;
+            }
         }
     }
     return false;
 }
 
-final private function bool NormalEnd( PlayerController PC, optional bool bMayEndGame )
+// Process end game for regular trials, PC = instigator.
+final private function ProcessRegularEnd( PlayerController PC )
 {
-    local string EndMsg;
-    local int i, j;
-    local float TimeBoost;
+    local int i;
     local array<BTStructs.sPlayerReference> contributors;
-    local int numRecordHolders;
-    local int objectivesArray[4];
     local name achievementID;
-    local int numObjectives;
+    local BTClient_ClientReplication CR;
+    local byte hasNewRecord;
 
     CurrentPlaySeconds = GetFixedTime( Level.TimeSeconds - MRI.MatchStartTime );
-    SetMatchStartingTime( 0 );
-    if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner != ERW_None && !bRecordChecked ) // The game ended!.
+    if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner != ERW_None ) // The game ended!.
     {
         // Calculate and return the best players.
-        contributors = GetBestPlayers( objectivesArray );
-        numRecordHolders = Min( contributors.Length, MaxPlayers );
-
-        ++ RDat.Rec[UsedSlot].TMFinish;
-
-        for( i = 0; i < contributors.Length; ++ i )
-        {
-            CurMode.PlayerCompletedMap( contributors[i].player, contributors[i].PlayerSlot-1, CurrentPlaySeconds );
-        }
-
-        for( i = 0; i < arraycount(objectivesArray); ++ i )
-        {
-            numObjectives += objectivesArray[i];
-        }
-
+        contributors = GetBestPlayers();
         if( AchievementsManager.TestMap( Level.Title, CurrentPlaySeconds, achievementID ) )
         {
             for( i = 0; i < contributors.Length; ++ i )
@@ -5485,159 +5354,44 @@ final private function bool NormalEnd( PlayerController PC, optional bool bMayEn
             }
         }
 
-        bRecordChecked = true;
-        FullLog( "RoundWinner Detected, De-Activated Timer @ "$CurrentPlaySeconds$" Seconds" );
+        // FullLog( "Processing instigator's record:" @ PC.GetHumanReadableName() );
+        CR = GetRep( PC );
+        CheckPlayerRecord( PC, CR,,, hasNewRecord );
 
-        if( ValidRecord() )
+        // FullLog( "Contributors:" @ contributors.Length );
+        for( i = 0; i < contributors.Length; ++ i )
         {
-            FullLog( "*** Valid Speed-Record ***" );
-            if( CurrentPlaySeconds < BestPlaySeconds || BestPlaySeconds == -1 ) // Faster or first-time record
+            if( contributors[i].player != PC )
             {
-                RDat.Rec[UsedSlot].Objs[0] = objectivesArray[0];
-                RDat.Rec[UsedSlot].Objs[1] = objectivesArray[1];
-                RDat.Rec[UsedSlot].Objs[2] = objectivesArray[2];
-                RDat.Rec[UsedSlot].Objs[3] = objectivesArray[3];
-                RDat.Rec[UsedSlot].TMContributors = contributors.Length;
+                CR = GetRep( contributors[i].player );
+                CheckPlayerRecord( contributors[i].player, CR, true );
+            }
+        }
 
-                FullLog( "*** New Speed-Record ***" );
-                MRI.RecordState = RS_Succeed;
+        if( hasNewRecord == 1 )
+        {
+            RDat.Rec[UsedSlot].TMContributors = contributors.Length;
+            UpdateRecordHoldersMessage();
 
-                RDat.Rec[UsedSlot].TMFailures = 0;                          // Reset this :)
-                ++ RDat.Rec[UsedSlot].TMHijacks;                            // Amount of times this map record is been Hijacked.
-
-                if( BestPlaySeconds == -1 )                                 // First Time record.
-                {
-                    FullLog( "*** First-Run Speed-Record ***" );
-                    UpdateEndMsg( "New record has been set, time "$TimeToStr( CurrentPlaySeconds ) );
-                    BroadcastAnnouncement( AnnouncementRecordSet );
-
-                    PDat.AddExperienceList( contributors, EXP_FirstRecord + numObjectives + 30 );
-                }
-                else                                                        // Improved record.
-                {
-                    FullLog( "*** Faster Speed-Record ***" );
-
-                    TimeBoost = (RDat.Rec[UsedSlot].TMT - CurrentPlaySeconds);
-
-                    UpdateEndMsg( "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$", time "$TimeToStr( CurrentPlaySeconds ) );
-                    if( TimeBoost <= 0.10f )
-                        BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
-                    else if( TimeBoost <= 1.0f )
-                        BroadcastAnnouncement( AnnouncementRecordImprovedClose );
-                    else BroadcastAnnouncement( AnnouncementRecordHijacked );
-
-                    // Add lost record.
-                    for( i = 0; i < MaxPlayers; ++ i )
-                    {
-                        if( RDat.Rec[UsedSlot].PLs[i] == 0 )
-                            break;
-
-                        j = PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].RecentLostRecords.Length;
-                        PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].RecentLostRecords.Length = j + 1;
-                        PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].RecentLostRecords[j] = "Map:"$CurrentMapName@"BOOST:"$TimeToStr( TimeBoost );
-                    }
-
-                    PDat.AddExperienceList( contributors, EXP_ImprovedRecord + numObjectives + (30 * (BestPlaySeconds/CurrentPlaySeconds)) );
-                }
-                BroadcastConsoleMessage( Class'HUD'.Default.GoldColor $ EndMsg );
-
-                // Clear old Players.
-                for( i = 0; i < MaxPlayers; ++ i )
-                    RDat.Rec[UsedSlot].PLs[i] = 0;
-
-                // Apply new players.
-                if( numRecordHolders > 0 )
-                {
-                    EndMsg = "Points:";
-                    for( i = 0; i < numRecordHolders; ++ i )
-                    {
-                        RDat.Rec[UsedSlot].PLs[i] = contributors[i].PlayerSlot;
-                        ++ PDat.Player[RDat.Rec[UsedSlot].PLs[i]-1].PLHijacks;
-
-                        // Predicted Points given...
-                        if( i > 0 && i < numRecordHolders )
-                            EndMsg $= ",";
-
-                        EndMsg @= string(int((PPoints.PlayerPoints[j-1].PPlayer[i]*ScalingPoints( UsedSlot ))))$"+("$(PointsPerObjective*RDat.Rec[UsedSlot].Objs[i])$")";
-
-                        AddRecentSetRecordToPlayer( RDat.Rec[UsedSlot].PLs[i], CurrentMapName@"Time:"$TimeToStr( CurrentPlaySeconds ) );
-                    }
-
-                    MRI.PointsReward = EndMsg;
-                }
-
-                BestPlaySeconds = CurrentPlaySeconds;
-                //RDat.Rec[UsedSlot].ObjCompT.Length = ObjCompT.Length;
-                //RDat.Rec[UsedSlot].ObjCompT = ObjCompT;
-                RDat.Rec[UsedSlot].TMPT = RDat.Rec[UsedSlot].TMT;
-                SetRecordTime( CurrentPlaySeconds );
-                RDat.Rec[UsedSlot].TMN = CurrentMapName;
-                RDat.Rec[UsedSlot].TMPoints = CalculatePoints( UsedSlot, numRecordHolders );
-                //MinPoint*((float(RDat.Rec[UsedSlot].MapSkill)+1.f)*(0.5f * (RDat.Rec[UsedSlot].TMHijacks-(numRecordHolders-RDat.Rec[UsedSlot].TMContributors))))+(RDat.Rec[i].TMFailures*0.010407f);
-                MRI.SetBestTime( CurrentPlaySeconds );
-                /*if( numRecordHolders > 1 )
-                    MRI.PointsReward = "Total Shared Points:"$RDat.Rec[UsedSlot].TMPoints;
-                else MRI.PointsReward = "Total Points:"$RDat.Rec[UsedSlot].TMPoints;*/
-
-                MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, numRecordHolders, True );
-                MRI.NetUpdateTime = Level.TimeSeconds - 1;
-
-                // Clear
+            if( GhostManager != none )
+            {
                 NewGhostsQue.Length = contributors.Length;
                 for( i = 0; i < contributors.Length; ++ i )
                 {
-                    NewGhostsQue[i] = contributors[i].PlayerSlot-1;
+                    NewGhostsQue[i] = contributors[i].playerSlot-1;
                 }
-
                 UpdateGhosts();
-                NotifyNewRecord( contributors[0].PlayerSlot-1 );
-                CurrentPlaySeconds = 0;
-                return true;
-            }
-            else
-            {
-                FullLog( "*** No Speed Record ***" );
-
-                ++ RDat.Rec[UsedSlot].TMFailures;
-                SaveAll();
-
-                // Fix the out off sync time.
-                MRI.RecordState = RS_Failure;
-
-                if( CurrentPlaySeconds == BestPlaySeconds )
-                {
-                    AddHistory( "A tie was made on"@CurrentMapName );
-                    UpdateEndMsg( "The record has been tied, time "$TimeToStr( CurrentPlaySeconds ) );
-                    BroadcastAnnouncement( AnnouncementRecordTied );
-                    PDat.AddExperienceList( contributors, EXP_TiedRecord + numObjectives + 30 );
-
-                    /*for( i = 0; i < contributors.Length; ++ i )
-                    {
-                        // Tie on a regular map
-                        PDat.ProgressAchievementByID( contributors[i].PlayerSlot-1, 'tie_0' );
-                    }*/
-                }
-                else
-                {
-                    UpdateEndMsg( "Failed to beat the record, over by " $ TimeToStr( CurrentPlaySeconds-BestPlaySeconds ) $ ", time " $ TimeToStr( CurrentPlaySeconds ) );
-                    if( CurrentPlaySeconds < (BestPlaySeconds+90) )
-                        BroadcastAnnouncement( AnnouncementRecordAlmost );
-                    else BroadcastAnnouncement( AnnouncementRecordFailed );
-
-                    PDat.AddExperienceList( contributors, EXP_FailRecord + numObjectives + (30 * (BestPlaySeconds/CurrentPlaySeconds)) );
-                }
-                BroadcastConsoleMessage( Class'HUD'.Default.RedColor $ EndMsg );
             }
         }
-        else                                                                    // Illegal record.
+        else
         {
-            FullLog( "*** Invalid-Record ***" );
             MRI.RecordState = RS_Failure;
-            UpdateEndMsg( "Record denied" );
-            BroadcastConsoleMessage( Class'HUD'.Default.RedColor$"* Invalid Record *" );
+            UpdateEndMsg( "Failed to beat the record, over by " $ TimeToStr( CurrentPlaySeconds - BestPlaySeconds ) $ ", time " $ TimeToStr( CurrentPlaySeconds ) );
+            if( CurrentPlaySeconds < (BestPlaySeconds+90) )
+                BroadcastAnnouncement( AnnouncementRecordAlmost );
+            else BroadcastAnnouncement( AnnouncementRecordFailed );
         }
     }
-    CurrentPlaySeconds = 0;
 }
 
 final function NotifyNewRecord( int playerSlot )
@@ -5683,7 +5437,7 @@ protected final function bool ValidRecord()                                     
 //==============================================================================
 // Team-Trial Method
 // Get the best players of the current game
-final function array<BTStructs.sPlayerReference> GetBestPlayers( out int ObjsPerP[4] )                      // .:..:, Eliot
+final function array<BTStructs.sPlayerReference> GetBestPlayers()                      // .:..:, Eliot
 {
     local Controller C;
     local array<PlayerController> Players;
@@ -5722,7 +5476,6 @@ final function array<BTStructs.sPlayerReference> GetBestPlayers( out int ObjsPer
 
     if( NumPCs == 1 )
     {
-        ObjsPerP[0] = (ASPlayerReplicationInfo(Players[0].PlayerReplicationInfo).DisabledObjectivesCount + ASPlayerReplicationInfo(Players[0].PlayerReplicationInfo).DisabledFinalObjective);
         S.Length = 1;
         S[0].player = Players[0];
         S[0].playerSlot = FastFindPlayerSlot( Players[0] );
@@ -5743,13 +5496,11 @@ final function array<BTStructs.sPlayerReference> GetBestPlayers( out int ObjsPer
         Players[i] = Tmp;
     }
 
-    NumPCs = Min( NumPCs, MaxPlayers );
     for( i = 0; i < NumPCs; ++ i )
     {
         S.Length = i+1;
         S[i].player = Players[i];
         S[i].playerSlot = FastFindPlayerSlot( Players[i] );
-        ObjsPerP[i] = (ASPlayerReplicationInfo(Players[i].PlayerReplicationInfo).DisabledObjectivesCount + ASPlayerReplicationInfo(Players[i].PlayerReplicationInfo).DisabledFinalObjective);
     }
     return S;
 }
@@ -6009,10 +5760,11 @@ final function RetrieveScore( PlayerController Other, string ClientID, int Slot 
 // Macro for logging
 final function FullLog( coerce string Print )
 {
+    // Suppress=MutBestTimes
     Log( Print, Name );
 
     if( bDebugMode )
-        Level.Game.Broadcast( Self, Class'HUD'.Default.TurqColor$Name$"->Debug:"@Print );
+        Level.Game.Broadcast( Self, Class'HUD'.Default.TurqColor$Name$":"@Print );
     else if( bShowDebugLogToWebAdmin && WebAdminActor != None )
         WebAdminActor.ClientMessage( Class'HUD'.Default.TurqColor$Print );
 }
@@ -6124,7 +5876,6 @@ final Function UpdateScoreboard( PlayerController PC )
     local BTClient_ClientReplication myCR, CR;
     local BTClient_ClientReplication.sGlobalPacket NewPacket;
     local BTClient_ClientReplication.sSoloPacket NewTPacket;
-    local int i;
 
     if( !ModeIsTrials() )
     {
@@ -6145,38 +5896,10 @@ final Function UpdateScoreboard( PlayerController PC )
         }
     }
 
-    if( MRI.RecordState == RS_Active )
+    // Update regardless of which improved rank position.
+    if( MRI.RecordState == RS_Active && RDat.Rec[UsedSlot].PSRL.Length > 0 )
     {
-        if( bSoloMap )
-        {
-            if( RDat.Rec[UsedSlot].PSRL.Length > 0 )
-            {
-                if( RDat.Rec[UsedSlot].PSRL[0].PLs-1 == myCR.myPlayerSlot )
-                {
-                    UpdateRecordHoldersMessage();
-                    //MRI.PlayersBestTimes = PDat.Player[myCR.myPlayerSlot].PLName;
-                }
-            }
-        }
-        else
-        {
-            for( i = 0; i < MaxPlayers; ++ i )
-            {
-                // PLs have one value higher than the actual slot number thats why we do a decrement
-
-                // No player then!
-                if( RDat.Rec[UsedSlot].PLs[i] == 0 )
-                {
-                    continue;
-                }
-
-                if( RDat.Rec[UsedSlot].PLs[i]-1 == myCR.myPlayerSlot )
-                {
-                    MRI.PlayersBestTimes = GetBestPlayersText( UsedSlot, MaxPlayers );
-                    break;
-                }
-            }
-        }
+        UpdateRecordHoldersMessage();
     }
 
     // Check if this player is the owner of the current ghost!
@@ -6193,9 +5916,9 @@ final Function UpdateScoreboard( PlayerController PC )
         NewPacket.Name          = PDat.Player[myCR.myPlayerSlot].PLName;
     }
 
-    if( bSoloMap && (myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers) )
+    if( myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers )
     {
-        NewTPacket.Points       = GetSoloPoints( UsedSlot, myCR.SoloRank-1 );
+        NewTPacket.Points       = CalcRecordPoints( UsedSlot, myCR.SoloRank-1 );
         NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
         NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
         NewTPacket.Date         = FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
@@ -6247,7 +5970,7 @@ final function BroadcastNotWebA( string Msg, optional name Type )               
 final function CreateWebBTimes()                                                        // .:..:, Eliot
 {
     local array<string> SS;
-    local int Pos, i, j, l;
+    local int Pos, i, j;
     local FileLog FF;
     local string S, T;
 
@@ -6328,7 +6051,7 @@ final function CreateWebBTimes()                                                
             SS[Pos] = "<tr><td><p>"$RDat.Rec[i].TMN$"</p></td>";
 
             // Write the Record BestTime!
-            if( RDat.Rec[i].PSRL.Length > 0 )                                       // Solo Map!
+            if( RDat.Rec[i].PSRL.Length > 0 )
             {
                 // Solo Record Time
                 SS[Pos] $= "<td><p>"$TimeToStr( RDat.Rec[i].PSRL[0].SRT )$"</p></td>";
@@ -6346,22 +6069,6 @@ final function CreateWebBTimes()                                                
                 }
                 // Nobody found
                 else SS[Pos] $= "<td><p>None</p></td><td><p>None</p></td>";
-            }
-            else                                                                // Not solo.
-            {
-                // Record Time
-                if( RDat.Rec[i].TMT <= 0.0 )
-                    SS[Pos] $= "<td><p>N/A</p></td>";
-                else SS[Pos] $= "<td><p>"$TimeToStr( RDat.Rec[i].TMT )$"</p></td>";
-
-                // Write all the players!
-                for( l = 0; l < MaxPlayers; ++ l )
-                {
-                    // Empty
-                    if( RDat.Rec[i].PLs[l] == 0 )
-                        SS[Pos] $= "<td><p>None</p></td>";
-                    else SS[Pos] $= "<td><p>"$%PDat.Player[RDat.Rec[i].PLs[l]-1].PLNAME$"</p></td>";
-                }
             }
             SS[Pos] $= "</tr>";                                                 // End this table row.
             ++ Pos;
@@ -6411,7 +6118,7 @@ final function CreateWebBTimes()                                                
     "<div id="$T$"d_Server"$T$" class="$T$"hidden"$T$" align="$T$"center"$T$"><table id="$T$"t_Server"$T$">"
     $"<tr><th><b>Name</b></th><th><b>Description</b></th></tr>"
     $"<tr><td><p>Version</p></td><td><p>"$BTVersion$"</p></td><tr>"
-    $"<tr><td><p>Authors</p></td><td><p>"$BTCredits$"</p></td><tr>"
+    $"<tr><td><p>Authors</p></td><td><p>"$META_DECOMPILER_VAR_COPYRIGHT$"</p></td><tr>"
     $"<tr><td><p>Records</p></td><td><p>"$MRI.RecordsCount$"</p></td><tr>"
     $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>"
     $"<tr><td><p>Points Rewarded for 1P Record</p></td><td><p>P1("$PPoints.PlayerPoints[0].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>"
@@ -6511,11 +6218,9 @@ final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll
     local int CurMap, MaxMap;
     local int CurRec, MaxRec;
     local int CurPlayer;
-    local int RecPlayers;
     local int PlayerNum;
     local int TotalPlayers;
     local int ly,lm,ld;
-    local bool bIsSoloMap;
     local array<int> NumRecords, NumTopRecords;
     local array<float> Points;
     local array<sPlayerStats> NoobList;
@@ -6546,77 +6251,31 @@ final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll
         if( RDat.Rec[CurMap].bIgnoreStats ) // This map is no longer in maplist so don't give any points for the record on it.
             continue;
 
-        bIsSoloMap = (RDat.Rec[CurMap].PSRL.Length > 0);
-
         // Just skip any map that isn't recorded yet, waste of performance and should not be counted towards the total records count anyway!
-        if( RDat.Rec[CurMap].PLs[0] == 0 && RDat.Rec[CurMap].PSRL.Length == 0 )
+        if( RDat.Rec[CurMap].PSRL.Length == 0 )
             continue;
 
         ++ MRI.RecordsCount;
-
-        if( bIsSoloMap )
-            RecPlayers = 1;
-        else
+        MaxRec = RDat.Rec[CurMap].PSRL.Length;
+        for( CurRec = 0; CurRec < MaxRec; ++ CurRec )
         {
-            for( RecPlayers = 0; RecPlayers < MaxPlayers; ++ RecPlayers )
-            {
-                if( RDat.Rec[CurMap].PLs[RecPlayers] == 0 )
-                    break;
-            }
-        }
+            PSlot = RDat.Rec[CurMap].PSRL[CurRec].PLs-1;
+            if( PSlot < 0 )
+                break;
 
-        if( bIsSoloMap )
-        {
-            MaxRec = Min( RDat.Rec[CurMap].PSRL.Length, MaxRankedPlayers );
-            for( CurRec = 0; CurRec < MaxRec; ++ CurRec )
-            {
-                PSlot = RDat.Rec[CurMap].PSRL[CurRec].PLs-1;
-                if( PSlot < 0 )
-                    break;
-
-                if( mode == 0 ||
-                    (mode == 1 && (GetDaysSince( RDat.Rec[CurMap].PSRL[CurRec].SRD[2], RDat.Rec[CurMap].PSRL[CurRec].SRD[1], RDat.Rec[CurMap].PSRL[CurRec].SRD[0] ) <= 30)) ||
-                    (mode == 2 && (RDat.Rec[CurMap].PSRL[CurRec].SRD[0] == Level.Day
-                        && RDat.Rec[CurMap].PSRL[CurRec].SRD[1] == Level.Month
-                        && RDat.Rec[CurMap].PSRL[CurRec].SRD[2] == Level.Year))
-                )
-                {
-                    Points[PSlot] += GetSoloPoints( CurMap, CurRec );
-                    ++ NumRecords[PSlot];
-
-                    if( CurRec == 0 )
-                    {
-                        ++ NumTopRecords[PSlot];
-                    }
-                }
-            }
-        }
-        else
-        {
-            RDat.GetCompactDate( RDat.Rec[CurMap].LastRecordedDate, ly, lm, ld );
             if( mode == 0 ||
-                (mode == 1 && ly != 0 && GetDaysSince( ly, lm, ld ) <= 30) ||
-                (mode == 2 && (ld == Level.Day
-                    && lm == Level.Month
-                    && ly == Level.Year))
+                (mode == 1 && (GetDaysSince( RDat.Rec[CurMap].PSRL[CurRec].SRD[2], RDat.Rec[CurMap].PSRL[CurRec].SRD[1], RDat.Rec[CurMap].PSRL[CurRec].SRD[0] ) <= 30)) ||
+                (mode == 2 && (RDat.Rec[CurMap].PSRL[CurRec].SRD[0] == Level.Day
+                    && RDat.Rec[CurMap].PSRL[CurRec].SRD[1] == Level.Month
+                    && RDat.Rec[CurMap].PSRL[CurRec].SRD[2] == Level.Year))
             )
             {
-                for( CurPlayer = 0; CurPlayer < MaxPlayers; ++ CurPlayer )
+                Points[PSlot] += CalcRecordPoints( CurMap, CurRec );
+                ++ NumRecords[PSlot];
+
+                if( CurRec == 0 )
                 {
-                    PSlot = RDat.Rec[CurMap].PLs[CurPlayer]-1;
-                    if( PSlot < 0 )
-                        break;
-
-                    if( RecPlayers > 0 )
-                    {
-                        ++ NumRecords[PSlot];
-                        Points[PSlot] += GetRegularPoints( CurMap, CurPlayer, RecPlayers );
-
-                        if( CurPlayer == 0 )
-                        {
-                            ++ NumTopRecords[PSlot];
-                        }
-                    }
+                    ++ NumTopRecords[PSlot];
                 }
             }
         }
@@ -6628,7 +6287,7 @@ final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll
         // 1 April joke.
         if( Level.Month == 4 && Level.Day == 1 )
         {
-            SortedPlayers[CurPlayer].PLPoints   =   Max( Points[PlayerNum] / Rand( Rand( 100 ) + 10 ) + 4, 0 );
+            SortedPlayers[CurPlayer].PLPoints = Max( Points[PlayerNum] / Rand( Rand( 100 ) + 10 ) + 4, 0 );
         }
         else
         {
@@ -6923,10 +6582,10 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
     Level.Game.AddServerDetail( ServerState, "BTimes", "Version:"@BTVersion );
     if( ModeIsTrials() )
     {
+        Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Ghost Enabled:"@bSpawnGhost );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Rankings Enabled:"@bShowRankings );
         Level.Game.AddServerDetail( ServerState, "BTimes", lzClientSpawn $ " Allowed:"@bAllowClientSpawn );
-        Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
 
         if( RDat != none && MRI != none )
         {
@@ -6937,9 +6596,6 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
         {
             Level.Game.AddServerDetail( ServerState, "BTimes", "Players:"@PDat.Player.Length );
         }
-
-        if( bShowRankings )
-            Level.Game.AddServerDetail( ServerState, "BTimes", "Max Ranked Players:"@MaxRankedPlayers );
     }
 }
 
@@ -7080,6 +6736,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
         return;
 
     CR.myPlayerSlot = Slot;
+    PDat.Player[Slot].Controller = PC; // not saved
 
     CR.Title = PDat.Player[Slot].Title;
     CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
@@ -7092,6 +6749,12 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
     if( Store != none )
     {
+        if( ModeIsTrials() && PDat.Player[Slot].bPendingTeamReward )
+        {
+            Store.RewardTeamPlayer( CR );
+            PDat.Player[Slot].bPendingTeamReward = false;
+            PDat.Player[Slot].TeamPointsContribution = 0;
+        }
         Store.ModifyPlayer( PC, PDat, CR );
     }
 
@@ -7125,35 +6788,12 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
         {
             CR.ClientSendText( "Say \"Happy Birthday Eliot!\" to get the achievement \"Happy Birthliot\"" );
         }
-
-        if( ModeIsTrials() && BonusPoints > 0 )
-        {
-            CR.ClientSendText( "" );
-            CR.ClientSendText( class'HUD'.Default.GreenColor $ "Solo/Group records will give an additional" @ BonusPoints @ "points" );
-        }
-
         CR.ClientSendText( "Happy Holiday!" );
     }
     else if( EventDescription != "" )
     {
         SendEventDescription( CR );
     }
-
-    if( bBlockSake && GroupFinishAchievementUnlockedNum < 10 )
-    {
-        CR.ClientSendText( $0xFF0000 $ "A new map for Group trials has been released! However the map is locked." );
-        CR.ClientSendText( $0xFF0000 $ "At least 10 people have to finish a Group map, to get the map unlocked!" );
-        CR.ClientSendText( $0xFF0000 $ GroupFinishAchievementUnlockedNum $ "/10" );
-    }
-
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0xFF8800 $ "Welcome to this server, a new MutBestTimes version is currently being tested, here are the changes:" );
-    CR.ClientSendText( "" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" For every time you complete an objective you have a small chance to receive a random item!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" Recent donators will receive a premium activation code, giving them access to exclusive features!" );
-    CR.ClientSendText( $0x00FF00 $ "  New!"$$0x888800$" The MutBestTimes HUD/Scoreboard and pretty much everything has a new look!" );
-    CR.ClientSendText( $0xFFFF00 $ "  New!"$$0x888800$" !title <AchievementTitle>, for premium players: !title <Title>" );
-    CR.ClientSendText( "" );
 
     if( bShowRankings && ModeIsTrials() )
     {
@@ -7260,50 +6900,6 @@ Final Function ClientForcePacketUpdate()
 }
 
 //==============================================================================
-// Returns a line with the Record Owner name and some stats
-Final Function string GetBestPlayersText( int Slot, int NumPlayers, optional bool bNoExtraInfo )
-{
-    local int i;
-    local string Text;
-
-    if( NumPlayers > MaxPlayers )
-        NumPlayers = 0;
-
-    if( RDat.Rec[Slot].PLs[0]-1 == -1 )
-        return "None";
-
-    Text = PDat.Player[RDat.Rec[Slot].PLs[0]-1].PLNAME;
-    if( RDat.Rec[Slot].Objs[0] > 0 )
-        Text $= "["$RDat.Rec[Slot].Objs[i]$"]";
-
-    for( i = 1; i < NumPlayers; ++ i )
-    {
-        if( RDat.Rec[Slot].PLs[i] <= 0 )
-            break;
-
-        Text $= ", "$PDat.Player[RDat.Rec[Slot].PLs[i]-1].PLNAME;
-        if( RDat.Rec[Slot].Objs[i] > 0 )
-            Text $= "["$RDat.Rec[Slot].Objs[i]$"]";
-    }
-
-    if( bNoExtraInfo )
-        return Text;
-
-    if( RDat.Rec[Slot].TMContributors > 3 )
-        Text @= "C["$RDat.Rec[Slot].TMContributors$"]";
-
-    return Text;//@"H["$RDat.Rec[Slot].TMHijacks$"]"@"P["$RDat.Rec[Slot].TMPoints$"]";
-}
-
-//==============================================================================
-// (Obsolete)
-// Predict the points this map could give
-final function float CalculatePoints( int Slot, int Players )
-{
-    return DefaultPoints * ScalingPoints( Slot );
-}
-
-//==============================================================================
 // Scales the points by certain map values
 final function float ScalingPoints( int Slot )
 {
@@ -7342,7 +6938,7 @@ final function float ScalingPoints( int Slot )
 // Returns the amount of points for the solo record
 // Start off with 20 then multiply by Percent (1.0 if 100% or 0.5 if 50%) and then scale it by ScalingPoints which is based on stats of the map/record and then add NumObjs as points
 // Short example: (20 * ( ( BestTime(scaled by rank) / SlowerTime ) * Difficulty ) + NumObjs
-final function float GetSoloPoints( int RecordSlot, int SoloRecordSlot )
+final function float CalcRecordPoints( int RecordSlot, int SoloRecordSlot )
 {
     local float BestTime;
     local float Scaler;
@@ -7351,81 +6947,62 @@ final function float GetSoloPoints( int RecordSlot, int SoloRecordSlot )
     local float difference, bonusSec;
     local float penalty;
     local int bonusMin;
+    local int i;
+    local int indexWithLowerTime;
+    local float averageTime;
 
     penalty = 1.00;
     if( RDat.Rec[RecordSlot].AverageRecordTime == 00.00 )
     {
         RDat.Rec[RecordSlot].AverageRecordTime = GetAverageRecordTime( RecordSlot );
     }
-    //FullLog( RDat.Rec[RecordSlot].TMN @ RDat.Rec[RecordSlot].AverageRecordTime );
 
+    averageTime = RDat.Rec[RecordSlot].AverageRecordTime;
     // Awful maps get punished by a 75% points discount.
-    if( RDat.Rec[RecordSlot].AverageRecordTime < class'BTServer_SoloMode'.default.MinRecordTime
-    || RDat.Rec[RecordSlot].AverageRecordTime > class'BTServer_SoloMode'.default.MaxRecordTime )
+    if( averageTime < class'BTServer_SoloMode'.default.MinRecordTime
+    || averageTime > class'BTServer_SoloMode'.default.MaxRecordTime )
     {
         penalty = class'BTServer_SoloMode'.default.PointsPenalty;
     }
 
-    performanceBonus += ((PointsPerObjective * RDat.Rec[RecordSlot].Objs[0]) + (1.0f * RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ExtraPoints));
-    // 1st gets max points always
-    if( SoloRecordSlot == 0 )
+    points = 5*(averageTime/60f) * ScalingPoints( RecordSlot );
+    performanceBonus += PointsPerObjective*RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ObjectivesCount
+        + RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ExtraPoints;
+
+    Scaler = float(SoloRecordSlot);
+    for( i = SoloRecordSlot; i >= 0; -- i )
     {
-        points = (PPoints.PlayerPoints[0].PPlayer[0] * ScalingPoints( RecordSlot ));
-        if( RDat.Rec[RecordSlot].PSRL.Length > 1 )
+        if( RDat.Rec[RecordSlot].PSRL[i].SRT == RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
         {
-            // How much better the top record is than the player's rec below.
-            difference = (RDat.Rec[RecordSlot].PSRL[1].SRT - RDat.Rec[RecordSlot].PSRL[0].SRT);
-            // Give 1 point for every remaining minute.
-            bonusMin = difference / 60;
-            // Give 1 point for every 0.08 remaining centiseconds.
-            bonusSec = difference - bonusMin * 60;
-            // Add them points and cap it at 100 points.
-            performanceBonus += bonusMin + (bonusSec / 0.12f);
+            Scaler = float(i);
         }
     }
-    else
-    {
 
-        Scaler = float(SoloRecordSlot);
-        BestTime = RDat.Rec[RecordSlot].PSRL[0].SRT - ((0.5f + (Scaler / 1000)) * (Scaler * 1.5f));
-        return FMax( ((PPoints.PlayerPoints[0].PPlayer[0] *
-            (( BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT ) * ScalingPoints( RecordSlot )))), 0.0f ) * penalty;
+    // best time gets extra points.
+    if( Scaler == 0 && RDat.Rec[RecordSlot].PSRL.Length > 1 )
+    {
+        for( i = 0; i < RDat.Rec[RecordSlot].PSRL.Length; ++ i )
+        {
+            if( RDat.Rec[RecordSlot].PSRL[i].SRT != RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
+            {
+                indexWithLowerTime = i;
+                break;
+            }
+        }
+
+        // How much better the top record is than the player's rec below.
+        difference = (RDat.Rec[RecordSlot].PSRL[indexWithLowerTime].SRT - RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT);
+        // Give 1 point for every remaining minute.
+        bonusMin = difference / 60;
+        // Give 1 point for every 0.08 remaining centiseconds.
+        bonusSec = difference - bonusMin * 60;
+        // Add them points and cap it at 100 points.
+        performanceBonus += bonusMin + (bonusSec / 0.12f);
     }
 
-    // if( penalty < 1.00 )
-    // {
-    //  FullLog( "Penalty:" @ penalty );
-    // }
-    return FMin( points + performanceBonus, 50.00 ) * penalty;
-}
-
-final function float GetRegularPoints( int recordSlot, int playerNum, int numPlayers )
-{
-    local float penalty;
-    local float points;
-
-    penalty = 1.00;
-    if( RDat.Rec[recordSlot].AverageRecordTime == 00.00 )
-    {
-        RDat.Rec[recordSlot].AverageRecordTime = GetAverageRecordTime( recordSlot );
-    }
-
-    // Awful maps get punished by a 75% points discount.
-    if( RDat.Rec[recordSlot].AverageRecordTime < class'BTServer_RegularMode'.default.MinRecordTime )
-    {
-        penalty = class'BTServer_RegularMode'.default.PointsPenalty;
-    }
-
-    points =
-        (
-            PPoints.PlayerPoints[numPlayers-1].PPlayer[playerNum]
-            +
-                (
-                    RDat.Rec[recordSlot].Objs[playerNum] * PointsPerObjective
-                )*2
-        )*ScalingPoints( recordSlot );
-
-    return points * penalty;
+    BestTime = RDat.Rec[RecordSlot].PSRL[0].SRT - (0.5f + Scaler/1000)*(Scaler*1.5f);
+    points *= BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT;
+    return FMin( points + performanceBonus, 99.99 ) * penalty;
 }
 
 final function float GetAverageRecordTime( int recordSlot )
@@ -7523,25 +7100,33 @@ Final Function BroadcastConsoleMessage( coerce string Msg )
 }
 
 //==============================Data Functions==================================
-Final Function LoadData()
+final function LoadData()
 {
-    RDat = Level.Game.LoadDataObject( Class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-    PDat = Level.Game.LoadDataObject( Class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
-    PDat.BT = self;
-
-    // if none, create one and try convert from .ini
-    if( RDat == None )
+    PDat = Level.Game.LoadDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
+    if( PDat != none )
     {
-        RDat = Level.Game.CreateDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-        SaveRecords();
+        PDat.BT = self;
     }
-
-    // if none, create one and try convert from .ini
-    if( PDat == None )
+    else
     {
         PDat = Level.Game.CreateDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
         PDat.BT = self;
         SavePlayers();
+    }
+
+    RDat = Level.Game.LoadDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
+    if( RDat != none )
+    {
+        // Update the data format if necessary.
+        if( RDat.ConvertData() )
+        {
+            SaveRecords();  // sync
+        }
+    }
+    else
+    {
+        RDat = Level.Game.CreateDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
+        SaveRecords();
     }
 }
 
@@ -7747,57 +7332,6 @@ final function bool FoundDuplicateID( PlayerController PC, optional bool bIgnore
     }
     return False;
 }
-
-// Deprecated
-final function AddObjectiveTime( GameObjective Obj )
-{
-/*
-    local int Pri;
-    local float OldT, NewT;
-
-    FullLog( "AddObjectiveTime" );
-
-    if( Obj != None && !Obj.bOptionalObjective )
-    {
-        FullLog( "AddObjectiveTime:Obj!=None" );
-
-        NewT = Level.TimeSeconds-StartLevelTimer;
-        Pri = Obj.ObjectivePriority;
-
-        OldT = ObjCompT[Pri];
-        ObjCompT[Pri] = NewT;
-        MessageObjectiveTime( NewT, OldT );
-    }
-*/
-}
-
-// Deprecated
-/*Final Function MessageObjectiveTime( float NewT, float OldT )
-{
-
-    local Controller C;
-    local string Cl;
-
-    if( OldT == 0.f )
-        return;
-
-    // Slower
-    if( NewT > OldT )
-        Cl = MakeColor( 255, 0, 0 );
-
-    // Faster
-    if( NewT < OldT )
-        Cl = MakeColor( 0, 0, 255 );
-
-    for( C = Level.ControllerList; C != None; C = C.NextController )
-    {
-        if( PlayerController(C) != None )
-        {
-            PlayerController(C).ClientMessage( "Ghost:"$TimeToStr( OldT )@"Player:"$TimeToStr( NewT ) );
-            PlayerController(C).ClientMessage( Cl$TimeToStr( OldT-NewT ) );
-        }
-    }
-}*/
 
 Static Final Function bool IsSpectator( PlayerReplicationInfo PRI )
 {
@@ -8015,11 +7549,7 @@ final function int GetGroupTaskPoints( int groupIndex )
         {
             if( GroupManager.Groups[groupIndex].CompletedTasks[i].bOptionalTask )
             {
-                points += GroupManager.Groups[groupIndex].CompletedTasks[i].OptionalTaskReward + 1;
-            }
-            else
-            {
-                ++ points;
+                points += GroupManager.Groups[groupIndex].CompletedTasks[i].OptionalTaskReward;
             }
         }
     }
@@ -8149,6 +7679,7 @@ DefaultProperties
     RPScale(8)=3.000
     RPScale(9)=3.500
 
+    PointsPerObjective=0.25
     PPoints=(PlayerPoints[0]=(PPlayer[0]=5),PlayerPoints[1]=(PPlayer[0]=3,PPlayer[1]=3),PlayerPoints[2]=(PPlayer[0]=1,PPlayer[1]=1,PPlayer[2]=1))
 
     PointsPerLevel=5
@@ -8243,9 +7774,6 @@ DefaultProperties
     Commands(35)=(Cmd="CompetitiveMode",Params=("None"),Help="Starts the competitive mode")
     Commands(36)=(Cmd="SetEventDesc",Params=("Message(1024)"),Help="Sets the BTimes MOTD")
 
-    ADMessage="Become a fan of our 'Unreal Trials' page on Facebook: Press Enter to visit it now"
-    ADURL="http://www.facebook.com/pages/Unreal-Trials-Commentation/130856926973107"
-
     InvalidAccessMessage="Sorry! This server is not permitted to use MutBestTimes!"
 
     ConfigurableProperties(0)=(Property=BoolProperty'bGenerateBTWebsite',Description="Generate a WebBTimes.html File",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will create a WebBTimes.html file under Saves folder when a new record is set.")
@@ -8263,15 +7791,19 @@ DefaultProperties
     ConfigurableProperties(12)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
     ConfigurableProperties(13)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
     ConfigurableProperties(14)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
-    ConfigurableProperties(15)=(Property=StrProperty'ADMessage',Description="Advertise Message",AccessLevel=255,Weight=1,Rules="255",Hint="Input an advertisement message, that will be displayed to every player, when QuickStart is active or when the map is completed.")
-    ConfigurableProperties(16)=(Property=StrProperty'ADURL',Description="Advertise URL",AccessLevel=255,Weight=1,Rules="255",Hint="The web link, the players will go to when hitting Enter while the Advertise Message is displayed.")
-    ConfigurableProperties(17)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
-    ConfigurableProperties(18)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(19)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(20)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(21)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(22)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(23)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
-    ConfigurableProperties(24)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Remove PlayerStart Locking",Weight=1,Hint="If Checked: BTimes will no longer force everyone to be spawned on one PlayerStart location.")
-    ConfigurableProperties(25)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+    ConfigurableProperties(16)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
+    ConfigurableProperties(17)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(18)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(19)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(20)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(21)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(22)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
+    ConfigurableProperties(23)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
+    ConfigurableProperties(24)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+
+    bDisableWeaponBoosting=true
+    ConfigurableProperties(25)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
+
+    bEnableInstigatorEmpathy=true
+    ConfigurableProperties(26)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
 }

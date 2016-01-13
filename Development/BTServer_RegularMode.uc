@@ -9,6 +9,19 @@ static function bool DetectMode( MutBestTimes M )
     return !Class'BTServer_SoloMode'.static.DetectMode( M );
 }
 
+static function bool IsRegular( string mapName )
+{
+    return !class'BTServer_SoloMode'.static.IsSolo( mapName )
+        && !class'BTServer_GroupMode'.static.IsGroup( mapName )
+        && (Left( mapName, 2 ) ~= "AS" || Left( mapName, 3 ) ~= default.ModePrefix);
+}
+
+protected function InitializeMode()
+{
+    super.InitializeMode();
+    bRegularMap = true;
+}
+
 function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
 {
     super.PlayerCompletedMap( player, playerSlot, playSeconds );

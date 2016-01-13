@@ -51,39 +51,44 @@ event Trigger( Actor other, Pawn eventInstigator )
 
 event Touch( Actor actor )
 {
-    if( Pawn(actor) == none )
+    local Pawn other;
+    local TeamInfo team;
+    local int oldTeamIndex;
+
+    other = Pawn(actor);
+    if( other == none )
         return;
 
-    if( IsRelevant( Pawn(actor), true ) )
+    team = other.GetTeam();
+    if( team == none )
+        return;
+
+    oldTeamIndex = Target.DefenderTeamIndex;
+    Target.DefenderTeamIndex = 1 - team.TeamIndex;
+    if( ProximityObjective(Target) != none && ProximityObjective(Target).IsRelevant( other, true ) )
     {
-        Target.DisableObjective( Pawn(actor) );
-    }
-}
-
-// Copy of the ProximityObjective relevant check, except this one does not care about the instigators team.
-function bool IsRelevant( Pawn P, bool bAliveCheck )
-{
-    if ( !Target.IsActive() || !UnrealMPGameInfo(Level.Game).CanDisableObjective( Target ) )
-        return false;
-
-    if( ProximityObjective(Target) != none )
-    {
-        if( !ClassIsChildOf(P.Class, ProximityObjective(Target).ConstraintPawnClass) )
-            return false;
-
-        Target.Instigator = ProximityObjective(Target).FindInstigator( P );
-
-        if ( bAliveCheck )
+        if( Target.IsA('LCA_KeyObjective') || Target.IsA('LCAKeyObjective') )
         {
-            if ( Target.Instigator.Health < 1 || Target.Instigator.bDeleteMe || !Target.Instigator.IsPlayerPawn() )
-                return false;
+            Target.UsedBy( other );
         }
-
-        if ( Target.bBotOnlyObjective && (PlayerController(Target.Instigator.Controller) != None) )
-            return false;
+        else
+        {
+            Target.DisableObjective( other );
+        }
     }
+    else
+    {
+        Target.DisableObjective( other );
+    }
+    // Let's just keep the defender index, it may be nice to see it swap colors :)
+    // Target.DefenderTeamIndex = oldTeamIndex;
+    Target.Reset();
+    Target.DefenderTeamIndex = team.TeamIndex;
 
-    return true;
+    if( ASGameInfo(Level.Game) != none )
+    {
+        ASGameInfo(Level.Game).LastDisabledObjective = none;
+    }
 }
 
 defaultproperties

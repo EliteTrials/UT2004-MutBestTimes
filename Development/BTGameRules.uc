@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005-2014 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTGameRules extends GameRules;
 
@@ -22,7 +22,7 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
     local Pawn P;
     local int i, j, Max;
 
-    if( BT.IsTrials() && Scorer != None )
+    if( BT.ModeIsTrials() && Scorer != None )
     {
         PC = PlayerController(Scorer.Owner);
         if( PC == None )
@@ -57,8 +57,6 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
                 Injureds.Length = 0;
                 LastHitsBy.Length = 0;
             }
-            // Note the time this objective was completed in.
-            BT.AddObjectiveTime( BT.AssaultGame.LastDisabledObjective );
         }
         // Double the score reward but cap to 10 incase the Level Designer did input a ridiculous number!
         Scorer.Score += Min( Score, 10 );
@@ -149,7 +147,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
     local Controller C;
 
     // FIXME: if bDisableForceSpawn is true then features like !Wager will break.
-    if( !BT.IsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded )
+    if( !BT.ModeIsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded )
         return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
     if( !Killed.IsA('Monster') && ((Killed != None && Killed.Controller == Killer) || (Killer == None && (Killed != None && Killed.Controller != None))) )
@@ -272,7 +270,7 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
     {
         if( instigatedBy != None && injured != None )
         {
-            if( Instigatedby.GetTeam() != injured.GetTeam() )
+            if( BT.bEnableInstigatorEmpathy && Instigatedby.GetTeam() != injured.GetTeam() )
             {
                 if( !BT.IsCompetitive() )
                 {
@@ -283,7 +281,7 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
             }
 
             CRI = BT.GetRep( injured.Controller );
-            if( CRI != none && CRI.bPermitBoosting )
+            if( !BT.bDisableWeaponBoosting || (CRI != none && CRI.bPermitBoosting) )
             {
                 // Do nothing :D
             }
@@ -295,38 +293,35 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
         }
 
         // Enemies never should deal damage in Trials
-        if( BT.IsTrials() )
+        if( injured != instigatedBy && instigatedBy != None && (instigatedBy.GetTeam() == injured.GetTeam()) )
         {
-            if( injured != instigatedBy && instigatedBy != None && (instigatedBy.GetTeam() == injured.GetTeam()) )
+            if( BT.bSoloMap && !BT.bGroupMap )
+                return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
+
+            //Log( "Team Naded | ShockBeam", Name );
+            if( DamageType == Class'DamTypeShockBeam' || DamageType == Class'DamTypeONSGrenade')
             {
-                if( BT.bSoloMap )
-                    return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
-
-                //Log( "Team Naded | ShockBeam", Name );
-                if( DamageType == Class'DamTypeShockBeam' || DamageType == Class'DamTypeONSGrenade')
+                // Scan all hits and remove all clones.
+                j = Injureds.Length;
+                for( i = 0; i < j; ++ i )
                 {
-                    // Scan all hits and remove all clones.
-                    j = Injureds.Length;
-                    for( i = 0; i < j; ++ i )
+                    if( Injureds[i] == injured.Controller )
                     {
-                        if( Injureds[i] == injured.Controller )
-                        {
-                            Injureds.Remove( i, 1 );
-                            LastHitsBy.Remove( i, 1 );
-                            -- j;
-                            -- i;
-                        }
+                        Injureds.Remove( i, 1 );
+                        LastHitsBy.Remove( i, 1 );
+                        -- j;
+                        -- i;
                     }
-
-                    j = LastHitsBy.Length;
-                    //Log( "TRUE", Name );
-                    LastHitsBy.Length = j + 1;
-                    LastHitsBy[j] = instigatedBy.Controller;
-
-                    j = Injureds.Length;
-                    Injureds.Length = j + 1;
-                    Injureds[j] = injured.Controller;
                 }
+
+                j = LastHitsBy.Length;
+                //Log( "TRUE", Name );
+                LastHitsBy.Length = j + 1;
+                LastHitsBy[j] = instigatedBy.Controller;
+
+                j = Injureds.Length;
+                Injureds.Length = j + 1;
+                Injureds[j] = injured.Controller;
             }
         }
     }

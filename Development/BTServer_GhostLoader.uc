@@ -356,7 +356,7 @@ function Reset()
 
 defaultproperties
 {
-    MaxGhosts=3
+    MaxGhosts=8
     GhostTag="' ghost"
 
     GhostDataClass=class'BTServer_GhostData'

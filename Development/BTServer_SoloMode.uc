@@ -8,6 +8,11 @@ static function bool DetectMode( MutBestTimes M )
     return M.Objectives.Length == 1;
 }
 
+static function bool IsSolo( string mapName )
+{
+    return Left( Mid( mapName, 3 ), 4 ) ~= default.ModeName || Left( mapName, 3 ) ~= default.ModePrefix;
+}
+
 protected function InitializeMode()
 {
     super.InitializeMode();

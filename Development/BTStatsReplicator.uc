@@ -170,43 +170,40 @@ state ReplicateSoloTop
         local BTClient_ClientReplication.sSoloPacket SP;
 
         // Send Map Top (MaxRankedPlayers) structure
-        if( P.bSoloMap )
+        j = P.RDat.Rec[P.UsedSlot].PSRL.Length;
+        // Scan whole list, yes including people above <MaxRankedPlayer> cuz of PersonalOverallTop
+        for( i = 0; i < j; ++ i )
         {
-            j = P.RDat.Rec[P.UsedSlot].PSRL.Length;
-            // Scan whole list, yes including people above <MaxRankedPlayer> cuz of PersonalOverallTop
-            for( i = 0; i < j; ++ i )
+            if( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT == 0.0f )
+                break;
+
+            // Owner of record?
+            if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
             {
-                if( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT == 0.0f )
-                    break;
+                CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
 
-                // Owner of record?
-                if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
+                SP.name = $0xFFFFFF00 $ P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
+                if( i >= P.MaxRankedPlayers )
                 {
-                    CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
-
-                    SP.name = $0xFFFFFF00 $ P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
-                    if( i >= P.MaxRankedPlayers )
-                    {
-                        SP.Points = P.GetSoloPoints( P.UsedSlot, i );
-                        SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
-                        SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
-                        CR.ClientSendPersonalOverallTop( SP );
-                    }
-                    CR.SoloRank = i+1;
-                }
-                else
-                {
-                    if( i < P.MaxRankedPlayers )
-                        SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
-                }
-
-                if( i < P.MaxRankedPlayers )
-                {
-                    SP.Points = P.GetSoloPoints( P.UsedSlot, i );
+                    SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
                     SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                     SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
-                    CR.ClientSendSoloTop( SP );
+                    CR.ClientSendPersonalOverallTop( SP );
                 }
+                CR.SoloRank = i+1;
+            }
+            else
+            {
+                if( i < P.MaxRankedPlayers )
+                    SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
+            }
+
+            if( i < P.MaxRankedPlayers )
+            {
+                SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
+                SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
+                SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
+                CR.ClientSendSoloTop( SP );
             }
         }
     }
