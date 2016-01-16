@@ -170,8 +170,6 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
         return;
     }
 
-
-
     // check for invalid vote from unpatch players
     if( !IsValidVote(MapIndex, GameIndex) )
     {
@@ -184,11 +182,6 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
     {
         return;
     }
-
-    PrevMapVote = MVRI[Index].MapVote;
-    PrevGameVote = MVRI[Index].GameVote;
-    MVRI[Index].MapVote = MapIndex;
-    MVRI[Index].GameVote = GameIndex;
 
     if( !PlayerController(Voter).PlayerReplicationInfo.bAdmin )
     {
@@ -213,8 +206,6 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
         Level.Game.Broadcast(self,TextMessage);
         log("Admin has forced map switch to " $ MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")",'MapVote');
         CloseAllVoteWindows();
-        ClearAllVotes();
-
         bAdminForced = true;
     }
 
@@ -222,6 +213,11 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
     PrevGameVote = MVRI[Index].GameVote;
     MVRI[Index].MapVote = MapIndex;
     MVRI[Index].GameVote = GameIndex;
+
+    if( bAdminForced )
+    {
+        ClearAllVotes();
+    }
 
     if(bAccumulationMode)
     {
@@ -299,10 +295,7 @@ function LoadMapList()
     }
     MapCount = 0;
 
-    // NEW
-    foreach DynamicActors( class'MutBestTimes', BT )
-        break;
-
+    BT = class'BTUtils'.static.GetBT( Level );
     if( BT.AllowCompetitiveMode() )
     {
         for( i = 0; i < GameConfig.Length; ++ i )

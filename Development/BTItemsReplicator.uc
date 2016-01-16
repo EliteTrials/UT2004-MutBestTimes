@@ -14,7 +14,6 @@ final function Initialize( BTClient_ClientReplication client, string selector, b
     if( client == none )
         return;
 
-    StopWatch( false );
     BT = MutBestTimes(Owner);
     CR = client;
 
@@ -111,5 +110,4 @@ event Tick( float deltaTime )
 event Destroyed()
 {
     super.Destroyed();
-    StopWatch( true );
 }

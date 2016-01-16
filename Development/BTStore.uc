@@ -142,7 +142,7 @@ final function TeamWon( int teamIndex )
             continue;
         }
 
-        PDat.RemoveItem( i, Teams[teamIndex].ItemID );
+        PDat.SilentRemoveItem( i, Teams[teamIndex].ItemID );
         PDat.Player[i].bPendingTeamReward = PDat.Player[i].TeamPointsContribution > 0;
     }
     SaveAll();
@@ -431,9 +431,9 @@ final function float GetItemDropChance( int itemIndex )
 
     if( Items[itemIndex].Access == Drop )
     {
-        bonus += 0.25;
+        bonus += 0.05;
     }
-    return DefaultDropChance + bonus + Items[itemIndex].DropChance;
+    return DefaultDropChance*(1.0 + bonus + Items[itemIndex].DropChance);
 }
 
 final function int GetRandomItem()
@@ -494,7 +494,7 @@ final function ItemToggled( int playerSlot, string itemID, bool status )
                 // Give existing supporters their banner reward!
                 if( status && PDat.HasItem( playerSlot, Teams[outTeamIndex].ItemID ) && !PDat.HasItem( playerSlot, Teams[outTeamIndex].BannerItemID ) )
                 {
-                    PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
+                    PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
                 }
             }
             break;
@@ -521,14 +521,14 @@ final function ItemRemoved( int playerSlot, string itemID )
 }
 
 /** Called when an item was bought by a player or through the "GiveItem" function. */
-final function ItemBought( int playerSlot, string itemID )
+final function ItemBought( BTClient_ClientReplication CRI, string itemID )
 {
     local int outTeamIndex;
 
     if( IsTeamItem( itemID, outTeamIndex ) )
     {
         AddVoteForTeam( outTeamIndex );
-        PDat.GiveItem( playerSlot, Teams[outTeamIndex].BannerItemID );
+        PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
     }
 }
 
@@ -701,13 +701,13 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
     playerSlot = CRI.myPlayerSlot;
     if( PDat.HasItem( playerSlot, Items[itemSlot].Id ) )
     {
-        msg = "You already own" @ Items[itemSlot].Name;
+        msg = "You do already own" @ Items[itemSlot].Name;
         return false;
     }
 
     if( IsTeamItem( Items[itemSlot].Id ) && HasATeamItem( CRI ) )
     {
-        msg = "You already voted a team!";
+        msg = "You have already voten for a team!";
         return false;
     }
 
@@ -756,7 +756,7 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
 defaultproperties
 {
     bEnabled=true
-    DefaultDropChance=0.25
+    DefaultDropChance=0.05
 
     // Teams(0)=(Name="Team Netliot",ItemId="team_netliot",BannerItemID="team_netliot_banner")
     // Teams(1)=(Name="Team BigBad",ItemId="team_bigbad",BannerItemID="team_bigbad_banner")
@@ -789,7 +789,7 @@ defaultproperties
     Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
     Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
     Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-    Items(5)=(Name="+25% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +25% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=400,ApplyOn=T_Player)
+    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
 
     // Player Skins
     Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
@@ -802,6 +802,11 @@ defaultproperties
 
     // Vehicle Skins
     Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+
+    // Map medals
+    Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(13)=(Name="Geometry Basics",ID="md_gemb",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Geometry Basics",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(14)=(Name="Mothership Kran",ID="md_mok",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Mothership Kran",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
 
     // Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
     // Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)

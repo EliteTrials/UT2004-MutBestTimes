@@ -361,6 +361,17 @@ var const string InvalidAccessMessage;
 var private editconst const color cDarkGray;
 var private editconst const color BlackColor;
 
+final static preoperator Color #( int rgbInt )
+{
+    local Color c;
+
+    c.R = rgbInt >> 24;
+    c.G = rgbInt >> 16;
+    c.B = rgbInt >> 8;
+    c.A = (rgbInt & 255);
+    return c;
+}
+
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
 {
@@ -716,17 +727,23 @@ final function NotifyCheckPointChange( Controller C )
     PDat.ProgressAchievementByType( GetRep( C ).myPlayerSlot, 'CheckpointUses', 1 );
 }
 
+final function NotifyAchievementPointsEarned( int playerSlot, int amount )
+{
+
+}
+
 final function AchievementEarned( int playerSlot, name id )
 {
     local BTClient_ClientReplication rep;
     local PlayerController PC;
     local BTAchievements.sAchievement ach;
-    local int earntAchievements;
+    local int earntAchievements, i;
+    local array<string> rewards;
 
     earntAchievements = PDat.CountEarnedAchievements( playerSlot );
     // Above PC == none because currency should always be given even for offline players!.
     ach = AchievementsManager.GetAchievementByID( id );
-    PDat.GiveCurrencyPoints( playerSlot, ach.Points + earntAchievements );
+    PDat.GiveAchievementPoints( playerSlot, ach.Points );
 
     if( PDat.FindAchievementByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
     {
@@ -753,10 +770,20 @@ final function AchievementEarned( int playerSlot, name id )
     }
 
     rep.ClientAchievementAccomplished( ach.Title, ach.Icon );
+    rep.APoints = PDat.Player[playerSlot].PLAchiev;
 
     NotifyPlayers( PC,
-     PC.GetHumanReadableName() @ "has earned the achievement" @ $0x60CB45 $ ach.Title,
-      "You earned the achievement" @ $0x60CB45 $ ach.Title );
+     PC.GetHumanReadableName() @ "has earned" @ ach.Points @ "points for achieving" @ $0x60CB45 $ ach.Title,
+      "You earned" @ ach.points @ "points for achievement" @ $0x60CB45 $ ach.Title );
+
+    if( ach.ItemRewardId != "" )
+    {
+        Split( ach.ItemRewardId, ";", rewards );
+        for( i = 0; i < rewards.Length; ++ i )
+        {
+            PDat.GiveItem( rep, rewards[i] );
+        }
+    }
 }
 
 final function PlayerEarnedTrophy( int playerSlot, BTChallenges.sChallenge challenge )
@@ -826,27 +853,86 @@ final function ProcessMap2Achievement( int playerSlot )
     PDat.ProgressAchievementByID( playerSlot, 'map_2' );
 }
 
-final function SendAchievementsStates( PlayerController requester )
+function InternalOnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI )
 {
-    local int i, achSlot;
-    local BTClient_ClientReplication Rep;
+    local int i;
 
-    //FullLog( "Sending achievements to:" @ requester.GetHumanReadableName() );
-    Rep = GetRep( requester );
-    if( Rep == none )
+    if( CRI.bReceivedAchievementCategories )
+    {
         return;
+    }
 
-    Rep.ClientCleanAchievements();
+    for( i = 0; i < AchievementsManager.Categories.Length; ++ i )
+    {
+        if( AchievementsManager.Categories[i].ID == "cat_challenges"
+            && (ChallengesManager == none || ChallengesManager.Challenges.Length == 0) )
+        {
+            continue;
+        }
+        else if( AchievementsManager.Categories[i].ID == "cat_trophies"
+            && (ChallengesManager == none || ChallengesManager.TodayChallenges.Length == 0) )
+        {
+            continue;
+        }
+        CRI.ClientSendAchievementCategory( AchievementsManager.Categories[i] );
+    }
+    CRI.bReceivedAchievementCategories = true;
+}
+
+function InternalOnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID )
+{
+    local int i, j, achSlot;
+    local BTAchievements.sAchievement ach;
+    local string trophyID;
+    local int progress;
+
+    // Hardcoded support for legacy daily challenges.
+    if( catID == "cat_trophies" )
+    {
+        for( i = 0; i < ChallengesManager.TodayChallenges.Length; ++ i )
+        {
+            progress = 0;
+            for( j = 0; j < PDat.Player[CRI.myPlayerSlot].Trophies.Length; ++ j )
+            {
+                trophyID = PDat.Player[CRI.myPlayerSlot].Trophies[j].ID;
+                if( Left( trophyID, 3 ) == "MAP" && Mid( trophyID, 4 ) == ChallengesManager.TodayChallenges[i] )
+                {
+                    progress = -1;
+                }
+            }
+
+            ach.Title = Repl( ChallengesManager.DailyChallenge.Title, "%MAPNAME%", ChallengesManager.TodayChallenges[i] );
+            ach.Description = Repl( ChallengesManager.DailyChallenge.Description, "%MAPNAME%", ChallengesManager.TodayChallenges[i] );
+            ach.Points = ChallengesManager.DailyChallenge.Points;
+            ach.EffectColor = #0xFFFF00FF;
+            CRI.ClientSendAchievementState( ach.Title, ach.Description, ach.Icon, progress, 0, ach.Points, ach.EffectColor );
+        }
+    }
+    else if( catID == "cat_challenges" )
+    {
+        for( i = 0; i < ChallengesManager.Challenges.Length; ++ i )
+        {
+            ach.Title = ChallengesManager.Challenges[i].Title;
+            ach.Description = ChallengesManager.Challenges[i].Description;
+            ach.Points = ChallengesManager.Challenges[i].Points;
+            ach.EffectColor = #0xFF0000FF;
+            CRI.ClientSendAchievementState( ach.Title, ach.Description, ach.Icon, 0, 0, ach.Points, ach.EffectColor );
+        }
+    }
+
     for( i = 0; i < AchievementsManager.Achievements.Length; ++ i )
     {
-        achSlot = PDat.FindAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+        if( AchievementsManager.Achievements[i].CatID != catID )
+            continue;
+
+        achSlot = PDat.FindAchievementByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
         if( achSlot != -1 )
         {
-            achSlot = PDat.Player[Rep.myPlayerSlot].Achievements[achSlot].Progress;
+            achSlot = PDat.Player[CRI.myPlayerSlot].Achievements[achSlot].Progress;
         }
         else achSlot = 0;
 
-        Rep.ClientSendAchievementState( AchievementsManager.Achievements[i].Title, AchievementsManager.Achievements[i].Description, AchievementsManager.Achievements[i].Icon, Min( achSlot, AchievementsManager.Achievements[i].Count ), AchievementsManager.Achievements[i].Count, AchievementsManager.Achievements[i].Points );
+        CRI.ClientSendAchievementState( AchievementsManager.Achievements[i].Title, AchievementsManager.Achievements[i].Description, AchievementsManager.Achievements[i].Icon, Min( achSlot, AchievementsManager.Achievements[i].Count ), AchievementsManager.Achievements[i].Count, AchievementsManager.Achievements[i].Points, AchievementsManager.Achievements[i].EffectColor );
     }
 }
 
@@ -875,33 +961,6 @@ final function SendTrophies( PlayerController requester )
             chall = ChallengesManager.GetChallenge( trophyID );
             Rep.ClientSendTrophy( chall.Title );
         }
-    }
-}
-
-final function SendChallenges( PlayerController requester )
-{
-    local int i;
-    local BTClient_ClientReplication Rep;
-
-    //FullLog( "Sending challenges to:" @ requester.GetHumanReadableName() );
-    Rep = GetRep( requester );
-    if( Rep == none )
-        return;
-
-    for( i = 0; i < ChallengesManager.TodayChallenges.Length; ++ i )
-    {
-        Rep.ClientSendChallenge(
-            Repl( ChallengesManager.DailyChallenge.Title, "%MAPNAME%", ChallengesManager.TodayChallenges[i] ),
-            Repl( ChallengesManager.DailyChallenge.Description, "%MAPNAME%", ChallengesManager.TodayChallenges[i] ),
-            ChallengesManager.DailyChallenge.Points );
-    }
-
-    for( i = 0; i < ChallengesManager.Challenges.Length; ++ i )
-    {
-        Rep.ClientSendChallenge(
-            ChallengesManager.Challenges[i].Title,
-            ChallengesManager.Challenges[i].Description,
-            ChallengesManager.Challenges[i].Points );
     }
 }
 
@@ -945,7 +1004,7 @@ final function SendStoreItems( PlayerController requester, string filter )
             {
                 continue;
             }
-            Rep.ClientSendCategory( Store.Categories[i].Name );
+            Rep.ClientSendStoreCategory( Store.Categories[i].Name );
         }
 
         if( Level.NetMode != NM_Standalone )
@@ -962,6 +1021,11 @@ final function SendStoreItems( PlayerController requester, string filter )
 
     // Store discovery
     // PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
+}
+
+final function InternalOnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter )
+{
+    Spawn( class'BTPlayerItemsReplicator', self ).Initialize( CRI, filter );
 }
 //==============================================================================
 
@@ -2681,7 +2745,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                             PDat.Player[Rep.myPlayerSlot].Inventory.TrailerSettings.TrailerColor[1] = class'HUD'.default.WhiteColor;
                         }
 
-                        PDat.GiveItem( Rep.myPlayerSlot, s );
+                        PDat.GiveItem( Rep, s );
                         SendSucceedMessage( sender, "Gave item" @ Store.Items[i].Name @ "to" @ C.PlayerReplicationInfo.PlayerName );
                         SendSucceedMessage( PlayerController(C), "You received item" @ Store.Items[i].Name @ "from" @ sender.PlayerReplicationInfo.PlayerName );
                         break;
@@ -2730,7 +2794,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                         if( PDat.HasItem( Rep.myPlayerSlot, s ) )
                         {
-                            PDat.RemoveItem( Rep.myPlayerSlot, s );
+                            PDat.RemoveItem( Rep, s );
                             SendSucceedMessage( sender, "Removed item" @ Store.Items[i].Name @ "from" @ C.PlayerReplicationInfo.PlayerName );
                             SendSucceedMessage( PlayerController(C), sender.PlayerReplicationInfo.PlayerName @ "removed your item" @ Store.Items[i].Name );
                         }
@@ -2778,7 +2842,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
 
                 NotifyItemBought( Rep.myPlayerSlot );
-                PDat.GiveItem( Rep.myPlayerSlot, Store.Items[i].ID );
+                PDat.GiveItem( Rep, Store.Items[i].ID );
                 // bBought, bEnabled
                 Rep.ClientSendItemData( Store.Items[i].ID,
                     class'BTClient_ClientReplication'.static.CompressStoreData(
@@ -2835,7 +2899,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                         break;
                     }
 
-                    PDat.RemoveItem( Rep.myPlayerSlot, s );
+                    PDat.RemoveItem( Rep, s );
                     if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
                     {
                         PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
@@ -2883,14 +2947,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                 // bBought, bEnabled
                 PDat.GetItemState( Rep.myPlayerSlot, Store.Items[i].ID, byteOne, byteTwo );
-                Rep.ClientSendItemData( Store.Items[i].ID,
-                    class'BTClient_ClientReplication'.static.CompressStoreData(
-                        Store.Items[i].Cost,
-                        bool(byteOne),
-                        bool(byteTwo),
-                        Store.Items[i].Access
-                    )
-                );
+                Rep.ClientNotifyItemUpdated( Store.Items[i].ID, bool(byteTwo), 0 );
             }
             break;
 
@@ -3154,7 +3211,7 @@ private final function ConsumeKey( BTActivateKey handler )
                 SendErrorMessage( handler.Requester, "Cannot use this key because you already own the reward!" );
                 break;
             }
-            PDat.GiveItem( Rep.myPlayerSlot, handler.Serial.Code );
+            PDat.GiveItem( Rep, handler.Serial.Code );
             SendSucceedMessage( handler.Requester, "You were given the following item" @ Store.items[itemStoreSlot].Name );
             break;
 
@@ -3440,6 +3497,23 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                             PlayerController(C).ClientMessage( Class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ params[1] @ "currency!" );
                         }
                         break;
+                    }
+                }
+            }
+            break;
+
+        case "bt_completeachievement":
+            if( params.Length == 1 )
+            {
+                Rep = GetRep( sender );
+                if( Rep != None )
+                {
+                    for( i = 0; i < AchievementsManager.Achievements.Length; ++ i )
+                    {
+                        if( string(AchievementsManager.Achievements[i].ID) ~= params[0] )
+                        {
+                            PDat.ProgressAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+                        }
                     }
                 }
             }
@@ -3834,19 +3908,9 @@ function Mutate( string MutateString, PlayerController Sender )
         }
         return;
     }*/
-    else if( MutateString == "BTClient_RequestAchievementsStates" )
-    {
-        SendAchievementsStates( Sender );
-        return;
-    }
-    else if( MutateString == "BTClient_RequestTrophies" )
+    if( MutateString == "BTClient_RequestTrophies" )
     {
         SendTrophies( Sender );
-        return;
-    }
-    else if( MutateString == "BTClient_RequestChallenges" )
-    {
-        SendChallenges( Sender );
         return;
     }
     else if( Left( MutateString, Len("BTClient_RequestStoreItems") ) == "BTClient_RequestStoreItems" )
@@ -5563,6 +5627,9 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
         if( Other.Owner != None && MessagingSpectator(Other.Owner) == None )
         {
             CR = Spawn( Class'BTClient_ClientReplication', Other.Owner );
+            CR.OnRequestAchievementCategories = InternalOnRequestAchievementCategories;
+            CR.OnRequestAchievementsByCategory = InternalOnRequestAchievementsByCategory;
+            CR.OnRequestPlayerItems = InternalOnRequestPlayerItems;
             CR.NextReplicationInfo = PlayerReplicationInfo(Other).CustomReplicationInfo;
             PlayerReplicationInfo(Other).CustomReplicationInfo = CR;
         }
@@ -5643,7 +5710,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 4.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "exp_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_1" );
                 }
             }
 
@@ -5652,7 +5719,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "exp_bonus_2" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_2" );
                 }
             }
 
@@ -5661,7 +5728,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
                 }
             }
 
@@ -5670,7 +5737,7 @@ Function NotifyLogout( Controller Exiting )                                     
                 PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
                 if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
                 {
-                    PDat.RemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
+                    PDat.SilentRemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
                 }
             }
         }
@@ -5910,6 +5977,7 @@ final Function UpdateScoreboard( PlayerController PC )
 
     if( myCR.Rank-1 >= 0 && myCR.Rank <= MaxRankedPlayers )
     {
+        NewPacket.AP            = PDat.Player[myCR.myPlayerSlot].PLAchiev;
         NewPacket.Points        = SortedOverallTop[myCR.Rank-1].PLPoints;
         NewPacket.Objectives    = PDat.Player[myCR.myPlayerSlot].PLObjectives;
         NewPacket.Hijacks       = PDat.Player[myCR.myPlayerSlot].PLHijacks << 16 | SortedOverallTop[myCR.Rank-1].PLRecords;
@@ -6741,6 +6809,7 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
     CR.Title = PDat.Player[Slot].Title;
     CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
     CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
+    CR.APoints = PDat.Player[Slot].PLAchiev;
     CR.bIsPremiumMember = PDat.Player[Slot].bHasPremium;
     if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {
@@ -6855,7 +6924,7 @@ Static Final Function string FixDate( int Date[3] )
         FixedDate $= "/0"$Date[1];
     else FixedDate $= "/"$Date[1];
 
-    return FixedDate$"/"$Date[2];
+    return FixedDate$"/"$Right( Date[2], 2 );
 }
 
 final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR )
@@ -7682,7 +7751,7 @@ DefaultProperties
     PointsPerObjective=0.25
     PPoints=(PlayerPoints[0]=(PPlayer[0]=5),PlayerPoints[1]=(PPlayer[0]=3,PPlayer[1]=3),PlayerPoints[2]=(PPlayer[0]=1,PPlayer[1]=1,PPlayer[2]=1))
 
-    PointsPerLevel=5
+    PointsPerLevel=1
     MaxLevel=100
     ObjectivesEXPDelay=10
     DropChanceCooldown=60

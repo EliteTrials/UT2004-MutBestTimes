@@ -21,7 +21,8 @@ struct sBTPlayerInfo
         PLObjectives,                                                           // OBJECTIVES
         PLHijacks,                                                              // BROKEN RECORDS
         PLSF,                                                                   // SOLO FINISH
-        PLAP;
+        PLAP,
+        PLAchiev;                                                               // Achievement points
 
     /** Index to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
@@ -60,7 +61,7 @@ struct sBTPlayerInfo
         var int Experience;
 
         /** The amount of not-spent points this player has. */
-        var int BTPoints;
+        var int BTPoints; // *Currency
     };
 
     var sLevel LevelData;
@@ -75,6 +76,8 @@ struct sBTPlayerInfo
             var string ID;
             var bool bEnabled;
             var string RawData;
+            /** Number of copies this player owns. */
+            var byte Count;
         };
 
         var array<sBoughtItem> BoughtItems;
@@ -198,13 +201,17 @@ final function bool HasItem( int playerSlot, string id, optional out int itemSlo
     return false;
 }
 
-final function GiveItem( int playerSlot, string id )
+final function GiveItem( BTClient_ClientReplication CRI, string id )
 {
-    local int j;
+    local int j, playerSlot;
+    local BTClient_ClientReplication.sPlayerItemClient item;
+    local int itemIndex;
 
+    playerSlot = CRI.A1233432;
     if( playerSlot == -1 )
         return;
 
+    // TODO: Support stackable items.
     j = Player[playerSlot].Inventory.BoughtItems.Length;
     Player[playerSlot].Inventory.BoughtItems.Length = j + 1;
     Player[playerSlot].Inventory.BoughtItems[j].ID = id;
@@ -212,10 +219,20 @@ final function GiveItem( int playerSlot, string id )
     ++ TotalItemsBought;
     // MRI
     BT.A123341.TotalItemsBought = TotalItemsBought;
-    BT.Store.ItemBought( playerSlot, id );
+    BT.Store.ItemBought( CRI, id );
+
+    // Notify our player that an item has been added to his inventory, to give UIs a change to reflect changes.
+    // FIXME: Bad code and relatively expensive!
+    item.Id = Player[playerSlot].Inventory.BoughtItems[j].ID;
+    item.bEnabled = Player[playerSlot].Inventory.BoughtItems[j].bEnabled;
+
+    itemIndex = BT.Store.FindItemByID( item.Id );
+    item.Name = BT.Store.Items[itemIndex].Name;
+    item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
+    CRI.ClientSendPlayerItem( item );
 }
 
-final function RemoveItem( int playerSlot, string id )
+final function SilentRemoveItem( int playerSlot, string id )
 {
     local int i;
 
@@ -226,6 +243,22 @@ final function RemoveItem( int playerSlot, string id )
     {
         BT.Store.ItemRemoved( playerSlot, id );
         Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
+    }
+}
+
+final function RemoveItem( BTClient_ClientReplication CRI, string id )
+{
+    local int i, playerSlot;
+
+    playerSlot = CRI.A1233432;
+    if( playerSlot == -1 )
+        return;
+
+    if( HasItem( playerSlot, id, i ) )
+    {
+        BT.Store.ItemRemoved( playerSlot, id );
+        Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
+        CRI.ClientNotifyItemRemoved( id );
     }
 }
 
@@ -330,6 +363,12 @@ final function GiveCurrencyPoints( int playerSlot, int amount, optional bool sho
     }
     Player[playerSlot].LevelData.BTPoints += amount;
     BT.NotifyGiveCurrency( playerSlot, amount );
+}
+
+final function GiveAchievementPoints( int playerSlot, int amount )
+{
+    Player[playerSlot].PLAchiev += amount;
+    BT.NotifyAchievementPointsEarned( playerSlot, amount );
 }
 
 /** Make sure the playerSlot's are incremented by 1 when calling. */

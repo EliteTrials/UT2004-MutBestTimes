@@ -44,7 +44,19 @@ final static function string DecimalToBinary( int decimal )
     return binary;
 }
 
+final static function MutBestTimes GetBT( Actor src )
+{
+    local Mutator m;
 
+    for( m = src.Level.Game.BaseMutator; m != none; m = m.NextMutator )
+    {
+        if( MutBestTimes(m) != none )
+        {
+            return MutBestTimes(m);
+        }
+    }
+    return none;
+}
 
 
 

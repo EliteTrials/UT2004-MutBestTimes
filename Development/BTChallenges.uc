@@ -79,6 +79,6 @@ defaultproperties
 {
     ChallengesGeneratedTime=-1
 
-    DailyChallenge=(Title="%MAPNAME% Master",Description="Complete the map %MAPNAME%",ID="MAP_%MAPNAME%",Points=3)
+    DailyChallenge=(Title="%MAPNAME%",Description="Complete the map %MAPNAME% to receive a trophy!",ID="MAP_%MAPNAME%",Points=3)
     MaxDailyChallenges=10
 }
