@@ -217,8 +217,8 @@ defaultproperties
         bBoundToParent=True
         FontScale=FNS_Small
         HeaderColumnPerc(0)=0.30
-        HeaderColumnPerc(1)=0.40
-        HeaderColumnPerc(2)=0.30
+        HeaderColumnPerc(1)=0.55
+        HeaderColumnPerc(2)=0.15
         begin object class=BTClient_MultiColumnListHeader name=oHeaderTwo
             BarStyleName=""
         end object
