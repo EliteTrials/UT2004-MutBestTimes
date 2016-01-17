@@ -99,6 +99,12 @@ var() globalconfig array<struct sTeam{
 var() globalconfig int TeamPointsGoal;
 var() globalconfig bool bEnabled;
 
+final function Free()
+{
+    // Free items that potentionally hold references to other objects.
+    Items.Length = 0;
+}
+
 final function int FindPlayerTeam( BTClient_ClientReplication CRI )
 {
     local int i;

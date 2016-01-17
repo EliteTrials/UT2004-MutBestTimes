@@ -152,7 +152,6 @@ const Objectives_GhostFollow            = 15000;
 const GhostFollowPrice                  = 25;
 const GhostFollowDiePrice               = 1;
 
-var private SMovDat                                 OldGhostData;               // Old ghost data object, only used for converting to new ghost data object system
 var BTServer_GhostLoader                            GhostManager;               // Currently used ghost data loader.
 var array<BTServer_GhostSaver>                      RecordingPlayers;           // Players we are currently recording.
 
@@ -3243,6 +3242,10 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
     switch( command )
     {
+        case "debugobjects":
+            DebugObjects();
+            break;
+
         case "btcommands":
             sender.ClientMessage( Class'HUD'.Default.RedColor $ "List of all admin commands of" @ Name );
             for( i = 0; i < Commands.Length; ++ i )
@@ -4455,31 +4458,79 @@ function ServerTraveling( string URL, bool bItems )
     SaveAll();
     SaveConfig();
 
-    Clear();
+    Free();
 }
 
-private final function Clear()
+function DebugObjects()
+{
+    local Object obj;
+    local Actor a;
+    local string pkg;
+
+    foreach AllObjects( class'Object', obj )
+    {
+        pkg = Left(obj, InStr(obj, "."));
+        if( pkg != "Engine" && pkg != "Core" )
+        {
+            Log( obj );
+        }
+    }
+
+    Log( "Actors with bNotOnDedServer true");
+    foreach AllActors( class'Actor', a )
+    {
+        if( a.bNotOnDedServer )
+        {
+            Log( a @ a.bNoDelete );
+        }
+    }
+}
+
+private final function Free()
 {
     local int i;
 
     if( Notify != none )
     {
-        Notify.Disconnect();
-        Notify = none;
+        Notify.Free();
     }
 
     if( PDat != none )
     {
-        PDat.BT = none;
+        PDat.Free();
+        PDat = none;
+    }
+
+    if( RDat != none )
+    {
+        RDat.Free();
+        RDat = none;
+    }
+
+    if( Store != none )
+    {
+        Store.Free();
+    }
+
+    if( AchievementsManager != none )
+    {
+        AchievementsManager.Free();
+        AchievementsManager = none;
+    }
+
+    if( ChallengesManager != none )
+    {
+        ChallengesManager.Free();
+        ChallengesManager = none;
     }
 
     if( GhostManager != none )
     {
         for( i = 0; i < GhostManager.Ghosts.Length; ++ i )
         {
-            if( GhostManager.Ghosts[i].GhostData != none && GhostManager.Ghosts[i].GhostData.Ghost != none )
+            if( GhostManager.Ghosts[i].GhostData != none )
             {
-                GhostManager.Ghosts[i].GhostData.Ghost = none;
+                GhostManager.Ghosts[i].GhostData.Free();
             }
         }
     }
@@ -7677,7 +7728,7 @@ static function string GetDescriptionText( string propertyName )
 event Destroyed()
 {
     super.Destroyed();
-    Clear();
+    Free();
 }
 
 DefaultProperties

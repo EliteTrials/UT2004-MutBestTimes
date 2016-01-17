@@ -119,6 +119,8 @@ struct long sBTRecordInfo
 var array<sBTRecordInfo> Rec;
 var int DataVersion;
 
+final function Free();
+
 final function bool ConvertData()
 {
     local int i, j, l;

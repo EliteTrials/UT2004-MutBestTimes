@@ -196,3 +196,9 @@ final function ClearGhostData()
     UsedGhostFPS = 0;
     RelativeStartTime = 0f;
 }
+
+final function Free()
+{
+    Ghost = none;
+    Controller = none;
+}

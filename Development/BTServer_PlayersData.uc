@@ -116,6 +116,11 @@ var transient int TotalActivePlayersCount;
 
 var transient MutBestTimes BT;
 
+final function Free()
+{
+    BT = none;
+}
+
 final function StringToArray( string s, out array<string> a )
 {
     local int i;

@@ -20,8 +20,13 @@ var() globalconfig string SecurityHash;
 var() globalconfig bool bStripNameColors;
 
 var protected HttpSock Socket;
-
 var protected array<string> Params;
+
+final function Free()
+{
+    Disconnect();
+    Socket = none;
+}
 
 /** Strips all color tags from A. */
 static final preoperator string %( string A )
@@ -135,7 +140,6 @@ final function Disconnect()
     if( Socket != none  )
     {
         Socket.Destroy();
-        Socket = none;
         FullLog( "HTTP:Disconnected" );
     }
 }

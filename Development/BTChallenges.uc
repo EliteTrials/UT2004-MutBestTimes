@@ -32,6 +32,8 @@ final static function BTChallenges Load()
     return new(none) default.Class;
 }
 
+final function Free();
+
 final function GenerateTodayChallenges( LevelInfo Level, BTServer_RecordsData RDat )
 {
     local int i;
