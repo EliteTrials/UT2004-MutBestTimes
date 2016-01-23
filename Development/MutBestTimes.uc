@@ -2927,6 +2927,31 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             }
             break;
 
+        case "destroyitem":
+            Rep = GetRep( sender );
+            if( Rep == none )
+                break;
+
+            s = Locs( params[0] );
+            i = Store.FindItemByID( s );
+            if( i != -1 )
+            {
+                if( PDat.HasItem( Rep.myPlayerSlot, s ) )
+                {
+                    if( Store.Items[i].bPassive )
+                    {
+                        SendErrorMessage( sender, "Sorry, passive items are indestructable!" );
+                        break;
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            PDat.RemoveItem( Rep, s );
+            break;
+
         case "toggleitem":
             Rep = GetRep( sender );
             if( Rep == none )
