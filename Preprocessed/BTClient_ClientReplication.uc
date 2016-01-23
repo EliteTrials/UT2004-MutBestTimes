@@ -111,6 +111,7 @@ struct sPlayerItemClient
     var byte Access;
     var string Desc;
     var Material IconTexture;
+    var byte Rarity;
 
     var transient bool bSync;
     var transient bool bHasMeta;
@@ -869,6 +870,11 @@ simulated function ServerBuyItem( string id )
 simulated function ServerSellItem( string id )
 {
     PlayerController(Owner).ConsoleCommand( "Store SellItem" @ id );
+}
+
+simulated function ServerDestroyItem( string id )
+{
+    PlayerController(Owner).ConsoleCommand( "Store DestroyItem" @ id );
 }
 
 static function BTClient_ClientReplication GetRep( PlayerController PC )

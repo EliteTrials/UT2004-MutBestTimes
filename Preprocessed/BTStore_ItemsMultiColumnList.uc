@@ -132,7 +132,7 @@ defaultproperties
 {
     OnRightClick=InternalOnRightClick
 
-    PositiveIcon=positiveIcon
+    PositiveIcon=ItemChecked
 
     ColumnHeadings(0)="Item"
     ColumnHeadings(1)="Price"
