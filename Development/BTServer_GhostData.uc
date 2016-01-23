@@ -163,6 +163,7 @@ final function BTClient_Ghost InitializeGhost( BTServer_GhostLoader other, int g
     Ghost.PlayerReplicationInfo.PlayerName = other.Ghosts[ghostIndex].GhostName;
     Ghost.PlayerReplicationInfo.CharacterName = other.Ghosts[ghostIndex].GhostChar;
     Ghost.PlayerReplicationInfo.Team = other.Ghosts[ghostIndex].GhostTeam;
+    Ghost.PlayerReplicationInfo.bIsSpectator = true; // hides the bot from the scoreboard(or as spectator board), but may still be spectated.
     Ghost.Controller.Possess( Ghost );
 
 
