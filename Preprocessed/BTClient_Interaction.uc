@@ -2162,19 +2162,17 @@ final function RenderRankingsTable( Canvas C )
         }
         else
         {
-            C.DrawColor = #0x22222244;
+            if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
+            {
+                C.DrawColor = #0x33333386;
+            }
+            else
+            {
+                C.DrawColor = #0x22222244;
+            }
         }
+
         DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-        if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
-        {
-            C.DrawColor = #0x88880044;
-            C.SetPos( drawX, drawY + headerHeight-2 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );
-
-            C.SetPos( drawX, drawY + headerHeight*0.5 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
-        }
-
         for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
         {
             value = "---";
@@ -2355,20 +2353,17 @@ final function RenderRecordsTable( Canvas C )
         }
         else
         {
-            C.DrawColor = #0x22222244;
+            if( MRI.CR.SoloTop[i].bIsSelf || i == MRI.CR.SoloRank-1 )
+            {
+                C.DrawColor = #0x33333386;
+            }
+            else
+            {
+                C.DrawColor = #0x22222244;
+            }
         }
 
         DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-        if( MRI.CR.SoloTop[i].bIsSelf || i == MRI.CR.SoloRank-1 )
-        {
-            C.DrawColor = #0x88880044;
-            C.SetPos( drawX, drawY + headerHeight-2 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );
-
-            C.SetPos( drawX, drawY + headerHeight*0.5 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
-        }
-
         for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
         {
             switch( columnIdx )
