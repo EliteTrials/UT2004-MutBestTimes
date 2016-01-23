@@ -219,7 +219,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
     // Draw Scoreboard Table, Fill whole screen except X/Y ClipOffset pixels on each side
     X = C.ClipX-(XClipOffset*2);
     rowWidth = X - 8;
-    Y = Min( PredictedPY + PredictedSY, C.ClipY-(YClipOffset*2) + 4 ); // 4 = spacing
+    Y = Min( PredictedPY + PredictedSY + 8, C.ClipY-(YClipOffset*2) + 4 ); // 4 = spacing
     C.SetPos( XClipOffset, YClipOffset );
     C.DrawColor = myInter.Options.CTable;
     C.DrawTile( myInter.AlphaLayer, X, Y, 0, 0, 256, 256 );
@@ -309,11 +309,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 
     C.SetPos( LX, TY );
     myInter.DrawHeaderTile( C, LX, TY, LXL+4, YL );
-    myInter.DrawHeaderText( C, LX, TY, "Team" );
-
-    C.SetPos( LX, TY+YL+2 );
-    C.DrawColor = SecondaryColor;
-    C.DrawText( Header_Rank );
+    myInter.DrawHeaderText( C, LX, TY, Header_Rank );
 
     // Draw Players Info Header
     C.SetPos( NX, TY );
@@ -385,6 +381,8 @@ Simulated Function UpdateScoreBoard( Canvas C )
     if( bSkipSpectators || SortedSpectators.Length == 0 )
         return;
 
+    YOffset += 8;
+
     // Draw Spectators
     j = SortedSpectators.Length;
     for( i = 0; i < j; ++ i )
@@ -422,34 +420,25 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     // <BACKGROUND>
     if( player != PlayerController(Owner).PlayerReplicationInfo )
         C.DrawColor = #0x22222244;
-    else C.DrawColor = #0x222222BB;
+    else C.DrawColor = #0x33333386;
 
-    if( CRI != none && CRI.bIsPremiumMember )
-    {
-        C.DrawColor.G = 200;
-        C.DrawColor.B = 200;
-        C.DrawColor.A -= 30;
-    }
+    // if( CRI != none && CRI.bIsPremiumMember )
+    // {
+    //     C.DrawColor.G = 200;
+    //     C.DrawColor.B = 200;
+    //     C.DrawColor.A -= 30;
+    // }
 
     if( player.bOutOfLives )
     {
         C.DrawColor.A = 20;
     }
 
+    C.DrawColor = C.DrawColor + (GetPlayerTeamColor( player )*0.05f);
+
     C.SetPos( rowTileX, rowTileY );
     C.DrawTile( myInter.AlphaLayer, rowWidth, rowHeight, 0, 0, 256, 256 );
     // </BACKGROUND>
-
-    // <TEAM>
-    C.DrawColor = GetPlayerTeamColor( player );
-    C.DrawColor.A = 0x44;
-
-    C.SetPos( rowTileX, rowTileY + rowSegmentHeight-2 );
-    C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, rowSegmentHeight, 0, 0, 1, 1 );
-
-    C.SetPos( rowTileX, rowTileY + rowHeight-2 );
-    C.DrawTile( Texture'Engine.WhiteSquareTexture', rowSegmentHeight, 2, 0, 0, 1, 1 );
-    // </TEAM>
 
     // Draw Player Name
     C.SetPos( NX, rowTextY );
