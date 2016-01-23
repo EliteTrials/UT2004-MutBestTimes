@@ -49,6 +49,17 @@ struct sItem
         Drop,
     } Access;
 
+    var() enum ERarity
+    {
+        Basic,
+        Fine,
+        Uncommon,
+        Rare,
+        Exotic,
+        Ascended,
+        Legendary,
+    } Rarity;
+
     var() ETarget ApplyOn;
 
     var transient Material CachedIMG;
@@ -792,27 +803,27 @@ defaultproperties
     Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
 
     // Upgrades - Bonuses
-    Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
-    Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
-    Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
+    Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Rarity=Uncommon,Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
+    Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Rarity=Uncommon,Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
+    Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Rarity=Uncommon,Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
+    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Rarity=Uncommon,Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
 
     // Player Skins
-    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
-    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",ItemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
-    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",ItemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 
     // Player Perks
     Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
     Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
 
     // Vehicle Skins
-    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",Rarity=Rare,ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
     // Map medals
-    Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
-    Items(13)=(Name="Geometry Basics",ID="md_gemb",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Geometry Basics",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
-    Items(14)=(Name="Mothership Kran",ID="md_mok",Type="Medal",Access=Private,Desc="A medal to showcase your completion of Mothership Kran",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(13)=(Name="Geometry Basics",ID="md_gemb",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometry Basics",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(14)=(Name="Mothership Kran",ID="md_mok",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Mothership Kran",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
 
     // Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
     // Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)

@@ -37,6 +37,7 @@ final private function SendRepData( int index )
     itemIndex = BT.Store.FindItemByID( item.Id );
     item.Name = BT.Store.Items[itemIndex].Name;
     item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
+    item.Rarity = BT.Store.Items[itemIndex].Rarity;
     CR.ClientSendPlayerItem(item);
 }
 

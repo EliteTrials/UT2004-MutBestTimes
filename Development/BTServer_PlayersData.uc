@@ -234,6 +234,7 @@ final function GiveItem( BTClient_ClientReplication CRI, string id )
     itemIndex = BT.Store.FindItemByID( item.Id );
     item.Name = BT.Store.Items[itemIndex].Name;
     item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
+    item.Rarity = BT.Store.Items[itemIndex].Rarity;
     CRI.ClientSendPlayerItem( item );
 }
 
