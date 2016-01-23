@@ -3246,6 +3246,14 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             DebugObjects();
             break;
 
+        case "debugitemdrop":
+            j = Max( int(params[0]), 1 );
+            for( i = 0; i < j; ++ i )
+            {
+                BTServer_TrialMode(CurMode).PerformItemDrop( sender, 0.0 );
+            }
+            break;
+
         case "btcommands":
             sender.ClientMessage( Class'HUD'.Default.RedColor $ "List of all admin commands of" @ Name );
             for( i = 0; i < Commands.Length; ++ i )

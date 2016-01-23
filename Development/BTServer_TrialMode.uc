@@ -93,15 +93,14 @@ function float GetItemDropChance( BTClient_ClientReplication LRI, int itemIndex,
 {
     local float dropChance;
 
-    dropChance = DropChanceBonus;
+    dropChance = DropChanceBonus + Store.GetItemDropChance( itemIndex );
     if( LRI.bIsPremiumMember )
     {
-        dropChance += 1.0;
+        dropChance += 0.05;
     }
-    dropChance += bonus + Store.GetItemDropChance( itemIndex );
     if( PDat.HasItem( LRI.myPlayerSlot, "drop_bonus_1" ) )
     {
-        dropChance *= 1.25;
+        dropChance += 0.05;
     }
     return dropChance;
 }

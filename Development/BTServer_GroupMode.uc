@@ -86,5 +86,4 @@ defaultproperties
     ModePrefix="GTR"
 
     ExperienceBonus=20
-    DropChanceBonus=0.5
 }
