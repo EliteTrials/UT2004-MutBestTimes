@@ -13,7 +13,7 @@ struct sAchievement
     /** Title of the achievement e.g. "Recwhore" */
     var string Title;
 
-    /** Identifiy of the achievement, used to identifiy which achievement an user has achieved.
+    /** Identity for the achievement, used to identifiy which achievement an user has achieved.
         Changing this will make the players that have earned this achievement obsolete. */
     var name ID;
 
@@ -52,6 +52,7 @@ struct sMapTest
 {
     var string MapTitle;
     var float Time;
+    var name Event;
     var name Target;
     var bool bCount;
 };
@@ -64,6 +65,19 @@ final static function BTAchievements Load()
 {
     // StaticSaveConfig();
     return new(none) default.Class;
+}
+
+final function InitForMap( MutBestTimes BT, string mapName, string mapTitle )
+{
+    local int i;
+
+    for( i = 0; i < MapTests.Length; ++ i )
+    {
+        if( MapTests[i].Event != '' && MapTests[i].MapTitle == mapTitle )
+        {
+            BT.Spawn( class'BTServer_AchievementListener', BT, MapTests[i].Event );
+        }
+    }
 }
 
 final function int FindAchievementByTitle( string title )
@@ -121,6 +135,11 @@ final function bool TestMap( string title, float recordTime, out name target )
 
     for( i = 0; i < MapTests.Length; ++ i )
     {
+        if( MapTests[i].Event != '' )
+        {
+            return false;
+        }
+
         asterik = InStr( MapTests[i].MapTitle, "*" );
         if( MapTests[i].MapTitle ~= title || (asterik != -1 && Left( MapTests[i].MapTitle, asterik ) ~= Left( title, asterik )) )
         {
@@ -140,10 +159,12 @@ defaultproperties
     Categories(2)=(Name="Records",ID="cat_records",ParentId="cat_trials")
     Categories(3)=(Name="Admin Challenges",ID="cat_challenges",ParentId="cat_trials")
     Categories(4)=(Name="Map Challenges",ID="cat_map",ParentId="cat_trials")
+    Categories(5)=(Name="Map Collections",ID="cat_col",ParentId="cat_trials")
+    Categories(6)=(Name="Geometric Absolution",ID="cat_col_gemab",ParentId="cat_col")
     // Achievements that are generated on a daily basis.
-    Categories(5)=(Name="Daily Trophies",ID="cat_trophies",ParentId="cat_trials")
-    Categories(6)=(Name="Game",ID="cat_game",ParentId="cat_trials")
-    Categories(7)=(Name="Other",ID="cat_other",ParentId="cat_trials")
+    Categories(7)=(Name="Daily Trophies",ID="cat_trophies",ParentId="cat_trials")
+    Categories(8)=(Name="Game",ID="cat_game",ParentId="cat_trials")
+    Categories(9)=(Name="Other",ID="cat_other",ParentId="cat_trials")
 
     // Record Count kinds
     Achievements(0)=(Title="Newbie Recwhore",ID=recwhore_0,CatID="cat_records",Type=RecordsCount,Count=1,Description="Achieve one record",Points=1,EffectColor=(B=255,A=255))
@@ -195,9 +216,16 @@ defaultproperties
     Achievements(45)=(Title="Regular gamer",ID=records_4,CatID="cat_records",Description="Own 10 Regular records",Points=5,EffectColor=(B=255,A=255))
     Achievements(46)=(Title="Group gamer",ID=records_5,CatID="cat_records",Description="Own 4 Group records",Points=5,EffectColor=(B=255,A=255))
     Achievements(47)=(Title="Trials master",ID=ach_1,CatID="cat_records",Description="Earn all four gamer achievements",Points=10,EffectColor=(B=255,A=255))
-    Achievements(48)=(Title="Freeman",ID=map_7,CatID="cat_map",Description="Eliminate the queen, and escape Mothership Kran",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_mok")
+    Achievements(48)=(Title="Freeman",ID=map_7,CatID="cat_map",Description="Eliminate the Mothership Kran queen and escape",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_mok")
     Achievements(49)=(Title="Fast and heavy lander",ID=map_8,CatID="cat_map",Description="Set a record on Geometry Basics of 3 minutes or less",Points=5,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_gemb")
     Achievements(50)=(Title="Naliman",ID=map_9,CatID="cat_map",Description="Survive through the Eldora passages",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_eldor")
+
+    // Geometric Absolution Achievements
+    Achievements(51)=(Title="Collection Absolute",ID=map_10_col,CatID="cat_col",Type=ColGem,Count=6,Description="Complete all the achievements for Geometric Absolution",Points=5,EffectColor=(R=255,G=255,B=255,A=255),Icon="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Achievements(52)=(Title="Karma Cube",ID=map_10_kcube,CatID="cat_col_gemab",Description="Karma cubes?",Points=1,EffectColor=(R=255,G=255,B=255,A=255))
+    Achievements(53)=(Title="Companion Cube",ID=map_10_ccube,CatID="cat_col_gemab",Description="Find the Companion Cube",Points=1,EffectColor=(R=255,G=255,B=255,A=255))
+    Achievements(54)=(Title="Absoluted",ID=map_10,CatID="cat_col_gemab",Description="Set a record on Geometric Absolution",Points=5,EffectColor=(R=255,G=255,B=255,A=255))
+    Achievements(55)=(Title="Hardmode",ID=map_10_hm,CatID="cat_col_gemab",Description="Easy paths ain't my thing!",Points=1,EffectColor=(R=255,G=255,B=255,A=255))
 
     MapTests(0)=(MapTitle="Eliot's Trial",Time=240,Target=map_2)
     MapTests(1)=(MapTitle="Blood On The Floor",Time=-1,Target=map_3)
@@ -207,4 +235,8 @@ defaultproperties
     MapTests(4)=(MapTitle="Mothership Kran",Time=-1,Target=map_7)
     MapTests(5)=(MapTitle="Geometry Basics",Time=180,Target=map_8)
     MapTests(6)=(MapTitle="The Eldora Passages",Time=-1,Target=map_9)
+    MapTests(7)=(MapTitle="Geometric Absolution",Event=ACHIEVEMENT_KarmaCube,Target=map_10_kcube)
+    MapTests(8)=(MapTitle="Geometric Absolution",Event=ACHIEVEMENT_CompanionCube,Target=map_10_ccube)
+    MapTests(9)=(MapTitle="Geometric Absolution",Time=-1,Target=map_10)
+    MapTests(10)=(MapTitle="Geometric Absolution",Event=ACHIEVEMENT_HardMode,Target=map_10_hm)
 }

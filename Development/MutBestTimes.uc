@@ -731,6 +731,27 @@ final function NotifyAchievementPointsEarned( int playerSlot, int amount )
 
 }
 
+// Called when a player instigated an achievement event in a map.
+final function OnMapAchievementTrigger( name eventId, Pawn instigator )
+{
+    local BTClient_ClientReplication CRI;
+    local int i;
+
+    CRI = GetRep( instigator.Controller );
+    if( CRI == none )
+    {
+        return;
+    }
+
+    for( i = 0; i < AchievementsManager.MapTests.Length; ++ i )
+    {
+        if( AchievementsManager.MapTests[i].Event == eventId )
+        {
+            PDat.ProgressAchievementByID( CRI.myPlayerSlot, AchievementsManager.MapTests[i].Target );
+        }
+    }
+}
+
 final function AchievementEarned( int playerSlot, name id )
 {
     local BTClient_ClientReplication rep;
@@ -782,6 +803,12 @@ final function AchievementEarned( int playerSlot, name id )
         {
             PDat.GiveItem( rep, rewards[i] );
         }
+    }
+
+    // Progress the Geometry Absolution collection if the achievement is related.
+    if( ach.CatID == string('cat_col_gemab') )
+    {
+        PDat.ProgressAchievementByType( playerSlot, 'ColGem', 1 );
     }
 }
 
@@ -1715,6 +1742,7 @@ event PostBeginPlay()
     }
 
     AchievementsManager = class'BTAchievements'.static.Load();
+    AchievementsManager.InitForMap( self, CurrentMapName, Level.Title );
     ChallengesManager = class'BTChallenges'.static.Load();
     ChallengesManager.GenerateTodayChallenges( Level, RDat );
 
