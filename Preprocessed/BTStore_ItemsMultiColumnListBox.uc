@@ -33,9 +33,6 @@ defaultproperties
 {
     Begin Object Class=GUIContextMenu Name=oContextMenu
         ContextItems(0)="Buy this item"
-        ContextItems(1)="Toggle this item"
-        ContextItems(2)="Sell this item"
-        //ContextItems(2)="Sell this item"
     End Object
     ContextMenu=oContextMenu
 }
