@@ -272,6 +272,10 @@ Exec Function Store( string command )
             ViewportOwner.Actor.ServerMutate( "sellitem" @ params[1] );
             break;
 
+        case "destroyitem":
+           ViewportOwner.Actor.ServerMutate( "destroyitem" @ params[1] );
+           break;
+
         case "giveitem":
             ViewportOwner.Actor.ServerMutate( "giveitem" @ params[1] @ params[2] );
             break;
@@ -282,9 +286,9 @@ Exec Function Store( string command )
     }
 }
 
-exec function TradeCurrency( string playerName, int amount )
+exec function TradeMoney( string playerName, int amount )
 {
-    BT( "TradeCurrency" @ playerName @ amount );
+    BT( "TradeMoney" @ playerName @ amount );
 }
 
 exec function ActivateKey( string key )
@@ -327,7 +331,7 @@ exec Function BTCommands()
         SendConsoleMessage( "DeleteClientSpawn" );
         SendConsoleMessage( "..." );
         SendConsoleMessage( "ToggleGhost (Only your Ghost!)" );
-        SendConsoleMessage( "GhostFollow <PlayerName> (Costs currency!)" );
+        SendConsoleMessage( "GhostFollow <PlayerName> (Costs money!)" );
         SendConsoleMessage( "GhostFollowID <PlayerID> (Only for admins, BTimes author and people with a ObjectivesLevel greater than 0)" );
         SendConsoleMessage( "..." );
         SendConsoleMessage( "TrailerMenu" );
@@ -2162,19 +2166,17 @@ final function RenderRankingsTable( Canvas C )
         }
         else
         {
-            C.DrawColor = #0x22222244;
+            if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
+            {
+                C.DrawColor = #0x33333386;
+            }
+            else
+            {
+                C.DrawColor = #0x22222244;
+            }
         }
+
         DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-        if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
-        {
-            C.DrawColor = #0x88880044;
-            C.SetPos( drawX, drawY + headerHeight-2 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );
-
-            C.SetPos( drawX, drawY + headerHeight*0.5 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
-        }
-
         for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
         {
             value = "---";
@@ -2355,20 +2357,17 @@ final function RenderRecordsTable( Canvas C )
         }
         else
         {
-            C.DrawColor = #0x22222244;
+            if( MRI.CR.SoloTop[i].bIsSelf || i == MRI.CR.SoloRank-1 )
+            {
+                C.DrawColor = #0x33333386;
+            }
+            else
+            {
+                C.DrawColor = #0x22222244;
+            }
         }
 
         DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-        if( MRI.CR.SoloTop[i].bIsSelf || i == MRI.CR.SoloRank-1 )
-        {
-            C.DrawColor = #0x88880044;
-            C.SetPos( drawX, drawY + headerHeight-2 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', tableWidth*0.5, 2, 0, 0, 1, 1 );
-
-            C.SetPos( drawX, drawY + headerHeight*0.5 );
-            C.DrawTile( Texture'Engine.WhiteSquareTexture', 2, headerHeight*0.5, 0, 0, 1, 1 );
-        }
-
         for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
         {
             switch( columnIdx )
@@ -2901,7 +2900,7 @@ function RenderHUDElements( Canvas C )
     }
 }
 
-final function string Decimal( int number )
+final static function string Decimal( int number )
 {
     local string s, ns;
     local int i;

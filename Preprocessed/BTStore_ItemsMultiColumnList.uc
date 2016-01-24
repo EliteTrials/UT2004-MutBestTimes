@@ -53,7 +53,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     switch( CRI.Items[SortData[i].SortItem].Access )
     {
         case 0:
-            price = string(CRI.Items[SortData[i].SortItem].Cost);
+            price = class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost) $ "$";
             break;
             
         case 1:
@@ -92,27 +92,12 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
             break;
     }
 
-    if( CRI.Items[SortData[i].SortItem].bBought )
-    {
-        Canvas.SetPos( CellLeft, Y );
-        orgStyle = Canvas.Style;
-        Canvas.Style = 5;
-        Canvas.SetDrawColor( 255, 255, 255 );
-        Canvas.DrawTileJustified( PositiveIcon, 1, H, H );
-        Canvas.Style = orgStyle;
-        CellLeft += H + 4;
-    }
-
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.Items[SortData[i].SortItem].Name, FontScale );
         
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, price, FontScale );
 
-    GetCellLeftWidth( 2, CellLeft, CellWidth );
-    DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        Eval( CRI.Items[SortData[i].SortItem].bEnabled, "Yes", "No" ), FontScale );
-        
     Canvas.SetPos( X, Y );
 }
 
@@ -132,19 +117,16 @@ defaultproperties
 {
     OnRightClick=InternalOnRightClick
 
-    PositiveIcon=positiveIcon
+    PositiveIcon=ItemChecked
 
     ColumnHeadings(0)="Item"
     ColumnHeadings(1)="Price"
-    ColumnHeadings(2)="Active"
 
-    InitColumnPerc(0)=0.70
-    InitColumnPerc(1)=0.15
-    InitColumnPerc(2)=0.15
+    InitColumnPerc(0)=0.80
+    InitColumnPerc(1)=0.20
 
     ColumnHeadingHints(0)="ID of the item"
     ColumnHeadingHints(1)="Price of the item"
-    ColumnHeadingHints(2)="Whether the item is active"
 
     SortColumn=0
     SortDescending=true

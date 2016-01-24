@@ -5,7 +5,7 @@ var BTClient_Interaction MyInteraction;
 var automated GUIImage Stats;
 var automated BTStore_ItemsMultiColumnListBox lb_ItemsListBox;
 var automated GUIButton b_ColorDialog;
-var automated GUIButton b_Edit, b_Toggle, b_Sell, b_Buy, b_Donate, b_DisableAll;
+var automated GUIButton b_Edit, b_Buy, b_Donate, b_DisableAll;
 var automated GUIImage i_ItemIcon;
 var automated GUISectionBackground sb_ItemBackground;
 var automated GUIScrollTextBox eb_ItemDescription;
@@ -119,7 +119,7 @@ function InitComponent( GUIController MyController, GUIComponent MyOwner )
 
 function bool InternalOnDblClick( GUIComponent sender )
 {
-    return ToggleSelectedItem();
+    return BuySelectedItem();
 }
 
 /**
@@ -134,14 +134,6 @@ function InternalOnSelect( GUIContextMenu sender, int clickIndex )
         case 0:
             BuySelectedItem();
             break;
-
-        case 1:
-            ToggleSelectedItem();
-            break;
-
-        case 2:
-            SellSelectedItem();
-            break;
     }
 }
 
@@ -152,9 +144,6 @@ final function bool BuySelectedItem()
     i = lb_ItemsListBox.List.CurrentListId();
     if( i != -1 )
     {
-        if( ClientData.Items[i].bBought )
-            return false;
-
         if( !PlayerOwner().PlayerReplicationInfo.bAdmin )
         {
             // 2 = Admin, 4 = Private
@@ -178,40 +167,6 @@ final function bool BuySelectedItem()
     return false;
 }
 
-final function bool ToggleSelectedItem()
-{
-    local int i;
-
-    i = lb_ItemsListBox.List.CurrentListId();
-    if( i != -1 )
-    {
-        if( !ClientData.Items[i].bBought )
-            return false;
-
-        PlayerOwner().ConsoleCommand( "Store ToggleItem" @ ClientData.Items[i].ID );
-        //LoadData();
-        return true;
-    }
-    return false;
-}
-
-final function bool SellSelectedItem()
-{
-    local int i;
-
-    i = lb_ItemsListBox.List.CurrentListId();
-    if( i != -1 )
-    {
-        if( !ClientData.Items[i].bBought )
-            return false;
-
-        PlayerOwner().ConsoleCommand( "Store Sell" @ ClientData.Items[i].ID );
-        //LoadData();
-        return true;
-    }
-    return false;
-}
-
 function bool InternalOnClick( GUIComponent Sender )
 {
     local int i;
@@ -220,19 +175,11 @@ function bool InternalOnClick( GUIComponent Sender )
     {
         return BuySelectedItem();
     }
-    else if( Sender == b_Toggle )
-    {
-        return ToggleSelectedItem();
-    }
     else if( Sender == b_DisableAll )
     {
         PlayerOwner().ConsoleCommand( "Store ToggleItem all" );
         LoadData();
         return true;
-    }
-    else if( Sender == b_Sell )
-    {
-        return SellSelectedItem();
     }
     else if( Sender == b_Edit )
     {
@@ -272,8 +219,6 @@ function BuyItemOnline( string itemName, string itemID )
 function bool InternalOnDraw( Canvas C )
 {
     local int i;
-
-    C.DrawText( "Currency:" $ ClientData.BTPoints, true );
 
     i = lb_ItemsListBox.List.CurrentListId();
     if( i == -1 )
@@ -466,17 +411,6 @@ defaultproperties
     end object
     b_Edit=oEdit
 
-    begin object Class=GUIButton Name=oToggle
-        Caption="Toggle"
-        WinLeft=0.88000
-        WinTop=0.855
-        WinWidth=0.12
-        WinHeight=0.08
-        OnClick=InternalOnClick
-        Hint="Activate/Deactivate the selected item"
-    end object
-    b_Toggle=oToggle
-
     begin object Class=GUIButton Name=oDisableAll
         Caption="Disable All"
         WinLeft=0.14
@@ -487,18 +421,6 @@ defaultproperties
         Hint="Deactivate all your items"
     end object
     b_DisableAll=oDisableAll
-
-    begin object Class=GUIButton Name=oSell
-        Caption="Sell"
-        WinLeft=0.71000
-        WinTop=0.855
-        WinWidth=0.12
-        WinHeight=0.08
-        OnClick=InternalOnClick
-        StyleName="SellButton"
-        Hint="Sell the selected item for 25% of its current price"
-    end object
-    b_Sell=oSell
 
     Begin Object class=moComboBox Name=oFilter
         WinLeft=0.40
@@ -522,7 +444,6 @@ defaultproperties
         WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
-        StyleName="AdvancedButton"
         Hint="Here you can donate to the admins who are working vigorously to update and add new things to the store to show appreciation for all the new things the server has. You can also make requests for personal items if you have made a donation. ÿIf you want to donate make sure you ALERT an admin who can verify it."
     end object
     b_Donate=oDonate
@@ -534,7 +455,6 @@ defaultproperties
         WinWidth=0.15
         WinHeight=0.08
         OnClick=InternalOnClick
-        StyleName="BuyButton"
         Hint="Buy the selected item"
     end object
     b_Buy=oBuy

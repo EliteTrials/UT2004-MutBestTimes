@@ -4,10 +4,14 @@
 class BTGUI_PlayerInventory extends BTGUI_StatsTab
     dependson(BTClient_ClientReplication);
 
-#exec texture import name=positiveIcon file=Images/positive.tga group="icons" mips=off DXT=5 alpha=1 LODSet=5
+#exec texture import name=itemBackground file=Images/itemBg.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemBar file=Images/itemBar.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemUnChecked file=Images/itemUnChecked.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemChecked file=Images/itemChecked.tga mips=off DXT=1 LODSet=5
 
-var Texture PositiveIcon;
 var Texture TileMat;
+var Texture FooterTexture;
+var Texture CheckedTexture, UnCheckedTexture;
 
 var automated GUITreeListBox        CategoriesListBox;
 var automated GUISectionBackground  ItemsBackground, CategoriesBackground;
@@ -16,11 +20,12 @@ var GUIContextMenu                  ItemsContextMenu;
 
 var automated BTGUI_ComPetPanel     PetPanel;
 
+var() Color RarityColor[7];
+var() name RarityTitle[7];
+
 event Free()
 {
     super.Free();
-    PositiveIcon = none;
-    TileMat = none;
 }
 
 function ShowPanel( bool bShow )
@@ -98,6 +103,7 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     local float iconSize;
     local float oldClipX, oldClipY;
     local float footerHeight;
+    local Texture stateTex;
 
     list = ItemsListBox.List;
     X += int((float(Item - list.Top)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
@@ -114,10 +120,9 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.Style = 1;
 
     C.StrLen( "T", XL, YL );
-    footerHeight = YL + 4;
+    footerHeight = YL*2 + 8*2;
 
     // RENDER: Background
-    C.DrawColor = CRI.Options.CTable;
     if( bSelected || bPending )
     {
         C.DrawColor = #0x8E8EFEFF;
@@ -126,29 +131,36 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.OrgX = int(X);
     C.OrgY = int(Y);
     C.SetPos( 0, 0 );
-    C.DrawTileClipped( TileMat, int(w), int(h), 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
+    C.DrawTileClipped( TileMat, int(w), int(h) - footerHeight, 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
 
     // RENDER: Icon
-    C.DrawColor = class'HUD'.default.WhiteColor;
-    iconSize = h - 16 - footerHeight;
-    C.OrgX = X;
-    C.OrgY = Y;
-    C.SetPos( w*0.5 - iconSize*0.5 + 2, 12 );
-    C.DrawTileClipped( playerItem.IconTexture, iconSize - 8, iconSize - 8, 0.0, 0.0, playerItem.IconTexture.MaterialUSize(), playerItem.IconTexture.MaterialVSize() );
-
-    C.OrgX = X;
-    C.OrgY = Y;
-    C.ClipX = W;
+    if( playerItem.IconTexture != none )
+    {
+        C.DrawColor = class'HUD'.default.WhiteColor;
+        iconSize = h - 16 - footerHeight;
+        C.OrgX = X;
+        C.OrgY = Y;
+        C.SetPos( w*0.5 - iconSize*0.5 + 2, 12 );
+        C.DrawTileClipped( playerItem.IconTexture, iconSize - 8, iconSize - 8, 0.0, 0.0, playerItem.IconTexture.MaterialUSize(), playerItem.IconTexture.MaterialVSize() );
+        C.OrgX = X;
+        C.OrgY = Y;
+        C.ClipX = W;
+    }
 
     if( playerItem.bEnabled )
     {
-        // TODO: Checked icon
-        C.SetPos( w - 16 - 8, 8 );
-        C.DrawColor = class'HUD'.default.WhiteColor;
-        C.Style = 5;
-        C.DrawTileClipped( PositiveIcon, 16, 16, 0, 0, PositiveIcon.MaterialUSize(), PositiveIcon.MaterialVSize() );
-        C.Style = 1;
+        stateTex = CheckedTexture;
     }
+    else
+    {
+        stateTex = UnCheckedTexture;
+    }
+
+    C.SetPos( w - 16 - 8, 8 );
+    C.DrawColor = class'HUD'.default.WhiteColor;
+    C.Style = 5;
+    C.DrawTileClipped( stateTex, 16, 16, 0, 0, stateTex.MaterialUSize(), stateTex.MaterialVSize() );
+    C.Style = 1;
 
     // RENDER: Name
     // Footer
@@ -157,15 +169,20 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.OrgY = int(Y) + h - footerHeight;
     C.ClipX = w;
     C.SetPos( 0, 0 );
-    C.DrawColor = #0x3C3935CC;
-    C.DrawTileClipped( TileMat, w, footerHeight, 0, 0, 256, 256 );
+    C.DrawColor = RarityColor[playerItem.Rarity];
+    C.DrawTileClipped( FooterTexture, w, footerHeight, 0, 0, 256, 64 );
 
     C.OrgX = X + 4;
     C.OrgY = Y + h - footerHeight;
     C.ClipX = W - 8;
-    C.SetPos( w*0.5 - XL*0.5, 0 );
+    C.SetPos( 0, 8 );
     C.DrawColor = class'HUD'.default.WhiteColor;
     C.DrawTextClipped( playerItem.Name );
+    C.CurX = w*0.5;
+    C.CurY = YL + 8;
+    C.SetPos( 0, YL + 12 );
+    C.DrawColor = RarityColor[playerItem.Rarity];
+    C.DrawTextClipped( RarityTitle[playerItem.Rarity] );
 
     C.OrgX = X-2;
     C.OrgY = Y-2;
@@ -214,6 +231,10 @@ function InternalOnSelect( GUIContextMenu sender, int clickIndex )
         case 1:
             SellSelectedItem();
             break;
+
+        case 2:
+            DestroySelectedItem();
+            break;
     }
 }
 
@@ -244,11 +265,42 @@ final function bool SellSelectedItem()
     return false;
 }
 
+final function bool DestroySelectedItem()
+{
+    local int i;
+
+    i = ItemsListBox.List.GetItem();
+    if( i != -1 )
+    {
+        CRI.ServerDestroyItem( CRI.PlayerItems[i].ID );
+        return true;
+    }
+    return false;
+}
+
 defaultproperties
 {
+    RarityColor[0]=(R=231,G=207,B=182,A=255)
+    RarityColor[1]=(R=96,G=164,B=218,A=255)
+    RarityColor[2]=(R=26,G=147,B=6,A=255)
+    RarityColor[3]=(R=252,G=208,B=11,A=255)
+    RarityColor[4]=(R=255,G=164,B=5,A=255)
+    RarityColor[5]=(R=251,G=62,B=141,A=255)
+    RarityColor[6]=(R=76,G=19,B=157,A=255)
+
+    RarityTitle[0]=Basic
+    RarityTitle[1]=Fine
+    RarityTitle[2]=Uncommon
+    RarityTitle[3]=Rare
+    RarityTitle[4]=Exotic
+    RarityTitle[5]=Ascended
+    RarityTitle[6]=Legendary
+
     OnKeyEvent=OnKeyEvent
-    TileMat=Texture'BTScoreBoardBG'
-    PositiveIcon=positiveIcon
+    TileMat=itemBackground
+    FooterTexture=itemBar
+    CheckedTexture=ItemChecked
+    UnCheckedTexture=ItemUnChecked
 
     begin object class=BTGUI_ComPetPanel name=oPetPanel
         WinWidth=0.300000
@@ -282,8 +334,8 @@ defaultproperties
         bScaleToParent=true
 
         CellStyle=Cell_FixedCount
-        NoVisibleRows=5
-        NoVisibleCols=6
+        NoVisibleCols=5
+        NoVisibleRows=4
         TabOrder=0
 
         VertBorder=2
@@ -293,7 +345,8 @@ defaultproperties
 
     begin object class=GUIContextMenu name=oContextMenu
         ContextItems(0)="Equip/Unequip Item"
-        ContextItems(1)="Sell Item"
+        ContextItems(1)="Sell Item to Vendor"
+        ContextItems(2)="Destroy Item"
         OnSelect=InternalOnSelect
     end object
     ContextMenu=oContextMenu

@@ -22,17 +22,17 @@ function bool InternalOnClick( GUIComponent sender )
 
         if( eb_TradeAmount.GetText() == "" )
         {
-            PlayerOwner().ClientMessage( "Please enter amount of currency that you want to send!" );
+            PlayerOwner().ClientMessage( "Please enter amount of money that you want to give!" );
             return false;
         }
 
         if( int(eb_TradeAmount.GetText()) <= 0 )
         {
-            PlayerOwner().ClientMessage( "Please send more than 0 currency!" );
+            PlayerOwner().ClientMessage( "Please send more than 0$!" );
             return false;
         }
 
-        PlayerOwner().ConsoleCommand( "TradeCurrency" @ eb_TradePlayer.GetText() @ int(eb_TradeAmount.GetText()) );
+        PlayerOwner().ConsoleCommand( "TradeMoney" @ eb_TradePlayer.GetText() @ int(eb_TradeAmount.GetText()) );
         return true;
     }
     else if( sender == b_GhostFollow )
@@ -63,7 +63,7 @@ function bool InternalOnClick( GUIComponent sender )
 defaultproperties
 {
     Begin Object class=GUIButton name=oTradeCurrency
-        Caption="Trade Currency"
+        Caption="Trade Money"
         WinTop=0.01
         WinLeft=0.0
         WinWidth=0.25
@@ -91,7 +91,7 @@ defaultproperties
         WinLeft=0.52
         WinWidth=0.25
         WinHeight=0.05
-        Hint="Currency(20% of this will be used as fee!)"
+        Hint="Money (20% of this will be used as fee!)"
     End Object
     eb_TradeAmount=oTradeAmount
 
@@ -103,7 +103,7 @@ defaultproperties
         WinWidth=0.25
         WinHeight=0.05
         OnClick=InternalOnClick
-        Hint="Hire the ghost for 25 currency! Note: Ghost can be rehired by someone else when you have it!"
+        Hint="Hire the ghost for 25$! Note: Ghost can be rehired by someone else when you have it!"
     End Object
     b_GhostFollow=oGhostFollow
 
