@@ -41,7 +41,8 @@ final function Initialize( BTClient_ClientReplication client, string selector, b
             }
 
             // Doesn't own special item?
-            if( BT.Store.Items[i].Access > Free && (!selectAdminItems && !BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[i].ID ) ) )
+            // Players can now view their inventory, displaying acquired private items are no longer neccessary.
+            if( BT.Store.Items[i].Access > Free && (!selectAdminItems) )
             {
                 continue;
             }
@@ -64,21 +65,11 @@ final function Initialize( BTClient_ClientReplication client, string selector, b
 
 final private function SendRepData( int index )
 {
-    local int playerItemSlot;
-    local bool hasItem, isEnabled;
-
-    hasItem = BT.PDat.HasItem( CR.myPlayerSlot, BT.Store.Items[index].ID, playerItemSlot );
-    if( playerItemSlot != -1 )
-    {
-        isEnabled = BT.PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[playerItemSlot].bEnabled;
-    }
     CR.ClientSendItem(
         BT.Store.Items[index].Name,
         BT.Store.Items[index].ID,
         class'BTClient_ClientReplication'.static.CompressStoreData(
             BT.Store.Items[index].Cost,
-            hasItem,
-            isEnabled,
             BT.Store.Items[index].Access
         )
     );

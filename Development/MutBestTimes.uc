@@ -2870,16 +2870,6 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                 NotifyItemBought( Rep.myPlayerSlot );
                 PDat.GiveItem( Rep, Store.Items[i].ID );
-                // bBought, bEnabled
-                Rep.ClientSendItemData( Store.Items[i].ID,
-                    class'BTClient_ClientReplication'.static.CompressStoreData(
-                        Store.Items[i].Cost,
-                        true,
-                        true,
-                        Store.Items[i].Access
-                    )
-                );
-
                 if( Store.Items[i].Access >= Free || Store.Items[i].Cost <= 0 )
                 {
                     break;
@@ -2931,16 +2921,6 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     {
                         PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
                     }
-
-                    // bBought, bEnabled
-                    Rep.ClientSendItemData( Store.Items[i].ID,
-                        class'BTClient_ClientReplication'.static.CompressStoreData(
-                            Store.Items[i].Cost,
-                            false,
-                            false,
-                            Store.Items[i].Access
-                        )
-                    );
                 }
                 else
                 {
