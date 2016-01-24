@@ -3357,11 +3357,44 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             SaveRecords();
             break;
 
+        case "bt_resetitems":
+            for( i = 0; i < PDat.Player.Length; ++ i )
+            {
+                PDat.Player[i].Inventory.BoughtItems.Length = 0;
+            }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' items have been removed. Restart map to apply." );
+            SavePlayers();
+            break;
+
+
+        case "bt_resetachievements":
+            for( i = 0; i < PDat.Player.Length; ++ i )
+            {
+                PDat.Player[i].Achievements.Length = 0;
+            }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' progressed achievements have been reset. Restart map to apply." );
+            SavePlayers();
+            break;
+
+        case "bt_recalcachievements":
+            for( i = 0; i < PDat.Player.Length; ++ i )
+            {
+                PDat.Player[i].PLAchiev = 0;
+                for( j = 0; j < AchievementsManager.Achievements.Length; ++ j )
+                {
+                    PDat.Player[i].PLAchiev += AchievementsManager.Achievements[j].Points*float(PDat.HasEarnedAchievement( i, j ));
+                }
+            }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' Achievement Points have been re-calculated. Restart map to apply." );
+            SavePlayers();
+            break;
+
         case "bt_resetobjectives":
             for( i = 0; i < PDat.Player.Length; ++ i )
             {
                 PDat.Player[i].PLObjectives = 0;
             }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' objective stats have been reset. Restart map to apply." );
             SavePlayers();
             break;
 
@@ -3370,6 +3403,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             {
                 PDat.Player[i].LevelData.BTPoints = 0;
             }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' currency stats have been reset. Restart map to apply." );
             SavePlayers();
             break;
 
@@ -3378,6 +3412,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             {
                 PDat.Player[i].LevelData.Experience = 0;
             }
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' experience stats have been reset. Restart map to apply." );
             SavePlayers();
             break;
 
