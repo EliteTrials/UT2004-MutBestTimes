@@ -608,11 +608,11 @@ final function NotifyGiveCurrency( int playerSlot, int currencyReceived )
     CRI.BTPoints = PDat.Player[playerSlot].LevelData.BTPoints;
     if( currencyReceived < 0 )
     {
-        PC.ClientMessage( "You have lost" @ class'HUD'.default.RedColor $ currencyReceived $ class'HUD'.default.WhiteColor @ "currency points!" );
+        PC.ClientMessage( "You have lost" @ class'HUD'.default.RedColor $ currencyReceived $ class'HUD'.default.WhiteColor $ "$!" );
     }
     else
     {
-        PC.ClientMessage( "You have received" @ class'HUD'.default.GreenColor $ currencyReceived $ class'HUD'.default.WhiteColor @ "currency points!" );
+        PC.ClientMessage( "You have received" @ class'HUD'.default.GreenColor $ currencyReceived $ class'HUD'.default.WhiteColor $ "$!" );
     }
 }
 
@@ -699,7 +699,7 @@ final function NotifyLevelUp( int playerSlot, int BTLevel )
     NotifyPlayers( PC,
      PC.GetHumanReadableName() @ "is now level" @ class'HUD'.default.GreenColor $ BTLevel,
      "You are now level" @ class'HUD'.default.GreenColor $ BTLevel $ "." $ class'HUD'.default.WhiteColor
-        @ "You also earned" @ class'HUD'.default.GreenColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "currency points." );
+        @ "You also earned" @ class'HUD'.default.GreenColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "$!" );
 }
 
 final function NotifyLevelDown( int playerSlot, int BTLevel )
@@ -718,7 +718,7 @@ final function NotifyLevelDown( int playerSlot, int BTLevel )
     NotifyPlayers( PC,
      PC.GetHumanReadableName() @ "became level" @ class'HUD'.default.RedColor $ BTLevel,
      "You became level" @ class'HUD'.default.RedColor $ BTLevel $ "." $ class'HUD'.default.WhiteColor
-        @ "You also lost" @ class'HUD'.default.RedColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "currency points." );
+        @ "You also lost" @ class'HUD'.default.RedColor $ PointsPerLevel * BTLevel @ class'HUD'.default.WhiteColor $ "$!" );
 }
 
 final function NotifyCheckPointChange( Controller C )
@@ -2364,7 +2364,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     }
                     else
                     {
-                        SendErrorMessage( sender, "Sorry you cannot hire the ghost because you do not have enough Currency points!" );
+                        SendErrorMessage( sender, "Sorry you cannot hire the ghost because you do not have enough money!" );
                         break;
                     }
                 }
@@ -2691,7 +2691,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
             if( !PDat.HasCurrencyPoints( Rep.myPlayerSlot, 1 ) )
             {
-                SendErrorMessage( sender, "Sorry you cannot change your Trailer texture because you don't have enough Currency Points!" );
+                SendErrorMessage( sender, "Sorry you cannot change your Trailer texture because you don't have enough money!" );
                 break;
             }
 
@@ -2881,8 +2881,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     PDat.SpendCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost );
 
                     NotifyPlayers( sender,
-                              sender.GetHumanReadableName() @ Class'HUD'.default.GoldColor $ "has bought" @ Store.Items[i].Name @ "for" @ Store.Items[i].Cost @ "Currency points",
-                              Class'HUD'.default.GoldColor $ "You bought" @ Store.Items[i].Name @ "for" @ Store.Items[i].Cost @ "Currency points"
+                              sender.GetHumanReadableName() @ Class'HUD'.default.GoldColor $ "has bought" @ Store.Items[i].Name @ "for" @ Store.Items[i].Cost $ "$",
+                              Class'HUD'.default.GoldColor $ "You bought" @ Store.Items[i].Name @ "for" @ Store.Items[i].Cost $ "$"
                               );
                 }
             }
@@ -3021,7 +3021,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
             if( int(params[0]) < MinExchangeableTrophies )
             {
-                SendErrorMessage( sender, "You need atleast" @ MinExchangeableTrophies @ "trophies before you can exchange them for Currency points!" );
+                SendErrorMessage( sender, "You need atleast" @ MinExchangeableTrophies @ "trophies before you can exchange to money!" );
                 break;
             }
 
@@ -3030,8 +3030,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             PDat.Player[Rep.myPlayerSlot].Trophies.Remove( 0, int(params[0]) );
 
             NotifyPlayers( sender,
-              sender.GetHumanReadableName() @ class'HUD'.default.GoldColor $ "Exchanged" @ int(params[0]) @ "trophies for" @ j @ "Currency points!",
-              class'HUD'.default.GoldColor $ "You exchanged" @ int(params[0]) @ "trophies for" @ j @ "Currency points!"
+              sender.GetHumanReadableName() @ class'HUD'.default.GoldColor $ "Exchanged" @ int(params[0]) @ "trophies for" @ j $ "$!",
+              class'HUD'.default.GoldColor $ "You exchanged" @ int(params[0]) @ "trophies for" @ j $ "$!"
               );
             break;
 
@@ -3045,19 +3045,19 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
             if( params.Length < 2 || (params.Length > 1 && int(params[1]) == 0) )
             {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify the amount of currency!" );
+                sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify the amount of money!" );
                 break;
             }
 
             if( int(params[1]) <= 0 )
             {
-                sender.ClientMessage( class'HUD'.default.RedColor $ "You cannot give less than 1 currency!" );
+                sender.ClientMessage( class'HUD'.default.RedColor $ "You cannot give less than 1$!" );
                 break;
             }
 
             if( !PDat.HasCurrencyPoints( Rep.myPlayerSlot, int(params[1]) ) )
             {
-                sender.ClientMessage( class'HUD'.default.RedColor $ "You do not have that much currency!" );
+                sender.ClientMessage( class'HUD'.default.RedColor $ "You do not have that much money!" );
                 break;
             }
 
@@ -3071,12 +3071,12 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                         sender.ClientMessage( class'HUD'.default.GoldColor $ "20% of your donation has been taken away as fee!" );
 
                         PDat.SpendCurrencyPoints( Rep.myPlayerSlot, int(params[1]) );
-                        sender.ClientMessage( class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ int(params[1])*0.80 @ "of your currency!" );
+                        sender.ClientMessage( class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ int(params[1])*0.80 @ "of your money!" );
 
                         PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80, true );
                         if( PlayerController(C) != sender )
                         {
-                            PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his/her currency!" );
+                            PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his/her money!" );
                         }
                         break;
                     }
@@ -3249,7 +3249,7 @@ private final function ConsumeKey( BTActivateKey handler )
 
         case "curr":
             PDat.GiveCurrencyPoints( Rep.myPlayerSlot, int(handler.Serial.Code), true );
-            SendSucceedMessage( handler.Requester, "You were given Currency!" );
+            SendSucceedMessage( handler.Requester, "You were given money!" );
             break;
 
         case "exp":
@@ -3403,7 +3403,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             {
                 PDat.Player[i].LevelData.BTPoints = 0;
             }
-            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' currency stats have been reset. Restart map to apply." );
+            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' money stats have been reset. Restart map to apply." );
             SavePlayers();
             break;
 
@@ -3549,7 +3549,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
             if( params.Length < 2 || (params.Length > 1 && int(params[1]) == 0) )
             {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify the amount of currency!" );
+                sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify the amount of money!" );
                 break;
             }
 
@@ -3560,7 +3560,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                 {
                     if( InStr( Caps( C.PlayerReplicationInfo.PlayerName ), S )  != -1 )
                     {
-                        sender.ClientMessage( Class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ params[1] @ "currency!" );
+                        sender.ClientMessage( Class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ params[1] $ "$!" );
 
                         if( int(params[1]) > 0 )
                         {
@@ -3573,7 +3573,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
                         if( PlayerController(C) != sender )
                         {
-                            PlayerController(C).ClientMessage( Class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ params[1] @ "currency!" );
+                            PlayerController(C).ClientMessage( Class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ params[1] $ "$!" );
                         }
                         break;
                     }
