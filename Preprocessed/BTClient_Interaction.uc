@@ -286,9 +286,9 @@ Exec Function Store( string command )
     }
 }
 
-exec function TradeCurrency( string playerName, int amount )
+exec function TradeMoney( string playerName, int amount )
 {
-    BT( "TradeCurrency" @ playerName @ amount );
+    BT( "TradeMoney" @ playerName @ amount );
 }
 
 exec function ActivateKey( string key )
@@ -331,7 +331,7 @@ exec Function BTCommands()
         SendConsoleMessage( "DeleteClientSpawn" );
         SendConsoleMessage( "..." );
         SendConsoleMessage( "ToggleGhost (Only your Ghost!)" );
-        SendConsoleMessage( "GhostFollow <PlayerName> (Costs currency!)" );
+        SendConsoleMessage( "GhostFollow <PlayerName> (Costs money!)" );
         SendConsoleMessage( "GhostFollowID <PlayerID> (Only for admins, BTimes author and people with a ObjectivesLevel greater than 0)" );
         SendConsoleMessage( "..." );
         SendConsoleMessage( "TrailerMenu" );
