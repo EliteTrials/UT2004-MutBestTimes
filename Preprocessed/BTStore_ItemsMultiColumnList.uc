@@ -53,7 +53,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     switch( CRI.Items[SortData[i].SortItem].Access )
     {
         case 0:
-            price = string(CRI.Items[SortData[i].SortItem].Cost);
+            price = class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost) $ "$";
             break;
             
         case 1:

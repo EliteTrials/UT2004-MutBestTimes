@@ -2900,7 +2900,7 @@ function RenderHUDElements( Canvas C )
     }
 }
 
-final function string Decimal( int number )
+final static function string Decimal( int number )
 {
     local string s, ns;
     local int i;
