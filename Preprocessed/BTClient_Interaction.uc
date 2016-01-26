@@ -9,7 +9,7 @@ class BTClient_Interaction extends Interaction;
 
 #Exec obj load file="UT2003Fonts.utx"
 #Exec obj load file="MenuSounds.uax"
-#Exec obj load file="ClientBTimes.utx" package="ClientBTimesV5"
+#Exec obj load file="ClientBTimes.utx" package="ClientBTimesV6"
 
 const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
 const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
