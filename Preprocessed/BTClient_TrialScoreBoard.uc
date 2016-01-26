@@ -194,6 +194,12 @@ Simulated Function UpdateScoreBoard( Canvas C )
         if( GRI.PRIArray[i] == None || ((!GRI.PRIArray[i].bOnlySpectator && !GRI.PRIArray[i].bIsSpectator) || GRI.PRIArray[i].bWaitingPlayer) )
             continue;
 
+        // Hide spectator bots!
+        if( GRI.PRIArray[i].bBot )
+        {
+            continue;
+        }
+
         SortedSpectators[SortedSpectators.Length] = GRI.PRIArray[i];
     }
 
