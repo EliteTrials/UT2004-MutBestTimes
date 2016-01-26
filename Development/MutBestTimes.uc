@@ -6657,7 +6657,10 @@ final function UpdateGhosts()
         return;
     }
 
-    RDat.Rec[UsedSlot].TMGhostDisabled = false;
+    if( RDat.Rec[UsedSlot].TMGhostDisabled )
+    {
+        Level.Game.Broadcast( self, "Ghosts are currently disabled for this map!" );
+    }
 
     // We must clear all present data objects and initialize new ones.
     GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
