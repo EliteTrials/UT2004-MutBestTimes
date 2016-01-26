@@ -146,11 +146,22 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
+        recordsCountTxt, FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        recordsCountTxt, FontScale );
+        string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
+}
+
+static function string MyPadLeft( string Src, byte StrLen, optional string PadStr )
+{
+    if ( PadStr == "" )
+        PadStr = " ";
+
+    while ( Len(Src) < StrLen )
+        Src = PadStr $ Src;
+
+    return src;
 }
 
 function string GetSortString( int i )
@@ -159,15 +170,29 @@ function string GetSortString( int i )
 	local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
 
 	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);
+    switch( SortColumn )
+    {
+        // MapRating
+        case 0:
+            return MyPadLeft(mapRatingTxt, 5, "0");
 
-	ColumnData[0] = right("000000" $ mapRatingTxt,6);
-    ColumnData[1] = left(Caps(mapTxt),20);
-    ColumnData[2] = timeTxt;
-    ColumnData[3] = string(float(VRI.MapList[MapVoteData[i]].PlayCount)/100F);
-    ColumnData[4] = right("000000" $ VRI.MapList[MapVoteData[i]].Sequence,6);
-    ColumnData[5] = right("000000" $ recordsCountTxt,6);
+        case 1:
+            return left(Caps(mapTxt),20);
 
-	return ColumnData[SortColumn] $ ColumnData[PrevSortColumn];
+        case 2:
+            return timeTxt;
+
+        case 3:
+            return MyPadLeft(string(float(VRI.MapList[MapVoteData[i]].PlayCount)/100F), 8, "0");
+
+        case 4:
+            return MyPadLeft(recordsCountTxt, 4, "0");
+
+        case 5:
+            return MyPadLeft(string(VRI.MapList[MapVoteData[i]].Sequence), 8, "0");
+    }
+
+    return MyPadLeft(string(i), 4, "0");
 }
 
 delegate OnFilterVotingList( GUIComponent sender, string filter, int gameTypeIndex );
@@ -276,26 +301,26 @@ private function bool MatchesFilter( string test, string filter, optional bool b
 
 defaultproperties
 {
-	ColumnHeadings(0)="Rating"
+	ColumnHeadings(0)="Score"
     ColumnHeadings(1)="Map Name"
     ColumnHeadings(2)="Time"
     ColumnHeadings(3)="Played Hours"
-    ColumnHeadings(4)="Seq"
-    ColumnHeadings(5)="Records"
+    ColumnHeadings(4)="Records"
+    ColumnHeadings(5)="Seq"
 
-    InitColumnPerc(0)=0.2
-    InitColumnPerc(1)=0.4
-    InitColumnPerc(2)=0.1
-    InitColumnPerc(3)=0.1
-    InitColumnPerc(4)=0.1
-    InitColumnPerc(5)=0.1
+    InitColumnPerc(0)=0.12
+    InitColumnPerc(1)=0.38
+    InitColumnPerc(2)=0.12
+    InitColumnPerc(3)=0.12
+    InitColumnPerc(4)=0.12
+    InitColumnPerc(5)=0.12
 
     ColumnHeadingHints(0)="Players rating of this map."
 	ColumnHeadingHints(1)="Map Name."
     ColumnHeadingHints(2)="Best time record on this map."
 	ColumnHeadingHints(3)="Number of hours this map has been played for."
-	ColumnHeadingHints(4)="Sequence, The number of games that have been played since this map was last played."
-    ColumnHeadingHints(5)="Number of records this map has."
+    ColumnHeadingHints(4)="Number of records this map has."
+    ColumnHeadingHints(5)="Sequence, The number of games that have been played since this map was last played."
 
     OnFilterVotingList=InternalOnFilterVotingList
 
