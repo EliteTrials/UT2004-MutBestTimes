@@ -3,6 +3,8 @@
 //=============================================================================
 class BTServer_SoloMode extends BTServer_ASMode;
 
+var() const bool bAllowWaging;
+
 static function bool DetectMode( MutBestTimes M )
 {
     return M.Objectives.Length == 1;
@@ -145,6 +147,12 @@ function WageSuccess( BTClient_ClientReplication wager, int wagedPoints )
 function ActivateWager( PlayerController sender, coerce int wagerAmount )
 {
     local BTClient_ClientReplication LRI;
+
+    if( !bAllowWaging )
+    {
+        SendErrorMessage( sender, "Waging is currently disabled on this server! " );
+        return;
+    }
 
     if( RDat.Rec[UsedSlot].PSRL.Length < 3 && !IsAdmin( sender.PlayerReplicationInfo ) )
     {
