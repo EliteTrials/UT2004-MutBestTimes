@@ -20,15 +20,15 @@ echo Copying Development to Classes
 echo.
 cd..
 cd %projn%
-xcopy Development Classes /Y /Q  
+xcopy Development Classes /Y /Q
 
 echo.
 echo Obfuscating classes
 echo.
 cd Development
 for %%F in (*.uc) do (
-    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  ( 
-        ..\..\ClientBTimesV5\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
+    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  (
+        ..\..\ClientBTimesV6\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
     )
 )
 cd..

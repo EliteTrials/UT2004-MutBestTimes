@@ -5,7 +5,7 @@ class BTServer_PlayersData extends Object
     dependson(BTStructs)
     hidedropdown;
 
-#exec obj load file="..\System\ClientBTimesV5.u"
+#exec obj load file="..\System\ClientBTimesV6.u"
 
 struct sBTPlayerInfo
 {
