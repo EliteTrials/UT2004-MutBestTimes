@@ -52,7 +52,7 @@ function ModePostBeginPlay()
 
         // We need a list of triggers.
         // If a user whom might be using Client Spawn, he shall be killed by any of those listed triggers.
-        if( bAllowClientSpawn && (bTriggersKillClientSpawnPlayers || bAlwaysKillClientSpawnPlayersNearTriggers) )
+        if( CanSetClientSpawn() && (bTriggersKillClientSpawnPlayers || bAlwaysKillClientSpawnPlayersNearTriggers) )
         {
             if( Tr.Event != '' && Tr.bCollideActors )
                 Triggers[Triggers.Length] = Tr;

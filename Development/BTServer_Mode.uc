@@ -12,11 +12,10 @@ var editconst const noexport string ModeName;
 /** The Server-MapName state mapprefix to use for this mode. */
 var editconst const noexport string ModePrefix;
 
-/** Reference to the owner that spawned this TrialMode instance. */
-//var editconst noexport MutBestTimes Master;
-
-var() int ExperienceBonus;
-var() float DropChanceBonus;
+// TODO: Move to config?
+var() const int ExperienceBonus;
+var() const float DropChanceBonus;
+var() const class<BTServer_ModeConfig> ConfigClass;
 
 var() private const globalconfig array<struct sChatMacro{
     var string Name;
@@ -24,6 +23,10 @@ var() private const globalconfig array<struct sChatMacro{
     var string Prot;
     var string Value;
 }> ChatMacros;
+
+function Free()
+{
+}
 
 static function bool DetectMode( MutBestTimes M )
 {
@@ -266,12 +269,15 @@ final static function BTServer_Mode NewInstance( MutBestTimes M )
     return Mode;
 }
 
-function Free()
+function bool CanSetClientSpawn( optional PlayerController player )
 {
+    return ConfigClass.default.bAllowClientSpawn;
 }
 
 defaultproperties
 {
+    ConfigClass=class'BTServer_ModeConfig'
+
     ExperienceBonus=0
 
     // ChatMacros(0)=(Name="ts",Command="prot",Prot="TeamSpeak",Value="212.187.247.41:9103")

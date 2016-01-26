@@ -12,7 +12,6 @@ class MutBestTimes extends Mutator
     dependson(BTServer_CheckPoint);
 
 #exec obj load file="..\System\TrialGroup.u"
-// #exec obj load file="..\Sounds\Stock\AnnouncerFemale2k4.uax"
 #exec obj load file="..\Sounds\Stock\AnnouncerSexy.uax"
 
 //#include DEC_Structs.uc
@@ -270,7 +269,6 @@ var() globalconfig
     bShowDebugLogToWebAdmin,
     bNotifyRecordDeletingHistory,
     bMapSkillAdminControlled,
-    bAllowClientSpawn,
     bTriggersKillClientSpawnPlayers,
     bClientSpawnPlayersCanCompleteMap,
     bSavePreviousGhost,
@@ -334,26 +332,7 @@ var() localized editconst const
 //byte Weight, string RenderType, optional string Extras, optional string ExtraPrivs,
 //optional bool bMultiPlayerOnly, optional bool bAdvanced);
 
-struct sConfigProperty
-{
-    var Property Property;
-    var localized string Category;
-    var localized string Description;
-    var localized string Hint;
-    var byte AccessLevel;
-    var byte Weight;
-
-    /** If Type is *empty* then the type will be guessed from the Property.Class variable. */
-    var string Type;
-
-    /** "DEFAULT;MIN:MAX" */
-    var string Rules;
-    var string Privileges;
-    var bool bMultiPlayerOnly;
-    var bool bAdvanced;
-};
-
-var array<sConfigProperty> ConfigurableProperties;
+var array<BTStructs.sConfigProperty> ConfigurableProperties;
 
 var const string InvalidAccessMessage;
 
@@ -1282,7 +1261,7 @@ function ModifyPlayer( Pawn Other )
 
     if( ModeIsTrials() )
     {
-        if( bAllowClientSpawn )
+        if( CurMode.CanSetClientSpawn( PlayerController(Other.Controller) ) )
         {
             //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
             i = GetClientSpawnIndex( Other.Controller );
@@ -2546,7 +2525,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 break;
             }
 
-            if( bAllowClientSpawn )
+            if( CurMode.CanSetClientSpawn( sender ) )
                 CreateClientSpawn( sender );
             else SendErrorMessage( sender, lzCS_NotEnabled );
             break;
@@ -2558,7 +2537,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 break;
             }
 
-            if( bAllowClientSpawn )
+            if( CurMode.CanSetClientSpawn( sender ) )
                 DeleteClientSpawn( sender );
             else SendErrorMessage( sender, lzCS_NotEnabled );
             break;
@@ -6780,7 +6759,7 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
         Level.Game.AddServerDetail( ServerState, "BTimes", "Most Recent Record:"@LastRecords[MaxRecentRecords-1] );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Ghost Enabled:"@bSpawnGhost );
         Level.Game.AddServerDetail( ServerState, "BTimes", "Rankings Enabled:"@bShowRankings );
-        Level.Game.AddServerDetail( ServerState, "BTimes", lzClientSpawn $ " Allowed:"@bAllowClientSpawn );
+        Level.Game.AddServerDetail( ServerState, "BTimes", lzClientSpawn $ " Allowed:"@CurMode.CanSetClientSpawn() );
 
         if( RDat != none && MRI != none )
         {
@@ -7755,7 +7734,7 @@ final function int GetGroupTaskPoints( int groupIndex )
 static function FillPlayInfo( PlayInfo info )
 {
     local int i;
-    local sConfigProperty prop;
+    local BTStructs.sConfigProperty prop;
 
     super.FillPlayInfo( info );
     for( i = 0; i < default.ConfigurableProperties.Length; ++ i )
@@ -7781,6 +7760,28 @@ static function FillPlayInfo( PlayInfo info )
         }
         info.AddSetting( prop.Category, string(prop.Property.Name), prop.Description, prop.AccessLevel, prop.Weight, prop.Type, prop.Rules, prop.Privileges, prop.bMultiPlayerOnly, prop.bAdvanced );
     }
+
+    info.AddClass( class'BTServer_RegularModeConfig' );
+    class'BTServer_RegularModeConfig'.static.FillPlayInfo( info );
+    info.PoPClass();
+
+    info.AddClass( class'BTServer_GroupModeConfig' );
+    class'BTServer_GroupModeConfig'.static.FillPlayInfo( info );
+    info.PoPClass();
+
+    info.AddClass( class'BTServer_BunnyModeConfig' );
+    class'BTServer_BunnyModeConfig'.static.FillPlayInfo( info );
+    info.PoPClass();
+
+    info.AddClass( class'BTServer_SoloModeConfig' );
+    class'BTServer_SoloModeConfig'.static.FillPlayInfo( info );
+    info.PoPClass();
+
+/**    for( i = 0; i < default.TrialModes.Length; ++ i )
+    {
+        info.AddClass( default.TrialModes[i].default.ConfigClass );
+        default.TrialModes[i].default.ConfigClass.static.FillPlayInfo( info );
+    }*/
 }
 
 static function string GetDescriptionText( string propertyName )
@@ -7847,7 +7848,7 @@ DefaultProperties
     lzCS_Obj="You cannot interact with any objectives while using a 'Client Spawn'"
     lzCS_AllowComplete="Because of the configuration of this server, you can complete the map with a 'Client Spawn'"
     lzCS_NoPawn="Sorry you cannot set a 'Client Spawn' when you have no pawn, you are not walking or quickstart is in progress"
-    lzCS_NotEnabled="Sorry 'Client Spawn' is not allowed on this server"
+    lzCS_NotEnabled="Sorry 'Client Spawn' is disabled for this trials mode"
     lzCS_NoQuickStartDelete="Sorry you cannot delete your 'Client Spawn' when quickstart is in progress"
     lzClientSpawn="Client Spawn"
 
@@ -7889,7 +7890,6 @@ DefaultProperties
     TrialModes(3)=Class'BTServer_GroupMode'
     TrialModes(4)=Class'BTServer_SoloMode'
 
-    bAllowClientSpawn=True
     bTriggersKillClientSpawnPlayers=True
     bClientSpawnPlayersCanCompleteMap=False
     bNoRandomSpawnLocation=True
@@ -7977,29 +7977,28 @@ DefaultProperties
     ConfigurableProperties(2)=(Property=BoolProperty'bDontEndGameOnRecord',Description="Don't End the Game on Record",AccessLevel=255,Weight=1,Hint="If Checked: The game will not end when a player sets a new record. bSpawnGhost must be disabled!")
     ConfigurableProperties(3)=(Property=BoolProperty'bEnhancedTime',Description="Dynamic RoundTime Limit",Weight=1,Hint="If Checked: BTimes will adjust the RoundTimeLimit of Assault based on the record time.")
     ConfigurableProperties(4)=(Property=BoolProperty'bDisableForceRespawn',Description="Disable Instant Respawning",Weight=1,Hint="If Checked: BTimes will not respawn dying players instantly.")
-    ConfigurableProperties(5)=(Property=BoolProperty'bAllowClientSpawn',Description="Allow ClientSpawn Use",Weight=1,Hint="If Checked: BTimes will allow people to use 'Client Spawn'.")
-    ConfigurableProperties(6)=(Property=BoolProperty'bTriggersKillClientSpawnPlayers',Description="Triggers Should Kill ClientSpawn Players",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will kill people coming near a trigger if using a 'Client Spawn'.")
-    ConfigurableProperties(7)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will alow people using a 'Client Spawn' to be able to finish the map.")
-    ConfigurableProperties(8)=(Property=BoolProperty'bAddGhostTimerPaths',Description="Generate Ghost Time Paths",Weight=1,Hint="Whether to spawn ghost markers.")
-    ConfigurableProperties(9)=(Property=IntProperty'GhostPlaybackFPS',Description="Ghost Recording Framerate",AccessLevel=255,Weight=1,Rules="2;1:25",Hint="Amount of frames recorded every second (DON'T SET THIS HIGH).")
-    ConfigurableProperties(10)=(Property=FloatProperty'GhostSaveSpeed',Description="Ghost Saving Interval",AccessLevel=255,Weight=1,Hint="Amount of saving delay between every 10 Movements.")
-    ConfigurableProperties(11)=(Property=IntProperty'MaxRankedPlayers',Description="Maximum Rankable Players",Weight=1,Rules="2;5:30",Hint="Amount of players to show in the ranking table and top records list.")
-    ConfigurableProperties(12)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
-    ConfigurableProperties(13)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
-    ConfigurableProperties(14)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
-    ConfigurableProperties(15)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
-    ConfigurableProperties(16)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(17)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(18)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(19)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(20)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(21)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
-    ConfigurableProperties(22)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
-    ConfigurableProperties(23)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+    ConfigurableProperties(5)=(Property=BoolProperty'bTriggersKillClientSpawnPlayers',Description="Triggers Should Kill ClientSpawn Players",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will kill people coming near a trigger if using a 'Client Spawn'.")
+    ConfigurableProperties(6)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will alow people using a 'Client Spawn' to be able to finish the map.")
+    ConfigurableProperties(7)=(Property=BoolProperty'bAddGhostTimerPaths',Description="Generate Ghost Time Paths",Weight=1,Hint="Whether to spawn ghost markers.")
+    ConfigurableProperties(8)=(Property=IntProperty'GhostPlaybackFPS',Description="Ghost Recording Framerate",AccessLevel=255,Weight=1,Rules="2;1:25",Hint="Amount of frames recorded every second (DON'T SET THIS HIGH).")
+    ConfigurableProperties(9)=(Property=FloatProperty'GhostSaveSpeed',Description="Ghost Saving Interval",AccessLevel=255,Weight=1,Hint="Amount of saving delay between every 10 Movements.")
+    ConfigurableProperties(10)=(Property=IntProperty'MaxRankedPlayers',Description="Maximum Rankable Players",Weight=1,Rules="2;5:30",Hint="Amount of players to show in the ranking table and top records list.")
+    ConfigurableProperties(11)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
+    ConfigurableProperties(12)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
+    ConfigurableProperties(13)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
+    ConfigurableProperties(14)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
+    ConfigurableProperties(15)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(16)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(17)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(18)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(19)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(20)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
+    ConfigurableProperties(21)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
+    ConfigurableProperties(22)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
 
     bDisableWeaponBoosting=true
-    ConfigurableProperties(24)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
+    ConfigurableProperties(23)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
 
     bEnableInstigatorEmpathy=true
-    ConfigurableProperties(25)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
+    ConfigurableProperties(24)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
 }

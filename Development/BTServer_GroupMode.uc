@@ -86,4 +86,5 @@ defaultproperties
     ModePrefix="GTR"
 
     ExperienceBonus=20
+    ConfigClass=class'BTServer_GroupModeConfig'
 }

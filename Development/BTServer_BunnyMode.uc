@@ -64,6 +64,7 @@ defaultproperties
 {
     ModeName="BT"
     ModePrefix="CTF"
+    ConfigClass=class'BTServer_BunnyModeConfig'
 
     ExperienceBonus=5
 }

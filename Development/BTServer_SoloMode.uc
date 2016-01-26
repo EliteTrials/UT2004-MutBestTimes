@@ -242,6 +242,7 @@ defaultproperties
 {
     ModeName="Solo"
     ModePrefix="STR"
+    ConfigClass=class'BTServer_SoloModeConfig'
 
     ExperienceBonus=5
 

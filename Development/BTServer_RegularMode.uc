@@ -40,6 +40,7 @@ defaultproperties
 {
     ModeName="Regular"
     ModePrefix="RTR"
+    ConfigClass=class'BTServer_RegularModeConfig'
 
     ExperienceBonus=25
 

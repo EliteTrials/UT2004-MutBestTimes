@@ -128,7 +128,6 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
 
 defaultproperties
 {
-    ModeName="Normal"
-    ModePrefix="NTR"
+    ConfigClass=class'BTServer_TrialModeConfig'
     PointsPenalty=0.25
 }
