@@ -221,7 +221,7 @@ defaultproperties
     Achievements(50)=(Title="Naliman",ID=map_9,CatID="cat_map",Description="Survive through the Eldora passages",Points=10,EffectColor=(R=255,G=165,A=255),ItemRewardId="md_eldor")
 
     // Geometric Absolution Achievements
-    Achievements(51)=(Title="Collection Absolute",ID=map_10_col,CatID="cat_col",Type=ColGem,Count=6,Description="Complete all the achievements for Geometric Absolution",Points=5,EffectColor=(R=255,G=255,B=255,A=255),Icon="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Achievements(51)=(Title="Collection Absolute",ID=map_10_col,CatID="cat_col",Type=ColGem,Count=6,Description="Complete all the achievements for Geometric Absolution",Points=5,EffectColor=(R=255,G=255,B=255,A=255),Icon="AS_FX_TX.Icons.ScoreBoard_Objective_Final",ItemRewardId="md_gemab")
     Achievements(52)=(Title="Karma Cube",ID=map_10_kcube,CatID="cat_col_gemab",Description="Karma cubes?",Points=1,EffectColor=(R=255,G=255,B=255,A=255))
     Achievements(53)=(Title="Companion Cube",ID=map_10_ccube,CatID="cat_col_gemab",Description="Find the Companion Cube",Points=1,EffectColor=(R=255,G=255,B=255,A=255))
     Achievements(54)=(Title="Absoluted",ID=map_10,CatID="cat_col_gemab",Description="Set a record on Geometric Absolution",Points=5,EffectColor=(R=255,G=255,B=255,A=255))
