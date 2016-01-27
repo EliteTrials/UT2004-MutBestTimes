@@ -782,7 +782,7 @@ final static function DecompressStoreData( int data, out int price, out byte acc
 //int cost, bool bBought, bool bEnabled
 simulated final function ClientSendItem( string itemName, string id, int data )
 {
-    local byte bBought, bEnabled, access;
+    local byte access;
     local int cost;
 
     Items.Insert( 0, 1 );

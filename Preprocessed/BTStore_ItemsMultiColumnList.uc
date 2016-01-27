@@ -32,7 +32,6 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
     local string price;
-    local byte orgStyle;
 
     if( CRI == none )
         return;

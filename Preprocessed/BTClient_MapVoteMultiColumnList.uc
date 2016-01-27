@@ -166,7 +166,6 @@ static function string MyPadLeft( string Src, byte StrLen, optional string PadSt
 
 function string GetSortString( int i )
 {
-	local string ColumnData[5];
 	local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
 
 	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);

@@ -138,18 +138,15 @@ Simulated Function UpdateScoreBoard( Canvas C )
                 XL,
                 YL,
                 TY,
-                PTime,
                 PredictedPY,
                 PredictedSY,
                 rowTileX, rowTextX,
-                rowTileY, rowTextY,
                 rowWidth, rowHeight, rowMargin, rowSegmentHeight;
 
     local int i, j;
     local array<PlayerReplicationInfo> SortedPlayers, SortedSpectators;
     local bool bSkipSpectators;
-    local string NextText, s;
-    local BTClient_ClientReplication CRI;
+    local string s;
 
     if( GRI == none || myInter == none )
         return; // Still receiving server state...

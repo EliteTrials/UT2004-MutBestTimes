@@ -53,16 +53,6 @@ Function InitializeTrailer()
 
 Function Opened( GUIComponent Sender )
 {
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     InitializeTrailer();
 
     // Setup color for sliders...
@@ -123,13 +113,6 @@ Function Closed( GUIComponent Sender, bool bCancelled )
 {
     local int i;
 
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     if( TrailerCopy != None )
     {
         TrailerCopy.Destroy();
@@ -173,12 +156,6 @@ Function UpdateSliderValues( color newvalue[2] )
 {
     local int i;
 
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     for( i = 0; i < 2; ++ i )
     {
         s_Red[i].SetValue( newvalue[i].R );
@@ -191,12 +168,6 @@ Function UpdateSliderValues( color newvalue[2] )
 Function UpdateTrailer()
 {
     local int i;
-
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
 
     if( TrailerCopy == None )
         return;
@@ -211,12 +182,6 @@ Function UpdateTrailer()
 
 Function UpdateSliderColors()
 {
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     SlideColor[0].Color.R = s_Red[0].Value;
     SlideColor[1].Color.G = s_Green[0].Value;
     SlideColor[2].Color.B = s_Blue[0].Value;
@@ -228,14 +193,6 @@ Function UpdateSliderColors()
 Function bool InternalOnClick( GUIComponent Sender )
 {
     local int i;
-
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
 
     if( PlayerOwner().Level.TimeSeconds-LastSaveTime > 0.5 )
         EnableComponent( b_Save );
@@ -268,13 +225,6 @@ Function InternalOnChange( GUIComponent Sender )
 {
     local Material M;
 
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     if( Sender == TrailerTex )
     {
         if( TrailerCopy == None )
@@ -299,13 +249,6 @@ Function InternalOnChange( GUIComponent Sender )
 
 Function InitializePreview()
 {
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     TrailerCopy = PlayerOwner().Spawn( Class'BTClient_PreviewTrailer', None );
     if( TrailerCopy != None )
     {
@@ -321,13 +264,6 @@ Function InitializePreview()
 
 Function UpdateTrailerOffset()
 {
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
-
     if( A >= 0 && A < 20 )
         Trailer_Offset.Y += Incr;
 
@@ -350,13 +286,6 @@ Function bool InternalOnDraw( Canvas C )
 {
     local vector CamPos, X, Y, Z;
     local rotator CamRot;
-
-    goto 'F';
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    if( bool( int( bool( int( bool( int( bool( int( bool( int( bool( int( False ) ) ) ) ) ) ) ) ) ) ) ) )
-    F:
 
     if( TrailerCopy == None )
         return False;

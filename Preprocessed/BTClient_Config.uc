@@ -62,12 +62,6 @@ var() globalconfig
     string
     StoreFilter;
 
-replication
-{
-    reliable if( bool( int( False ) ) )
-        OldResult;
-}
-
 // .:..: Method
 final static function BTClient_Config FindSavedData()
 {

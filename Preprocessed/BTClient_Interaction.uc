@@ -11,21 +11,6 @@ class BTClient_Interaction extends Interaction;
 #Exec obj load file="MenuSounds.uax"
 #Exec obj load file="ClientBTimes.utx" package="ClientBTimesV6"
 
-const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2014 Eliot and .:..:. All Rights Reserved";
-const META_DECOMPILER_EVENT_ONLOAD_MESSAGE      = "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
-
-struct LongBuggyCompilerStruct
-{
-    var int LongBuggyCompilerStruct;
-};
-
-replication
-{
-    reliable if( bool(int(False)) )
-        Orange;
-}
-
 struct sTableColumn
 {
     var string Title;
@@ -218,7 +203,7 @@ final static function Color Lighten( Color c, float pct )
     return MakeColor( c.R*pct, c.G*pct, c.B*pct, c.A );
 }
 
-Final Function SendConsoleMessage( string Msg )
+final function SendConsoleMessage( string Msg )
 {
     ViewportOwner.Actor.Player.Console.Message( Msg, 1.0 );
 }
@@ -234,7 +219,7 @@ exec function TestAchievement( optional bool bProgress )
 }
 
 // Shortcut for Mutate
-Exec Function BT( string Command )
+exec function BT( string Command )
 {
     if( Delay > ViewportOwner.Actor.Level.TimeSeconds )
         return;
@@ -243,7 +228,7 @@ Exec Function BT( string Command )
     ViewportOwner.Actor.ServerMutate( Command );
 }
 
-Exec Function Store( string command )
+exec function Store( string command )
 {
     local array<string> params;
 
@@ -296,7 +281,7 @@ exec function ActivateKey( string key )
     BT( "ActivateKey" @ key );
 }
 
-exec Function BTCommands()
+exec function BTCommands()
 {
     if( ViewportOwner.Actor.PlayerReplicationInfo.bAdmin )
     {
@@ -345,7 +330,7 @@ exec Function BTCommands()
     }
 }
 
-Exec Function SetConfigProperty( string Property, string Value )
+exec function SetConfigProperty( string Property, string Value )
 {
     if( Options != None )
     {
@@ -359,7 +344,7 @@ exec function CloseDialog()
     MRI.CR.Text.Length = 0;
 }
 
-/*Exec Function AutoPress()
+/*exec function AutoPress()
 {
     if( MRI.CR.Rank <= MRI.CR.OverallTop.Length && MRI.CR.Rank > 0 )
     {
@@ -369,13 +354,13 @@ exec function CloseDialog()
     else SendConsoleMessage( "Sorry you need to be in the top"@MRI.CR.OverallTop.Length$"!" );
 }*/
 
-Exec Function SetTableColor( optional color tc )
+exec function SetTableColor( optional color tc )
 {
     Options.CTable = tc;
     Options.SaveConfig();
 }
 
-Exec Function SetTextColor( optional color tc )
+exec function SetTextColor( optional color tc )
 {
     Options.CGoldText = tc;
     Options.SaveConfig();
@@ -404,7 +389,7 @@ exec function PreferedColorDialog()
     ViewportOwner.Actor.ClientOpenMenu( string(class'BTGUI_ColorDialog') );
 }
 
-Exec Function SetYOffsetScale( float newScale )
+exec function SetYOffsetScale( float newScale )
 {
     YOffsetScale = newScale;
 }
@@ -415,7 +400,7 @@ exec function SetGlobalSort( int sort )
     Options.SaveConfig();
 }
 
-Exec Function ShowBestTimes()
+exec function ShowBestTimes()
 {
     local string FPage;
 
@@ -436,7 +421,7 @@ Exec Function ShowBestTimes()
     else SendConsoleMessage( "Sorry ShowBestTimes is not available on this server!" );
 }
 
-Exec Function ClearAttachments()
+exec function ClearAttachments()
 {
     local int i, j;
     local Pawn P;
@@ -471,7 +456,7 @@ exec function TrailerMenu()
     ViewportOwner.Actor.ClientOpenMenu( string( Class'BTClient_TrailerMenu' ) );
 }
 
-Exec Function FastSuicide()
+exec function FastSuicide()
 {
     if( ViewportOwner.Actor.Pawn == None )
         return;
@@ -479,164 +464,144 @@ Exec Function FastSuicide()
     BT( "Suicide" );
 }
 
-Exec Function RecentRecords()
+exec function RecentRecords()
 {
     BT( "RecentRecords" );
 }
 
-Exec Function RecentHistory()
+exec function RecentHistory()
 {
     BT( "RecentHistory" );
 }
 
-Exec Function RecentMaps()
+exec function RecentMaps()
 {
     BT( "RecentMaps" );
 }
 
-Exec Function SetTrailerColor( string CmdLine )
+exec function SetTrailerColor( string CmdLine )
 {
     BT( "SetTrailerColor" @ CmdLine );
 }
 
-Exec Function SetTrailerTexture( string CmdLine )
+exec function SetTrailerTexture( string CmdLine )
 {
     BT( "SetTrailerTexture" @ CmdLine );
 }
 
-Exec Function ShowPlayerInfo( string playerName )
+exec function ShowPlayerInfo( string playerName )
 {
     BT( "ShowPlayerInfo" @ playerName );
 }
 
-Exec Function ShowMapInfo( string mapName )
+exec function ShowMapInfo( string mapName )
 {
     BT( "ShowMapInfo" @ mapName );
 }
 
-Exec Function ShowMissingRecords()
+exec function ShowMissingRecords()
 {
     BT( "ShowMissingRecords" );
 }
 
-Exec Function ShowBadRecords()
+exec function ShowBadRecords()
 {
     BT( "ShowBadRecords" );
 }
 
-Exec Function SetClientSpawn()
+exec function SetClientSpawn()
 {
     BT( "SetClientSpawn" );
 }
 
-Exec Function CreateClientSpawn()
+exec function CreateClientSpawn()
 {
     BT( "CreateClientSpawn" );
 }
 
-Exec Function MakeClientSpawn()
+exec function MakeClientSpawn()
 {
     BT( "MakeClientSpawn" );
 }
 
-Exec Function DeleteClientSpawn()
+exec function DeleteClientSpawn()
 {
     BT( "DeleteClientSpawn" );
 }
 
-Exec Function RemoveClientSpawn()
+exec function RemoveClientSpawn()
 {
     BT( "RemoveClientSpawn" );
 }
 
-Exec Function KillClientSpawn()
+exec function KillClientSpawn()
 {
     BT( "KillClientSpawn" );
 }
 
-Exec Function ResetCheckPoint()
+exec function ResetCheckPoint()
 {
     BT( "ResetCheckPoint" );
 }
 
-Exec Function VoteMapSeq( int sequence )
+exec function VoteMapSeq( int sequence )
 {
     BT( "VoteMapSeq" @ sequence );
 }
 
-Exec Function RevoteMap()
+exec function RevoteMap()
 {
     if( ViewportOwner.Actor.PlayerReplicationInfo.bAdmin || ViewportOwner.Actor.Level.NetMode == NM_StandAlone )
         BT( "QuickStart" );
     else BT( "VoteMap" @ Left( string(MRI), InStr( string(MRI), "." ) ) );
 }
 
-Exec Function VoteMap( string PartInMapName )
+exec function VoteMap( string PartInMapName )
 {
     BT( "VoteMap" @ PartInMapName );
 }
 
-Exec Function ToggleGhost()
+exec function ToggleGhost()
 {
     BT( "ToggleGhost" );
 }
 
-Exec Function GhostFollow( string playerName )
+exec function GhostFollow( string playerName )
 {
     BT( "GhostFollow" @ playerName );
 }
 
-Exec Function GhostFollowID( int playerID )
+exec function GhostFollowID( int playerID )
 {
     BT( "GhostFollowID" @ playerID );
 }
 
-Exec Function Race( string playerName )
+exec function Race( string playerName )
 {
     BT( "Race" @ playerName );
 }
 
-Exec Function ToggleRanking()
+exec function ToggleRanking()
 {
-    /*if( MRI.bSoloMap && MRI.CR.SoloTop.Length != 0 )
-    {
-        if( !Options.bShowRankingTable && TablePage == 0 )
-            TablePage = -1;
-
-        if( TablePage == -1 )
-        {
-            Options.bShowRankingTable = True;
-            Options.SaveConfig();
-        }
-        ++ TablePage;
-        if( TablePage > 1 )
-        {
-            TablePage = -1;
-            Options.bShowRankingTable = False;
-            Options.SaveConfig();
-        }
-        return;
-    }*/
-
     Options.bShowRankingTable = !Options.bShowRankingTable;
     Options.SaveConfig();
 }
 
-Exec Function SpeedRun()
+exec function SpeedRun()
 {
     Options.bUseAltTimer = !Options.bUseAltTimer;
     SendConsoleMessage( "SpeedRun:"$Options.bUseAltTimer );
     Options.SaveConfig();
 }
 
-Exec Function ToggleColorFade()
+exec function ToggleColorFade()
 {
     Options.bFadeTextColors = !Options.bFadeTextColors;
     SendConsoleMessage( "FadeTextColors:"$Options.bFadeTextColors );
     Options.SaveConfig();
 }
 
-Exec Function TogglePersonalTimer()
+exec function TogglePersonalTimer()
 {
     Options.bBaseTimeLeftOnPersonal = !Options.bBaseTimeLeftOnPersonal;
     SendConsoleMessage( "Using PersonalTime:"$Options.bBaseTimeLeftOnPersonal );
@@ -883,14 +848,14 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
     return False;
 }
 
-Exec Function StartTimer()
+exec function StartTimer()
 {
     bTestRun = true;
     LastTickTime = MRI.Level.TimeSeconds;
     SendConsoleMessage( "Test-Run:ON" );
 }
 
-Exec Function PauseTimer()
+exec function PauseTimer()
 {
     if( bTestRun )
     {
@@ -899,7 +864,7 @@ Exec Function PauseTimer()
     }
 }
 
-Exec Function StopTimer()
+exec function StopTimer()
 {
     SendConsoleMessage( "Test-Run:OFF" );
     bTestRun = False;
@@ -1095,41 +1060,36 @@ function UpdateToggleKey()
 {
     local string Key;
 
-    Key = Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey );
+    Key = class'Interactions'.static.GetFriendlyName( Options.RankingTableKey );
     if( Len( OldKey ) == 0 )
     {
-        RankingKeyMsg = Repl( RankingKeyMsg, "%KEY%", Class'GameInfo'.Static.MakeColorCode( Options.CGoldText )$Key$Class'GameInfo'.Static.MakeColorCode( Class'HUD'.Default.WhiteColor ) );
+        RankingKeyMsg = Repl( RankingKeyMsg, "%KEY%", Options.CGoldText$Key$class'HUD'.default.WhiteColor );
     }
     else
     {
-        RankingKeyMsg = Repl( RankingKeyMsg, OldKey, Class'GameInfo'.Static.MakeColorCode( Options.CGoldText )$Key$Class'GameInfo'.Static.MakeColorCode( Class'HUD'.Default.WhiteColor ) );
+        RankingKeyMsg = Repl( RankingKeyMsg, OldKey, Options.CGoldText $Key$class'HUD'.default.WhiteColor );
     }
     OldKey = Key;
 }
 
-Final Function ObjectsInitialized()
+final function ObjectsInitialized()
 {
     local Pickup Key;
 
-    if( ViewportOwner.Actor.myHUD != None && BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard) != None )
-        BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard).myInter = Self;
+    if( ViewportOwner.Actor.myHUD != none && BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard) != none )
+        BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard).myInter = self;
 
     if( MRI != None )
     {
         if( MRI.bKeyMap )
         {
-            ForEach ViewportOwner.Actor.AllActors( Class'Pickup', Key )
+            foreach ViewportOwner.Actor.AllActors( class'Pickup', Key )
             {
                 if( Key.IsA('LCAKeyPickup') )
                     KeyPickupsList[KeyPickupsList.Length] = Key;
             }
         }
     }
-
-    /*if( Options.bShowRankingTable && MRI.CR != none && MRI.CR.OverallTop.Length == 0 )
-    {
-        ViewportOwner.Actor.ServerMutate( "BTClient_RequestRankings" );
-    }*/
 }
 
 private function ReplaceVotingMenu()
@@ -1233,7 +1193,7 @@ event NotifyLevelChange()
     Master.RemoveInteraction( self );
 }
 
-Final Function Color GetFadingColor( color FadingColor )
+final function Color GetFadingColor( color FadingColor )
 {
     if( Options.bFadeTextColors )
         return MRI.GetFadingColor( FadingColor );
@@ -1241,7 +1201,7 @@ Final Function Color GetFadingColor( color FadingColor )
     return FadingColor;
 }
 
-Exec Function ShowZoneActors( optional bool bshowAll, optional bool bdynamicOnly, optional name tag, optional byte rm )
+exec function ShowZoneActors( optional bool bshowAll, optional bool bdynamicOnly, optional name tag, optional byte rm )
 {
     Options.bShowZoneActors = !Options.bShowZoneActors || bshowAll;
     SendConsoleMessage( "ShowZoneActors:"$Options.bShowZoneActors );
@@ -1303,7 +1263,7 @@ exec function ToggleMisc2( byte bit )
     else ViewPortOwner.Actor.Misc2 = ViewPortOwner.Actor.Misc2 | flag;
 }
 
-Final Function RenderZoneActors( Canvas C )
+final function RenderZoneActors( Canvas C )
 {
     local Actor A;
     local Teleporter NextTP;
@@ -1438,7 +1398,7 @@ Final Function RenderZoneActors( Canvas C )
 }
 
 // Calculation done by Freon_HUD !.
-Final Function RenderRankIcon( Canvas C )
+final function RenderRankIcon( Canvas C )
 {
     local xPawn P;
     local vector Scre, CamLoc, X, Y, Z, Dir;
@@ -1526,14 +1486,14 @@ Final Function RenderRankIcon( Canvas C )
     }
 }
 
-Exec Function SetFontSize( int NewSize )
+exec function SetFontSize( int NewSize )
 {
     Options.DrawFontSize = NewSize;
     Options.SaveConfig();
 }
 
 // As of LCA v3 ClientBTimes will no longer render keys, LCA v3 will now render the keys.
-Final Function RenderKeys( Canvas C )
+final function RenderKeys( Canvas C )
 {
     local int i, j;
     local string KeyName;
@@ -2274,7 +2234,6 @@ final function RenderRecordsTable( Canvas C )
     local float fontXL, fontYL;
 
     // Temporary string measures.
-    local float xl, yl;
     local string s;
 
     // FLOW
@@ -2494,15 +2453,10 @@ function RenderFooter( Canvas C )
 function PostRender( Canvas C )
 {
     local string S;
-    local float XL,YL,YL2,YL3,YL4;
-    local int i, j, YLength, ExYL, FLength;
-    local float YP, XP, XPL, YPL;
-    local float XP1, XP2, XP3, XP4, XP5;
-    local float nXP, nYP;
-    local float TableXL;
-    local float TableOffset;
-    local float FXL, FYL;
-    local float rXL;
+    local float XL,YL;
+    local int i, j, YLength, FLength;
+    local float YP, XP;
+    local float XP1;
     local LinkedReplicationInfo LRI;
     local xPawn p;
 
@@ -2757,7 +2711,6 @@ function RenderHUDElements( Canvas C )
 {
     // PRE-RENDERED
     local float drawX, drawY;
-    local float fontXL, fontYL;
 
     // Temporary string measures.
     local float xl, yl;
@@ -2923,7 +2876,6 @@ function DrawRecordWidget( Canvas C )
 
     // PRE-RENDERED
     local float drawX, drawY;
-    local float fontXL, fontYL;
     local float width, height;
 
     // Temporary string measures.
@@ -3151,7 +3103,7 @@ final function float GetTimeLeft()
     }
 }
 
-/*Final Function DrawTextBox( Canvas C, float X, float Y, string Text, string Value, color ValueColor )
+/*final function DrawTextBox( Canvas C, float X, float Y, string Text, string Value, color ValueColor )
 {
     local string S;
     local float XL, YL;
@@ -3189,7 +3141,7 @@ final function float GetTimeLeft()
 }*/
 
 // Enhanced copy of HUD_Assault.uc
-Final Function DrawTextWithBackground( Canvas C, String Text, Color TextColor, float XO, float YO )
+final function DrawTextWithBackground( Canvas C, String Text, Color TextColor, float XO, float YO )
 {
     local float XL, YL, XL2, YL2;
 
