@@ -7,7 +7,7 @@
 //==============================================================================
 class BTUI_AchievementState extends CriticalEventPlus;
 
-#exec obj load file="../Textures/Stock/2K4Menus.utx"
+#exec obj load file="2K4Menus.utx"
 
 var() Material AchievementBackground;
 var() Texture AchievementDefaultIcon;
