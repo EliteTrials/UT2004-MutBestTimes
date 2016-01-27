@@ -48,8 +48,6 @@ var int MaxRecords;
 var int PlayersCount;
 var int MaxMoves;
 var int SoloRecords;
-var int TotalCurrencySpent;
-var int TotalItemsBought;
 
 var float TeamTime[2];
 
@@ -69,10 +67,6 @@ replication
 
     reliable if( bNetDirty /*&& EndMsg != ""*/ )
         PointsReward;
-
-    reliable if( bNetDirty )
-        TotalCurrencySpent,
-        TotalItemsBought;
 
     reliable if( !bSoloMap )
         MatchStartTime;
