@@ -1400,8 +1400,6 @@ event PreBeginPlay()
     MRI.Credits = "v" $ Class'HUD'.Default.GoldColor $ BTVersion $ Class'HUD'.Default.WhiteColor @ Credits;
     MRI.PlayersCount = PDat.Player.Length;
     MRI.MaxRecords = RDat.Rec.Length;
-    MRI.TotalCurrencySpent = PDat.TotalCurrencySpent;
-    MRI.TotalItemsBought = PDat.TotalItemsBought;
 
     // Get a list of all the objectives, for ClientSpawn performance
     if( AssaultGame != none )

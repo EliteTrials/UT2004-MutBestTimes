@@ -208,28 +208,30 @@ final function bool HasItem( int playerSlot, string id, optional out int itemSlo
 
 final function GiveItem( BTClient_ClientReplication CRI, string id )
 {
-    local int j, playerSlot;
-    local BTClient_ClientReplication.sPlayerItemClient item;
-    local int itemIndex;
+    local int invIndex, playerSlot;
 
     playerSlot = CRI.A1233432;
     if( playerSlot == -1 )
         return;
 
     // TODO: Support stackable items.
-    j = Player[playerSlot].Inventory.BoughtItems.Length;
-    Player[playerSlot].Inventory.BoughtItems.Length = j + 1;
-    Player[playerSlot].Inventory.BoughtItems[j].ID = id;
+    invIndex = Player[playerSlot].Inventory.BoughtItems.Length;
+    Player[playerSlot].Inventory.BoughtItems.Length = invIndex + 1;
+    Player[playerSlot].Inventory.BoughtItems[invIndex].ID = id;
+    // For team items.
+    OnItemGiven( CRI, invIndex );
+}
+
+// Notify our player that an item has been added to his inventory, to give UIs a change to reflect changes.
+// FIXME: Bad code and relatively expensive!
+final function OnItemGiven( BTClient_ClientReplication CRI, int invIndex )
+{
+    local BTClient_ClientReplication.sPlayerItemClient item;
+    local int itemIndex;
+
     ++ TotalItemsBought;
-    // MRI
-    BT.A123341.TotalItemsBought = TotalItemsBought;
-    BT.Store.ItemBought( CRI, id );
-
-    // Notify our player that an item has been added to his inventory, to give UIs a change to reflect changes.
-    // FIXME: Bad code and relatively expensive!
-    item.Id = Player[playerSlot].Inventory.BoughtItems[j].ID;
-    item.bEnabled = Player[playerSlot].Inventory.BoughtItems[j].bEnabled;
-
+    item.Id = Player[CRI.A1233432].Inventory.BoughtItems[invIndex].ID;
+    BT.Store.OnItemAcquired( CRI, item.Id );
     itemIndex = BT.Store.FindItemByID( item.Id );
     item.Name = BT.Store.Items[itemIndex].Name;
     item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
@@ -353,8 +355,6 @@ final function SpendCurrencyPoints( int playerSlot, int amount )
     BT.NotifySpentCurrency( playerSlot, amount );
 
     TotalCurrencySpent += amount;
-    // MRI
-    BT.A123341.TotalCurrencySpent = TotalCurrencySpent;
 }
 
 final function GiveCurrencyPoints( int playerSlot, int amount, optional bool shouldIgnoreBonuses )

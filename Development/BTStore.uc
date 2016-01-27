@@ -69,7 +69,7 @@ struct sItem
 
 var() array<sItem> Items;
 var() globalconfig array<sItem> CustomItems;
-var() globalconfig float DefaultDropChance;
+var() const float DefaultDropChance;
 
 struct sCategory
 {
@@ -355,6 +355,11 @@ final function Cache()
         {
             Items[i].Access = Admin;
         }
+
+        if( Items[i].DropChance == 0.0 )
+        {
+            Items[i].DropChance = 1.0;
+        }
     }
     AddToPackageMap( "TextureBTimes" );
 }
@@ -450,7 +455,7 @@ final function float GetItemDropChance( int itemIndex )
     {
         bonus += 0.05;
     }
-    return DefaultDropChance*(1.0 + bonus + Items[itemIndex].DropChance);
+    return DefaultDropChance*(1.0 + bonus)*Items[itemIndex].DropChance;
 }
 
 final function int GetRandomItem()
@@ -459,7 +464,7 @@ final function int GetRandomItem()
 
 tryagain:
     randomIndex = Rand(Items.Length);
-    if( Items[randomIndex].Access != Buy || Items[randomIndex].Access == Drop )
+    if( Items[randomIndex].Access != Drop )
     {
         if( tries >= Items.Length )
         {
@@ -538,7 +543,7 @@ final function ItemRemoved( int playerSlot, string itemID )
 }
 
 /** Called when an item was bought by a player or through the "GiveItem" function. */
-final function ItemBought( BTClient_ClientReplication CRI, string itemID )
+final function OnItemAcquired( BTClient_ClientReplication CRI, string itemID )
 {
     local int outTeamIndex;
 
@@ -803,22 +808,22 @@ defaultproperties
     Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
 
     // Upgrades - Bonuses
-    Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Rarity=Uncommon,Cost=200,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
-    Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Rarity=Uncommon,Access=Premium,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
+    Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Rarity=Uncommon,Cost=1000,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
+    Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Rarity=Uncommon,Cost=3000,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
     Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Rarity=Uncommon,Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Rarity=Uncommon,Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
+    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Rarity=Uncommon,Access=Drop,Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
 
     // Player Skins
-    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=300,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
-    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=600,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
-    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",cost=900,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
+    Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",Cost=2000,Access=Drop,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
+    Items(7)=(Name="Grade E Skin",Id="skin_grade_e",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",Cost=2000,Access=Drop,Desc="Official Wire Skin E",IMG="TextureBTimes.GradeE_FB",Vars=("OverlayMat:TextureBTimes.GradeE_FB"))
+    Items(8)=(Name="Grade D Skin",Id="skin_grade_d",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",Cost=2000,Access=Drop,Desc="Official Wire Skin D",IMG="TextureBTimes.GradeD",Vars=("OverlayMat:TextureBTimes.GradeD"))
 
     // Player Perks
-    Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Cost=1000,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
-    Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Cost=500,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
+    Items(9)=(Name="Dodge Assistance",ID="perk_dodge_assistance",Type="Perk_Dodge",Access=Free,Desc="Assists the player with timing dodges",IMG="TextureBTimes.PerkIcons.matrix",ApplyOn=T_Player)
+    Items(10)=(Name="Press Assistance",ID="perk_press_assistance",Type="Perk_Press",Access=Free,Desc="Auto presses for the player upon touch of any objective",IMG="TextureBTimes.PerkIcons.trollface",ApplyOn=T_Player)
 
     // Vehicle Skins
-    Items(11)=(Name="Vehicle Goldify",Id="vskin_gold",Type="VehicleSkin",Rarity=Rare,ItemClass="Engine.Vehicle",Access=Premium,Desc="Goldifies your vehicles skin",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
+    Items(11)=(Name="Golden Vehicle",Id="vskin_gold",Type="VehicleSkin",Rarity=Rare,ItemClass="Engine.Vehicle",Access=Premium,Desc="Drive around with a golden vehicle!",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
     // Map medals
     Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
