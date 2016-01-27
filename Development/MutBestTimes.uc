@@ -11,8 +11,8 @@ class MutBestTimes extends Mutator
     dependson(BTActivateKey)
     dependson(BTServer_CheckPoint);
 
-#exec obj load file="..\System\TrialGroup.u"
-#exec obj load file="..\Sounds\Stock\AnnouncerSexy.uax"
+#exec obj load file="TrialGroup.u"
+#exec obj load file="AnnouncerSexy.uax"
 
 //==============================================================================
 // Macros
@@ -1416,7 +1416,6 @@ event PreBeginPlay()
     }
 
     Store = class'BTStore'.static.Load( self );
-    FullLog( "Store:" @ Store );
 
     // WARNING: Do not add any code below!
     if( ModeIsTrials() )
@@ -5713,7 +5712,7 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
         NL = Spawn( Class'BTServer_NotifyLogin', Self );
         if( NL != None )
         {
-            NL.Client = PlayerController(Other);
+            NL.Player = PlayerController(Other);
             NL.SetTimer( NL.NotifyDelay, False );
         }
     }
@@ -5748,11 +5747,6 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
                 {
                     WebServer(Other).Applications[i] = string(class'BTAdmin');
                     WebServer(Other).ApplicationPaths[i] = "/BTAdmin";
-                    /*WebServer(Other).ApplicationObjects[i] = new( self ) class'BTAdmin';
-                    WebServer(Other).ApplicationObjects[i].Level = Level;
-                    WebServer(Other).ApplicationObjects[i].WebServer = WebServer(Other);
-                    WebServer(Other).ApplicationObjects[i].Path = "/BTAdmin";
-                    WebServer(Other).ApplicationObjects[i].Init();*/
                     break;
                 }
             }

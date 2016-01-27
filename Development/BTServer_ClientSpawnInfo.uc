@@ -3,8 +3,6 @@
 //=============================================================================
 class BTServer_ClientSpawnInfo extends Info;
 
-#include DEC_Structs.uc
-
 var BTimesMute M;
 
 // Don't notify mutators, no need and happens too much because players die so often

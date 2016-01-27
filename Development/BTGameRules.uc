@@ -6,8 +6,6 @@ class BTGameRules extends GameRules;
 var array<Controller> LastHitsBy, Injureds;
 var MutBestTimes BT;
 
-#include DEC_Structs.uc
-
 const EXP_Dead = 1;
 
 event PostBeginPlay()
@@ -111,34 +109,6 @@ private final function bool FindRoundEnd()
 
     return False;
 }
-
-/*Function bool OverridePickupQuery( Pawn Other, Pickup item, out byte bAllowPickup )
-{
-    local GameRules GR;
-
-    if( TournamentPickup(Item) != None )
-    {
-        if( Skips > 0 )
-        {
-            Skips --;
-            bAllowPickup = 0;
-            return True;
-        }
-        Skips = 1;
-        GR = Level.Game.GameRulesModifiers;
-        Level.Game.GameRulesModifiers = None;
-        Item.Touch( Other );
-        if( !Item.IsInState( 'Pickup' ) )
-        {
-            Item.GotoState( 'Pickup' );
-            Item.RespawnEffect();
-        }
-        Level.Game.GameRulesModifiers = GR;
-        bAllowPickup = 0;
-        return True;
-    }
-    return Super.OverridePickupQuery(Other,Item,bAllowPickup);
-}*/
 
 function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> damageType, vector HitLocation )
 {

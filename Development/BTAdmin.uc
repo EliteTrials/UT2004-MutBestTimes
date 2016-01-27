@@ -36,7 +36,7 @@ event Query( WebRequest request, WebResponse response )
 
     if( BT == none )
     {
-        FindBT();
+        BT = class'BTUtils'.static.GetBT( Level );
     }
 
     if( request.URI == "/" )
@@ -257,20 +257,6 @@ function Perform( WebResponse response, string method, string mapName )
     else
     {
         response.SendText( "<p>Couldn't find" @ mapName @ "</p>" );
-    }
-}
-
-final function FindBT()
-{
-    local Mutator m;
-
-    for( m = Level.Game.BaseMutator; m != none; m = m.NextMutator )
-    {
-        if( MutBestTimes(m) != none )
-        {
-            BT = MutBestTimes(m);
-            break;
-        }
     }
 }
 

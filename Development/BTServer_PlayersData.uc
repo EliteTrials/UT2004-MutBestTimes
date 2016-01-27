@@ -5,7 +5,7 @@ class BTServer_PlayersData extends Object
     dependson(BTStructs)
     hidedropdown;
 
-#exec obj load file="..\System\ClientBTimesV6.u"
+#exec obj load file="ClientBTimesV6.u"
 
 struct sBTPlayerInfo
 {
@@ -119,23 +119,6 @@ var transient MutBestTimes BT;
 final function Free()
 {
     BT = none;
-}
-
-final function StringToArray( string s, out array<string> a )
-{
-    local int i;
-
-    a.Length = Len( s );
-    if( a.Length == 1 )
-    {
-        a[0] = s;
-        return;
-    }
-
-    for( i = 0; i < a.Length; ++ i )
-    {
-        a[i] = Mid( Left( s, i + 1), i );
-    }
 }
 
 final function bool HasTrophy( int playerSlot, string trophyID )

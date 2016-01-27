@@ -44,11 +44,28 @@ final static function string DecimalToBinary( int decimal )
     return binary;
 }
 
-final static function MutBestTimes GetBT( Actor src )
+final function StringToArray( string s, out array<string> a )
+{
+    local int i;
+
+    a.Length = Len( s );
+    if( a.Length == 1 )
+    {
+        a[0] = s;
+        return;
+    }
+
+    for( i = 0; i < a.Length; ++ i )
+    {
+        a[i] = Mid( Left( s, i + 1), i );
+    }
+}
+
+final static function MutBestTimes GetBT( LevelInfo world )
 {
     local Mutator m;
 
-    for( m = src.Level.Game.BaseMutator; m != none; m = m.NextMutator )
+    for( m = world.Game.BaseMutator; m != none; m = m.NextMutator )
     {
         if( MutBestTimes(m) != none )
         {
