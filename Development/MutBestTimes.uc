@@ -14,8 +14,6 @@ class MutBestTimes extends Mutator
 #exec obj load file="..\System\TrialGroup.u"
 #exec obj load file="..\Sounds\Stock\AnnouncerSexy.uax"
 
-//#include DEC_Structs.uc
-
 //==============================================================================
 // Macros
 //  Major Version // Major modification
@@ -23,6 +21,7 @@ class MutBestTimes extends Mutator
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
 const BTVersion                         = "4.0.1.0";
+const CREDITS                           = "Copyright 2005-2016 Eliot van Uytfanghe and .:..:";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
 const MaxHistoryLength                  = 25;
@@ -34,10 +33,6 @@ const EXP_FirstRecord                   = 40;
 const EXP_TiedRecord                    = 30;
 const EXP_FailRecord                    = 3;
 const EXP_Objective                     = 4;
-
-const META_DECOMPILER_VAR_AUTHOR                = "Eliot Van Uytfanghe";
-const META_DECOMPILER_VAR_COPYRIGHT             = "(C) 2005-2016 Eliot and .:..:. All Rights Reserved";
-const META_DECOMPILER_EVENT_ONLOAD_MESSAGE      = "Please, only decompile this for learning purposes, do not edit the author/copyright information!";
 
 const groupNum = 2;
 const soloNum = 1;
@@ -1348,7 +1343,7 @@ event PreBeginPlay()
     local GameObjective Obj;
 
     FullLog( "====================================" );
-    FullLog( string(Name) @ BTVersion @ META_DECOMPILER_VAR_COPYRIGHT );
+    FullLog( string(Name) @ BTVersion @ CREDITS );
     // Make sure 'self' is not in ServerPckages!
     FullLog( "Checking ServerPackages for ServerBTimes.u" );
     if( IsInServerPackages() )
@@ -1394,10 +1389,6 @@ event PreBeginPlay()
         }
     }*/
 
-    Credits = META_DECOMPILER_VAR_COPYRIGHT;
-    Credits = Repl( Credits, "Eliot", Class'HUD'.Default.GoldColor $ "Eliot" $ Class'HUD'.Default.WhiteColor );
-    Credits = Repl( Credits, ".:..:", Class'HUD'.Default.GoldColor $ ".:..:" $ Class'HUD'.Default.WhiteColor );
-    MRI.Credits = "v" $ Class'HUD'.Default.GoldColor $ BTVersion $ Class'HUD'.Default.WhiteColor @ Credits;
     MRI.PlayersCount = PDat.Player.Length;
     MRI.MaxRecords = RDat.Rec.Length;
 
@@ -6290,7 +6281,7 @@ final function CreateWebBTimes()                                                
     "<div id="$T$"d_Server"$T$" class="$T$"hidden"$T$" align="$T$"center"$T$"><table id="$T$"t_Server"$T$">"
     $"<tr><th><b>Name</b></th><th><b>Description</b></th></tr>"
     $"<tr><td><p>Version</p></td><td><p>"$BTVersion$"</p></td><tr>"
-    $"<tr><td><p>Authors</p></td><td><p>"$META_DECOMPILER_VAR_COPYRIGHT$"</p></td><tr>"
+    $"<tr><td><p>Authors</p></td><td><p>"$CREDITS$"</p></td><tr>"
     $"<tr><td><p>Records</p></td><td><p>"$MRI.RecordsCount$"</p></td><tr>"
     $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>"
     $"<tr><td><p>Points Rewarded for 1P Record</p></td><td><p>P1("$PPoints.PlayerPoints[0].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>"
