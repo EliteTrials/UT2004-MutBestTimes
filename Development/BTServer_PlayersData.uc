@@ -220,7 +220,6 @@ final function GiveItem( BTClient_ClientReplication CRI, string id )
     j = Player[playerSlot].Inventory.BoughtItems.Length;
     Player[playerSlot].Inventory.BoughtItems.Length = j + 1;
     Player[playerSlot].Inventory.BoughtItems[j].ID = id;
-    ToggleItem( playerSlot, id );
     ++ TotalItemsBought;
     // MRI
     BT.A123341.TotalItemsBought = TotalItemsBought;
