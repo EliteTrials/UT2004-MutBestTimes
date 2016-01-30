@@ -2,6 +2,7 @@ class BTServer_ModeConfig extends Info
     config(MutBestTimes);
 
 var() config bool bAllowClientSpawn;
+var() config bool bDisableWeaponBoosting;
 var() const string ConfigGroupName;
 
 var array<BTStructs.sConfigProperty> ConfigProperties;

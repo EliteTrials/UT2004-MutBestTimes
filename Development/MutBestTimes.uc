@@ -270,7 +270,6 @@ var() globalconfig
     bAddGhostTimerPaths,
     bAllowCompetitiveMode,
     bDontEndGameOnRecord,
-    bDisableWeaponBoosting,
     bEnableInstigatorEmpathy;
 
 var() globalconfig
@@ -7981,10 +7980,6 @@ DefaultProperties
     ConfigurableProperties(20)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
     ConfigurableProperties(21)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
     ConfigurableProperties(22)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
-
-    bDisableWeaponBoosting=true
-    ConfigurableProperties(23)=(Property=BoolProperty'bDisableWeaponBoosting',Description="Disable Weapon Boosting",AccessLevel=0,Weight=1,Hint="If checked: players no longer can boost another by shooting the player.")
-
     bEnableInstigatorEmpathy=true
-    ConfigurableProperties(24)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
+    ConfigurableProperties(23)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
 }

@@ -251,7 +251,7 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
             }
 
             CRI = BT.GetRep( injured.Controller );
-            if( !BT.bDisableWeaponBoosting || (CRI != none && CRI.bPermitBoosting) )
+            if( !BT.CurMode.ConfigClass.default.bDisableWeaponBoosting || (CRI != none && CRI.bPermitBoosting) )
             {
                 // Do nothing :D
             }

@@ -5,4 +5,5 @@ defaultproperties
 	ConfigGroupName="BestTimes - STR"
 
 	bAllowClientSpawn=true
+	bDisableWeaponBoosting=true // Boosting on any solo mode is considered cheating!
 }
