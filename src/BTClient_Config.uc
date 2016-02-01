@@ -1,18 +1,12 @@
-//==============================================================================
-// BTClient_Config.uc (C) 2005-2009 Eliot and .:..:. All Rights Reserved
-/* Tasks:
-            Store dynamic configuration data
-*/
-//  Coded by Eliot
-//  Updated @ 01/12/2009
-//==============================================================================
-Class BTClient_Config extends Object
-    Config(ClientBTimes)
-    PerObjectConfig;
+//=============================================================================
+// Copyright 2005-2016 Eliot Van Uytfanghe. All Rights Reserved.
+//=============================================================================
+class BTClient_Config extends Object
+    config(ClientBTimes)
+    perobjectconfig;
 
-var BTClient_Config OldResult;
+const CONFIG_NAME = "BTConfig";
 
-// Config
 var() globalconfig
     int
     DrawFontSize,
@@ -62,24 +56,25 @@ var() globalconfig
     string
     StoreFilter;
 
-// .:..: Method
+var private BTClient_Config _ConfigInstance;
+
+// Thanks to .:..:
 final static function BTClient_Config FindSavedData()
 {
-    local BTClient_Config C;
+    local BTClient_Config cfg;
 
-    if( Default.OldResult != None )
-        return Default.OldResult;
+    if( default._ConfigInstance != none )
+        return default._ConfigInstance;
 
-    C = BTClient_Config(FindObject( "Package.BTConfig", default.Class ));
+    cfg = BTClient_Config(FindObject( "Package."$CONFIG_NAME, default.Class ));
+    if( cfg == none )
+        cfg = new (none, CONFIG_NAME) default.Class;
 
-    if( C == None )
-        C = New( None, "BTConfig" ) default.Class;
-
-    Default.OldResult = C;
-    return C;
+    default._ConfigInstance = cfg;
+    return cfg;
 }
 
-// Function by Gugi from ClanManager, Used with permission.
+// Thanks to Gugi(ClanManager), used with permission.
 final static function Interactions.EInputKey ConvertToKey( string KeyStr ) // Converts the string to the enum. KeyStr example: F8
 {
   local int CurKey;
@@ -104,29 +99,27 @@ final static function Interactions.EInputKey ConvertToKey( string KeyStr ) // Co
 
 final function ResetSavedData()
 {
-    RankingTableKey                 = Default.RankingTableKey;
-    DrawFontSize                    = Default.DrawFontSize;
-    ScreenFontSize                  = Default.ScreenFontSize;
-    bPlayTickSounds                 = Default.bPlayTickSounds;
-    TickSound                       = Default.TickSound;
-    LastTickSound                   = Default.LastTickSound;
-    //bShowRankingTable             = Default.bShowRankingTable;
-    bUseAltTimer                    = Default.bUseAltTimer;
-    bShowZoneActors                 = Default.bShowZoneActors;
-    bFadeTextColors                 = Default.bFadeTextColors;
-    bDisplayCompletingMessages      = Default.bDisplayCompletingMessages;
-    bDisplayFail                    = Default.bDisplayFail;
-    bDisplayNew                     = Default.bDisplayNew;
-    bPlayCompletingSounds           = Default.bPlayCompletingSounds;
-    FailSound                       = Default.FailSound;
-    NewSound                        = Default.NewSound;
-    bBaseTimeLeftOnPersonal         = Default.bBaseTimeLeftOnpersonal;
-    bDisplayFullTime                = Default.bDisplayFullTime;
+    RankingTableKey                 = default.RankingTableKey;
+    DrawFontSize                    = default.DrawFontSize;
+    ScreenFontSize                  = default.ScreenFontSize;
+    bPlayTickSounds                 = default.bPlayTickSounds;
+    TickSound                       = default.TickSound;
+    LastTickSound                   = default.LastTickSound;
+    //bShowRankingTable             = default.bShowRankingTable;
+    bUseAltTimer                    = default.bUseAltTimer;
+    bShowZoneActors                 = default.bShowZoneActors;
+    bFadeTextColors                 = default.bFadeTextColors;
+    bDisplayCompletingMessages      = default.bDisplayCompletingMessages;
+    bDisplayFail                    = default.bDisplayFail;
+    bDisplayNew                     = default.bDisplayNew;
+    bPlayCompletingSounds           = default.bPlayCompletingSounds;
+    FailSound                       = default.FailSound;
+    NewSound                        = default.NewSound;
+    bBaseTimeLeftOnPersonal         = default.bBaseTimeLeftOnpersonal;
+    bDisplayFullTime                = default.bDisplayFullTime;
     bResetGhostOnDead               = default.bResetGhostOnDead;
     bProfesionalMode                = default.bProfesionalMode;
     bAutoBehindView                 = default.bAutoBehindView;
-    //bNoTrailers                       = default.bNoTrailers;
-    //StoreFilter                       = default.StoreFilter;
     SaveConfig();
 }
 

@@ -1183,11 +1183,7 @@ event NotifyLevelChange()
     MRI = none;
     HU = none;
     myHUD = none;
-    if( Options != none )
-    {
-        Options.OldResult = none;
-        Options = none;
-    }
+    Options = none;
     SpectatedClient = none;
     KeyPickupsList.Length = 0;
     Master.RemoveInteraction( self );
