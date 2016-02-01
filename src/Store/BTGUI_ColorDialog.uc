@@ -18,6 +18,22 @@ final static function Color GetPreferedColor( PlayerController PC )
     return class'HUD'.default.WhiteColor;
 }
 
+function Free()
+{
+    local int i;
+
+    for( i = 0; i < arraycount(SlideColor); ++ i )
+    {
+        SlideColor[i].Material = none;
+        SlideColor[i].Color.R = 0;
+        SlideColor[i].Color.G = 0;
+        SlideColor[i].Color.B = 0;
+        SlideColor[i].Color.A = 0;
+        PlayerOwner().Level.ObjectPool.FreeObject( SlideColor[i] );
+    }
+    super.Free();
+}
+
 function Opened( GUIComponent sender )
 {
     SlideColor[0] = ColorModifier(PlayerOwner().Level.ObjectPool.AllocateObject( Class'ColorModifier' ));
