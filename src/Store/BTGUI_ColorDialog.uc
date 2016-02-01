@@ -48,7 +48,7 @@ function Opened( GUIComponent sender )
     SlideColor[3].Color.B = 255;
     s_Alpha.FillImage = SlideColor[3];
 
-    UpdateSliderValues( class'BTClient_Config'.static.A1233341().PreferedColor /*GetPreferedColor( PlayerOwner() )*/ );
+    UpdateSliderValues( class'BTClient_Config'.static.FindSavedData().PreferedColor /*GetPreferedColor( PlayerOwner() )*/ );
 }
 
 function UpdateSliderValues( Color newValue )
@@ -65,25 +65,25 @@ function bool InternalOnClick( GUIComponent sender )
     if( sender == s_Alpha )
     {
         SlideColor[3].Color.A = byte(s_Alpha.GetValueString());
-        class'BTClient_Config'.static.A1233341().PreferedColor.A = SlideColor[3].Color.A;
+        class'BTClient_Config'.static.FindSavedData().PreferedColor.A = SlideColor[3].Color.A;
         l_PreferedColor.TextColor.A = SlideColor[3].Color.A;
         return true;
     }
     else if( sender == s_Red )
     {
-        class'BTClient_Config'.static.A1233341().PreferedColor.R = byte(s_Red.GetValueString());
+        class'BTClient_Config'.static.FindSavedData().PreferedColor.R = byte(s_Red.GetValueString());
         l_PreferedColor.TextColor.R = byte(s_Red.GetValueString());
         return true;
     }
     else if( sender == s_Green)
     {
-        class'BTClient_Config'.static.A1233341().PreferedColor.G = byte(s_Green.GetValueString());
+        class'BTClient_Config'.static.FindSavedData().PreferedColor.G = byte(s_Green.GetValueString());
         l_PreferedColor.TextColor.G = byte(s_Green.GetValueString());
         return true;
     }
     else if( sender == s_Blue )
     {
-        class'BTClient_Config'.static.A1233341().PreferedColor.B = byte(s_Blue.GetValueString());
+        class'BTClient_Config'.static.FindSavedData().PreferedColor.B = byte(s_Blue.GetValueString());
         l_PreferedColor.TextColor.B = byte(s_Blue.GetValueString());
         return true;
     }

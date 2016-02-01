@@ -70,10 +70,10 @@ final static function BTClient_Config FindSavedData()
     if( Default.OldResult != None )
         return Default.OldResult;
 
-    C = BTClient_Config(FindObject( "Package.BTConfig", Class'BTClient_Config' ));
+    C = BTClient_Config(FindObject( "Package.BTConfig", default.Class ));
 
     if( C == None )
-        C = New( None, "BTConfig" ) Class'BTClient_Config';
+        C = New( None, "BTConfig" ) default.Class;
 
     Default.OldResult = C;
     return C;
