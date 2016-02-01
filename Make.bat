@@ -26,8 +26,14 @@ for /r %%i in (*.uc) do (
 cd..
 cd..
 cd system
+:: Add editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_build_name%
 ucc.exe MakeCommandlet
+:: Remove editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %project_build_name%
+:: Work around the stripper, so that it cannot embed the current .ini settings.
+ren ClientBTimes.ini ClientBTimes_bak.ini
+ucc.exe Editor.StripSourceCommandlet %project_build_name%.u
+ren ClientBTimes_bak.ini ClientBTimes.ini
 pause
 goto compile
