@@ -128,7 +128,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
             if( PlayerController(Killed.Controller).Player == None )
                 return False;
 
-            if( (!BT.IsCompetitive() && Killed.GetTeamNum() != BTimesMute(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
+            if( (!BT.IsCompetitive() && Killed.GetTeamNum() != MutBestTimes(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
                 return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
             C = Killed.Controller;

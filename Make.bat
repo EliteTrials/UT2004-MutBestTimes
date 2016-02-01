@@ -15,37 +15,11 @@ del %projn%.u
 del %projn%.ucl
 del %projn%.int
 
-echo.
-echo Copying Development to Classes
-echo.
-cd..
-cd %projn%
-xcopy Development Classes /Y /Q
-
-echo.
-echo Obfuscating classes
-echo.
-cd Development
-for %%F in (*.uc) do (
-    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  (
-        ..\..\ClientBTimesV6\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
-    )
-)
-cd..
-
-echo.
-echo Obfuscating done. Preprocessing and compiling!
-echo.
 cd..
 cd System
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %projn%
-ucc.exe editor.MakeCommandlet -EXPORTCACHE -DEBUG -SHOWDEP -SILENTBUILD -AUTO
+ucc.exe editor.MakeCommandlet -EXPORTCACHE -SHOWDEP -SILENTBUILD -AUTO
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %projn%
-pause
-
-echo.
-echo StripSource?
-echo.
 pause
 
 echo.
@@ -71,8 +45,4 @@ echo.
 echo Generating cache files
 echo.
 ucc.exe dumpintCommandlet %projn%.u
-
-cd..
-cd %projn%
-del Classes
 pause

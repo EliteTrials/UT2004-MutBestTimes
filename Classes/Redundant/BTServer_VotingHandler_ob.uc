@@ -8,7 +8,7 @@ var array<string> DonePrefixes;
 Const RandMapName="All:RandomVote";
 Const SGRandMapName="ShieldGun:RandomVote";
 
-var BTimesMute RecordsManager;
+var MutBestTimes RecordsManager;
 
 var int ThisMapDSlot;
 var int QuickStarts;
@@ -28,7 +28,7 @@ Function PostBeginPlay()
 {
 	Super.PostBeginPlay();
 
-	ForEach DynamicActors( Class'BTimesMute', RecordsManager )
+	ForEach DynamicActors( Class'MutBestTimes', RecordsManager )
 		break;
 }
 

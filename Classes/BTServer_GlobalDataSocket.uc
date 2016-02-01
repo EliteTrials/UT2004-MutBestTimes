@@ -23,7 +23,7 @@ Function PostBeginPlay()
         j = GDat.GRL.Length;
         for( i = 0; i < j; i ++ )
         {
-            if( GDat.GRL[i].GRN == BTimesMute(Owner).CurrentMapName )
+            if( GDat.GRL[i].GRN == MutBestTimes(Owner).CurrentMapName )
             {
                 CurrentGlobalRecordIndex = i;
                 bFound = True;
@@ -59,12 +59,12 @@ Function CreateGlobalRecord()
 {
     local int j;
 
-    BTimesMute(Owner).FullLog( "GlobalData:CreateGlobalRecord" );
+    MutBestTimes(Owner).FullLog( "GlobalData:CreateGlobalRecord" );
 
     j = GDat.GRL.Length;
     GDat.GRL.Length = j + 1;
     GDat.GRL[j].GRT = -1;
-    GDat.GRL[j].GRN = BTimesMute(Owner).CurrentMapName;
+    GDat.GRL[j].GRN = MutBestTimes(Owner).CurrentMapName;
 }
 
 Function float GetGlobalRecordTime()
@@ -102,7 +102,7 @@ Function DownloadComplete( HttpSock Sender )
     if( Sender == None )
         return;
 
-    BTimesMute(Owner).FullLog( "GlobalData:DownloadComplete, Re-Loading GlobalData" );
+    MutBestTimes(Owner).FullLog( "GlobalData:DownloadComplete, Re-Loading GlobalData" );
     LoadGlobalData();
     Sender.Destroy();
 }
@@ -112,7 +112,7 @@ Function DownloadError( HttSock Sender )
     if( Sender == None )
         return;
 
-    BTimesMute(Owner).FullLog( "GlobalData:DownloadError, Reason:Perhaps no GlobalData found!" );
+    MutBestTimes(Owner).FullLog( "GlobalData:DownloadError, Reason:Perhaps no GlobalData found!" );
     if( GDat == None )
         LoadGlobalData();
     Sender.Destroy();
@@ -136,7 +136,7 @@ Function UploadComplete( HttpSock Sender )
     if( Sender == None )
         return;
 
-    BTimesMute(Owner).FullLog( "GlobalData:UploadComplete" );
+    MutBestTimes(Owner).FullLog( "GlobalData:UploadComplete" );
     Sender.Destroy();
 }
 
@@ -145,7 +145,7 @@ Function UploadError( HttSock Sender )
     if( Sender == None )
         return;
 
-    BTimesMute(Owner).FullLog( "GlobalData:UploadError, Reason:Unknown" );
+    MutBestTimes(Owner).FullLog( "GlobalData:UploadError, Reason:Unknown" );
     Sender.Destroy();
 }
 

@@ -5,11 +5,11 @@ Class BTServer_SecondsTest Extends Info;
 
 Event Timer()
 {
-	if( BTimesMute(Owner) == None )
+	if( MutBestTimes(Owner) == None )
 	{
 		Destroy();
 		return;
 	}
 
-	BTimesMute(Owner).SecondsTest += 1.0;
+	MutBestTimes(Owner).SecondsTest += 1.0;
 }

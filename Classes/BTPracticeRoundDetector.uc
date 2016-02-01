@@ -3,12 +3,12 @@
 //=============================================================================
 class BTPracticeRoundDetector extends Info;
 
-var protected BTimesMute BT;
+var protected MutBestTimes BT;
 
 event PostBeginPlay()
 {
     super.PostBeginPlay();
-    BT = BTimesMute(Owner);
+    BT = MutBestTimes(Owner);
     SetTimer( 0.2, true );
 }
 

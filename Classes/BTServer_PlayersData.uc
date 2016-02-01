@@ -193,7 +193,7 @@ final function GiveItem( BTClient_ClientReplication CRI, string id )
 {
     local int invIndex, playerSlot;
 
-    playerSlot = CRI.A1233432;
+    playerSlot = CRI.myPlayerSlot;
     if( playerSlot == -1 )
         return;
 
@@ -213,7 +213,7 @@ final function OnItemGiven( BTClient_ClientReplication CRI, int invIndex )
     local int itemIndex;
 
     ++ TotalItemsBought;
-    item.Id = Player[CRI.A1233432].Inventory.BoughtItems[invIndex].ID;
+    item.Id = Player[CRI.myPlayerSlot].Inventory.BoughtItems[invIndex].ID;
     BT.Store.OnItemAcquired( CRI, item.Id );
     itemIndex = BT.Store.FindItemByID( item.Id );
     item.Name = BT.Store.Items[itemIndex].Name;
@@ -240,7 +240,7 @@ final function RemoveItem( BTClient_ClientReplication CRI, string id )
 {
     local int i, playerSlot;
 
-    playerSlot = CRI.A1233432;
+    playerSlot = CRI.myPlayerSlot;
     if( playerSlot == -1 )
         return;
 
@@ -375,7 +375,7 @@ final function AddExperienceList( array<BTStructs.sPlayerReference> playerSlots,
 
 final function AddExperience( int playerSlot, int experience )
 {
-    local int preLevel, postLevel;
+    local int preLevel, postLevel;eeezq
     local int expPoints;
 
     if( experience <= 0 )
@@ -386,9 +386,9 @@ final function AddExperience( int playerSlot, int experience )
         return;
 
     expPoints = experience;
-    if( BT.A1233451 != none )
+    if( BT.CurMode != none )
     {
-        expPoints += BT.A1233451.ExperienceBonus;
+        expPoints += BT.CurMode.ExperienceBonus;
     }
 
     if( HasItem( playerSlot, "exp_bonus_1" ) )

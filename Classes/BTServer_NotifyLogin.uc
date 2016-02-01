@@ -26,8 +26,8 @@ event Timer()
             SetTimer( 0.5, false );
             return;
         }
-        Slot = BTimesMute(Owner).FindPlayerSlot( playerHash );
-        BTimesMute(Owner).NotifyPostLogin( Player, playerHash, Slot );
+        Slot = MutBestTimes(Owner).FindPlayerSlot( playerHash );
+        MutBestTimes(Owner).NotifyPostLogin( Player, playerHash, Slot );
     }
     Destroy();
     return;

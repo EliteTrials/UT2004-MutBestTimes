@@ -3,7 +3,7 @@
 //=============================================================================
 class BTServer_ClientSpawnInfo extends Info;
 
-var BTimesMute M;
+var MutBestTimes M;
 
 // Don't notify mutators, no need and happens too much because players die so often
 event PreBeginPlay();

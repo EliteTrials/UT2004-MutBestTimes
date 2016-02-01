@@ -5,12 +5,12 @@ Function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver,
 	local int i, j;
 	local array<string> S;
 
-	if( BTimesMute(Owner) != None && PlayerController(Sender.Owner) != None && (Type == 'Say' || Type == 'TeamSay') )
+	if( MutBestTimes(Owner) != None && PlayerController(Sender.Owner) != None && (Type == 'Say' || Type == 'TeamSay') )
 	{
 		if( Msg ~= "LatestRecords" )
 		{
 			for( i = 0; i < 3; i ++ )
-				PlayerController(Sender.Owner).ClientMessage( "LatestRecord("$i$")"@BTimesMute(Owner).LastRecords[i] );
+				PlayerController(Sender.Owner).ClientMessage( "LatestRecord("$i$")"@MutBestTimes(Owner).LastRecords[i] );
 			Broadcast( Self, "You can type"@Msg@"to show latest made records" );
 		}
 		else if( Left( Msg, 11 ) ~= "ShowMapInfo" )
@@ -29,7 +29,7 @@ Function BroadcastText( PlayerReplicationInfo Sender, PlayerController Receiver,
 				PlayerController(Sender.Owner).ClientMessage( S[i] );
 			Broadcast( Self, "You can type"@Msg@"to show records made by that player" );
 		}
-		else if( BTimesMute(Owner).bAntiSpam && BlockTextMessage( Msg, PlayerController(Sender.Owner) ) )
+		else if( MutBestTimes(Owner).bAntiSpam && BlockTextMessage( Msg, PlayerController(Sender.Owner) ) )
 			return;
 	}
 	Super.BroadcastText(Sender,Receiver,Msg,Type);
@@ -40,13 +40,13 @@ Function array<string> GetMapInfo( string MapName )
 	local array<string> MapInfo;
 	local int i, j;
 
-	j = BTimesMute(Owner).BMTL.Length;
+	j = MutBestTimes(Owner).BMTL.Length;
 	for( i = 0; i < j; i ++ )
 	{
-		if( MapName ~= BTimesMute(Owner).BMTL[i].TMN )
+		if( MapName ~= MutBestTimes(Owner).BMTL[i].TMN )
 		{
-			MapInfo[MapInfo.Length] = "MapName:"$BTimesMute(Owner).BMTL[i].TMN;
-			MapInfo[MapInfo.Length] = "MapBestTime:"$BTimesMute(Owner).BMTL[i].TMT;
+			MapInfo[MapInfo.Length] = "MapName:"$MutBestTimes(Owner).BMTL[i].TMN;
+			MapInfo[MapInfo.Length] = "MapBestTime:"$MutBestTimes(Owner).BMTL[i].TMT;
 			break;
 		}
 	}
@@ -58,25 +58,25 @@ Function array<string> GetPlayerInfo( string PlayerName )
 	local array<string> PlayerInfo;
 	local int i, j, PlayerSlot, l;
 
-	j = BTimesMute(Owner).STORPL.Length;
+	j = MutBestTimes(Owner).STORPL.Length;
 	for( i = 0; i < j; i ++ )
 	{
-		if( PlayerName ~= BTimesMute(Owner).STORPL[i].PLName )
+		if( PlayerName ~= MutBestTimes(Owner).STORPL[i].PLName )
 		{
 			PlayerSlot = i;
-			PlayerInfo[PlayerInfo.Length] = "PlayerName:"$BTimesMute(Owner).STORPL[i].PLName;
+			PlayerInfo[PlayerInfo.Length] = "PlayerName:"$MutBestTimes(Owner).STORPL[i].PLName;
 			break;
 		}
 	}
-	j = BTimesMute(Owner).BMTL.Length;
+	j = MutBestTimes(Owner).BMTL.Length;
 	for( i = 0; i < j; i ++ )
 	{
 		for( l = 0; l < 3; l ++ )
 		{
-			if( BTimesMute(Owner).BMTL[i].PLs[l] == PlayerSlot )
+			if( MutBestTimes(Owner).BMTL[i].PLs[l] == PlayerSlot )
 			{
-				PlayerInfo[PlayerInfo.Length] = "MapName:"$BTimesMute(Owner).BMTL[i].TMN;
-				PlayerInfo[PlayerInfo.Length] = "MapBestTime:"$BTimesMute(Owner).BMTL[i].TMT;
+				PlayerInfo[PlayerInfo.Length] = "MapName:"$MutBestTimes(Owner).BMTL[i].TMN;
+				PlayerInfo[PlayerInfo.Length] = "MapBestTime:"$MutBestTimes(Owner).BMTL[i].TMT;
 				break;	// Scan next map.
 			}
 		}

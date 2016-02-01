@@ -39,7 +39,7 @@ var int X;
 
 event Timer()
 {
-	//BTimesMute(Owner).FullLog( "*** QuickStart:Timer"@X$" ***" );
+	//MutBestTimes(Owner).FullLog( "*** QuickStart:Timer"@X$" ***" );
 
 	if( X > 0 && X <= 5 )
    		Level.Game.BroadcastLocalizedMessage( Class'BTClient_QuickStartSound', X );
@@ -75,7 +75,7 @@ event Timer()
 {
 	local GameObjective Obj;
 
-	for( Obj = BTimesMute(Owner).AssaultGame.Teams[0].AI.Objectives; Obj != None; Obj = Obj.NextObjective )
+	for( Obj = MutBestTimes(Owner).AssaultGame.Teams[0].AI.Objectives; Obj != None; Obj = Obj.NextObjective )
 	{
 		Obj.Reset();
 		Obj.NetUpdateTime = Level.TimeSeconds - 1;
@@ -92,7 +92,7 @@ Function Ready()
 		PC = PlayerController(C);
 		if( PC != None && PC.IsDead() )
 		{
-			BTimesMute(Owner).AssaultGame.RestartPlayer( PC );
+			MutBestTimes(Owner).AssaultGame.RestartPlayer( PC );
 			ASPlayerReplicationInfo(PC.PlayerReplicationInfo).bAutoRespawn = False;
 			continue;
 		}
@@ -101,5 +101,5 @@ Function Ready()
 			C.Pawn.Fire( 1 );
 	}
 
-	BTimesMute(Owner).AssaultGame.StartNewRound();
+	MutBestTimes(Owner).AssaultGame.StartNewRound();
 }*/
