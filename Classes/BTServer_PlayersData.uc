@@ -375,7 +375,7 @@ final function AddExperienceList( array<BTStructs.sPlayerReference> playerSlots,
 
 final function AddExperience( int playerSlot, int experience )
 {
-    local int preLevel, postLevel;eeezq
+    local int preLevel, postLevel;
     local int expPoints;
 
     if( experience <= 0 )
