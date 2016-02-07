@@ -3272,10 +3272,20 @@ final private function bool AdminExecuted( PlayerController sender, string comma
         case "bt_backupdata":
             CreateBackupData();
             sender.ClientMessage( Class'HUD'.default.GoldColor $ "Backup created!, check saves folder!" );
+            break;
 
         case "bt_restoredata":
             RestoreBackupData();
             sender.ClientMessage( Class'HUD'.default.GoldColor $ "Backup restored!" );
+            break;
+
+        case "bt_mergerecordsdata":
+            if( params[0] != "" )
+            {
+                if( MergeRecordsData( params[0] ) )
+                    Sender.ClientMessage( Class'HUD'.default.GoldColor $ "Merged" @ params[0] );
+            }
+            break;
 
         case "bt_exportrecord":
             if( params[0] != "" )
@@ -7348,6 +7358,27 @@ Final Function RestoreBackupData()
     PDat.BT = self;
 
     SaveAll();
+}
+
+final function bool MergeRecordsData( string uvxFileName )
+{
+    local BTServer_RecordsData sourceRDat;
+
+    Log( "Loading records data from" @ uvxFileName, self.Name );
+    sourceRDat = Level.Game.LoadDataObject( class'BTServer_RecordsData', RecordsDataFileName, uvxFileName );
+    if( sourceRDat == none )
+    {
+        Log( "Couldn't find records data for file" @ uvxFileName, self.Name );
+        foreach Level.Game.AllDataObjects( class'BTServer_RecordsData', sourceRDat, uvxFileName )
+        {
+            Log( string(sourceRDat), self.Name );
+        }
+        return false;
+    }
+
+    RDat.MergeDataFrom( PDat, sourceRDat, false );
+    SaveRecords();
+    return true;
 }
 
 //==============================================================================

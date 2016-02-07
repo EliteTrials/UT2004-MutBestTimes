@@ -115,11 +115,96 @@ struct long sBTRecordInfo
     var array<int> Likers;
 };
 
-/** The list of all records made on this server. */
+/** The list of all records made on this server. FIXME: Should be called Maps, as it currently stands ambiguous with solo records. */
 var array<sBTRecordInfo> Rec;
 var int DataVersion;
 
 final function Free();
+
+/**
+ * Takes another copy of BTServer_RecordsData, and imports its best records into the current instance.
+ * The mapping of player slots is assumed to be identical to that of the current PlayersData instance!
+ * The importing RecordsData is also assumed to be unique and thus not derived from the current RecordsData. (i.e. it has to be a save from a pre-reset)
+ */
+final function MergeDataFrom( BTServer_PlayersData PDat, BTServer_RecordsData other, optional bool onlyMergeTime )
+{
+    local int i, mapIdx;
+    local int j, recIdx;
+    local bool bBestReplaced;
+
+    // First convert the old format to our newest format, if possible at all? (compatible as far 2009)
+    other.ConvertData();
+
+    for( i = 0; i < other.Rec.Length; ++ i )
+    {
+        mapIdx = FindRecord( other.Rec[i].TMN );
+        if( mapIdx != -1 )
+        {
+            // Add the old PlayedCount to our record instance.
+            if( !onlyMergeTime )
+            {
+                Rec[mapIdx].Played += other.Rec[i].Played;
+                Rec[mapIdx].PlayHours += other.Rec[i].PlayHours;
+                Rec[mapIdx].TMHijacks += other.Rec[i].TMHijacks;
+                Rec[mapIdx].TMFinish += other.Rec[i].TMFinish;
+            }
+
+            for( j = 0; j < other.Rec[i].PSRL.Length; ++ j )
+            {
+                recIdx = FindRecordSlot( mapIdx, other.Rec[i].PSRL[j].PLs );
+                if( recIdx == -1 )
+                {
+                    // We didn't have this individuals record, so let's add it.
+                    recIdx = Rec[mapIdx].PSRL.Length;
+                    Rec[mapIdx].PSRL.Length = recIdx + 1;
+
+                    // Log( "Adding new record to" @ other.Rec[i].TMN, 'MutBestTimes' );
+                }
+
+                // Copy all the data over, if this is a new record, or if the time is faster.
+                if( Rec[mapIdx].PSRL[recIdx].SRT == 0.0 || Rec[mapIdx].PSRL[recIdx].SRT > other.Rec[i].PSRL[j].SRT )
+                {
+                    // Log( "Adding improved record to" @ other.Rec[i].TMN, 'MutBestTimes' );
+                    Rec[mapIdx].PSRL[recIdx].PLs = other.Rec[i].PSRL[j].PLs;
+                    Rec[mapIdx].PSRL[recIdx].SRT = other.Rec[i].PSRL[j].SRT;
+                    Rec[mapIdx].PSRL[recIdx].SRD[0] = other.Rec[i].PSRL[j].SRD[0];
+                    Rec[mapIdx].PSRL[recIdx].SRD[1] = other.Rec[i].PSRL[j].SRD[1];
+                    Rec[mapIdx].PSRL[recIdx].SRD[2] = other.Rec[i].PSRL[j].SRD[2];
+                    Rec[mapIdx].PSRL[recIdx].ExtraPoints = other.Rec[i].PSRL[j].ExtraPoints;
+                    Rec[mapIdx].PSRL[recIdx].ObjectivesCount = other.Rec[i].PSRL[j].ObjectivesCount;
+
+                    // Our first record time was improved.
+                    if( recIdx == 0 )
+                    {
+                        // Log( "Adding best record to" @ other.Rec[i].TMN, 'MutBestTimes' );
+                        bBestReplaced = true;
+                    }
+                }
+            }
+
+            if( bBestReplaced )
+            {
+                bBestReplaced = false;
+
+                // The top record was beaten by the old save file, copy over all of the records data.
+                Rec[mapIdx].TMContributors = other.Rec[i].TMContributors;
+                // Fails since the last hijack.
+                Rec[mapIdx].TMFailures = other.Rec[i].TMFailures;
+            }
+
+            // Re-sort the player records.
+            SortRecords( mapIdx );
+        }
+        else
+        {
+            // We don't have this map, copy the entire map's data.
+            mapIdx = Rec.Length;
+            Rec.Length = mapIdx + 1;
+            Rec[mapIdx] = other.Rec[i];
+            Log( "Registering new record" @ other.Rec[i].TMN, 'MutBestTimes' );
+        }
+    }
+}
 
 final function bool ConvertData()
 {
@@ -204,8 +289,40 @@ final function int FindRecord( string mapName )
             return i;
         }
     }
-
     return -1;
+}
+
+final function int FindRecordSlot( int mapSlot, int playerSlot )
+{
+    local int i;
+
+    for( i = 0; i < Rec[mapSlot].PSRL.Length; ++ i )
+    {
+        if( Rec[mapSlot].PSRL[i].PLs == playerSlot )
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+final function SortRecords( int mapSlot )
+{
+    local int i, j, y, z;
+    local sSoloRecord tmp;
+
+    j = Rec[mapSlot].PSRL.Length;
+    for( i = 0; i < (j - 1); ++ i )
+    {
+        z = i;
+        for( y = (i + 1); y < j; ++ y )
+            if( Rec[mapSlot].PSRL[y].SRT < Rec[mapSlot].PSRL[z].SRT )
+                z = y;
+
+        tmp = Rec[mapSlot].PSRL[z];
+        Rec[mapSlot].PSRL[z] = Rec[mapSlot].PSRL[i];
+        Rec[mapSlot].PSRL[i] = tmp;
+    }
 }
 
 final function bool PlayerLikeMap( int recordSlot, int playerSlot )
