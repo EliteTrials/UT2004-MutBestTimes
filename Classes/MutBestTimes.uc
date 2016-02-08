@@ -327,11 +327,8 @@ var() localized editconst const
 //optional bool bMultiPlayerOnly, optional bool bAdvanced);
 
 var array<BTStructs.sConfigProperty> ConfigurableProperties;
-
 var const string InvalidAccessMessage;
-
-var private editconst const color cDarkGray;
-var private editconst const color BlackColor;
+var private editconst const color cDarkGray, cGold, cWhite;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -1900,80 +1897,63 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
     return;
 }
 
-//==============================================================================
-// Return an array with info(i.e Records) about the requested player
-final function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, out int Hijacks, out array<string> RLR )
+final function int QueryPlayerSlot( string q )
 {
-    local int i, j, PlayerSlot, jj;
-    local string OrgName;
+    local int i;
+    local int qId;
+    local string pName;
 
-    // Cache length, so we don't have to lookup the length every loop!.
-    j = PDat.Player.Length;
-
-    // Find the player
-    OrgName = PlayerName;
-    PlayerName = Caps( PlayerName );
-    PlayerSlot = -1;
-
-    // Scan the PDat.Player Array!
-    for( i = 0; i < j; ++ i )
+    pName = Caps(q);
+    qId = int(q);
+    for( i = 0; i< PDat.Player.Length; ++ i )
     {
-        if( (i == int(PlayerName)-1 && int(PlayerName) != 0) || InStr( Caps( %PDat.Player[i].PLName ), PlayerName ) != -1 )
+        if( (i == qId-1 && qId != 0) || InStr(Caps(%PDat.Player[i].PLName), pName) != -1 )
         {
-            // Found...
-
-            PlayerSlot = i;
-            PlayerInfo[PlayerInfo.Length] = lzPlayerName$":"@PDat.Player[PlayerSlot].PLName$"."$i+1;
-            PlayerInfo[PlayerInfo.Length] = "Played" @ PDat.Player[PlayerSlot].Played @ "rounds with" @ int(PDat.Player[PlayerSlot].PlayHours) @ "hours";
-            PlayerInfo[PlayerInfo.Length] = "Join date:" @ MaskToDate(PDat.Player[PlayerSlot].RegisterDate);
-            PlayerInfo[PlayerInfo.Length] = "Last played:" @ MaskToDate(PDat.Player[PlayerSlot].LastPlayedDate);
-            Hijacks = PDat.Player[PlayerSlot].PLHijacks;
-            break;
+            return i;
         }
     }
+    return -1;
+}
 
-    // Check if the player was found!
-    if( PlayerSlot == -1 )
-    {
-        PlayerInfo.Length = 1;
-        PlayerInfo[0] = "No player found with this"@OrgName@Locs( lzPlayerName );
-        return;
-    }
+final function QueryPlayerMeta( int playerSlot, out array<string> columns )
+{
+    columns[columns.Length] = "Viewing stats for player" @ PDat.Player[playerSlot].PLName$"."$cDarkGray$playerSlot+1;
+    columns[columns.Length] = "";
+    columns[columns.Length] = "This player has hijacked a record" @ cGold$PDat.Player[playerSlot].PLHijacks$cWhite
+        @ "times, and played" @ cDarkGray$PDat.Player[playerSlot].Played$cWhite
+        @ "rounds in" @ cDarkGray$int(PDat.Player[playerSlot].PlayHours)$cWhite @ "hours";
+    columns[columns.Length] = "Last played:" @ cDarkGray$MaskToDate(PDat.Player[playerSlot].LastPlayedDate);
+    columns[columns.Length] = "Join date:" @ cDarkGray$MaskToDate(PDat.Player[playerSlot].RegisterDate);
+}
 
-    // Cache length, so we don't have to lookup the length every loop!.
-    j = RDat.Rec.Length;
-    // Scan the RDat.Rec Array!
-    for( i = 0; i < j; ++ i )
+final function QueryPlayerRecords( int playerSlot, out array<string> records )
+{
+    local int i;
+
+    for( i = 0; i < RDat.Rec.Length; ++ i )
     {
-        if( RDat.Rec[i].bIgnoreStats )
+        if( RDat.Rec[i].bIgnoreStats || RDat.Rec[i].PSRL.Length == 0)
         {
             continue;
         }
 
-        if( RDat.Rec[i].PSRL.Length > 0 )
+        // Possesses the top record?
+        if( RDat.Rec[i].PSRL[0].PLs-1 == playerSlot )
         {
-            // Yep, check if the Number 1 record holder is <PlayerName>.
-            if( RDat.Rec[i].PSRL[0].PLs-1 == PlayerSlot )
-            {
-                jj = PlayerInfo.Length;
-                PlayerInfo.Length = jj+1;
-                PlayerInfo[jj] = RDat.Rec[i].TMN@cDarkGray$TimeToStr( RDat.Rec[i].PSRL[0].SRT );
-            }
-            continue;
+            records[records.Length] = "# 1 -" @ cDarkGray$TimeToStr(RDat.Rec[i].PSRL[0].SRT) @ cWhite$"-" @ RDat.Rec[i].TMN;
         }
-    }
-
-    // if Length is only 1 then there wasn't found any Records for this player, but the player account was found.
-    if( PlayerInfo.Length == 1 )
-        PlayerInfo[PlayerInfo.Length] = "No record(s)";
-
-    if( PDat.Player[PlayerSlot].RecentSetRecords.Length > 0 )
-    {
-        RLR = PDat.Player[PlayerSlot].RecentSetRecords;
     }
 }
 
-Final Function GetMissingRecords( PlayerController PC, out array<string> RecordsInfo, out int NumHave, out int NumMissing )
+final function QueryPlayerRecentRecords( int playerSlot, out array<string> records )
+{
+    if( PDat.Player[playerSlot].RecentSetRecords.Length > 0 )
+    {
+        records = PDat.Player[playerSlot].RecentSetRecords;
+    }
+}
+
+final function GetMissingRecords( PlayerController PC, out array<string> RecordsInfo, out int NumHave, out int NumMissing )
 {
     local int CurRec, NumRecs;
     local int CurPos, MaxPos;
@@ -2016,7 +1996,7 @@ Final Function GetMissingRecords( PlayerController PC, out array<string> Records
     }
 }
 
-Final Function GetBadRecords( PlayerController PC, out array<string> RecordsInfo, out int NumBad )
+final function GetBadRecords( PlayerController PC, out array<string> RecordsInfo, out int NumBad )
 {
     local int CurRec, NumRecs;
     local int CurPos, MaxPos;
@@ -2075,9 +2055,10 @@ final private function bool ClientExecuted( PlayerController sender, string comm
     local string S;
     local Controller C;
     local bool bCondition;
-    local array<string> output, output2;
+    local array<string> output;
     local bool b2;
     local byte byteOne, byteTwo;
+    local int playerSlot;
 
     switch( command )
     {
@@ -2135,7 +2116,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             break;
 
         case "showplayerinfo":
-            Rep = GetRep( sender );
+            Rep = GetRep(sender);
             if( Rep != none )
             {
                 Rep.ClientCleanText();
@@ -2145,30 +2126,45 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     params.Insert( 0, 1 );
                     params[0] = sender.GetHumanReadableName();
                 }
-                GetPlayerInfo( params[0], output, i, output2 );
-                if( output.Length > 0 )
+
+                playerSlot = QueryPlayerSlot(params[0]);
+                QueryPlayerMeta(playerSlot, output);
+                for( i = 0; i < output.Length; ++ i )
                 {
-                    Rep.ClientSendText( output[0] );
-                    Rep.ClientSendText( "Hijacks:" $ i );
-                    output.Remove( 0, 1 );  // Because we don't want this element to be randomly picked!
-                    Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 20 ) @ lzRandomPick );
-                    for( i = 4; i < output.Length && n < 20; ++ i )
+                    Rep.ClientSendText(output[i]);
+                }
+                output.Length = 0;
+                QueryPlayerRecords(playerSlot, output);
+                Rep.ClientSendText("");   // new line!
+                if( output.Length == 0 )
+                {
+                    Rep.ClientSendText(cGold$"Has no top records!");
+                }
+                else
+                {
+                    Rep.ClientSendText(cGold$Min(output.Length, 20)$"/"$output.Length @ "top records:");
+                    for( i = 0; i < output.Length && n < 20; ++ i )
                     {
-                        j = Rand( output.Length - 1 );
-                        Rep.ClientSendText( output[j] );
-                        output.Remove( j, 1 );
+                        j = Rand(output.Length - 1);
+                        Rep.ClientSendText(output[j]);
+                        output.Remove(j, 1);
                         -- i;
                         ++ n;
                     }
+                    output.Length = 0;
+                    Rep.ClientSendText("");   // new line!
                 }
-
-                if( output2.Length > 0 )
+                QueryPlayerRecentRecords(playerSlot, output);
+                if( output.Length == 0 )
                 {
-                    Rep.ClientSendText( "" );   // new line!
-                    Rep.ClientSendText( class'HUD'.default.GoldColor $ "Recent Set Records by Player:" );
-                    for( i = output2.Length - 1; i >= 0; -- i )
+                    Rep.ClientSendText(cGold$"Hasn't recently set any records!");
+                }
+                else
+                {
+                    Rep.ClientSendText(cGold$"Most recent records:");
+                    for( i = 0; i < output.Length; ++ i )
                     {
-                        Rep.ClientSendText( output2[i] );
+                        Rep.ClientSendText(output[i]);
                     }
                 }
             }
@@ -7893,6 +7889,8 @@ DefaultProperties
     GhostDataFileName="BTGhost_"
 
     cDarkGray=(R=60,G=60,B=60,A=255)
+    cGold=(R=255,G=255,B=0,A=255)
+    cWhite=(R=255,G=255,B=255,A=255)
 
     MaxRewardedPlayers=3
 
