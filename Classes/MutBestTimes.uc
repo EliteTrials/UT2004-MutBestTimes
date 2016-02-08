@@ -1902,7 +1902,7 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
 
 //==============================================================================
 // Return an array with info(i.e Records) about the requested player
-Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, out int Hijacks, out array<string> RLR )
+final function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, out int Hijacks, out array<string> RLR )
 {
     local int i, j, PlayerSlot, jj;
     local string OrgName;
@@ -1918,13 +1918,15 @@ Final Function GetPlayerInfo( string PlayerName, out array<string> PlayerInfo, o
     // Scan the PDat.Player Array!
     for( i = 0; i < j; ++ i )
     {
-        if( InStr( Caps( %PDat.Player[i].PLName ), PlayerName ) != -1 )
+        if( (i == int(PlayerName)-1 && int(PlayerName) != 0) || InStr( Caps( %PDat.Player[i].PLName ), PlayerName ) != -1 )
         {
             // Found...
 
             PlayerSlot = i;
-            PlayerInfo[PlayerInfo.Length] = lzPlayerName$":"$PDat.Player[PlayerSlot].PLName;
-            PlayerInfo[PlayerInfo.Length] = "Hours spent on this server:" $ int(PDat.Player[PlayerSlot].PlayHours);
+            PlayerInfo[PlayerInfo.Length] = lzPlayerName$":"@PDat.Player[PlayerSlot].PLName$"."$i+1;
+            PlayerInfo[PlayerInfo.Length] = "Played" @ PDat.Player[PlayerSlot].Played @ "rounds with" @ int(PDat.Player[PlayerSlot].PlayHours) @ "hours";
+            PlayerInfo[PlayerInfo.Length] = "Join date:" @ MaskToDate(PDat.Player[PlayerSlot].RegisterDate);
+            PlayerInfo[PlayerInfo.Length] = "Last played:" @ MaskToDate(PDat.Player[PlayerSlot].LastPlayedDate);
             Hijacks = PDat.Player[PlayerSlot].PLHijacks;
             break;
         }
@@ -2150,7 +2152,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     Rep.ClientSendText( "Hijacks:" $ i );
                     output.Remove( 0, 1 );  // Because we don't want this element to be randomly picked!
                     Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 20 ) @ lzRandomPick );
-                    for( i = 0; i < output.Length && n < 20; ++ i )
+                    for( i = 4; i < output.Length && n < 20; ++ i )
                     {
                         j = Rand( output.Length - 1 );
                         Rep.ClientSendText( output[j] );
@@ -7012,20 +7014,38 @@ private final function SendEventDescription( BTClient_ClientReplication CR )
 
 //==============================================================================
 // Merge a numeric date to a string date DD/MM/YY
-Static Final Function string FixDate( int Date[3] )
+static final function string FixDate( int Date[3] )
 {
     local string FixedDate;
 
     // Fix date
     if( Date[0] < 10 )
         FixedDate = "0"$Date[0];
-    else FixedDate = string( Date[0] );
+    else FixedDate = string(Date[0]);
 
     if( Date[1] < 10 )
         FixedDate $= "/0"$Date[1];
     else FixedDate $= "/"$Date[1];
 
     return FixedDate$"/"$Right( Date[2], 2 );
+}
+
+final function string MaskToDate( int date )
+{
+    local int day, month, year;
+    local string FixedDate;
+
+    RDat.GetCompactDate( date, year, month, day );
+        // Fix date
+    if( day < 10 )
+        FixedDate = "0"$day;
+    else FixedDate = string(day);
+
+    if( month < 10 )
+        FixedDate $= "/0"$month;
+    else FixedDate $= "/"$month;
+
+    return FixedDate$"/"$Right( year, 2 );
 }
 
 final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR )
