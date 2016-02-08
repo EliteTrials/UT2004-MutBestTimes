@@ -178,11 +178,8 @@ state ReplicateSoloTop
         // Scan whole list, yes including people above <MaxRankedPlayer> cuz of PersonalOverallTop
         for( i = 0; i < j; ++ i )
         {
-            if( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT == 0.0f )
-                break;
-
-            // Owner of record?
             SP.PlayerId = P.RDat.Rec[P.UsedSlot].PSRL[i].PLs;
+            // Owner of record?
             if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
             {
                 CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
@@ -220,7 +217,6 @@ Begin:
 
 final function SendAdditionalInfo()
 {
-    local string rewardedCommands;
     local BTClient_ClientReplication.sGlobalPacket GP;
 
     // Send rank < (MaxRankedPlayers) player his rank.
@@ -229,29 +225,14 @@ final function SendAdditionalInfo()
     {
         if( P.SortedOverallTop[i].PLPoints > 0 )
         {
-            rewardedCommands = "SetClientSpawn, DeleteClientSpawn";
             CR.Rank = i+1;
             if( i > P.MaxRankedPlayers-1 )
             {
                 InitGlobalPacket( i, GP );
                 CR.ClientSendMyOverallTop( GP );
             }
-            else if( i < P.MaxRewardedPlayers )
-                rewardedCommands $= ", TrailerMenu";
-
-            if( P.PDat.Player[P.SortedOverallTop[i].PLSlot].PLObjectives >= P.Objectives_GhostFollow )
-            {
-                rewardedCommands $= ", GhostFollow";
-            }
-            CR.UserState[0] = "Rewarded Commands";
-            CR.UserState[1] = rewardedCommands;
-
-            // We shall return here because this user has points. See the message below!
-            return;
         }
     }
-    CR.UserState[0] = "You are not ranked because you have no points!";
-    CR.UserState[1] = "You can earn points by breaking records";
     CR.bReceivedRankings = true;
 }
 
