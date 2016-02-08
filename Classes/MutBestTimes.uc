@@ -1928,7 +1928,7 @@ final function QueryPlayerMeta( int playerSlot, out array<string> columns )
 
 final function QueryPlayerRecords( int playerSlot, out array<string> records )
 {
-    local int i;
+    local int i, j;
 
     for( i = 0; i < RDat.Rec.Length; ++ i )
     {
@@ -1938,9 +1938,20 @@ final function QueryPlayerRecords( int playerSlot, out array<string> records )
         }
 
         // Possesses the top record?
-        if( RDat.Rec[i].PSRL[0].PLs-1 == playerSlot )
+        for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
         {
-            records[records.Length] = "# 1 -" @ cDarkGray$TimeToStr(RDat.Rec[i].PSRL[0].SRT) @ cWhite$"-" @ RDat.Rec[i].TMN;
+            if( RDat.Rec[i].PSRL[j].SRT == RDat.Rec[i].PSRL[0].SRT )
+            {
+                if( RDat.Rec[i].PSRL[j].PLs-1 == playerSlot )
+                {
+                    records[records.Length] = "#" @ j+1 @ "-" @ cDarkGray$TimeToStr(RDat.Rec[i].PSRL[j].SRT) @ cWhite$"-" @ RDat.Rec[i].TMN;
+                    break;
+                }
+            }
+            else
+            {
+                break;
+            }
         }
     }
 }
