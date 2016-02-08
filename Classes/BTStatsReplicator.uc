@@ -53,6 +53,7 @@ final function InitGlobalPacket( int index, optional out BTClient_ClientReplicat
         GP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
     else GP.Name = P.PDat.Player[pSlot].PLName;
 
+    GP.PlayerId     = pSlot + 1;
     GP.Points       = P.SortedOverallTop[index].PLPoints;
     GP.AP           = P.PDat.Player[pSlot].PLAchiev;
     GP.Objectives   = P.PDat.Player[pSlot].PLObjectives;
@@ -94,6 +95,7 @@ final function SendQuarterlyTop( int index, optional out BTClient_ClientReplicat
 
     pSlot = P.SortedQuarterlyTop[index].PLSlot;
 
+    QP.PlayerId     = pSlot + 1;
     if( pSlot == CR.myPlayerSlot )
         QP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
     else QP.Name = P.PDat.Player[pSlot].PLName;
@@ -132,6 +134,7 @@ final function SendDailyTop( int index, optional out BTClient_ClientReplication.
 
     pSlot = P.SortedDailyTop[index].PLSlot;
 
+    DP.PlayerId     = pSlot + 1;
     if( pSlot == CR.myPlayerSlot )
         DP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
     else DP.Name = P.PDat.Player[pSlot].PLName;
@@ -179,6 +182,7 @@ state ReplicateSoloTop
                 break;
 
             // Owner of record?
+            SP.PlayerId = P.RDat.Rec[P.UsedSlot].PSRL[i].PLs;
             if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
             {
                 CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
