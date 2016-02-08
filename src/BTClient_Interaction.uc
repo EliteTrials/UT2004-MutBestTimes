@@ -105,15 +105,18 @@ var const
     RankBeacon;
 
 // DODGEPERK DATA
+var Actor LastBase;
 var Actor.EPhysics LastPhysicsState;
 var Actor.EDoubleClickDir LastDoubleClickDir;
 var float LastDodgeTime;
 var float LastLandedTime;
+var float LastPerformedDodgeTime;
 var bool bPerformedDodge;
 var bool bPreDodgeReady;
 var bool bDodgeReady;
-
 var bool bPromodeWasPerformed;
+var bool bTimeViewTarget;
+var PlayerInput PlayerInput;
 
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
@@ -934,14 +937,28 @@ event Tick( float DeltaTime )
     }
 }
 
+exec function TimeViewTarget()
+{
+    bTimeViewTarget = !bTimeViewTarget;
+}
+
 function PerformDodgePerk()
 {
     local Pawn p;
     local bool bDodgePossible;
     local Actor.EPhysics phy;
     local Actor.EDoubleClickDir dir;
+    local name anim;
+    local float animFrame, animRate;
 
-    p = ViewportOwner.Actor.Pawn;
+    if( bTimeViewTarget )
+    {
+        p = Pawn(ViewportOwner.Actor.ViewTarget);
+    }
+    else
+    {
+        p = ViewportOwner.Actor.Pawn;
+    }
     if( p == none )
         return;
 
@@ -952,51 +969,42 @@ function PerformDodgePerk()
         LastDodgeTime = ViewportOwner.Actor.Level.TimeSeconds;
         LastDoubleClickDir = DClick_None;
         LastPhysicsState = PHYS_None;
+        LastBase = none;
         bPreDodgeReady = true;
         bDodgeReady = true;
     }
 
     phy = p.Physics;
-    dir = xPawn(p).CurrentDir;
-
     if( Options != none && Options.bShowDodgeReady )
     {
         bDodgePossible = ((phy == PHYS_Falling && p.bCanWallDodge) || phy == PHYS_Walking) && !p.bIsCrouched && !p.bWantsToCrouch;
         bPreDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.10 && !bPerformedDodge && bDodgePossible;
-        bDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.35 && !bPerformedDodge && bDodgePossible;
+        bDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.25 && !bPerformedDodge && bDodgePossible;
     }
 
-    if( LastPhysicsState != PHYS_Walking && phy == PHYS_Walking )
+    if( (LastPhysicsState != PHYS_Walking && phy == PHYS_Walking) || (bTimeViewTarget && p.Base != LastBase) )
     {
         //ViewportOwner.Actor.ClientMessage( "Land!" );
         PerformedLanding( p );
     }
 
-    if( dir > DCLICK_None )
+    dir = xPawn(p).CurrentDir;
+    p.GetAnimParams(0, anim, animFrame, animRate); // for simulated pawns.
+    if( (bTimeViewTarget && !bPerformedDodge && (dir > DCLICK_None || InStr(Caps(anim), "DODGE") != -1)) || dir > DCLICK_None )
     {
-        //ViewportOwner.Actor.ClientMessage( "Dodge!" );
         PerformedDodge( p );
         xPawn(p).CurrentDir = DCLICK_None;
     }
 
     LastPhysicsState = phy;
-
+    LastBase = p.Base;
     MRI.CR.LastPawn = p;
 }
 
 function PerformedDodge( Pawn other )
 {
-    local float diff;
-
     bPerformedDodge = true;
-    if( Options.bShowDodgeDelay )
-    {
-        diff = ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime;
-        if( diff > 0.1f )
-        {
-            ViewportOwner.Actor.ClientMessage( "DodgeDelay:" $ diff );
-        }
-    }
+    LastPerformedDodgeTime = ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime;
     LastDodgeTime = ViewportOwner.Actor.Level.TimeSeconds;
 }
 
@@ -1007,8 +1015,56 @@ function PerformedLanding( Pawn other )
         LastLandedTime = ViewportOwner.Actor.Level.TimeSeconds;
         bPerformedDodge = false;
     }
-
     LastDoubleClickDir = DCLICK_None;
+}
+
+function RenderDodgeReady( Canvas C )
+{
+    local string s;
+    local float XL, YL;
+
+    if( Options != none )
+    {
+        if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+        {
+            s = string(LastPerformedDodgeTime)$"s";
+        }
+        else
+        {
+            if( !Options.bShowDodgeReady )
+            {
+                return;
+            }
+
+            if( Options.bShowDodgeDelay )
+            {
+                s = "Dodge:" @ ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime$"s";
+            }
+            else
+            {
+                s = "Dodge: Ready";
+            }
+        }
+
+        C.Font = myHUD.GetMediumFont( C.ClipX * myHUD.HUDScale );
+        C.StrLen( s, XL, YL );
+        C.SetPos( C.ClipX * 0.5 - XL * 0.5, C.ClipY * 0.85 );
+        if( bDodgeReady )
+        {
+            C.DrawColor = class'HUD'.default.GreenColor;
+        }
+        else C.DrawColor = Orange;
+        C.Style = 1;
+        C.DrawText( s );
+
+        // if( PlayerInput == none )
+        // {
+        //     foreach AllObjects( class'PlayerInput', PlayerInput )
+        //         break;
+
+        // }
+        // C.DrawText( PlayerInput.DoubleClickTimer );
+    }
 }
 
 Event Initialized()
@@ -1186,6 +1242,7 @@ event NotifyLevelChange()
     Options = none;
     SpectatedClient = none;
     KeyPickupsList.Length = 0;
+    LastBase = none;
     Master.RemoveInteraction( self );
 }
 
@@ -1748,26 +1805,6 @@ function RenderCompetitiveLayer( Canvas C )
     C.CurY -= 2;
     Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX, YL+4 );
     Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX+SizeX, YL+4 );
-}
-
-function RenderDodgeReady( Canvas C )
-{
-    local string s;
-    local float XL, YL;
-
-    if( Options != none && Options.bShowDodgeReady && bPreDodgeReady )
-    {
-        s = "Dodge: Ready";
-        C.StrLen( s, XL, YL );
-        C.SetPos( C.ClipX * 0.5 - XL * 0.5, C.ClipY * 0.85 );
-        if( bDodgeReady )
-        {
-            C.DrawColor = class'HUD'.default.GreenColor;
-        }
-        else C.DrawColor = Orange;
-        C.Style = 1;
-        C.DrawText( s );
-    }
 }
 
 function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> columns, optional out float totalWidth, optional out float totalHeight )
@@ -2527,7 +2564,7 @@ function PostRender( Canvas C )
     if( MRI.CR == None )
         return;
 
-    if( ViewportOwner.Actor.Pawn != none )
+    if( Pawn(ViewportOwner.Actor.ViewTarget) != none && MRI.CR.bAllowDodgePerk )
     {
         RenderDodgeReady( C );
     }
