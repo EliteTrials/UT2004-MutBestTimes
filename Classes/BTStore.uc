@@ -576,7 +576,7 @@ final function ItemActivated( Actor other, BTClient_ClientReplication CRI, strin
             }
             break;
 
-        case "perks_dodge_assistance":
+        case "perk_dodge_assistance":
             CRI.bAllowDodgePerk = true;
             break;
 
