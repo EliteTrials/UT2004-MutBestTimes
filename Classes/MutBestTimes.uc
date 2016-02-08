@@ -2153,8 +2153,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
                 else
                 {
-                    Rep.ClientSendText(cGold$Min(output.Length, 20)$"/"$output.Length @ "top records:");
-                    for( i = 0; i < output.Length && n < 20; ++ i )
+                    Rep.ClientSendText(cGold$Min(output.Length, 15)$"/"$output.Length @ "top records:");
+                    for( i = 0; i < output.Length && n < 15; ++ i )
                     {
                         j = Rand(output.Length - 1);
                         Rep.ClientSendText(output[j]);
@@ -2191,8 +2191,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 Rep.ClientSendText( "You are missing" @ i @ "solo records!" );
                 Rep.ClientSendText( "You have" @ j @ "solo records!" );
 
-                Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 20 ) @ lzRandomPick );
-                for( i = 0; i < output.Length && n < 20; ++ i )
+                Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
+                for( i = 0; i < output.Length && n < 15; ++ i )
                 {
                     j = Rand( output.Length - 1 );
                     Rep.ClientSendText( output[j] );
@@ -2212,8 +2212,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 GetBadRecords( sender, output, j );
                 Rep.ClientSendText( "You have" @ j @ "bad solo records!" );
 
-                Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 20 ) @ lzRandomPick );
-                for( i = 0; i < output.Length && n < 20; ++ i )
+                Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
+                for( i = 0; i < output.Length && n < 15; ++ i )
                 {
                     j = Rand( output.Length - 1 );
                     Rep.ClientSendText( output[j] );
