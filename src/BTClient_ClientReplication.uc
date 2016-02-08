@@ -170,9 +170,6 @@ var(DEBUG) transient bool bItemsTransferComplete;
 // Cleared when F12 is pressed
 var(DEBUG) array<string> Text;
 
-// Some addional message for the rankings table e.g. You are..., Rewarded commands
-var(DEBUG) string UserState[2];
-
 // The rank position of this user, and the solo rank of this user
 var int Rank, SoloRank;
 var(DEBUG) string Title;
@@ -251,9 +248,6 @@ replication
 
     reliable if( bNetOwner && Role == ROLE_Authority )
         bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
-
-    unreliable if( bNetInitial && bNetOwner && Role == ROLE_Authority )
-        UserState;
 
     reliable if( Role == ROLE_Authority )
         // Rankings scoreboard
