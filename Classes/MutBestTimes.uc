@@ -1907,11 +1907,20 @@ final function int QueryPlayerSlot( string q )
     qId = int(q);
     for( i = 0; i< PDat.Player.Length; ++ i )
     {
-        if( (i == qId-1 && qId != 0) || InStr(Caps(%PDat.Player[i].PLName), pName) != -1 )
+        if( (i == qId-1 && qId != 0) )
         {
             return i;
         }
     }
+
+    for( i = 0; i< PDat.Player.Length; ++ i )
+    {
+        if( InStr(Caps(%PDat.Player[i].PLName), pName) != -1 )
+        {
+            return i;
+        }
+    }
+
     return -1;
 }
 
@@ -2139,6 +2148,12 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
 
                 playerSlot = QueryPlayerSlot(params[0]);
+                if( playerSlot == -1 )
+                {
+                    Rep.ClientSendText("Couldn't find a match with" @ params[0]);   // new line!
+                    break;
+                }
+
                 QueryPlayerMeta(playerSlot, output);
                 for( i = 0; i < output.Length; ++ i )
                 {
