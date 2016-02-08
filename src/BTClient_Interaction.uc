@@ -722,7 +722,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                         }
                         else if( Key == IK_Enter )
                         {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ Class'GUIComponent'.Static.StripColorCodes( MRI.CR.OverallTop[SelectedIndex].Name ) );
+                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.OverallTop[SelectedIndex].PlayerId );
                             return True;
                         }
                     }
@@ -746,7 +746,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                         }
                         else if( Key == IK_Enter )
                         {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ Class'GUIComponent'.Static.StripColorCodes( MRI.CR.QuarterlyTop[SelectedIndex].Name ) );
+                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.QuarterlyTop[SelectedIndex].PlayerId );
                             return True;
                         }
                     }
@@ -770,7 +770,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                         }
                         else if( Key == IK_Enter )
                         {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ Class'GUIComponent'.Static.StripColorCodes( MRI.CR.DailyTop[SelectedIndex].Name ) );
+                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.DailyTop[SelectedIndex].PlayerId );
                             return True;
                         }
                     }
@@ -811,7 +811,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                     }
                     else if( Key == IK_Enter )
                     {
-                        ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ class'GUIComponent'.Static.StripColorCodes( MRI.CR.SoloTop[SelectedIndex].Name ) );
+                        ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.SoloTop[SelectedIndex].PlayerId );
                         return True;
                     }
                 }
