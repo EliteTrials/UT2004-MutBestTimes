@@ -15,6 +15,7 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 // Player Rankings
 struct sGlobalPacket
 {
+    var int PlayerId;
     var string name;
     var int AP;
     var float Points;
@@ -25,6 +26,7 @@ struct sGlobalPacket
 
 struct sDailyPacket
 {
+    var int PlayerId;
     var string name;
     var float Points;
     var int Records;
@@ -32,6 +34,7 @@ struct sDailyPacket
 
 struct sQuarterlyPacket
 {
+    var int PlayerId;
     var string name;
     var float Points;
     var int Records;
@@ -40,6 +43,7 @@ struct sQuarterlyPacket
 // Top Solo Rankings
 struct sSoloPacket
 {
+    var int PlayerId;
     var string name;
     var float Points;
     var float Time;
