@@ -1046,7 +1046,7 @@ function RenderDodgeReady( Canvas C )
             }
         }
 
-        C.Font = myHUD.GetMediumFont( C.ClipX * myHUD.HUDScale );
+        C.Font = GetScreenFont( C );
         C.StrLen( s, XL, YL );
         C.SetPos( C.ClipX * 0.5 - XL * 0.5, C.ClipY * 0.85 );
         if( bDodgeReady )
