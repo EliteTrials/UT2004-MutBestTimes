@@ -171,6 +171,14 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
             sender.ConsoleCommand( "mutate SetTitle" @ value );
             break;
 
+        case "player":
+            Mutate( "showplayerinfo" @ value, sender );
+            break;
+
+        case "map":
+            Mutate( "showmapinfo" @ value, sender );
+            break;
+
         case "exec":
             if( value == "" )
             {
