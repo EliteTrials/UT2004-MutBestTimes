@@ -24,10 +24,10 @@ struct sBTPlayerInfo
         PLAP,
         PLAchiev;                                                               // Achievement points
 
-    /** Index to their All Time, Quarterly and Daily rank! */
+    /** Index(+1) to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
 
-    /** Last known rank since leaving. */
+    /** Last known rank(PLARank) since leaving. */
     var int LastKnownRank;
 
     /** Last known ranking score since leaving. */

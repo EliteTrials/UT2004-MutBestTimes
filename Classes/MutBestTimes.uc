@@ -328,7 +328,7 @@ var() localized editconst const
 
 var array<BTStructs.sConfigProperty> ConfigurableProperties;
 var const string InvalidAccessMessage;
-var private editconst const color cDarkGray, cGold, cWhite;
+var private editconst const color cDarkGray, cLight, cGold, cWhite, cRed, cGreen;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -1864,7 +1864,7 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
         {
             MapInfo[MapInfo.Length] = lzMapName$":"$RDat.Rec[i].TMN @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
             MapInfo[MapInfo.Length] = lzFinished$":"$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
-            MapInfo[MapInfo.Length] = "Average Time:"$GetAverageRecordTime( i );
+            MapInfo[MapInfo.Length] = "Average Time:"$cDarkGray$TimeToStr(GetAverageRecordTime( i ));
             if( RDat.Rec[i].TMRatingSet )
                 MapInfo[MapInfo.Length] = lzRating$":"$RDat.Rec[i].TMRating+1;
 
@@ -1926,8 +1926,6 @@ final function int QueryPlayerSlot( string q )
 
 final function QueryPlayerMeta( int playerSlot, out array<string> columns )
 {
-    columns[columns.Length] = "Viewing stats for player" @ PDat.Player[playerSlot].PLName$"."$cDarkGray$playerSlot+1;
-    columns[columns.Length] = "";
     columns[columns.Length] = "This player has hijacked a record" @ cGold$PDat.Player[playerSlot].PLHijacks$cWhite
         @ "times, and played" @ cDarkGray$PDat.Player[playerSlot].Played$cWhite
         @ "rounds in" @ cDarkGray$int(PDat.Player[playerSlot].PlayHours)$cWhite @ "hours";
@@ -1973,7 +1971,7 @@ final function QueryPlayerRecentRecords( int playerSlot, out array<string> recor
     }
 }
 
-final function GetMissingRecords( PlayerController PC, out array<string> RecordsInfo, out int NumHave, out int NumMissing )
+final function GetMissingRecords( PlayerController PC, out array<string> records, out int NumHave, out int NumMissing )
 {
     local int CurRec, NumRecs;
     local int CurPos, MaxPos;
@@ -2010,17 +2008,18 @@ final function GetMissingRecords( PlayerController PC, out array<string> Records
             if( !bFound )
             {
                 ++ NumMissing;
-                RecordsInfo[RecordsInfo.Length] = RDat.Rec[CurRec].TMN@cDarkGray$TimeToStr( RDat.Rec[CurRec].PSRL[0].SRT );
+                records[records.Length] = cDarkGray$TimeToStr(RDat.Rec[CurRec].PSRL[0].SRT) @ cWhite$"-" @ RDat.Rec[CurRec].TMN;
             }
         }
     }
 }
 
-final function GetBadRecords( PlayerController PC, out array<string> RecordsInfo, out int NumBad )
+final function GetBadRecords( PlayerController PC, out array<string> records, out int NumBad )
 {
     local int CurRec, NumRecs;
     local int CurPos, MaxPos;
     local int PlayerSlot;
+    local string rank;
 
     PlayerSlot = FindPlayerSlot( PC.GetPlayerIdHash() );
     if( PlayerSlot == -1 )
@@ -2041,7 +2040,12 @@ final function GetBadRecords( PlayerController PC, out array<string> RecordsInfo
             {
                 if( CurPos >= MaxRankedPlayers )
                 {
-                    RecordsInfo[RecordsInfo.Length] = RDat.Rec[CurRec].TMN@cDarkGray$TimeToStr( RDat.Rec[CurRec].PSRL[CurPos].SRT-RDat.Rec[CurRec].PSRL[0].SRT );
+                    rank = string(CurPos+1);
+                    if( CurPos+1 < 9 )
+                    {
+                        rank = "0"$rank;
+                    }
+                    records[records.Length] = "#" @ rank @ "-" @ cDarkGray$TimeToStr(RDat.Rec[CurRec].PSRL[CurPos].SRT) @ cWhite$"-" @ RDat.Rec[CurRec].TMN;
                     ++ NumBad;
                 }
                 break;
@@ -2049,9 +2053,9 @@ final function GetBadRecords( PlayerController PC, out array<string> RecordsInfo
         }
     }
 
-    if( RecordsInfo.Length == 0 )
+    if( records.Length == 0 )
     {
-        RecordsInfo[RecordsInfo.Length] = "No bad solo records found!";
+        records[records.Length] = "No bad solo records found!";
     }
 }
 
@@ -2087,6 +2091,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             if( Rep != None )
             {
                 Rep.ClientCleanText();
+                Rep.ClientSendText("Most Recent Records");
+                Rep.ClientSendText("");   // new line!
                 for( i = 0; i < MaxRecentRecords; ++ i )
                     Rep.ClientSendText( LastRecords[MaxRecentRecords-(i+1)] );
             }
@@ -2097,6 +2103,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             if( Rep != None )
             {
                 Rep.ClientCleanText();
+                Rep.ClientSendText("History");
+                Rep.ClientSendText("");   // new line!
                 for( i = History.Length-1; i >= 0; -- i )
                     Rep.ClientSendText( History[i] );
             }
@@ -2107,6 +2115,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             if( Rep != None )
             {
                 Rep.ClientCleanText();
+                Rep.ClientSendText("Latest Maps");
+                Rep.ClientSendText("");   // new line!
                 j = RDat.Rec.Length;
                 for( i = j-1; i >= 0; -- i )
                 {
@@ -2127,6 +2137,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 {
                     params.Insert( 0, 1 );
                 }
+                Rep.ClientSendText("Map Stats");
+                Rep.ClientSendText("");   // new line!
                 GetMapInfo( params[0], output );
                 for( i = 0; i < output.Length; ++ i )
                 {
@@ -2150,10 +2162,14 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 playerSlot = QueryPlayerSlot(params[0]);
                 if( playerSlot == -1 )
                 {
-                    Rep.ClientSendText("Couldn't find a match with" @ params[0]);   // new line!
+                    Rep.ClientSendText("Player Profile");
+                    Rep.ClientSendText("");   // new line!
+                    Rep.ClientSendText("Couldn't find a match with" @ params[0]);
                     break;
                 }
 
+                Rep.ClientSendText("Player Profile" @ PDat.Player[playerSlot].PLName$"."$cDarkGray$playerSlot+1);
+                Rep.ClientSendText("");   // new line!
                 QueryPlayerMeta(playerSlot, output);
                 for( i = 0; i < output.Length; ++ i )
                 {
@@ -2202,10 +2218,12 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             {
                 Rep.ClientCleanText();
 
+                Rep.ClientSendText("Missing Records");
+                Rep.ClientSendText("");   // new line!
                 GetMissingRecords( sender, output, j, i );
                 Rep.ClientSendText( "You are missing" @ i @ "solo records!" );
                 Rep.ClientSendText( "You have" @ j @ "solo records!" );
-
+                Rep.ClientSendText("");   // new line!
                 Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
                 for( i = 0; i < output.Length && n < 15; ++ i )
                 {
@@ -2224,9 +2242,11 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             {
                 Rep.ClientCleanText();
 
+                Rep.ClientSendText("Bad Records");
+                Rep.ClientSendText("");   // new line!
                 GetBadRecords( sender, output, j );
                 Rep.ClientSendText( "You have" @ j @ "bad solo records!" );
-
+                Rep.ClientSendText("");   // new line!
                 Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
                 for( i = 0; i < output.Length && n < 15; ++ i )
                 {
@@ -5352,7 +5372,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
                 //FullLog( "Found Player in top 25 after sort" );
 
-                AddRecentSetRecordToPlayer( RDat.Rec[UsedSlot].PSRL[i].PLs, CurrentMapName @ "Time:" $ TimeToStr( CurrentPlaySeconds ) );
+                AddRecentSetRecordToPlayer( RDat.Rec[UsedSlot].PSRL[i].PLs, CurrentMapName @ cDarkGray$TimeToStr( CurrentPlaySeconds ) );
 
                 // Update all Clients...
                 if( i < MaxRankedPlayers )  // only update new times under top 25
@@ -5597,7 +5617,7 @@ final function NotifyNewRecord( int playerSlot )
         bRecentRecordsUpdated = True;
     }
 
-    LastRecords[MaxRecentRecords - 1] = CurrentMapName @ "Time:" $ TimeToStr( CurrentPlaySeconds ) @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
+    LastRecords[MaxRecentRecords - 1] = CurrentMapName @ cDarkGray$TimeToStr( CurrentPlaySeconds )$cWhite @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
 
     SaveAll();
 
@@ -5818,7 +5838,6 @@ Function NotifyLogout( Controller Exiting )                                     
     local BTClient_ClientReplication CR;
 
     super.NotifyLogout( exiting );
-
     if( PlayerController(Exiting) != none && Exiting.PlayerReplicationInfo != none )
     {
         CR = GetRep( Exiting );
@@ -5826,8 +5845,8 @@ Function NotifyLogout( Controller Exiting )                                     
         {
             timeSpent = ((Level.TimeSeconds - PDat.Player[CR.myPlayerSlot]._LastLoginTime) / 60) / 60;
             PDat.Player[CR.myPlayerSlot].PlayHours += timeSpent;
-            PDat.Player[CR.myPlayerSlot].LastKnownRank = PDat.Player[CR.myPlayerSlot].PLARank
-            PDat.Player[CR.myPlayerSlot].LastKnownPoints = SortedOverallTop[PDat.Player[CR.myPlayerSlot].PLARank].PLPoints;
+            PDat.Player[CR.myPlayerSlot].LastKnownRank = PDat.Player[CR.myPlayerSlot].PLARank-1;
+            PDat.Player[CR.myPlayerSlot].LastKnownPoints = SortedOverallTop[PDat.Player[CR.myPlayerSlot].PLARank-1].PLPoints;
 
             if( PDat.HasItem( CR.myPlayerSlot, "exp_bonus_1", i ) )
             {
@@ -6514,24 +6533,6 @@ final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll
         // An index to PDat.Player
         SortedPlayers[CurPlayer].PLSlot         =   PlayerNum;
 
-        switch( mode )
-        {
-                // All Time
-            case 0:
-                PDat.Player[PlayerNum].PLARank = CurPlayer + 1;
-                break;
-
-                // Quarterly
-            case 1:
-                PDat.Player[PlayerNum].PLQRank = CurPlayer + 1;
-                break;
-
-                // Daily
-            case 2:
-                PDat.Player[PlayerNum].PLDRank = CurPlayer + 1;
-                break;
-        }
-
         if( SortedPlayers[CurPlayer].PLPoints == 0.0f )
         {
             // Keep a copy, we'll add them back after the sorting
@@ -6558,6 +6559,24 @@ final function array<sPlayerStats> SortTopPlayers( byte mode, optional bool bAll
         Tmp = SortedPlayers[z];
         SortedPlayers[z] = SortedPlayers[CurPlayer];
         SortedPlayers[CurPlayer] = Tmp;
+
+        switch( mode )
+        {
+                // All Time
+            case 0:
+                PDat.Player[SortedPlayers[CurPlayer].PLSlot].PLARank = CurPlayer + 1;
+                break;
+
+                // Quarterly
+            case 1:
+                PDat.Player[SortedPlayers[CurPlayer].PLSlot].PLQRank = CurPlayer + 1;
+                break;
+
+                // Daily
+            case 2:
+                PDat.Player[SortedPlayers[CurPlayer].PLSlot].PLDRank = CurPlayer + 1;
+                break;
+        }
     }
 
     // Add the noobs to the end of the pro's
@@ -6916,7 +6935,6 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
 final function CreateReplication( PlayerController PC, string SS, int Slot )
 {
     local BTClient_ClientReplication CR;
-    local int i, PacketNum;
     local BTStatsReplicator RR;
 
     CR = GetRep( PC );
@@ -6954,31 +6972,95 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
         Store.ModifyPlayer( PC, PDat, CR );
     }
 
-    // Check whether user lost some records since he logged off
-    PacketNum = PDat.Player[Slot].RecentLostRecords.Length;
-    if( PacketNum > 0 )
-    {
-        if( PacketNum >= 5 )
-        {
-            // Timeout
-            PDat.ProgressAchievementByID( Slot, 'records_1' );
-        }
-
-        CR.ClientSendText( "You have lost"@PacketNum@"record(s) since your last login!" );
-        for( i = 0; i < PacketNum; ++ i )
-            CR.ClientSendText( PDat.Player[Slot].RecentLostRecords[i] );
-
-        PDat.Player[Slot].RecentLostRecords.Length = 0;
-    }
-    else if( EventDescription != "" )
-    {
-        SendEventDescription( CR );
-    }
-
     if( bShowRankings && ModeIsTrials() )
     {
         RR = StartReplicatorFor( CR );
         RR.BeginReplication();
+    }
+    WelcomePlayer( PC, CR );
+}
+
+final function WelcomePlayer( PlayerController PC, BTClient_ClientReplication CR )
+{
+    local bool suppressMotd;
+    local int i, playerSlot;
+    local float diff;
+    local int packetNum, rankShift;
+
+    playerSlot = CR.myPlayerSlot;
+    if( playerSlot+1 != PDat.Player.Length )
+    {
+        CR.ClientSendText( "Welcome back" @ PC.GetHumanReadableName()$"!" );
+        CR.ClientSendText( "" );
+        CR.ClientSendText( cLight$"Checkout the latest maps by using console command \"RecentMaps\"." );
+        CR.ClientSendText( cLight$"We also have \"ShowMissingRecords\", \"ShowBadRecords\", and \"RecentRecords\", etc." );
+        CR.ClientSendText( cLight$"You can also checkout a player's profile with \"Player <Name/Id>\", or \"Map <Name>\" for map stats." );
+    }
+    else
+    {
+        // new player
+        CR.ClientSendText( "Welcome to our server" @ PC.GetHumanReadableName()$"!" );
+        CR.ClientSendText( "" );
+        CR.ClientSendText( cLight$"You can set a CheckPoint by typing !cp in the chat!" );
+        CR.ClientSendText( cLight$"Type it again if you want to turn it off!" );
+    }
+
+    // Check whether user lost some records since he logged off
+    packetNum = PDat.Player[playerSlot].RecentLostRecords.Length;
+    if( packetNum > 0 )
+    {
+        CR.ClientSendText( "" );
+        if( packetNum >= 5 )
+        {
+            // Timeout
+            PDat.ProgressAchievementByID( playerSlot, 'records_1' );
+        }
+
+        CR.ClientSendText( "You lost"@packetNum@"top record(s) since your last login!" );
+        for( i = 0; i < packetNum; ++ i )
+            CR.ClientSendText( PDat.Player[playerSlot].RecentLostRecords[i] );
+
+        PDat.Player[playerSlot].RecentLostRecords.Length = 0;
+        suppressMotd = true;
+    }
+
+    if( bShowRankings && PDat.Player[playerSlot].PLARank-1 != -1 )
+    {
+        diff = SortedOverallTop[PDat.Player[playerSlot].PLARank-1].PLPoints - PDat.Player[playerSlot].LastKnownPoints;
+        rankShift = (PDat.Player[playerSlot].LastKnownRank) - (PDat.Player[playerSlot].PLARank-1);
+        if( diff != 0.00 || rankShift != 0 )
+        {
+            CR.ClientSendText( "" );
+        }
+        if( diff != 0.00 )
+        {
+            if( diff > 0 )
+            {
+                CR.ClientSendText( "Your rank score has increased by" @ "+"$cGreen$diff @ cWhite$"since your last login!");
+            }
+            else
+            {
+                CR.ClientSendText( "Your rank score has decreased by" @ "-"$cRed$Abs(diff) @ cWhite$"since your last login!");
+            }
+            suppressMotd = true;
+        }
+        if( rankShift != 0 )
+        {
+            if( rankShift > 0 )
+            {
+                CR.ClientSendText( "Your rank went up" @ "+"$cGreen$rankShift @ cWhite$"ranks since your last login!");
+            }
+            else
+            {
+                CR.ClientSendText( "Your rank went down" @ cRed$int(Abs(rankShift)) @ cWhite$"ranks since your last login!");
+            }
+            suppressMotd = true;
+        }
+    }
+
+    if( EventDescription != "" && !suppressMotd )
+    {
+        SendEventDescription( CR );
     }
 }
 
@@ -7901,8 +7983,11 @@ DefaultProperties
     GhostDataFileName="BTGhost_"
 
     cDarkGray=(R=60,G=60,B=60,A=255)
+    cLight=(R=204,G=204,B=204,A=255)
     cGold=(R=255,G=255,B=0,A=255)
     cWhite=(R=255,G=255,B=255,A=255)
+    cRed=(R=255,G=0,B=0,A=255)
+    cGreen=(R=0,G=255,B=0,A=255)
 
     MaxRewardedPlayers=3
 
