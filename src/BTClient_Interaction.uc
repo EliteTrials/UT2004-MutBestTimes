@@ -635,7 +635,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             return False;
         }
 
-        if( Key == IK_Escape )
+        if( Key == IK_Escape || (MRI.CR.Text.Length > 0 && Key == IK_Enter) )
         {
             if( MRI.CR.Text.Length > 0 )
             {
@@ -2468,7 +2468,7 @@ function RenderFooter( Canvas C )
     s = RankingKeyMsg @ RankingHideMsg;
     C.StrLen( s, xl, yl );
     width = xl;
-    height = (tableHeight - TABLE_PADDING*2)*0.5;
+    height = (tableHeight - TABLE_PADDING)*0.5;
     drawX = tableWidth - TABLE_PADDING - xl;
     drawY = tableY + tableHeight - height - TABLE_PADDING;
     C.DrawColor = #0x0072C688;
@@ -2615,7 +2615,7 @@ function PostRender( Canvas C )
             C.SetPos( XP + TABLE_PADDING*2, YP + i*yl );
             if( i == 0 )
             {
-                C.StrLen( MRI.CR.Text[i], xl, yl );
+                C.StrLen( %MRI.CR.Text[i], xl, yl );
                 C.DrawColor = #0x00529668;
                 DrawColumnTile( C, C.CurX, C.CurY, xl+4, yl+2 );
                 DrawHeaderText( C, C.CurX, C.CurY, MRI.CR.Text[i] );
