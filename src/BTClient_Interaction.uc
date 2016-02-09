@@ -1637,6 +1637,7 @@ function RenderGhostMarkings( Canvas C )
     if( MRI == none || SpectatedClient == none )
         return;
 
+    C.Font = GetScreenFont( C );
     foreach ViewportOwner.Actor.DynamicActors( class'BTClient_GhostMarker', Marking )
     {
         C.GetCameraLocation( CamPos, CamRot );
@@ -1644,23 +1645,23 @@ function RenderGhostMarkings( Canvas C )
         Dir = Marking.Location - CamPos;
         Dist = VSize( Dir );
         Dir /= Dist;
-        if( (Dir Dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
+        if( (Dir dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
         {
-            T = MRI.MapBestTime * (float(Marking.MoveIndex) / float(MRI.MaxMoves));
+            T = MRI.MapBestTime * (float(Marking.MoveIndex)/float(MRI.MaxMoves));
             YT = T - (MRI.MapBestTime - GetTimeLeft());
             if( YT >= 0 )
             {
                 C.DrawColor = class'HUD'.default.GreenColor;
+                S = "+"$FormatTimeCompact( YT );
             }
             else
             {
                 C.DrawColor = class'HUD'.default.RedColor;
+                S = FormatTimeCompact( YT );
             }
-            S = FormatTimeCompact( T ) @ "+" @ FormatTimeCompact( YT );
             C.StrLen( S, XL, YL );
-
             Scr = C.WorldToScreen( Marking.Location );
-            C.SetPos( Scr.X - (XL * 0.5), Scr.Y - (YL * 0.5) );
+            C.SetPos( Scr.X - XL*0.5, Scr.Y - YL*0.5 );
             C.DrawText( S, false );
         }
     }
