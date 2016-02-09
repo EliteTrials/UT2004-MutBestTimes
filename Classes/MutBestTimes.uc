@@ -5826,6 +5826,8 @@ Function NotifyLogout( Controller Exiting )                                     
         {
             timeSpent = ((Level.TimeSeconds - PDat.Player[CR.myPlayerSlot]._LastLoginTime) / 60) / 60;
             PDat.Player[CR.myPlayerSlot].PlayHours += timeSpent;
+            PDat.Player[CR.myPlayerSlot].LastKnownRank = PDat.Player[CR.myPlayerSlot].PLARank
+            PDat.Player[CR.myPlayerSlot].LastKnownPoints = SortedOverallTop[PDat.Player[CR.myPlayerSlot].PLARank].PLPoints;
 
             if( PDat.HasItem( CR.myPlayerSlot, "exp_bonus_1", i ) )
             {
@@ -6967,22 +6969,6 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
             CR.ClientSendText( PDat.Player[Slot].RecentLostRecords[i] );
 
         PDat.Player[Slot].RecentLostRecords.Length = 0;
-    }
-    else if( Holiday != "" )    // its a holiday!
-    {
-        CR.ClientSendText( Class'HUD'.Default.GoldColor $ "Welcome to this server, this time it is"@Holiday );
-        /*CR.ClientSendText( Class'HUD'.Default.GoldColor $ "What is different now?" );
-        CR.ClientSendText( "" );
-        CR.ClientSendText( class'HUD'.Default.GoldColor $ "All top"@MaxRankedPlayers@"players now have trailers and MNAF member options!" );
-        CR.ClientSendText( "" );
-        CR.ClientSendText( "How to enable options, just type ShieldMenu in your console if you have a ShieldGun selected!" );
-        CR.ClientSendText( "How to config your trailer, SetTrailerTexture Package.Group.Name, SetTrailerColor Num(0 or 1) R=255 G=255 B=255" );*/
-
-        if( Level.Month == 8 && Level.Day == 26  )
-        {
-            CR.ClientSendText( "Say \"Happy Birthday Eliot!\" to get the achievement \"Happy Birthliot\"" );
-        }
-        CR.ClientSendText( "Happy Holiday!" );
     }
     else if( EventDescription != "" )
     {

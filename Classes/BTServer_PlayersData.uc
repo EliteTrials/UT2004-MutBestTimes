@@ -27,6 +27,12 @@ struct sBTPlayerInfo
     /** Index to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
 
+    /** Last known rank since leaving. */
+    var int LastKnownRank;
+
+    /** Last known ranking score since leaving. */
+    var float LastKnownPoints;
+
     var array<string>
         RecentLostRecords,
         RecentSetRecords;
