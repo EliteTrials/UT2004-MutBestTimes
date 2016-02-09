@@ -15,7 +15,6 @@ var() globalconfig
 
 var() globalconfig
     bool
-    bShowRankingTable,
     bUseAltTimer,
     bShowZoneActors,
     bFadeTextColors,
@@ -105,7 +104,6 @@ final function ResetSavedData()
     bPlayTickSounds                 = default.bPlayTickSounds;
     TickSound                       = default.TickSound;
     LastTickSound                   = default.LastTickSound;
-    //bShowRankingTable             = default.bShowRankingTable;
     bUseAltTimer                    = default.bUseAltTimer;
     bShowZoneActors                 = default.bShowZoneActors;
     bFadeTextColors                 = default.bFadeTextColors;
@@ -135,7 +133,6 @@ DefaultProperties
     TickSound=Sound'MenuSounds.select3'
     LastTickSound=Sound'MenuSounds.denied1'
 
-    bShowRankingTable=True
     bUseAltTimer=False
     bShowZoneActors=False
     bFadeTextColors=True

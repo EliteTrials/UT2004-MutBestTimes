@@ -98,6 +98,7 @@ var float
     LastShowAllCheck;
 
 var bool bTimerPaused, bSoundTicking;
+var() bool bShowRankingTable;
 
 var const
     texture
@@ -326,7 +327,6 @@ exec function BTCommands()
         SendConsoleMessage( "SetTrailerColor 255 255 255 128 128 128 (Only if Ranked!)" );
         SendConsoleMessage( "SetTrailerTexture <Package.Group.Name> (Only if Ranked!)" );
         SendConsoleMessage( "..." );
-        //SendConsoleMessage( "AutoPress" );
 
         if( MRI.RankingPage != "" )
             SendConsoleMessage( "ShowBestTimes (Loads Website!)" );
@@ -346,16 +346,6 @@ exec function CloseDialog()
 {
     MRI.CR.Text.Length = 0;
 }
-
-/*exec function AutoPress()
-{
-    if( MRI.CR.Rank <= MRI.CR.OverallTop.Length && MRI.CR.Rank > 0 )
-    {
-        MRI.CR.bAutoPress = !MRI.CR.bAutoPress;
-        SendConsoleMessage( "AutoPress ON:"$MRI.CR.bAutoPress );
-    }
-    else SendConsoleMessage( "Sorry you need to be in the top"@MRI.CR.OverallTop.Length$"!" );
-}*/
 
 exec function SetTableColor( optional color tc )
 {
@@ -459,6 +449,7 @@ exec function TrailerMenu()
     ViewportOwner.Actor.ClientOpenMenu( string( Class'BTClient_TrailerMenu' ) );
 }
 
+exec function Kill(){FastSuicide();}
 exec function FastSuicide()
 {
     if( ViewportOwner.Actor.Pawn == None )
@@ -492,11 +483,13 @@ exec function SetTrailerTexture( string CmdLine )
     BT( "SetTrailerTexture" @ CmdLine );
 }
 
+exec function Player( string playerName ){ShowPlayerInfo(playerName);}
 exec function ShowPlayerInfo( string playerName )
 {
     BT( "ShowPlayerInfo" @ playerName );
 }
 
+exec function Map( string mapName ){ShowMapInfo(mapName);}
 exec function ShowMapInfo( string mapName )
 {
     BT( "ShowMapInfo" @ mapName );
@@ -586,8 +579,7 @@ exec function Race( string playerName )
 
 exec function ToggleRanking()
 {
-    Options.bShowRankingTable = !Options.bShowRankingTable;
-    Options.SaveConfig();
+    bShowRankingTable = !bShowRankingTable;
 }
 
 exec function SpeedRun()
@@ -633,7 +625,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                 MRI.CR.Text.Length = 0;
             else ToggleRanking();
 
-            if( Options.bShowRankingTable )
+            if( bShowRankingTable )
             {
                 if( MRI.CR != none && MRI.CR.OverallTop.Length == 0 )
                 {
@@ -651,17 +643,16 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                 return True;
             }
 
-            if( Options.bShowRankingTable )
+            if( bShowRankingTable )
             {
-                Options.bShowRankingTable = False;
-                Options.SaveConfig();
+                bShowRankingTable = False;
                 TablePage = -1;
                 return True;
             }
             return false;
         }
 
-        if( Options.bShowRankingTable )
+        if( bShowRankingTable )
         {
             if( MRI.CR.Text.Length == 0 )
             {
@@ -978,8 +969,8 @@ function PerformDodgePerk()
     if( Options != none && Options.bShowDodgeReady )
     {
         bDodgePossible = ((phy == PHYS_Falling && p.bCanWallDodge) || phy == PHYS_Walking) && !p.bIsCrouched && !p.bWantsToCrouch;
-        bPreDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.10 && !bPerformedDodge && bDodgePossible;
-        bDodgeReady = ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime >= 0.25 && !bPerformedDodge && bDodgePossible;
+        bPreDodgeReady = (ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation >= 0.10 && !bPerformedDodge && bDodgePossible;
+        bDodgeReady = (ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation >= 0.35 && !bPerformedDodge && bDodgePossible;
     }
 
     if( (LastPhysicsState != PHYS_Walking && phy == PHYS_Walking) || (bTimeViewTarget && p.Base != LastBase) )
@@ -1027,7 +1018,7 @@ function RenderDodgeReady( Canvas C )
     {
         if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
         {
-            s = string(LastPerformedDodgeTime)$"s";
+            s = string(LastPerformedDodgeTime/ViewportOwner.Actor.Level.TimeDilation)$"s";
         }
         else
         {
@@ -1038,7 +1029,7 @@ function RenderDodgeReady( Canvas C )
 
             if( Options.bShowDodgeDelay )
             {
-                s = "Dodge:" @ ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime$"s";
+                s = "Dodge:" @ (ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation$"s";
             }
             else
             {
@@ -2130,6 +2121,7 @@ final function RenderRankingsTable( Canvas C )
     C.DrawColor = #0x00529668;
     DrawColumnTile( C, drawX, drawY, xl + COLUMN_PADDING_X*2, headerHeight );
     DrawHeaderText( C, drawX, drawY, s );
+
     drawY += headerHeight + ROW_MARGIN*2;
     drawX = tableX;
 
@@ -2606,7 +2598,7 @@ function PostRender( Canvas C )
         YLength = yl*j + (j*3) + TABLE_PADDING;
         FLength = C.ClipY*0.5 - YLength*0.5;
 
-        XP = 0;
+        XP = C.ClipX*0.125;
         YP = FLength;
 
         XP1 = C.ClipX;
@@ -2614,15 +2606,26 @@ function PostRender( Canvas C )
         C.SetPos( XP, YP - TABLE_PADDING );
         C.DrawColor = Options.CTable;
         C.Style = 1;
-        C.DrawTile( AlphaLayer, C.ClipX, YLength + TABLE_PADDING, 0, 0, 256, 256 );
+        C.DrawTile( AlphaLayer, C.ClipX*0.75, YLength + TABLE_PADDING, 0, 0, 256, 256 );
 
         // Draw the packets
         YP += TABLE_PADDING;
-        C.DrawColor = class'HUD'.default.WhiteColor;
         for( i = 0; i < j; ++ i )
         {
-            C.SetPos( XP + TABLE_PADDING, YP + i*yl );
-            C.DrawText( MRI.CR.Text[i] );
+            C.SetPos( XP + TABLE_PADDING*2, YP + i*yl );
+            if( i == 0 )
+            {
+                C.StrLen( MRI.CR.Text[i], xl, yl );
+                C.DrawColor = #0x00529668;
+                DrawColumnTile( C, C.CurX, C.CurY, xl+4, yl+2 );
+                DrawHeaderText( C, C.CurX, C.CurY, MRI.CR.Text[i] );
+            }
+            else
+            {
+                C.DrawColor = class'HUD'.default.WhiteColor;
+                C.DrawText( MRI.CR.Text[i] );
+            }
+
             YP += 3;
         }
         C.ClipX = XP1;
@@ -2630,7 +2633,7 @@ function PostRender( Canvas C )
         RenderFooter( C );
     }
     // Ranking table code
-    else if( Options.bShowRankingTable )
+    else if( bShowRankingTable )
     {
         if( ViewportOwner.Actor.Level.GRI != none )
         {
@@ -2697,7 +2700,7 @@ function PostRender( Canvas C )
             }
         }
         // Solo Rank
-        if( !Options.bShowRankingTable && MRI.CR.Text.Length == 0 )
+        if( !bShowRankingTable && MRI.CR.Text.Length == 0 )
         {
             RenderHUDElements( C );
         }
