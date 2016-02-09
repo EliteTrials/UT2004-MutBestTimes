@@ -2706,7 +2706,7 @@ function PostRender( Canvas C )
         switch( MRI.RecordState )
         {
             case RS_Succeed:
-                C.Font = myHUD.LoadFont( 7 );
+                C.Font = GetScreenFont( C );
                 if( MRI.GhostPercent < 100 )
                 {
                     S = "Saving ghost " $ MRI.GhostPercent $ "%";
@@ -2715,24 +2715,20 @@ function PostRender( Canvas C )
 
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.05), S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.GoldColor );
-
                 S = MRI.PlayersBestTimes;
-                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Holder", S, true, C.ClipX*0.65, 4.5 );
-
+                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Holder(s)", S, true, C.ClipX*0.65, 4.5 );
                 S = MRI.PointsReward;
-                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Rank Points", S, true, C.ClipX*0.65, 4.5 );
+                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Score", S, true, C.ClipX*0.65, 4.5 );
                 break;
 
             case RS_Failure:
-                C.Font = myHUD.GetFontSizeIndex( C, Options.DrawFontSize );
-
+                C.Font = GetScreenFont( C );
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.05), S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.RedColor );
                 break;
 
             case RS_QuickStart:
-                C.Font = myHUD.GetFontSizeIndex( C, Options.DrawFontSize );
-
+                C.Font = GetScreenFont( C );
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*0.8, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.TurqColor );
                 break;
