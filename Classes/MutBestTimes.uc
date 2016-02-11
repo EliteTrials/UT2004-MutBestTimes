@@ -5166,6 +5166,7 @@ final private function ProcessSoloEnd( PlayerController PC )
                     }
                     UpdateGhosts();
                 }
+                UpdateRecordHoldersMessage();
                 NotifyNewRecord( FastFindPlayerSlot( PC )-1 );
             }
         }
@@ -5182,13 +5183,9 @@ final private function ProcessSoloEnd( PlayerController PC )
                 NewGhostsQue[0] = CR.myPlayerSlot;
                 UpdateGhosts();
             }
+            UpdateRecordHoldersMessage();
             NotifyNewRecord( CR.myPlayerSlot );
         }
-    }
-
-    if( hasNewRecord == 1 )
-    {
-        UpdateRecordHoldersMessage();
     }
 }
 
@@ -5430,7 +5427,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
                             j = PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length;
                             PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = "Map:"$CurrentMapName@"BOOST:"$TimeToStr( TimeBoost );
+                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( TimeBoost )$cWhite$CurrentMapName;
                         }
 
                         if( RDat.Rec[UsedSlot].TMFailures >= 50 )
@@ -5580,6 +5577,7 @@ final private function ProcessRegularEnd( PlayerController PC )
         {
             RDat.Rec[UsedSlot].TMContributors = contributors.Length;
             UpdateRecordHoldersMessage();
+            NotifyNewRecord( CR.myPlayerSlot );
 
             if( GhostManager != none )
             {
