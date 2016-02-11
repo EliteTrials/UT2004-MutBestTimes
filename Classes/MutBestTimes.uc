@@ -5835,6 +5835,12 @@ Function NotifyLogout( Controller Exiting )                                     
     super.NotifyLogout( exiting );
     if( PlayerController(Exiting) != none && Exiting.PlayerReplicationInfo != none )
     {
+        // Because GameInfo does not broadcast a left game message for spectators.
+        if( Exiting.PlayerReplicationInfo.bOnlySpectator && Level.NetMode != NM_Standalone )
+        {
+            Level.Game.BroadcastLocalizedMessage(Level.Game.GameMessageClass, 4, Exiting.PlayerReplicationInfo);
+        }
+
         CR = GetRep( Exiting );
         if( PDat != none && CR != none && CR.myPlayerSlot != -1 )
         {
