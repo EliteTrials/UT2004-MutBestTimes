@@ -1862,32 +1862,29 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
     {
         if( InStr( Caps( RDat.Rec[i].TMN ), MapName ) != -1 )
         {
-            MapInfo[MapInfo.Length] = lzMapName$":"$RDat.Rec[i].TMN @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
-            MapInfo[MapInfo.Length] = lzFinished$":"$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
-            MapInfo[MapInfo.Length] = "Average Time:"$cDarkGray$TimeToStr(GetAverageRecordTime( i ));
+            MapInfo[MapInfo.Length] = lzMapName$": "$RDat.Rec[i].TMN @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
+            MapInfo[MapInfo.Length] = lzFinished$": "$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
+            MapInfo[MapInfo.Length] = "Average Time: "$cDarkGray$TimeToStr(GetAverageRecordTime( i ));
             if( RDat.Rec[i].TMRatingSet )
-                MapInfo[MapInfo.Length] = lzRating$":"$RDat.Rec[i].TMRating+1;
+                MapInfo[MapInfo.Length] = lzRating$": "$RDat.Rec[i].TMRating+1;
 
             // Add the all 3 top records info
             // Check whether its a solo map
             if( RDat.Rec[i].PSRL.Length > 0 )
             {
-                MapInfo[MapInfo.Length] = "Top 1";
-                MapInfo[MapInfo.Length] = lzRecordTime$":"$TimeToStr( RDat.Rec[i].PSRL[0].SRT );
-                MapInfo[MapInfo.Length] = lzRecordAuthor$":"$PDat.Player[RDat.Rec[i].PSRL[0].PLs-1].PLNAME;
+                MapInfo[MapInfo.Length] = lzRecordTime$": "$cDarkGray$TimeToStr( RDat.Rec[i].PSRL[0].SRT );
+                MapInfo[MapInfo.Length] = lzRecordAuthor$": "$PDat.Player[RDat.Rec[i].PSRL[0].PLs-1].PLNAME;
                 if( RDat.Rec[i].PSRL.Length > 1 )
                 {
-                    MapInfo[MapInfo.Length] = "Top 2";
-                    MapInfo[MapInfo.Length] = lzRecordTime$":"$TimeToStr( RDat.Rec[i].PSRL[1].SRT );
-                    MapInfo[MapInfo.Length] = lzRecordAuthor$":"$PDat.Player[RDat.Rec[i].PSRL[1].PLs-1].PLNAME;
+                    MapInfo[MapInfo.Length] = lzRecordTime$": "$cDarkGray$TimeToStr( RDat.Rec[i].PSRL[1].SRT );
+                    MapInfo[MapInfo.Length] = lzRecordAuthor$": "$PDat.Player[RDat.Rec[i].PSRL[1].PLs-1].PLNAME;
                     if( RDat.Rec[i].PSRL.Length > 2 )
                     {
-                        MapInfo[MapInfo.Length] = "Top 3";
-                        MapInfo[MapInfo.Length] = lzRecordTime$":"$TimeToStr( RDat.Rec[i].PSRL[2].SRT );
-                        MapInfo[MapInfo.Length] = lzRecordAuthor$":"$PDat.Player[RDat.Rec[i].PSRL[2].PLs-1].PLNAME;
+                        MapInfo[MapInfo.Length] = lzRecordTime$": "$cDarkGray$TimeToStr( RDat.Rec[i].PSRL[2].SRT );
+                        MapInfo[MapInfo.Length] = lzRecordAuthor$": "$PDat.Player[RDat.Rec[i].PSRL[2].PLs-1].PLNAME;
 
                         if( RDat.Rec[i].PSRL.Length > 3 )
-                            MapInfo[MapInfo.Length] = lzRecords$":"$RDat.Rec[i].PSRL.Length;
+                            MapInfo[MapInfo.Length] = lzRecords$": "$RDat.Rec[i].PSRL.Length;
                     }
                 }
             }
@@ -2204,7 +2201,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 else
                 {
                     Rep.ClientSendText(cGold$"Most recent records:");
-                    for( i = 0; i < output.Length; ++ i )
+                    for( i = output.Length - 1; i >= 0; -- i )
                     {
                         Rep.ClientSendText(output[i]);
                     }
@@ -7956,7 +7953,7 @@ DefaultProperties
     lzMapName="Map Name"
     lzPlayerName="Player Name"
     lzRecordTime="Record Time"
-    lzRecordAuthor="Record Holder(s)"
+    lzRecordAuthor="Record Holder"
     lzRecordPoints="Points"
     lzFinished="Finished"
     lzHijacks="Hijacked"
