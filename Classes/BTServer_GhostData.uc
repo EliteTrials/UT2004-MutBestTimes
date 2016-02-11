@@ -67,13 +67,8 @@ final function bool LoadNextMoveData()
     if( CurrentMove >= MO.Length )
         return false;
 
-    // Pawns don't use pitch!
-    Controller.SetRotation( TinyRotToRot( MO[CurrentMove].R, false ) );
-    Controller.FocalPoint = vector(TinyRotToRot( MO[CurrentMove].R, true ) )*15000 + Ghost.Location;
-
     if( Ghost != none )
     {
-        Controller.FocalPoint += Ghost.Location;
         Ghost.Health = MO[CurrentMove].H;
         if( Ghost.Health <= 0 )
         {
@@ -83,25 +78,29 @@ final function bool LoadNextMoveData()
         {
             Ghost.bHidden = false;
         }
-        Ghost.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
 
-        if( MO[CurrentMove].P != Ghost.Location )
-            Ghost.SetLocation( MO[CurrentMove].P );
+        Ghost.SetLocation( MO[CurrentMove].P );
+        // Ghost.SetRotation( TinyRotToRot( MO[CurrentMove].R ) ); // Applies pitch but it keeps facing back up(stutters very badly)
+        Ghost.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
 
+        // Pawns don't use pitch!
+        if( CurrentMove+1 < MO.Length )
+        {
+            Controller.Destination = MO[CurrentMove+1].P;
+            Controller.FocalPoint = vector(TinyRotToRot( MO[CurrentMove].R ))*15000 + Controller.Destination;
+        }
         Ghost.Velocity = MO[CurrentMove].V;
         Ghost.Acceleration = MO[CurrentMove].A;
-
-    //  if( Ghost.Velocity.Z == 0.0f && Ghost.Physics != PHYS_Walking )
-    //      Ghost.SetPhysics( PHYS_Walking );
 
         if( Ghost.PhysicsVolume.bWaterVolume && Ghost.Physics != PHYS_Swimming )
             Ghost.SetPhysics( PHYS_Swimming );
         else if( Ghost.Physics != PHYS_Walking && Ghost.Physics != PHYS_Falling )
             Ghost.SetPhysics( PHYS_Falling );
-    }
 
-    TZERO = Controller.Level.TimeSeconds;
-    TONE = TZERO + 1.0f/UsedGhostFPS;
+        Ghost.NetUpdateTime = Ghost.Level.TimeSeconds - 1;
+        TZERO = Controller.Level.TimeSeconds;
+        TONE = TZERO + 1.0f/UsedGhostFPS;
+    }
     return !(++ CurrentMove >= MO.Length);
 }
 

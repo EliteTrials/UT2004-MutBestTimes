@@ -39,3 +39,15 @@ ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVol
     {
     }
 }
+
+function UpdatePawnViewPitch()
+{
+    if (Pawn != None)
+        Pawn.SetViewPitch(Rotation.Pitch);
+}
+
+defaultproperties
+{
+     RotationRate=(Pitch=3072,Yaw=30000,Roll=0)
+     FovAngle=90
+}
