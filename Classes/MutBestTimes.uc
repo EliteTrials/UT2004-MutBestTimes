@@ -4538,13 +4538,22 @@ final function Revoted()
 
 function ServerTraveling( string URL, bool bItems )
 {
-    super.ServerTraveling( URL, bItems );
+    local Controller c;
 
     FullLog( "*** ServerTraveling ***" );
+    super.ServerTraveling( URL, bItems );
 
     if( UsedSlot != -1 )
     {
         RDat.Rec[UsedSlot].PlayHours += Level.TimeSeconds/60 / 60;
+    }
+
+    for( c = Level.ControllerList; c != none; c = c.NextController )
+    {
+        if( PlayerController(c) != none )
+        {
+            ProcessPlayerLogout( c );
+        }
     }
 
     // Map is switching, save everything!
@@ -5823,103 +5832,104 @@ final function ResembleFlag( CTFFlag flag )
     resemblance.SetCollisionSize( flag.CollisionRadius, flag.CollisionHeight );
 }
 
+final function ProcessPlayerLogout( Controller player )
+{
+    local int playerSlot;
+    local int i;
+    local float timeSpent;
+
+    // Use find by hash, because the PlayerReplicationInfos are destroyed on ServerTravel!
+    playerSlot = FindPlayerSlot( PlayerController(player).GetPlayerIDHash() );
+    if( playerSlot == -1 )
+    {
+        FullLog( "A player with no account, has left the server!! This shouldn't happen!" );
+        return;
+    }
+    -- playerSlot;
+
+    timeSpent = ((Level.TimeSeconds - PDat.Player[playerSlot]._LastLoginTime) / 60) / 60;
+    PDat.Player[playerSlot].PlayHours += timeSpent;
+    PDat.Player[playerSlot].LastKnownRank = PDat.Player[playerSlot].PLARank-1;
+    PDat.Player[playerSlot].LastKnownPoints = SortedOverallTop[PDat.Player[playerSlot].PLARank-1].PLPoints;
+
+    if( PDat.HasItem( playerSlot, "exp_bonus_1", i ) )
+    {
+        PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
+        if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 4.00f )
+        {
+            PDat.SilentRemoveItem( playerSlot, "exp_bonus_1" );
+        }
+    }
+
+    if( PDat.HasItem( playerSlot, "exp_bonus_2", i ) )
+    {
+        PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
+        if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
+        {
+            PDat.SilentRemoveItem( playerSlot, "exp_bonus_2" );
+        }
+    }
+
+    if( PDat.HasItem( playerSlot, "cur_bonus_1", i ) )
+    {
+        PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
+        if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
+        {
+            PDat.SilentRemoveItem( playerSlot, "cur_bonus_1" );
+        }
+    }
+
+    if( PDat.HasItem( playerSlot, "drop_bonus_1", i ) )
+    {
+        PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
+        if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
+        {
+            PDat.SilentRemoveItem( playerSlot, "drop_bonus_1" );
+        }
+    }
+}
+
 //==============================================================================
 // NotifyLogout
 Function NotifyLogout( Controller Exiting )                                         // .:..:, Eliot
 {
-    local float timeSpent;
     local int i;
-    local LinkedReplicationInfo LRI;
-    local BTClient_ClientReplication CR;
 
     super.NotifyLogout( exiting );
-    if( PlayerController(Exiting) != none && Exiting.PlayerReplicationInfo != none )
+    if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange )
     {
+        ProcessPlayerLogout( Exiting );
         // Because GameInfo does not broadcast a left game message for spectators.
         if( Exiting.PlayerReplicationInfo.bOnlySpectator && Level.NetMode != NM_Standalone )
         {
             Level.Game.BroadcastLocalizedMessage(Level.Game.GameMessageClass, 4, Exiting.PlayerReplicationInfo);
         }
 
-        CR = GetRep( Exiting );
-        if( PDat != none && CR != none && CR.myPlayerSlot != -1 )
+        // Backup our disconnected player's stats, so we can restore it when he or she gets back!
+        for( i = 0; i < KeepScoreTable.Length; ++ i )
         {
-            timeSpent = ((Level.TimeSeconds - PDat.Player[CR.myPlayerSlot]._LastLoginTime) / 60) / 60;
-            PDat.Player[CR.myPlayerSlot].PlayHours += timeSpent;
-            PDat.Player[CR.myPlayerSlot].LastKnownRank = PDat.Player[CR.myPlayerSlot].PLARank-1;
-            PDat.Player[CR.myPlayerSlot].LastKnownPoints = SortedOverallTop[PDat.Player[CR.myPlayerSlot].PLARank-1].PLPoints;
-
-            if( PDat.HasItem( CR.myPlayerSlot, "exp_bonus_1", i ) )
+            if( KeepScoreTable[i].ClientFlesh == Exiting )
             {
-                PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
-                if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 4.00f )
+                KeepScoreTable[i].Score = Exiting.PlayerReplicationInfo.Score;
+                if( AssaultGame != none )
                 {
-                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_1" );
-                }
-            }
-
-            if( PDat.HasItem( CR.myPlayerSlot, "exp_bonus_2", i ) )
-            {
-                PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
-                if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
-                {
-                    PDat.SilentRemoveItem( CR.myPlayerSlot, "exp_bonus_2" );
-                }
-            }
-
-            if( PDat.HasItem( CR.myPlayerSlot, "cur_bonus_1", i ) )
-            {
-                PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
-                if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
-                {
-                    PDat.SilentRemoveItem( CR.myPlayerSlot, "cur_bonus_1" );
-                }
-            }
-
-            if( PDat.HasItem( CR.myPlayerSlot, "drop_bonus_1", i ) )
-            {
-                PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
-                if( float(PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
-                {
-                    PDat.SilentRemoveItem( CR.myPlayerSlot, "drop_bonus_1" );
-                }
-            }
-        }
-
-        if( !Level.bLevelChange )
-        {
-            for( i = 0; i < KeepScoreTable.Length; ++ i )
-            {
-                if( KeepScoreTable[i].ClientFlesh == Exiting )
-                {
-                    KeepScoreTable[i].Score = Exiting.PlayerReplicationInfo.Score;
-                    if( AssaultGame != none )
+                    if( !bKeyMap && !bGroupMap )
                     {
-                        if( !bKeyMap && !bGroupMap )
-                        {
-                            KeepScoreTable[i].Objectives = ASPlayerReplicationInfo(Exiting.PlayerReplicationInfo).DisabledObjectivesCount;
-                            KeepScoreTable[i].FinalObjectives = ASPlayerReplicationInfo(Exiting.PlayerReplicationInfo).DisabledFinalObjective;
-                        }
-
-                        if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo) != None )
-                            KeepScoreTable[i].LeftOnRound = ASGameReplicationInfo(AssaultGame.GameReplicationInfo).CurrentRound;
+                        KeepScoreTable[i].Objectives = ASPlayerReplicationInfo(Exiting.PlayerReplicationInfo).DisabledObjectivesCount;
+                        KeepScoreTable[i].FinalObjectives = ASPlayerReplicationInfo(Exiting.PlayerReplicationInfo).DisabledFinalObjective;
                     }
-                    break;
+
+                    if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo) != None )
+                        KeepScoreTable[i].LeftOnRound = ASGameReplicationInfo(AssaultGame.GameReplicationInfo).CurrentRound;
                 }
-            }
-
-            // Using foreach because a linked loop would break the linked loop and so fail destroying all the LRI actors
-            foreach DynamicActors( Class'LinkedReplicationInfo', LRI )
-            {
-                if( LRI.Owner == Exiting || LRI.Owner == Exiting.PlayerReplicationInfo )
-                    LRI.Destroy();
-            }
-
-            if( Level.NetMode == NM_Standalone )
-            {
-                SaveAll();
+                break;
             }
         }
+    }
+
+    if( Level.NetMode == NM_Standalone )
+    {
+        SaveAll();
     }
 }
 
