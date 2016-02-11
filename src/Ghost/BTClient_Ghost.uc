@@ -34,10 +34,11 @@ Simulated Function TickFX( float DeltaTime )
     FC.Color2 = FadeColor2;
     FC.FadePeriod = 0.33f;
     FC.FadePhase = 0.0f;
+    FC.ColorFadeType = FC_Sinusoidal;
 
     S = Shader(Level.ObjectPool.AllocateObject( Class'Shader' ));
     S.Specular = FC;
-    S.OutputBlending = OB_Translucent;
+    S.OutputBlending = OB_Brighten;
 
     if( Skins[0].IsA('Shader') )
     {
@@ -49,7 +50,7 @@ Simulated Function TickFX( float DeltaTime )
 
     HeadS = Shader(Level.ObjectPool.AllocateObject( Class'Shader' ));
     HeadS.Specular = FC;
-    HeadS.OutputBlending = OB_Translucent;
+    HeadS.OutputBlending = OB_Brighten;
 
     if( Skins[1].IsA('Shader') )
     {
@@ -119,7 +120,10 @@ function GiveWeapon(string aClassName );
 function CreateInventory(string InventoryClassName);
 
 simulated function FootStepping(int Side);
-event Landed(vector v);
+event Landed(vector v)
+{
+    SetPhysics( PHYS_Walking );
+}
 
 simulated function TurnOff();
 function Reset()
@@ -129,14 +133,20 @@ function Reset()
 
 DefaultProperties
 {
-    FadeColor1=(R=0,G=0,B=255,A=255)
+    FadeColor1=(R=0,G=0,B=30,A=255)
     FadeColor2=(R=0,G=0,B=0,A=255)
-    bScriptPostRender=True
+    bScriptPostRender=true
 
     FootstepVolume=0.0
     GruntVolume=0.0
     TransientSoundVolume=0.0
     RagImpactVolume=0.0
+    AmbientGlow=0
 
-    bAlwaysRelevant=True
+    bAlwaysRelevant=true
+    bAcceptsProjectors=false
+    bProjTarget=false
+    bBlockZeroExtentTraces=false
+    bCanTeleport=false
+    bIgnoreTerminalVelocity=true
 }
