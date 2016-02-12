@@ -48,6 +48,7 @@ struct sSoloPacket
     var float Points;
     var float Time;
     var string Date;
+    var int Flags;
     var transient bool bIsSelf;
 };
 

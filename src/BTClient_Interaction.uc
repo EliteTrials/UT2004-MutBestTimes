@@ -2266,6 +2266,7 @@ final function RenderRecordsTable( Canvas C )
     local int columnIdx;
     local int i;
     local string value;
+    local float vXL;
     local bool isFocused, isRowSelected;
 
     // PRE-RENDERING
@@ -2396,6 +2397,14 @@ final function RenderRecordsTable( Canvas C )
             }
             DrawColumnText( C, drawX, drawY, value );
             drawX += columns[columnIdx].W;
+
+            if( columnIdx == 3 && (MRI.CR.SoloTop[i].Flags & 0x01/**RFLAG_CP*/) != 0 )
+            {
+                vXL = 54f/76f*fontYL;
+                C.SetPos( drawX - vXL - COLUMN_PADDING_X, drawY );
+                C.DrawColor = #0xFB607FFF;
+                C.DrawTile( Texture'HudContent.Generic.Hud', vXL, fontYL, 340, 130, 54, 76 );
+            }
         }
 
         // Tooltip
