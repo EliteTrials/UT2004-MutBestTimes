@@ -4312,14 +4312,17 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
 
 //==============================================================================
 // Deletes clientspawn of PlayerController
-final function DeleteClientSpawn( PlayerController Sender )                         // Eliot
+final function DeleteClientSpawn( PlayerController Sender, optional bool bSilent )                         // Eliot
 {
     local int i;
 
     i = GetClientSpawnIndex( Sender );
     if( i != -1 )
     {
-        SendSucceedMessage( Sender, lzCS_Deleted );
+        if( !bSilent )
+        {
+            SendSucceedMessage( Sender, lzCS_Deleted );
+        }
         if( ClientPlayerStarts[i].PStart != none )
         {
             ClientPlayerStarts[i].PStart.Destroy();

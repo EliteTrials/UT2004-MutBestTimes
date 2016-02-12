@@ -204,6 +204,7 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 {
     super.PlayerCompletedMap( player, playerSlot, playSeconds );
 
+    DeleteClientSpawn( player, true );
     if( bGroupMap )
     {
         // Complete a Group map

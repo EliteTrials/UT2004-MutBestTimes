@@ -22,6 +22,12 @@ protected function InitializeMode()
     bRegularMap = true;
 }
 
+function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
+{
+    super.PlayerCompletedObjective( player, LRI, score );
+    ClearClientStarts();
+}
+
 function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
 {
     super.PlayerCompletedMap( player, playerSlot, playSeconds );
