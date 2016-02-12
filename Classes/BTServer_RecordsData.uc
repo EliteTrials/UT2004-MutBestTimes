@@ -6,6 +6,8 @@ class BTServer_RecordsData extends Object
 
 const Version = 2;
 
+const RFLAG_CP = 0x01;
+
 struct sSoloRecord
 {
     /** Index into the PlayerList.
@@ -25,6 +27,9 @@ struct sSoloRecord
 
     /** Objectives that were completed during recording this record. */
     var int ObjectivesCount;
+
+    /** Holds certain conditions for this record, such as if a player set this record with a client spawn. */
+    var int Flags;
 };
 
 struct long sBTRecordInfo

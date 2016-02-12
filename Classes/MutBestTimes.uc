@@ -5260,6 +5260,14 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             RDat.Rec[UsedSlot].PSRL[i].SRD[2] = Level.Year;
             RDat.Rec[UsedSlot].PSRL[i].ExtraPoints = xp;
             RDat.Rec[UsedSlot].PSRL[i].ObjectivesCount = numObjectives;
+            if( IsClientSpawnPlayer( PC.Pawn ) )
+            {
+                RDat.Rec[UsedSlot].PSRL[i].Flags = RDat.Rec[UsedSlot].PSRL[i].Flags | 0x01/**RFLAG_CP*/;
+            }
+            else
+            {
+                RDat.Rec[UsedSlot].PSRL[i].Flags = RDat.Rec[UsedSlot].PSRL[i].Flags & ~0x01/**RFLAG_CP*/;
+            }
             CR.ClientSetPersonalTime( CurrentPlaySeconds );
             // Broadcast success, on next if( b ).
 
@@ -5319,6 +5327,10 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         RDat.Rec[UsedSlot].PSRL[j].SRD[2] = Level.Year;
         RDat.Rec[UsedSlot].PSRL[j].ExtraPoints = xp;
         RDat.Rec[UsedSlot].PSRL[j].ObjectivesCount = numObjectives;
+        if( IsClientSpawnPlayer( PC.Pawn ) )
+        {
+            RDat.Rec[UsedSlot].PSRL[j].Flags = RDat.Rec[UsedSlot].PSRL[j].Flags | 0x01/**RFLAG_CP*/;
+        }
         CR.ClientSetPersonalTime( CurrentPlaySeconds );
         b = True;
 
@@ -5393,6 +5405,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     TS.Points = CalcRecordPoints( UsedSlot, i );
                     TS.Time = RDat.Rec[UsedSlot].PSRL[i].SRT;
                     TS.Date = FixDate( RDat.Rec[UsedSlot].PSRL[i].SRD );
+                    TS.Flags = RDat.Rec[UsedSlot].PSRL[i].Flags;
                     CR.ClientSendPersonalOverallTop( TS );
                     CR.SoloRank = i + 1;
                 }
@@ -6104,18 +6117,8 @@ final Function UpdateScoreboard( PlayerController PC )
     }
 
     myCR = GetRep( PC );
-    if( myCR == None )
+    if( myCR == none || myCR.myPlayerSlot == -1 )
         return;
-
-    if( myCR.myPlayerSlot == -1 )
-    {
-        myCR.myPlayerSlot = FindPlayerSlot( PC.GetPlayerIDHash() )-1;
-        if( myCR.myPlayerSlot == -1 )
-        {
-            FullLog( "Failed to update the F12 scoreboard for player:" @ PC.GetHumanReadableName() );
-            return;
-        }
-    }
 
     // Update regardless of which improved rank position.
     if( MRI.RecordState == RS_Active && RDat.Rec[UsedSlot].PSRL.Length > 0 )
@@ -6144,6 +6147,7 @@ final Function UpdateScoreboard( PlayerController PC )
         NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
         NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
         NewTPacket.Date         = FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
+        NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
     }
 
     if( NewPacket.Name == "" && NewTPacket.Name == "" )

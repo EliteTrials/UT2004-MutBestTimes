@@ -190,6 +190,7 @@ state ReplicateSoloTop
                     SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
                     SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                     SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
+                    SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
                     CR.ClientSendPersonalOverallTop( SP );
                 }
                 CR.SoloRank = i+1;
@@ -205,6 +206,7 @@ state ReplicateSoloTop
                 SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
                 SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                 SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
+                SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
                 CR.ClientSendSoloTop( SP );
             }
         }
