@@ -2547,7 +2547,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 break;
             }
 
-            if( sender.Pawn == None || sender.Pawn.Physics != PHYS_Walking  || bQuickStart )
+            if( IsValidClientSpawnLocation( sender ) )
             {
                 SendErrorMessage( sender, lzCS_NoPawn );
                 break;
@@ -4206,6 +4206,21 @@ final function SendSucceedMessage( PlayerController PC, coerce string succeedMsg
     PC.ClientMessage( Class'HUD'.default.GoldColor $ succeedMsg );
 }
 
+final function bool IsValidClientSpawnLocation( PlayerController sender )
+{
+    if( bQuickStart )
+        return false;
+
+    return sender.Pawn == None
+        || sender.Pawn.Physics != PHYS_Walking
+        || (sender.Pawn.Base != none && Mover(sender.Pawn.Base) != none);
+}
+
+final function bool ClientSpawnCanCompleteMap()
+{
+    return bSoloMap && bClientSpawnPlayersCanCompleteMap;
+}
+
 //==============================================================================
 // Creates a clientspawn for PlayerController
 Final Function CreateClientSpawn( PlayerController Sender )                         // Eliot
@@ -4290,7 +4305,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
     ClientPlayerStarts[j].TeamIndex = Sender.Pawn.GetTeamNum();
     CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[j].SavedStats );
 
-    if( bClientSpawnPlayersCanCompleteMap )
+    if( ClientSpawnCanCompleteMap() )
     {
         SendSucceedMessage( Sender, lzCS_AllowComplete );
     }
@@ -4369,7 +4384,7 @@ final function PimpClientSpawn( int index, Pawn other )
     }
 
     CheckPointHandlerClass.static.ApplyPlayerState( other, ClientPlayerStarts[index].SavedStats );
-    if( !bClientSpawnPlayersCanCompleteMap )
+    if( !ClientSpawnCanCompleteMap() )
     {
         other.bCanUse = false;                                  // Cannot use Actors
         other.SetCollision( true, false, false );               // Cannot Block
@@ -4911,7 +4926,7 @@ function Trigger( Actor Other, Pawn EventInstigator )
     if( IsTrials() )
     {
         // Extra protection against 'Client Spawn' players using/touching a objective
-        if( !bClientSpawnPlayersCanCompleteMap && IsClientSpawnPlayer( EventInstigator ) )
+        if( !ClientSpawnCanCompleteMap() && IsClientSpawnPlayer( EventInstigator ) )
         {
             EventInstigator.Destroy();
 
@@ -7990,8 +8005,8 @@ DefaultProperties
     lzCS_Failed="Failed to set a 'Client Spawn' here. Please try move a little and try again"
     lzCS_ObjAndTrigger="You cannot interact with any objectives nor triggers while using a 'Client Spawn'"
     lzCS_Obj="You cannot interact with any objectives while using a 'Client Spawn'"
-    lzCS_AllowComplete="Because of the configuration of this server, you can complete the map with a 'Client Spawn'"
-    lzCS_NoPawn="Sorry you cannot set a 'Client Spawn' when you have no pawn, you are not walking or quickstart is in progress"
+    lzCS_AllowComplete="You can complete the current map with a 'Client Spawn'"
+    lzCS_NoPawn="Sorry you cannot set a 'Client Spawn' in this situation!"
     lzCS_NotEnabled="Sorry 'Client Spawn' is disabled for this trials mode"
     lzCS_NoQuickStartDelete="Sorry you cannot delete your 'Client Spawn' when quickstart is in progress"
     lzClientSpawn="Client Spawn"
@@ -8127,7 +8142,7 @@ DefaultProperties
     ConfigurableProperties(3)=(Property=BoolProperty'bEnhancedTime',Description="Dynamic RoundTime Limit",Weight=1,Hint="If Checked: BTimes will adjust the RoundTimeLimit of Assault based on the record time.")
     ConfigurableProperties(4)=(Property=BoolProperty'bDisableForceRespawn',Description="Disable Instant Respawning",Weight=1,Hint="If Checked: BTimes will not respawn dying players instantly.")
     ConfigurableProperties(5)=(Property=BoolProperty'bTriggersKillClientSpawnPlayers',Description="Triggers Should Kill ClientSpawn Players",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will kill people coming near a trigger if using a 'Client Spawn'.")
-    ConfigurableProperties(6)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: BTimes will alow people using a 'Client Spawn' to be able to finish the map.")
+    ConfigurableProperties(6)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: Players with a ClientSpawn will be able to complete solo maps.")
     ConfigurableProperties(7)=(Property=BoolProperty'bAddGhostTimerPaths',Description="Generate Ghost Time Paths",Weight=1,Hint="Whether to spawn ghost markers.")
     ConfigurableProperties(8)=(Property=IntProperty'GhostPlaybackFPS',Description="Ghost Recording Framerate",AccessLevel=255,Weight=1,Rules="2;1:25",Hint="Amount of frames recorded every second (DON'T SET THIS HIGH).")
     ConfigurableProperties(9)=(Property=FloatProperty'GhostSaveSpeed',Description="Ghost Saving Interval",AccessLevel=255,Weight=1,Hint="Amount of saving delay between every 10 Movements.")
