@@ -1271,7 +1271,7 @@ function ModifyPlayer( Pawn Other )
         }
 
         // Keys are lost after a dead!, except not if your're using a CheckPoint!
-        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
+        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) && !IsClientSpawnPlayer( Other ) )
         {
             ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
             ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
@@ -1840,9 +1840,8 @@ Final Function ResetCheckPoint( PlayerController PC )
     if( CheckPointHandler == None )
         return;
 
-    if( CheckPointHandler.HasSavedCheckPoint( PC ) )
+    if( CheckPointHandler.RemoveSavedCheckPoint( PC ) )
     {
-        CheckPointHandler.RemoveSavedCheckPoint( PC );
         PC.ClientMessage( "'CheckPoint' Reset" );
     }
 }

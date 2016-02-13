@@ -11,9 +11,6 @@ struct sCheckPoint
 
     var int CheckPointUses;
 };
-var array<sCheckPoint> CheckPoints; // CheckPoint Volumes array
-
-var private class<Inventory> KeyClass;
 
 struct sPawnStats
 {
@@ -22,6 +19,7 @@ struct sPawnStats
 
     var array< class<Weapon> > Weapons;
     var array<string> Keys;
+    var class<Inventory> KeyClass;
 
     var vector Location;
     var rotator Rotation;
@@ -38,6 +36,8 @@ struct sSavedCheckPoint
     var int Used;
     var int TeamIndex;
 };
+
+var array<sCheckPoint> CheckPoints; // CheckPoint Volumes array
 var array<sSavedCheckPoint> SavedCheckPoints; // In-Use CheckPoints
 
 // Don't need to call CheckReplacement.
@@ -116,7 +116,7 @@ function Trigger( Actor Other, Pawn Player )
         }
 
         // Players with a 'Client Spawn' and defenders should not be able to set checkpoints
-        if( Player.LastStartSpot.IsA( 'BTServer_ClientStartPoint' ) || Player.GetTeamNum() != ASGameInfo(Level.Game).CurrentAttackingTeam )
+        if( BTServer_ClientStartPoint(Player.LastStartSpot) != none || Player.GetTeamNum() != ASGameInfo(Level.Game).CurrentAttackingTeam )
         {
             xPawn(Player).ClientMessage( "'CheckPoint' Denied" );
             return;
@@ -185,14 +185,16 @@ final function AddSavedCheckPoint( Controller player, Actor Other )
     CapturePlayerState( player.Pawn, SavedCheckPoints[j].CheckPointActor, SavedCheckPoints[j].SavedStats );
 }
 
-final function RemoveSavedCheckPoint( Controller player )
+final function bool RemoveSavedCheckPoint( Controller player )
 {
     local int SlotIndex;
 
     if( HasSavedCheckPoint( player, SlotIndex ) )
     {
         SavedCheckPoints.Remove( SlotIndex, 1 );
+        return true;
     }
+    return false;
 }
 
 // Check if user has made a checkpoint, if so then spawn him there, this is called by BTServer_GameRules!
@@ -248,9 +250,9 @@ static function CapturePlayerState( Pawn player, Actor destination, out sPawnSta
         }
         else if( inv.IsA('LCAKeyInventory') || inv.IsA('LCA_KeyInventory') )
         {
-            if( default.KeyClass == none )
+            if( stats.KeyClass == none )
             {
-                default.KeyClass = inv.Class;
+                stats.KeyClass = inv.Class;
             }
             stats.Keys[stats.Keys.Length] = inv.GetPropertyText( "KeyName" );
         }
@@ -288,11 +290,11 @@ static function ApplyPlayerState( Pawn other, out sPawnStats stats )
         weaponClass.Default.bCanThrow = couldThrow;
     }
 
-    if( default.KeyClass != none )
+    if( stats.KeyClass != none )
     {
         for( i = 0; i < stats.Keys.Length; ++ i )
         {
-            savedKey = other.Spawn( default.KeyClass, other );
+            savedKey = other.Spawn( stats.KeyClass, other );
             savedKey.SetPropertyText( "KeyName", stats.Keys[i] );
             other.AddInventory( savedKey );
         }
