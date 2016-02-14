@@ -1,7 +1,7 @@
 class BTGUI_Trophies extends BTGUI_StatsTab
     dependson(Actor);
 
-#exec texture import name=trophyIcon file=Images/Trophy.tga group="icons" mips=off DXT=5 alpha=1
+#exec texture import name=trophyIcon file=content/Trophy.tga group="icons" mips=off DXT=5 alpha=1
 #exec obj load file="SkaarjAnims.ukx"
 
 var Texture TrophyIcon;

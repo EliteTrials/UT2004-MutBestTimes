@@ -15,7 +15,7 @@ del %project_build_name%.int
 cd..
 cd %project_name%
 
-xcopy Images "..\%project_build_name%\Images" /i /y /q
+xcopy content "..\%project_build_name%\content" /i /y /q
 copy /y "ClientBTimes.utx" "..\%project_build_name%\ClientBTimes.utx"
 
 cd src

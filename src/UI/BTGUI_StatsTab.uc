@@ -12,7 +12,7 @@ const IconSize = 64;
 
 var editconst protected int CurPos;
 
-#exec texture import name=regionBackground file=Images/Background.tga group="icons" mips=off DXT=5 alpha=1
+#exec texture import name=regionBackground file=content/Background.tga group="icons" mips=off DXT=5 alpha=1
 
 var() texture RegionImage;
 

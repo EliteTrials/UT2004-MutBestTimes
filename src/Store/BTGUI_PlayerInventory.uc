@@ -4,10 +4,10 @@
 class BTGUI_PlayerInventory extends BTGUI_StatsTab
     dependson(BTClient_ClientReplication);
 
-#exec texture import name=itemBackground file=Images/itemBg.tga mips=off DXT=1 LODSet=5
-#exec texture import name=itemBar file=Images/itemBar.tga mips=off DXT=1 LODSet=5
-#exec texture import name=itemUnChecked file=Images/itemUnChecked.tga mips=off DXT=1 LODSet=5
-#exec texture import name=itemChecked file=Images/itemChecked.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemBackground file=content/itemBg.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemBar file=content/itemBar.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemUnChecked file=content/itemUnChecked.tga mips=off DXT=1 LODSet=5
+#exec texture import name=itemChecked file=content/itemChecked.tga mips=off DXT=1 LODSet=5
 
 var Texture TileMat;
 var Texture FooterTexture;
