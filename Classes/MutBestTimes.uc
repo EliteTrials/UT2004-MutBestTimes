@@ -5265,7 +5265,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
                 PLi = i;
-                //FullLog( "Player Found"@PLs );
                 b = true;
                 break;
             }
@@ -5275,13 +5274,10 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     // Player was found!
     if( b )
     {
-        //FullLog( "First b Check" );
         if( GetFixedTime( RDat.Rec[UsedSlot].PSRL[i].SRT ) > CurrentPlaySeconds )
         {
             //==============================================================
             // Update solo record slot
-
-            //FullLog( "Faster personal record!" );
             SetSoloRecordTime( PC, i, CurrentPlaySeconds );
             RDat.Rec[UsedSlot].PSRL[i].SRD[0] = Level.Day;
             RDat.Rec[UsedSlot].PSRL[i].SRD[1] = Level.Month;
@@ -5298,15 +5294,12 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             }
             CR.ClientSetPersonalTime( CurrentPlaySeconds );
             // Broadcast success, on next if( b ).
-
             PDat.AddExperience( PLs-1, EXP_ImprovedRecord + numObjectives );
         }
         else
         {
             //==============================================================
             // Failed rec'ing, broadcast the failure!
-
-            //FullLog( "Not faster personal record!" );
             b = False;
             // Broadcast failure!
             ++ RDat.Rec[UsedSlot].TMFailures;
@@ -5337,7 +5330,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 {
                     BTServer_SoloMode(CurMode).WageFailed( CR, CR.BTWage );
                 }
-                //PDat.AddExperience( PLs-1, EXP_FailRecord + xp );
             }
         }
     }
@@ -5345,8 +5337,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     {
         //==================================================================
         // Add a solo record slot
-
-        //FullLog( "First b check failed" );
         RDat.Rec[UsedSlot].PSRL.Length = j + 1;
         RDat.Rec[UsedSlot].PSRL[j].PLs = PLs;
         SetSoloRecordTime( PC, j, CurrentPlaySeconds );
@@ -5368,9 +5358,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     if( b )
     {
         b = False;
-        //FullLog( "Second b Check" );
-        // Update the best (MaxRankedPlayers) PSRL list
-
         j = RDat.Rec[UsedSlot].PSRL.Length;
         for( i = 0; i < (j - 1); ++ i )
         {
@@ -5384,16 +5371,12 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             RDat.Rec[UsedSlot].PSRL[i] = Tmp;
         }
 
-        //FullLog( "Sorted" );
-
-        // sorted, find player slot again and get the new position and broadcast
-        //j = Min( RDat.Rec[UsedSlot].PSRL.Length, MaxRankedPlayers );
         for( i = 0; i < j; ++ i )
         {
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
             	score = CalcRecordPoints( UsedSlot, i );
-                if( Store != none )
+                if( Store != none && Store.Teams.Length > 0 )
                 {
                     l = Store.FindPlayerTeam( CR );
                     if( l != -1 )
@@ -5413,8 +5396,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 {
                     PDat.ProgressAchievementByID( PLs-1, 'points_0' );
                 }
-
-                //FullLog( "Found Player in top 25 after sort" );
 
                 AddRecentSetRecordToPlayer( RDat.Rec[UsedSlot].PSRL[i].PLs, CurrentMapName @ cDarkGray$TimeToStr( CurrentPlaySeconds ) );
 
@@ -5493,7 +5474,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                         BroadcastAnnouncement( AnnouncementRecordSet );
                     }
 
-                    //SetXfireStatusFor( PC, %EndMsg @ "on" @ CurrentMapName );
                     BroadcastConsoleMessage( EndMsg );
 
                     // Update map stats.
