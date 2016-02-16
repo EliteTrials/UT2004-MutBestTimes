@@ -542,16 +542,20 @@ final function ProgressAchievementByType( int playerSlot, name type, optional in
         if( BT.AchievementsManager.Achievements[i].Type == type )
         {
             slot = FindAchievementByID( playerSlot, BT.AchievementsManager.Achievements[i].ID );
-            if( slot == -1 )
-            {
-                CreateAchievementSlot( BT.AchievementsManager, playerSlot, BT.AchievementsManager.Achievements[i].ID );
-            }
+            if( slot != -1 )
+                continue;
+
+            CreateAchievementSlot( BT.AchievementsManager, playerSlot, BT.AchievementsManager.Achievements[i].ID );
         }
     }
 
     for( i = 0; i < Player[playerSlot].Achievements.Length; ++ i )
     {
-        if( BT.AchievementsManager.Achievements[BT.AchievementsManager.FindAchievementByID( Player[playerSlot].Achievements[i].ID )].Type == type )
+        slot = BT.AchievementsManager.FindAchievementByID( Player[playerSlot].Achievements[i].ID );
+        if( slot == -1 ) // Retired?
+            continue; // This is an achievement track for a no-longer-existing achievement.
+
+        if( BT.AchievementsManager.Achievements[slot].Type == type )
         {
             ProgressAchievementBySlot( playerSlot, i, count );
         }
@@ -611,7 +615,6 @@ final private function ProgressAchievementBySlot( int playerSlot, int achSlot, o
         return;
 
     req = BT.AchievementsManager.Achievements[BT.AchievementsManager.FindAchievementByID( Player[playerSlot].Achievements[achSlot].ID )].Count;
-
     if( req == 0 )
     {
         if( Player[playerSlot].Achievements[achSlot].Progress != -1 )
