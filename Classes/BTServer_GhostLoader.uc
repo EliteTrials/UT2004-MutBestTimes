@@ -354,6 +354,12 @@ function Reset()
     GhostsRespawn();
 }
 
+event Destroyed()
+{
+    super.Destroyed();
+    GhostsKill();
+}
+
 defaultproperties
 {
     MaxGhosts=8
