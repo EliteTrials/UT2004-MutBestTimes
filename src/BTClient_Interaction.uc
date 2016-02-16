@@ -2728,8 +2728,10 @@ function PostRender( Canvas C )
 
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.05), S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.GoldColor );
+
                 S = MRI.PlayersBestTimes;
-                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Holder(s)", S, true, C.ClipX*0.65, 4.5 );
+                DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.10), "Set by", S, true, C.ClipX*0.65, 4.5 );
+
                 S = MRI.PointsReward;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.15), "Score", S, true, C.ClipX*0.65, 4.5 );
                 break;

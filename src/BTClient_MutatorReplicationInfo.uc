@@ -62,11 +62,8 @@ replication
 {
     reliable if( Role == ROLE_Authority )
         PlayersBestTimes, MapBestTime,
-        RecordState, EndMsg, ObjectiveTotalTime,
+        RecordState, EndMsg, PointsReward, ObjectiveTotalTime,
         MaxMoves, SoloRecords, bCompetitiveMode, Teams;
-
-    reliable if( bNetDirty /*&& EndMsg != ""*/ )
-        PointsReward;
 
     reliable if( !bSoloMap )
         MatchStartTime;
@@ -74,7 +71,7 @@ replication
     reliable if( bNetDirty && bCompetitiveMode )
         TeamTime;
 
-    // Only once replicated
+    // Only replicated once
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
