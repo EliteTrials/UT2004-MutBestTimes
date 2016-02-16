@@ -361,6 +361,9 @@ function string InjectMapNameData( VotingReplicationInfo VRI, int mapIndex )
     local int recordIndex;
     local string data;
 
+    if( Level.bLevelChange )
+        return "";
+
     recordIndex = BT.RDat.FindRecord( MapList[mapIndex].MapName );
     if( recordIndex == -1 )
     {
