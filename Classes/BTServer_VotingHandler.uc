@@ -8,7 +8,6 @@ const ASTERIKPREFIX = "*";
 
 var() globalconfig array<string> RandomMapModes;
 var() globalconfig int QuickStartLimit;
-var() globalconfig bool bRankedVotingPriority;
 
 var MutBestTimes BT;
 
@@ -26,8 +25,14 @@ var bool bThisMapHasD;
 
 var protected transient bool bAdminForced;
 
+event Reset()
+{
+    super.Reset();
+    bAdminForced = false; // Admins may also have voten something that doesn't involve map traveling.
+}
+
 // Small fix
-event timer()
+event Timer()
 {
     local int i;
 
@@ -198,6 +203,11 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
             PlayerController(Voter).ClientMessage( "You cannot vote for a disabled map!" );
             return;
         }
+
+        PrevMapVote = MVRI[Index].MapVote;
+        PrevGameVote = MVRI[Index].GameVote;
+        MVRI[Index].MapVote = MapIndex;
+        MVRI[Index].GameVote = GameIndex;
     }
     else
     {
@@ -207,57 +217,57 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
         log("Admin has forced map switch to " $ MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")",'MapVote');
         CloseAllVoteWindows();
         bAdminForced = true;
-    }
 
-    PrevMapVote = MVRI[Index].MapVote;
-    PrevGameVote = MVRI[Index].GameVote;
-    MVRI[Index].MapVote = MapIndex;
-    MVRI[Index].GameVote = GameIndex;
-
-    if( bAdminForced )
-    {
         ClearAllVotes();
+        VoteCount = 1;
+        PrevMapVote = MVRI[Index].MapVote;
+        PrevGameVote = MVRI[Index].GameVote;
+        MVRI[Index].MapVote = MapIndex;
+        MVRI[Index].GameVote = GameIndex;
     }
 
-    if(bAccumulationMode)
+    if( !bAdminForced )
     {
-        if(bScoreMode)
+        if(bAccumulationMode)
         {
-            VoteCount = GetAccVote(PlayerController(Voter)) + int(GetPlayerScore(PlayerController(Voter)));
-            TextMessage = lmsgMapVotedForWithCount;
-            TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
-            TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
-            TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
-            Level.Game.Broadcast(self,TextMessage);
+            if(bScoreMode)
+            {
+                VoteCount = GetAccVote(PlayerController(Voter)) + int(GetPlayerScore(PlayerController(Voter)));
+                TextMessage = lmsgMapVotedForWithCount;
+                TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
+                TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
+                TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
+                Level.Game.Broadcast(self,TextMessage);
+            }
+            else
+            {
+                VoteCount = GetAccVote(PlayerController(Voter)) + 1;
+                TextMessage = lmsgMapVotedForWithCount;
+                TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
+                TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
+                TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
+                Level.Game.Broadcast(self,TextMessage);
+            }
         }
         else
         {
-            VoteCount = GetAccVote(PlayerController(Voter)) + 1;
-            TextMessage = lmsgMapVotedForWithCount;
-            TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
-            TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
-            TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
-            Level.Game.Broadcast(self,TextMessage);
-        }
-    }
-    else
-    {
-        if(bScoreMode)
-        {
-            VoteCount = int(GetPlayerScore(PlayerController(Voter)));
-            TextMessage = lmsgMapVotedForWithCount;
-            TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
-            TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
-            TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
-            Level.Game.Broadcast(self,TextMessage);
-        }
-        else
-        {
-            VoteCount =  1;
-            TextMessage = lmsgMapVotedFor;
-            TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
-            TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
-            Level.Game.Broadcast(self,TextMessage);
+            if(bScoreMode)
+            {
+                VoteCount = int(GetPlayerScore(PlayerController(Voter)));
+                TextMessage = lmsgMapVotedForWithCount;
+                TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
+                TextMessage = repl(TextMessage, "%votecount%", string(VoteCount) );
+                TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
+                Level.Game.Broadcast(self,TextMessage);
+            }
+            else
+            {
+                VoteCount =  1;
+                TextMessage = lmsgMapVotedFor;
+                TextMessage = repl(TextMessage, "%playername%", PlayerController(Voter).PlayerReplicationInfo.PlayerName );
+                TextMessage = repl(TextMessage, "%mapname%", MapList[MapIndex].MapName $ "(" $ GameConfig[GameIndex].Acronym $ ")" );
+                Level.Game.Broadcast(self,TextMessage);
+            }
         }
     }
     UpdateVoteCount(MapIndex, GameIndex, VoteCount);
@@ -438,14 +448,6 @@ function TallyVotes(bool bForceMapSwitch)
                         Votes = GetAccVote(MVRI[x].PlayerOwner) + 1;
                     else
                         Votes = 1;
-                }
-
-                // Count top ranked players twice.
-                // Hardcoded 3 because MaxRewardedPlayers adjusts when its holiday and so then almost everyone gets double votes which is just stupid
-                if( bRankedVotingPriority && BT.IsRank( MVRI[x].PlayerOwner.GetPlayerIdHash(), 3/*BT.MaxRewardedPlayers*/ ) && !BT.FoundDuplicateID( MVRI[x].PlayerOwner ) )
-                {
-                    PlayersThatVoted ++;
-                    Votes *= 2;
                 }
 
                 if( bAdminForced && MVRI[x].PlayerOwner.PlayerReplicationInfo.bAdmin )
@@ -772,7 +774,6 @@ function CheckMapData()
 static function FillPlayInfo( PlayInfo Info )
 {
     super.FillPlayInfo( Info );
-    Info.AddSetting( default.MapVoteGroup, "bRankedVotingPriority", "Ranked Voting Priority", 0, 1, "Check" );
     Info.AddSetting( default.MapVoteGroup, "QuickStartLimit", "QuickStart Limit", 0, 1, "Text", "10;0:9999",, true, true );
 }
 
@@ -780,9 +781,6 @@ static function string GetDescriptionText( string PropName )
 {
     switch( PropName )
     {
-        case "bRankedVotingPriority":
-            return "Whether to give the top ranked players an higher voting priority";
-
         case "QuickStartLimit":
             return "The amount of times people are allowed to vote for quickstart within one session";
     }
@@ -793,7 +791,6 @@ DefaultProperties
 {
     QuickStartLimit=10
     bMapVote=True
-    bRankedVotingPriority=True
 
     RepeatLimit=0   // We have our own system and better!
 
