@@ -5236,7 +5236,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
     local int i, j, PLs, PLi, y, z, l;
-    local float TimeBoost;
+    local float TimeBoost, score;
     local Pawn P;
     local int numObjectives;
 
@@ -5392,6 +5392,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         {
             if( RDat.Rec[UsedSlot].PSRL[i].PLs == PLs )
             {
+            	score = CalcRecordPoints( UsedSlot, i );
                 if( Store != none )
                 {
                     l = Store.FindPlayerTeam( CR );
@@ -5408,7 +5409,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 }
 
                 // Earn 20 points from one record.
-                if( CalcRecordPoints( UsedSlot, i ) >= 20 )
+                if( score >= 20 )
                 {
                     PDat.ProgressAchievementByID( PLs-1, 'points_0' );
                 }
@@ -5430,7 +5431,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 {
                     // Update Personal Record Packet
                     TS.Name = Class'HUD'.Default.WhiteColor $ PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
-                    TS.Points = CalcRecordPoints( UsedSlot, i );
+                    TS.Points = score;
                     TS.Time = RDat.Rec[UsedSlot].PSRL[i].SRT;
                     TS.Date = FixDate( RDat.Rec[UsedSlot].PSRL[i].SRD );
                     TS.Flags = RDat.Rec[UsedSlot].PSRL[i].Flags;
@@ -5513,7 +5514,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     // Update clients. .
                     BestPlaySeconds = CurrentPlaySeconds;
                     MRI.MapBestTime = BestPlaySeconds;
-                    MRI.PointsReward = "Earned points this record: " $ CalcRecordPoints( UsedSlot, 0 );
+                    MRI.PointsReward = string(score);
 
                     if( CR.BTWage > 0 )
                     {
@@ -7294,12 +7295,15 @@ final function float CalcRecordPoints( int RecordSlot, int SoloRecordSlot )
         + RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ExtraPoints;
 
     Scaler = float(SoloRecordSlot);
-    for( i = SoloRecordSlot; i >= 0; -- i )
+    if( Scaler > 0 )
     {
-        if( RDat.Rec[RecordSlot].PSRL[i].SRT == RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
-        {
-            Scaler = float(i);
-        }
+	    for( i = SoloRecordSlot; i >= 0; -- i )
+	    {
+	        if( RDat.Rec[RecordSlot].PSRL[i].SRT == RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
+	        {
+	            Scaler = float(i);
+	        }
+	    }
     }
 
     // best time gets extra points.
