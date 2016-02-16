@@ -339,7 +339,7 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
         {
             foreach AllActors( class'PlayerStart', S )
             {
-                if( S.bEnabled && !S.IsA( 'BTServer_ClientStartPoint' ) && !S.IsA( 'BTServer_CheckPointNavigation' ) )
+                if( S.bEnabled )
                 {
                     Player.Event = '';
                     if( ASGameInfo(Level.Game) != none )

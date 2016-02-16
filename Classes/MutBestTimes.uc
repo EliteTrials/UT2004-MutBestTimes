@@ -463,7 +463,13 @@ final function bool IsTrials()
 
 final function bool IsClientSpawnPlayer( Pawn player )
 {
-    return player.LastStartSpot != none && player.LastStartSpot.IsA( ClientStartPointClass.Name );
+	local int index;
+
+	index = GetClientSpawnIndex( player.Controller );
+	if( index == -1 )
+		return false;
+
+	return player.LastStartSpot != none && player.LastStartSpot == ClientPlayerStarts[index].PStart;
 }
 
 final function NotifyObjectiveAccomplished( PlayerController PC, float score )
@@ -5546,13 +5552,14 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         }
     }
 
+    DeleteClientSpawn( PC, true );
+    if( CheckPointHandler != none )
+    {
+        CheckPointHandler.RemoveSavedCheckPoint( PC );
+    }
+
     if( bSoloMap )
     {
-        if( CheckPointHandler != none )
-        {
-            CheckPointHandler.RemoveSavedCheckPoint( PC );
-        }
-
         // Kill player?
         P = PC.Pawn;
         if( P != None )
@@ -7978,11 +7985,11 @@ DefaultProperties
     AnnouncementRecordFailed=Denied
     AnnouncementRecordAlmost=Totalled
 
-    CheckPointHandlerClass=Class'BTServer_CheckPoint'
-    CheckPointNavigationClass=Class'BTServer_CheckPointNavigation'
-    TrailerInfoClass=Class'BTClient_TrailerInfo'
-    RankTrailerClass=Class'BTClient_RankTrailer'
-    ClientStartPointClass=Class'BTServer_ClientStartPoint'
+    CheckPointHandlerClass=class'BTServer_CheckPoint'
+    CheckPointNavigationClass=class'BTServer_CheckPointNavigation'
+    TrailerInfoClass=class'BTClient_TrailerInfo'
+    RankTrailerClass=class'BTClient_RankTrailer'
+    ClientStartPointClass=class'BTServer_ClientStartPoint'
     NotifyClass=class'BTServer_HttpNotificator'
 
     lzMapName="Map Name"

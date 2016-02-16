@@ -11,7 +11,7 @@ function Reset()
 
 defaultproperties
 {
-    bEnabled=False
-    bStatic=False
-    bNoDelete=False
+    bEnabled=false
+    bStatic=false
+    bNoDelete=false
 }
