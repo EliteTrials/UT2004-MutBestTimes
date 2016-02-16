@@ -40,6 +40,8 @@ struct sSavedCheckPoint
 var array<sCheckPoint> CheckPoints; // CheckPoint Volumes array
 var array<sSavedCheckPoint> SavedCheckPoints; // In-Use CheckPoints
 
+var() const class<LocalMessage> CheckpointSetMessageClass;
+
 // Don't need to call CheckReplacement.
 event PreBeginPlay();
 
@@ -128,7 +130,7 @@ function Trigger( Actor Other, Pawn Player )
             // User made a new checkpoint?
             if( SavedCheckPoints[SlotIndex].CheckPointActor != Other )
             {
-                xPawn(Player).ClientMessage( "'CheckPoint' Updated" );
+                Level.Game.BroadcastLocalizedMessage( CheckpointSetMessageClass, 0, Player.PlayerReplicationInfo );
 
                 // Update!
                 SavedCheckPoints[SlotIndex].CheckPointActor = Other;
@@ -140,7 +142,7 @@ function Trigger( Actor Other, Pawn Player )
         }
         else
         {
-            xPawn(Player).ClientMessage( "'CheckPoint' Set" );
+            Level.Game.BroadcastLocalizedMessage( CheckpointSetMessageClass, 0, Player.PlayerReplicationInfo );
 
             // Create a checkpoint for this player
             AddSavedCheckPoint( Player.Controller, Other );
@@ -299,4 +301,9 @@ static function ApplyPlayerState( Pawn other, out sPawnStats stats )
             other.AddInventory( savedKey );
         }
     }
+}
+
+defaultproperties
+{
+    CheckpointSetMessageClass=class'BTClient_CheckPointSetMessage'
 }
