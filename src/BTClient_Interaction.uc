@@ -1170,8 +1170,10 @@ private function ModifyMenu()
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
     local BTGUI_PlayerInventory invMenu;
+    local BTGUI_Help helpMenu;
     local BTGUI_Store storeMenu;
     local BTGUI_Rewards rewardsMenu;
+    local GUITabPanel oldHelpMenu;
 
     Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
     if( Menu != None )
@@ -1183,6 +1185,22 @@ private function ModifyMenu()
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
+
+        oldHelpMenu = Menu.c_Main.FindPanelClass( class'UT2k4Tab_MidGameHelp' );
+        if( oldHelpMenu != none )
+        {
+            helpMenu = BTGUI_Help(Menu.c_Main.ReplaceTab( oldHelpMenu.MyButton, "Help", string(Class'BTGUI_Help'),, "Help Topics" ));
+        } else
+        {
+            helpMenu = BTGUI_Help(Menu.c_Main.AddTab( "Help", string(Class'BTGUI_Help'),, "Help Topics" ));
+        }
+        if( helpMenu != none )
+        {
+            // helpMenu.MyInteraction = self;
+            helpMenu.MyButton.StyleName = "StoreButton";
+            helpMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", helpMenu.FontScale );
+            helpMenu.PostInitPanel();
+        }
 
         invMenu = BTGUI_PlayerInventory(Menu.c_Main.AddTab( "Inventory", string(Class'BTGUI_PlayerInventory'),, "Manage your items" ));
         if( invMenu != none )
