@@ -74,10 +74,14 @@ function InternalOnOpen()
         ComboGameType.AddItem( MVRI.GameConfig[i].GameName, none, string(i));
     ComboGameType.List.SortList();
 
+    // set starting gametype to current
+    d = ComboGameType.List.FindExtra(string(MVRI.CurrentGameConfig));
+    if( d > -1 )
+        ComboGameType.SetIndex(d);
+
     t_WindowTitle.Caption = t_WindowTitle.Caption@"("$lmsgMode[MVRI.Mode]$")";
 
     lb_MapListBox.LoadList(MVRI);
-
     MapVoteCountMultiColumnList(lb_VoteCountListBox.List).LoadList(MVRI);
 
     lb_VoteCountListBox.List.OnDblClick = MapListDblClick;
@@ -90,20 +94,17 @@ function InternalOnOpen()
     ComboGameType.OnChange = GameTypeChanged;
     // f_Chat.OnSubmit = Submit;
 
-    // set starting gametype to current
-    d = ComboGameType.List.FindExtra(string(MVRI.CurrentGameConfig));
-    if( d > -1 )
-        ComboGameType.SetIndex(d);
+
 
     ComboGameType.Edit.Style = Controller.GetStyle("BTEditBox", ComboGameType.Edit.FontScale);
     ComboGameType.MyShowListBtn.Style = Controller.GetStyle("BTButton", ComboGameType.MyShowListBtn.FontScale);
     ComboGameType.List.Style = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
     ComboGameType.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
 
-    lb_MaplistBox.MyScrollBar.MyIncreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyIncreaseButton.FontScale);
-    lb_MaplistBox.MyScrollBar.MyDecreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyDecreaseButton.FontScale);
-    lb_MaplistBox.MyScrollBar.MyGripButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyGripButton.FontScale);
-    lb_MaplistBox.MyScrollBar.MyScrollZone.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyScrollZone.FontScale);
+    // lb_MaplistBox.MyScrollBar.MyIncreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyIncreaseButton.FontScale);
+    // lb_MaplistBox.MyScrollBar.MyDecreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyDecreaseButton.FontScale);
+    // lb_MaplistBox.MyScrollBar.MyGripButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyGripButton.FontScale);
+    // lb_MaplistBox.MyScrollBar.MyScrollZone.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyScrollZone.FontScale);
 }
 
 function GameTypeChanged(GUIComponent Sender)
@@ -184,14 +185,8 @@ defaultproperties
         bScaleToParent=True
         bBoundToParent=True
         FontScale=FNS_Small
-        HeaderColumnPerc(0)=0.10
-        HeaderColumnPerc(1)=0.40
-        HeaderColumnPerc(2)=0.15
-        HeaderColumnPerc(3)=0.15
-        HeaderColumnPerc(4)=0.10
-        HeaderColumnPerc(5)=0.10
         begin object class=BTClient_MultiColumnListHeader name=oHeader
-            BarStyleName=""
+            // BarStyleName=""
         end object
         Header=oHeader
     End Object
@@ -220,7 +215,7 @@ defaultproperties
         HeaderColumnPerc(1)=0.55
         HeaderColumnPerc(2)=0.15
         begin object class=BTClient_MultiColumnListHeader name=oHeaderTwo
-            BarStyleName=""
+            // BarStyleName=""
         end object
         Header=oHeaderTwo
     End Object

@@ -41,7 +41,7 @@ final static function string ParseMapName(string mapName)
 }
 
 // STR-MapName$$TIME;COUNT
-final static function string ParseMapNameData(string mapName, out string timeString, out string recordsCount, out string mapRating)
+final static function string ParseMapNameData(string mapName, out string timeString, out string recordsCount, out string mapRating, out string recordHolder)
 {
     local int i;
 	local string data;
@@ -52,7 +52,7 @@ final static function string ParseMapNameData(string mapName, out string timeStr
     {
         data = Mid(mapName, i + 2);
         mapName = Left(mapName, i);
-        Split(data, ";", props);
+        Split(data, " ", props);
         for( i = 0; i < props.Length; ++ i )
         {
             Split(props[i], ":", prop);
@@ -69,23 +69,12 @@ final static function string ParseMapNameData(string mapName, out string timeStr
                 case "R":
                     mapRating = Right( "0"$prop[1], 5 );
                     break;
+
+                case "P":
+                    recordHolder = prop[1];
+                    break;
             }
         }
-    }
-
-    if( timeString == "" )
-    {
-        timeString = class'BTClient_Interaction'.static.FormatTime(0.00);
-    }
-
-    if( recordsCount == "" )
-    {
-        recordsCount = "0";
-    }
-
-    if( mapRating == "" )
-    {
-        mapRating = "00.00";
     }
     return mapName;
 }
@@ -96,12 +85,12 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     local float CellLeft, CellWidth;
     local eMenuState MState;
     local GUIStyles DrawStyle;
-    local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
+    local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt;
 
 	if( VRI == none )
 		return;
 
-    mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[SortData[i].SortItem]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);
+    mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[SortData[i].SortItem]].MapName, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt);
     Y += 2;
     H -= 4;
     X += 4;
@@ -127,28 +116,32 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     else
         MState = MenuState;
 
+    C.DrawColor = #0xFFFFFFFF;
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        mapRatingTxt, FontScale );
+        string(int(float(VRI.MapList[MapVoteData[SortData[i].SortItem]].PlayCount)/100F))$"h", FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    C.DrawColor = #0xFFFFFFFF;
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		mapTxt, FontScale );
+        mapTxt, FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		timeTxt, FontScale );
+        recordsCountTxt, FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		string(float(VRI.MapList[MapVoteData[SortData[i].SortItem]].PlayCount)/100F), FontScale );
+        timeTxt, FontScale );
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        recordsCountTxt, FontScale );
+        holderTxt, FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
+    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+        mapRatingTxt, FontScale );
+
+    GetCellLeftWidth( 6, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
 }
@@ -166,28 +159,31 @@ static function string MyPadLeft( string Src, byte StrLen, optional string PadSt
 
 function string GetSortString( int i )
 {
-	local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt;
+	local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt;
 
-	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt, mapRatingTxt);
+	mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[i]].MapName, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt);
     switch( SortColumn )
     {
         // MapRating
-        case 0:
+        case 5:
             return MyPadLeft(mapRatingTxt, 5, "0");
 
         case 1:
             return left(Caps(mapTxt),20);
 
-        case 2:
+        case 3:
             return timeTxt;
 
-        case 3:
+        case 4:
+            return Caps(class'GUIComponent'.static.StripColorCodes(holderTxt));
+
+        case 0:
             return MyPadLeft(string(float(VRI.MapList[MapVoteData[i]].PlayCount)/100F), 8, "0");
 
-        case 4:
+        case 2:
             return MyPadLeft(recordsCountTxt, 4, "0");
 
-        case 5:
+        case 6:
             return MyPadLeft(string(VRI.MapList[MapVoteData[i]].Sequence), 8, "0");
     }
 
@@ -227,21 +223,30 @@ function bool IsFiltered( VotingReplicationInfo LoadVRI, int GameTypeIndex, stri
     local array<string> PrefixList;
     local string filter;
     local int p;
+    local bool hasMatch;
 
     mapName = Locs(mapName);
-    filter = Locs(_CurrentFilter);
-    if( filter != "" && !MatchesFilter(mapName, filter, true) )
-        return true;
-
     Split(Locs(VRI.GameConfig[GameTypeIndex].Prefix), ",", PrefixList);
     for( p=0; p<PreFixList.Length; p++)
     {
         if( MatchesFilter(mapname, PreFixList[p]) )
         {
-            return false;
+            hasMatch = true;
+            break;
         }
     }
-    return true;
+
+    filter = Locs(_CurrentFilter);
+    if( filter != "" )
+    {
+        hasMatch = MatchesFilter(mapName, filter, false);
+        if( !hasMatch )
+        {
+            hasMatch = MatchesFilter(mapName, filter, true);
+        }
+    }
+
+    return !hasMatch;
 }
 
 private function bool MatchesFilter( string test, string filter, optional bool bNoPrefix )
@@ -300,28 +305,30 @@ private function bool MatchesFilter( string test, string filter, optional bool b
 
 defaultproperties
 {
-	ColumnHeadings(0)="Score"
+    InitColumnPerc(0)=0.06
+    InitColumnPerc(1)=0.36
+    InitColumnPerc(2)=0.08
+    InitColumnPerc(3)=0.10
+    InitColumnPerc(4)=0.22
+    InitColumnPerc(5)=0.08
+    InitColumnPerc(6)=0.10
+
+    ColumnHeadings(0)="Hours"
     ColumnHeadings(1)="Map Name"
-    ColumnHeadings(2)="Time"
-    ColumnHeadings(3)="Played Hours"
-    ColumnHeadings(4)="Records"
-    ColumnHeadings(5)="Seq"
+    ColumnHeadings(2)="Records"
+    ColumnHeadings(3)="Time"
+    ColumnHeadings(4)="Set By"
+	ColumnHeadings(5)="Thumbs"
+    ColumnHeadings(6)="Seq"
 
-    InitColumnPerc(0)=0.12
-    InitColumnPerc(1)=0.38
-    InitColumnPerc(2)=0.12
-    InitColumnPerc(3)=0.12
-    InitColumnPerc(4)=0.12
-    InitColumnPerc(5)=0.12
-
-    ColumnHeadingHints(0)="Players rating of this map."
-	ColumnHeadingHints(1)="Map Name."
-    ColumnHeadingHints(2)="Best time record on this map."
-	ColumnHeadingHints(3)="Number of hours this map has been played for."
-    ColumnHeadingHints(4)="Number of records this map has."
-    ColumnHeadingHints(5)="Sequence, The number of games that have been played since this map was last played."
+	ColumnHeadingHints(0)="Number of hours this map has been played for."
+    ColumnHeadingHints(1)="Map Name."
+    ColumnHeadingHints(2)="Number of records this map has."
+    ColumnHeadingHints(3)="Best time record on this map."
+    ColumnHeadingHints(4)="Best time set by."
+    ColumnHeadingHints(5)="Players rating of this map."
+    ColumnHeadingHints(6)="Sequence, The number of games that have been played since this map was last played."
 
     OnFilterVotingList=InternalOnFilterVotingList
-
     StyleName="BTMultiColumnList"
 }
