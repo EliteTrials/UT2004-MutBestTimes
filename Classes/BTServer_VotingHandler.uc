@@ -380,16 +380,13 @@ function string InjectMapNameData( VotingReplicationInfo VRI, int mapIndex )
         return "";
     }
 
+    data $= "R:" $ BT.RDat.GetMapRating( recordIndex );
+    data $= " N:" $ BT.RDat.Rec[recordIndex].PSRL.Length;
     if( BT.RDat.Rec[recordIndex].PSRL.Length > 0 )
     {
-        data = "T:" $ BT.RDat.Rec[recordIndex].PSRL[0].SRT;
+        data $= " T:" $ BT.RDat.Rec[recordIndex].PSRL[0].SRT;
+        data $= " P:" $ BT.PDat.Player[BT.RDat.Rec[recordIndex].PSRL[0].PLs-1].PLName;
     }
-    else
-    {
-        data = "T:";
-    }
-    data $= ";N:" $ BT.RDat.Rec[recordIndex].PSRL.Length;
-    data $= ";R:" $ BT.RDat.GetMapRating( recordIndex );
     return data;
 }
 
