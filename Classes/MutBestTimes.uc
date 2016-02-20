@@ -461,15 +461,14 @@ final function bool IsTrials()
     return ASGameInfo(Level.Game) != none;
 }
 
-final function bool IsClientSpawnPlayer( Pawn player )
+final function bool IsClientSpawnPlayer( Pawn other )
 {
-	local int index;
+    local BTClient_ClientReplication CRI;
 
-	index = GetClientSpawnIndex( player.Controller );
-	if( index == -1 )
-		return false;
-
-	return player.LastStartSpot != none && player.LastStartSpot == ClientPlayerStarts[index].PStart;
+    CRI = GetRep( other.Controller );
+    return other != none && CRI != none && CRI.ClientSpawnPawn == other
+        // Checkpoint players use the same system, so make sure we don't consider them as ClientSpawn users.
+        && !(other.LastStartSpot != none && other.LastStartSpot.IsA( CheckPointNavigationClass.Name ));
 }
 
 final function NotifyObjectiveAccomplished( PlayerController PC, float score )
@@ -1127,7 +1126,6 @@ function ModifyPlayer( Pawn Other )
     }
 
     CRI.myPawn = Other;
-
     CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
 
     // This Player GUID is in use by someone else on this server! destroy...
@@ -1148,20 +1146,23 @@ function ModifyPlayer( Pawn Other )
         }
     }
 
-    // Respawn all my stalkers!
-    if( ModeIsTrials() && !bGroupMap )
-    {
-        for( i = 0; i < Racers.Length; ++ i )
-        {
-            if( Racers[i].Leader == Other.Controller && Racers[i].Stalker != none && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
-            {
-                ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
-            }
-        }
-    }
-
     if( ModeIsTrials() )
     {
+        if( !bGroupMap )
+        {
+            // Respawn all my stalkers!
+            for( i = 0; i < Racers.Length; ++ i )
+            {
+                if( Racers[i].Leader == Other.Controller
+                    && Racers[i].Stalker != none
+                    && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator
+                    && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
+                {
+                    ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
+                }
+            }
+        }
+
         if( !bSoloMap ) // Regular
         {
             RecordGhostForPlayer( PlayerController(Other.Controller) );
@@ -1177,6 +1178,7 @@ function ModifyPlayer( Pawn Other )
                 if( CheckPointHandler.HasSavedCheckPoint( Other.Controller, CheckPointIndex ) )
                 {
                     CheckPointHandler.ApplyPlayerState( Other, CheckPointHandler.SavedCheckPoints[CheckPointIndex].SavedStats );
+                    CRI.ClientSpawnPawn = other; // re-use the ClientSpawn feature for this :), with this the timer won't restart for spectators.
                 }
             }
             // Check if a clientspawn is registered, not if we spawned on one, because we don't want to reset the time if a player switches team while having a clientspawn!
@@ -1190,7 +1192,8 @@ function ModifyPlayer( Pawn Other )
                     RestartGhostRecording( PlayerController(Other.Controller) );
 
                     // Reset ghost, if wanted
-                    if( CRI.HasClientFlags( 0x00000001 ) && (Other.Controller == LeadingGhost || Level.Game.NumPlayers <= 1) )
+                    if( CRI.HasClientFlags( 0x00000001/**CFRESETGHOST*/ )
+                        && (Other.Controller == LeadingGhost || Level.Game.NumPlayers <= 1) )
                     {
                         if( GhostManager != none && !RDat.Rec[UsedSlot].TMGhostDisabled )
                         {
@@ -1198,6 +1201,30 @@ function ModifyPlayer( Pawn Other )
                         }
                     }
                 }
+            }
+        }
+
+        //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
+        i = GetClientSpawnIndex( Other.Controller );
+        if( i != -1 )
+        {
+            PimpClientSpawn( i, Other );
+            CRI.ClientSpawnPawn = other;
+
+            if( Holiday != "" )
+            {
+                // No family
+                PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'holiday_0' );
+            }
+            return; // Don't reset objectives (see below)
+        }
+        else
+        {
+            // Keys are lost after a dead!, except not if your're using a CheckPoint!
+            if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != none && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
+            {
+                ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
+                ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
             }
         }
     }
@@ -1253,34 +1280,6 @@ function ModifyPlayer( Pawn Other )
                     }
                 }
             }
-        }
-    }
-
-    if( ModeIsTrials() )
-    {
-        if( CurMode.CanSetClientSpawn( PlayerController(Other.Controller) ) )
-        {
-            //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
-            i = GetClientSpawnIndex( Other.Controller );
-            if( i != -1 )
-            {
-                PimpClientSpawn( i, Other );
-                CRI.ClientSpawnPawn = other;
-
-                if( Holiday != "" )
-                {
-                    // No family
-                    PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'holiday_0' );
-                }
-                return; // Don't reset objectives (see below)
-            }
-        }
-
-        // Keys are lost after a dead!, except not if your're using a CheckPoint!
-        if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != None && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) && !IsClientSpawnPlayer( Other ) )
-        {
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
-            ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
         }
     }
 }
@@ -1848,7 +1847,7 @@ Final Function ResetCheckPoint( PlayerController PC )
 
     if( CheckPointHandler.RemoveSavedCheckPoint( PC ) )
     {
-        PC.ClientMessage( "'CheckPoint' Reset" );
+        PC.ClientMessage( "'Checkpoint' Reset" );
     }
 }
 
