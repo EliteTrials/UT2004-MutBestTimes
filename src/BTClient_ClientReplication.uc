@@ -210,7 +210,6 @@ var float BTExperienceDiff;
 var float ClientMatchStartTime;
 
 const CFRESETGHOST      = 0x00000001;
-const CFCLIENTSPAWN     = 0x00000002;
 const CFCHECKPOINT      = 0x00000004;
 
 var private int ClientFlags;
@@ -242,13 +241,13 @@ var /**TEMP*/ string ClientMessage;
 replication
 {
     reliable if( Role == ROLE_Authority )
-        myPawn, PersonalTime,
-        Rank, ClientFlags, SoloRank,
+        myPawn, ClientSpawnPawn/**should only be replicated to spectators!*/,
+        PersonalTime, Rank, ClientFlags, SoloRank,
         BTLevel, BTExperience, BTPoints, APoints, BTWage,
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
-        bAllowDodgePerk, ProhibitedCappingPawn, ClientSpawnPawn;
+        bAllowDodgePerk, ProhibitedCappingPawn;
 
     reliable if( Role == ROLE_Authority )
         // Rankings scoreboard
@@ -263,7 +262,7 @@ replication
         ClientSendPersonalOverallTop, ClientSendMyOverallTop,
 
         // Reset Timer
-        ClientSpawn,
+        ClientSpawned,
         ClientMatchStarting,
 
         // Stats
@@ -303,7 +302,6 @@ delegate OnPlayerItemUpdated( int index );
 simulated event PostBeginPlay()
 {
     super.PostBeginPlay();
-
     if( Level.NetMode != NM_DedicatedServer )
     {
         if( Role == ROLE_Authority && Level.GetLocalPlayerController() == Owner ) // e.g. offline client
@@ -313,25 +311,37 @@ simulated event PostBeginPlay()
     }
 }
 
-simulated function InitializeClient( optional BTClient_Interaction myInter )
-{
-	Options = class'BTClient_Config'.static.FindSavedData();
-    if( Options == none )
-    {
-        Log( "BTClient_Config not found!", Name );
-    }
-
-    ReplicateResetGhost();
-    ServerSetPreferedColor( Options.PreferedColor );
-}
-
 simulated event PostNetBeginPlay()
 {
     super.PostNetBeginPlay();
-
     if( Role < ROLE_Authority && Level.GetLocalPlayerController() == Owner )
     {
         InitializeClient();
+    }
+}
+
+// Client-side detection whether the pawn of this CRI owner died!
+simulated event PostNetReceive()
+{
+    super.PostNetReceive();
+    if( !bNetOwner )
+    {
+        // Pawn changed?
+        if( myPawn != none && myPawn != DeadPawn )
+        {
+            if( myPawn != ClientSpawnPawn ) // Don't restart the timer for players that are using a ClientSpawn.
+            {
+                ClientSpawned();
+            }
+            DeadPawn = myPawn;
+        }
+    }
+    else
+    {
+        if( Options != none && Options.bAutoBehindView )
+        {
+            Level.GetLocalPlayerController().BehindView( true );
+        }
     }
 }
 
@@ -340,33 +350,16 @@ final function bool IsClient()
     return Level.NetMode == NM_Client || Level.NetMode == NM_Standalone;
 }
 
-// Client-side detection whether the pawn of this CRI owner died!
-simulated function PostNetReceive()
+simulated function InitializeClient( optional BTClient_Interaction myInter )
 {
-    super.PostNetReceive();
-    // Using Options to know whether were executing this on my own CRI
-    if( Level.NetMode == NM_Client )
+    Options = class'BTClient_Config'.static.FindSavedData();
+    if( Options == none )
     {
-        if( Options == none && (Owner == none || Viewport(PlayerController(Owner).Player) == none) )
-        {
-            // Pawn changed?
-            if( myPawn != none && myPawn != DeadPawn )
-            {
-                if( !HasClientFlags( CFCLIENTSPAWN | CFCHECKPOINT ) )
-                {
-                    ClientSpawn();
-                }
-                DeadPawn = myPawn;
-            }
-        }
-        else if( Options != none )
-        {
-            if( Options.bAutoBehindView )
-            {
-                Level.GetLocalPlayerController().BehindView( true );
-            }
-        }
+        Log( "BTClient_Config not found!", Name );
     }
+
+    ReplicateResetGhost();
+    ServerSetPreferedColor( Options.PreferedColor );
 }
 
 simulated function ReplicateResetGhost()
@@ -448,7 +441,7 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
 function PlayerSpawned()
 {
     LastSpawnTime = Level.TimeSeconds;
-    ClientSpawn();
+    ClientSpawned();
 }
 
 function ClientSetPersonalTime( float CPT )
@@ -457,11 +450,8 @@ function ClientSetPersonalTime( float CPT )
 }
 
 // Client spawned, reset timer...
-simulated function ClientSpawn()
+simulated function ClientSpawned()
 {
-    if( Role == ROLE_Authority )
-        return;
-
     LastSpawnTime = Level.TimeSeconds;
 }
 
