@@ -2757,7 +2757,7 @@ function RenderHUDElements( Canvas C )
     local float drawX, drawY;
 
     // Temporary string measures.
-    local float xl, yl;
+    local float vXL, xl, yl;
     local Vector v;
     local string s;
     local Color backupColor;
@@ -2769,21 +2769,18 @@ function RenderHUDElements( Canvas C )
     C.StrLen( "9", xl, yl );
     if( MRI.CR.ClientSpawnPawn != none )
     {
-        if( MRI.Level.GRI != none && MRI.Level.GRI.GameName == "Capture the Flag" )
-        {
-            S = "CheckPoint";
-        }
-        else
-        {
-            S = "ClientSpawn";
-        }
-
         backupColor = Options.CTable;
-        Options.CTable = class'HUD'.default.GreenColor;
+        Options.CTable = #0xFB607FFF;
         Options.CTable.A = 100;
-        Options.CTable.G = 150;
-        drawY += DrawElement( C, drawX, drawY, s ).y*1.2;
+        v = DrawElement( C, drawX, drawY, "   Checkpoint" );
         Options.CTable = backupColor;
+
+        vXL = 54f/76f*yl;
+        C.SetPos( drawX + COLUMN_PADDING_X, drawY );
+        C.DrawColor = #0xFB607FFF;
+        C.DrawTile( Texture'HudContent.Generic.Hud', vXL, yl, 340, 130, 54, 76 );
+
+        drawY += v.Y*1.2;
     }
 
     if( MRI.CR.ProhibitedCappingPawn != none )
