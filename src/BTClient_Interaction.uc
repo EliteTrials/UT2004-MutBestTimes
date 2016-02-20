@@ -611,6 +611,10 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
     if( InStr( S, "SHOWALL" ) != -1 )
         return True;        // Ignore Input!.
 
+    // Wait until the game's state is completely replicated.
+    if( MRI.CR == none )
+        return false;
+
     if( Action == IST_Press )
     {
         if( Key == IK_MiddleMouse )
@@ -627,7 +631,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
             if( bShowRankingTable )
             {
-                if( MRI.CR != none && MRI.CR.OverallTop.Length == 0 )
+                if( MRI.CR.OverallTop.Length == 0 )
                 {
                     ViewportOwner.Actor.ServerMutate( "BTClient_RequestRankings" );
                 }
@@ -839,7 +843,7 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             }
         }
     }
-    return False;
+    return false;
 }
 
 exec function StartTimer()
@@ -890,14 +894,14 @@ event Tick( float DeltaTime )
         }
     }
 
-    if( MRI.CR.bAllowDodgePerk )
+    if( MRI.CR != none && MRI.CR.bAllowDodgePerk )
     {
         PerformDodgePerk();
     }
 
     /* Anti-ShowAll */
     C = ViewportOwner.Actor.Player.Console;
-    if( C != None )
+    if( C != none )
     {
         // Kick if player is attempting to use the illegal command Showall.
         if( C.HistoryCur-1 > 16 || C.HistoryCur-1 < 0 )
@@ -914,7 +918,7 @@ event Tick( float DeltaTime )
 
     if( ViewportOwner.Actor.Level.TimeSeconds > LastShowAllCheck )
     {
-        ForEach ViewportOwner.Actor.DynamicActors( Class'DefaultPhysicsVolume', DPV )
+        foreach ViewportOwner.Actor.DynamicActors( class'DefaultPhysicsVolume', DPV )
         {
             if( !DPV.bHidden )
             {
@@ -2510,7 +2514,6 @@ function PostRender( Canvas C )
 
         RenderGhostMarkings( C );
     }
-    RenderTitle( C );
     if( Options.bProfesionalMode || bPromodeWasPerformed )
     {
         foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
@@ -2563,30 +2566,35 @@ function PostRender( Canvas C )
         }
     }
 
-    if( MRI.CR == None )
+    if( MRI.CR == none )
         return;
 
+    RenderTitle( C );
     if( Pawn(ViewportOwner.Actor.ViewTarget) != none && MRI.CR.bAllowDodgePerk )
     {
         RenderDodgeReady( C );
     }
 
     // See if client is spectating someone!
-    SpectatedClient = None;
-    if( Pawn(ViewportOwner.Actor.ViewTarget) != None && ViewportOwner.Actor.ViewTarget != ViewportOwner.Actor.Pawn )
+    SpectatedClient = none;
+    P = xPawn(ViewportOwner.Actor.ViewTarget);
+    if( p != none && p != ViewportOwner.Actor.Pawn )
     {
-        for( LRI = Pawn(ViewportOwner.Actor.ViewTarget).PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+        if( p != none && p.PlayerReplicationInfo != none )
         {
-            if( BTClient_ClientReplication(LRI) != None )
+            for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
             {
-                SpectatedClient = BTClient_ClientReplication(LRI);
-                break;
+                if( BTClient_ClientReplication(LRI) != none )
+                {
+                    SpectatedClient = BTClient_ClientReplication(LRI);
+                    break;
+                }
             }
         }
     }
 
     // Not spectating anyone, assign to myself!
-    if( SpectatedClient == None )
+    if( SpectatedClient == none )
     {
         SpectatedClient = MRI.CR;
     }
