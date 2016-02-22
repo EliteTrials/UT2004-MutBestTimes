@@ -339,7 +339,7 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
         {
             foreach AllActors( class'PlayerStart', S )
             {
-                if( S.bEnabled )
+                if( IsValidPlayerStart( s ) )
                 {
                     Player.Event = '';
                     if( ASGameInfo(Level.Game) != none )
@@ -377,4 +377,10 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
         }
     }
     return super.FindPlayerStart( Player, InTeam, incomingName );
+}
+
+final function bool IsValidPlayerStart( PlayerStart s )
+{
+    // Despite configured with bEnabled=false, something is enabling them at run-time, so ensure that no player can spawn on any these two!
+    return s.bEnabled && !s.IsA( 'BTServer_ClientStartPoint' ) && !s.IsA( 'BTServer_CheckPointNavigation' );
 }
