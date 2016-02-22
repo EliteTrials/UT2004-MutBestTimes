@@ -2570,7 +2570,7 @@ function PostRender( Canvas C )
         return;
 
     RenderTitle( C );
-    if( Pawn(ViewportOwner.Actor.ViewTarget) != none && MRI.CR.bAllowDodgePerk )
+    if( MRI.CR.bAllowDodgePerk && Pawn(ViewportOwner.Actor.ViewTarget) != none && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
     {
         RenderDodgeReady( C );
     }
