@@ -262,8 +262,8 @@ exec function Store( string command )
             break;
 
         case "destroyitem":
-           ViewportOwner.Actor.ServerMutate( "destroyitem" @ params[1] );
-           break;
+            ViewportOwner.Actor.ServerMutate( "destroyitem" @ params[1] );
+            break;
 
         case "giveitem":
             ViewportOwner.Actor.ServerMutate( "giveitem" @ params[1] @ params[2] );

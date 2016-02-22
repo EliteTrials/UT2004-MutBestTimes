@@ -180,12 +180,12 @@ var Pawn myPawn;
 var Pawn LastPawn;
 var private Pawn DeadPawn;
 
-// #ifdef bSoloMap
-// Solo Timer
-    var float LastSpawnTime;        // Not replicated but simulated on both.
-    var float PersonalTime;         // Best time for this player
-    var transient string SFMSG;             // Solo Finish Messsage (the message displayed when a rec is made)
-// #endif
+var float JoinServerTime; // The server's timeseconds stamp when this player joined.
+// Timers for solo, or group maps.
+var float InitServerSpawnTime;
+var float LastSpawnTime;        // Not replicated(except to new clients as InitServerSpawnTime) but simulated on both.
+var float PersonalTime;         // Best time for this player
+var transient string SFMSG;             // Solo Finish Messsage (the message displayed when a rec is made)
 
 var int BTLevel;
 // Not to be confused with actual Ranking Points!
@@ -224,8 +224,9 @@ var int EventTeamIndex;
 
 //==============================================================================
 // CLIENTSIDE VARIABLES
-var BTClient_Config Options;
-var BTClient_MutatorReplicationInfo MRI;
+var /**bNetOwner*/ BTClient_Config Options;
+var /**bNetOwner*/ BTClient_MutatorReplicationInfo MRI;
+var bool bNetNotified;
 
 //==============================================================================
 // SERVERSIDE VARIABLES
@@ -247,7 +248,10 @@ replication
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
-        bAllowDodgePerk, ProhibitedCappingPawn;
+        bAllowDodgePerk, ProhibitedCappingPawn, JoinServerTime;
+
+    reliable if( !bNetOwner && bNetInitial && Role == ROLE_Authority )
+        InitServerSpawnTime;
 
     reliable if( Role == ROLE_Authority )
         // Rankings scoreboard
@@ -314,15 +318,25 @@ simulated event PostBeginPlay()
 simulated event PostNetBeginPlay()
 {
     super.PostNetBeginPlay();
-    if( Role < ROLE_Authority && Level.GetLocalPlayerController() == Owner )
+    if( Role == ROLE_Authority )
     {
-        InitializeClient();
+        JoinServerTime = Level.TimeSeconds;
+    }
+    else if( Role < ROLE_Authority )
+    {
+        if( bNetOwner )
+        {
+            InitializeClient();
+        }
     }
 }
 
 // Client-side detection whether the pawn of this CRI owner died!
 simulated event PostNetReceive()
 {
+    local BTClient_ClientReplication CRI;
+    local PlayerController localPC;
+
     super.PostNetReceive();
     if( !bNetOwner )
     {
@@ -335,6 +349,23 @@ simulated event PostNetReceive()
             }
             DeadPawn = myPawn;
         }
+
+        // If we have just connected to a server, then Initialize the SpawnTime for this player.
+        if( !bNetNotified )
+        {
+            localPC = Level.GetLocalPlayerController();
+            if( localPC.PlayerReplicationInfo != none )
+            {
+                CRI = GetRep( Level.GetLocalPlayerController() );
+                if( CRI != none )
+                {
+                    // InitServerSpawnTime is initially replicated as Server-TimeSeconds
+                    LastSpawnTime = (InitServerSpawnTime - CRI.JoinServerTime);
+                    bNetNotified = true;
+                }
+            }
+        }
+
     }
     else
     {
@@ -343,11 +374,6 @@ simulated event PostNetReceive()
             Level.GetLocalPlayerController().BehindView( true );
         }
     }
-}
-
-final function bool IsClient()
-{
-    return Level.NetMode == NM_Client || Level.NetMode == NM_Standalone;
 }
 
 simulated function InitializeClient( optional BTClient_Interaction myInter )
@@ -441,6 +467,8 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
 function PlayerSpawned()
 {
     LastSpawnTime = Level.TimeSeconds;
+    // For newly connected clients.
+    InitServerSpawnTime = LastSpawnTime;
     ClientSpawned();
 }
 
