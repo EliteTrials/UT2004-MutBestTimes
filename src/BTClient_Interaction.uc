@@ -2385,7 +2385,9 @@ final function RenderRecordsTable( Canvas C )
                     break;
 
                 case 3: // "Time"
-                    C.DrawColor = #0xAAAAAAFF;
+                    if( (MRI.CR.SoloTop[i].Flags & 0x01/**RFLAG_CP*/) != 0 )
+                        C.DrawColor = #0xCB304FFF;
+                    else C.DrawColor = #0xAAAAAAFF;
                     value = FormatTimeCompact(MRI.CR.SoloTop[i].Time);
                     break;
 
@@ -2397,7 +2399,9 @@ final function RenderRecordsTable( Canvas C )
 
             if( isRowSelected )
             {
-                C.DrawColor = Lighten( C.DrawColor, 50F );
+                if( columnIdx == 3 && (MRI.CR.SoloTop[i].Flags & 0x01/**RFLAG_CP*/) != 0 )
+                    C.DrawColor = #0xFB607FFF;
+                else C.DrawColor = Lighten( C.DrawColor, 50F );
             }
             DrawColumnText( C, drawX, drawY, value );
             drawX += columns[columnIdx].W;
@@ -3368,7 +3372,7 @@ DefaultProperties
     RecordsRankingColumns(0)=(Title="#",Format="000")
     RecordsRankingColumns(1)=(Title="Score",Format="00.00")
     RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00")
+    RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00 ") // Space for flag
     RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
 
     RankingRanges(0)="All Time"
