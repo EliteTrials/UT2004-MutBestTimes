@@ -7255,6 +7255,12 @@ final function float CalcRecordPoints( int RecordSlot, int SoloRecordSlot )
     local int indexWithLowerTime;
     local float averageTime;
 
+    // Zero points for ClientSpawn times.
+    if( (RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].Flags & 0x01/**RFLAG_CP*/) != 0 )
+    {
+        return 0.00;
+    }
+
     penalty = 1.00;
     if( RDat.Rec[RecordSlot].AverageRecordTime == 00.00 )
     {
