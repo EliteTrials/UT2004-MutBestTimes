@@ -6,48 +6,48 @@ class BTGameRules extends GameRules;
 var array<Controller> LastHitsBy, Injureds;
 var MutBestTimes BT;
 
-const EXP_Dead = 1;
-
 event PostBeginPlay()
 {
-    Super.PostBeginPlay();
+    super.PostBeginPlay();
     BT = MutBestTimes(Owner);
 }
 
-function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
+function ScoreObjective( PlayerReplicationInfo scorer, int score )
 {
     local PlayerController PC, LastHitBy;
     local Pawn P;
-    local int i, j, Max;
+    local int i, max;
 
-    if( BT.ModeIsTrials() && Scorer != None )
+    super.ScoreObjective(scorer, score);
+    if( BT.ModeIsTrials() && scorer != none )
     {
-        PC = PlayerController(Scorer.Owner);
-        if( PC == None )
+        PC = PlayerController(scorer.Owner);
+        if( PC == none )
             return;
 
+        score = Min( score, 10 );
         if( !BT.bSoloMap )
         {
             P = PC.Pawn;
-            if( P != None )
+            if( P != none )
             {
                 for( i = Injureds.Length - 1; i >= 0; -- i )
                 {
-                    if( Max > 2 )
+                    if( max > 2 )
                         break;
 
                     // Set LastHitBy and clean all injureds of this user.
                     if( Injureds[i] == P.Controller )
                     {
-                        ++ Max;
+                        ++ max;
                         //Log( "LastHitBy Found!", Name );
 
                         LastHitBy = PlayerController(LastHitsBy[i]);
-                        if( LastHitBy != None )
+                        if( LastHitBy != none )
                         {
-                            LastHitBy.PlayerReplicationInfo.Score += Min( Score*2, 20 );
+                            LastHitBy.PlayerReplicationInfo.score += score*2.00;
                             ASPlayerReplicationInfo(LastHitBy.PlayerReplicationInfo).DisabledObjectivesCount ++;
-                            BT.ObjectiveCompleted( LastHitBy.PlayerReplicationInfo, FMin( Score, 10 ) );
+                            BT.ObjectiveCompleted( LastHitBy.PlayerReplicationInfo, score);
                         }
                     }
                 }
@@ -57,75 +57,56 @@ function ScoreObjective( PlayerReplicationInfo Scorer, Int Score )
             }
         }
         // Double the score reward but cap to 10 incase the Level Designer did input a ridiculous number!
-        Scorer.Score += Min( Score, 10 );
+        scorer.score += score;
+        BT.ObjectiveCompleted( scorer, score);
 
-        // Solo handles the ending...
-        if( BT.bSoloMap )
+        // If this objective did not end the game,
+        // - then we should check whether all objectives have been completed,
+        // - to see if we need to end the game ourselves.
+        if( !Level.Game.bGameEnded )
         {
-            Super.ScoreObjective(Scorer,Score);
-            return;
-        }
-
-        BT.ObjectiveCompleted( Scorer, FMin( Score, 10 ) );
-
-        // Find out if the obj ended the level
-        if( Level.Game.bGameEnded )
-        {
-            // Did end
-            Super.ScoreObjective(Scorer,Score);
-            return;
-        }
-
-        j = BT.Objectives.Length;
-        for( i = 0; i < j; ++ i )
-        {
-            if( BT.Objectives[i] != None && BT.Objectives[i].bActive )
+            for( i = 0; i < BT.Objectives.Length; ++ i )
             {
-                // might have end... but theres still this objective active, so don't end it
-                Super.ScoreObjective(Scorer,Score);
-                return;
+                if( BT.Objectives[i] != none && BT.Objectives[i].bActive )
+                {
+                    return;
+                }
+            }
+
+            // If there's no end game trigger, then we should end it ourselves.
+            if( !FindRoundEnd() )
+            {
+                ASGameInfo(Level.Game).EndRound( ERER_AttackersWin, P, "Attackers Win!" );
             }
         }
-
-        if( FindRoundEnd() )
-        {
-            // Map has ability to end
-            Super.ScoreObjective(Scorer,Score);
-            return;
-        }
-
-        // End it, none of above was true!
-        ASGameInfo(Level.Game).EndRound( ERER_AttackersWin, P, "Attackers Win!" );
     }
-    super.ScoreObjective( Scorer, Score );
 }
 
 private final function bool FindRoundEnd()
 {
     local Trigger_ASRoundEnd TRoundEnd;
 
-    ForEach AllActors( Class'Trigger_ASRoundEnd', TRoundEnd )
-        return True;
+    foreach AllActors( Class'Trigger_ASRoundEnd', TRoundEnd )
+        return true;
 
-    return False;
+    return false;
 }
 
 function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> damageType, vector HitLocation )
 {
     //local Pawn Clone;
-    //local int i;
     local Controller C;
 
     // FIXME: if bDisableForceSpawn is true then features like !Wager will break.
     if( !BT.ModeIsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded )
-        return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
+        return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
-    if( !Killed.IsA('Monster') && ((Killed != None && Killed.Controller == Killer) || (Killer == None && (Killed != None && Killed.Controller != None))) )
+    if( !Killed.IsA('Monster') && ((Killed != none && Killed.Controller == Killer) || (Killer == none && (Killed != none && Killed.Controller != none))) )
     {
-        if( PlayerController(Killed.Controller) != None && Killed.PlayerReplicationInfo != None && PlayerController(Killed.Controller).CanRestartPlayer() )
+        if( PlayerController(Killed.Controller) != none && Killed.PlayerReplicationInfo != none && PlayerController(Killed.Controller).CanRestartPlayer() )
         {
             // Player dead was caused by leaving.
-            if( PlayerController(Killed.Controller).Player == None )
+            if( PlayerController(Killed.Controller).Player == none )
                 return False;
 
             if( (!BT.IsCompetitiveModeActive() && Killed.GetTeamNum() != MutBestTimes(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
@@ -133,13 +114,13 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
 
             C = Killed.Controller;
 
-            if( Killed.DrivenVehicle != None )
+            if( Killed.DrivenVehicle != none )
             {
                 Killed.DrivenVehicle.DriverDied();
-                Killed.DrivenVehicle = None;
+                Killed.DrivenVehicle = none;
             }
 
-            if( Killed.LastStartSpot != None )
+            if( Killed.LastStartSpot != none )
             {
                 if( Killed.LastStartSpot.Class != Class'BTServer_ClientStartPoint' )   // Died without a 'ClientSpawn'
                 {
@@ -151,20 +132,17 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
                     {
                         //Log( "Died without a client spawn and no suicide damtype!" );
                         Clone = Killed;
-                        Killed.Controller.Pawn = None;
-                        Killed.PlayerReplicationInfo = None;
+                        Killed.Controller.Pawn = none;
+                        Killed.PlayerReplicationInfo = none;
                         Level.Game.RestartPlayer( Killed.Controller );
                         Clone.Controller.PawnDied( Clone );
-                        Clone.Controller = None;
+                        Clone.Controller = none;
                         // Give other mutators a chance to know about a players dead, but without giving the chance to overwrite the return value.
                         Super.PreventDeath(C.Pawn,Killer,damageType,HitLocation);
                         return False;
                     }*/
                     // Should not be called with gibbing or message will be duplicated ;).
-                    Level.Game.BroadcastDeathMessage( None, Killed.Controller, damageType );
-
-                    //if( !BT.bQuickStart )
-                    //  BT.PDat.RemoveExperience( BT.GetRep( PlayerController(Killed.Controller) ).myPlayerSlot, EXP_Dead );
+                    Level.Game.BroadcastDeathMessage( none, Killed.Controller, damageType );
                 }
             }
             BT.CurMode.ModePlayerKilled( C );
@@ -182,7 +160,7 @@ final function RespawnPlayer( Pawn player )
 {
     Level.Game.RestartPlayer( player.Controller );
     player.Controller.PawnDied( player );
-    if( player != None )
+    if( player != none )
         player.Destroy();
 }
 
@@ -228,17 +206,16 @@ function ScoreKill(Controller Killer, Controller Killed)
 
 function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn instigatedBy, vector HitLocation, out vector Momentum, class<DamageType> DamageType )
 {
-    //local Pawn Clone;
     local int i, j;
     local BTClient_ClientReplication CRI;
 
     // Skip monsters...
-    if( Monster(injured) != None || Monster(instigatedBy) != None )
+    if( Monster(injured) != none || Monster(instigatedBy) != none )
         return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
 
     if( BT.ModeIsTrials() )
     {
-        if( instigatedBy != None && injured != None )
+        if( instigatedBy != none && injured != none )
         {
             if( BT.bEnableInstigatorEmpathy && Instigatedby.GetTeam() != injured.GetTeam() )
             {
@@ -263,12 +240,11 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
         }
 
         // Enemies never should deal damage in Trials
-        if( injured != instigatedBy && instigatedBy != None && (instigatedBy.GetTeam() == injured.GetTeam()) )
+        if( injured != instigatedBy && instigatedBy != none && (instigatedBy.GetTeam() == injured.GetTeam()) )
         {
             if( BT.bSoloMap && !BT.bGroupMap )
                 return Super.NetDamage(OriginalDamage,Damage,injured,instigatedBy,HitLocation,Momentum,DamageType);
 
-            //Log( "Team Naded | ShockBeam", Name );
             if( DamageType == Class'DamTypeShockBeam' || DamageType == Class'DamTypeONSGrenade')
             {
                 // Scan all hits and remove all clones.
@@ -285,7 +261,6 @@ function int NetDamage( int OriginalDamage, int Damage, pawn injured, pawn insti
                 }
 
                 j = LastHitsBy.Length;
-                //Log( "TRUE", Name );
                 LastHitsBy.Length = j + 1;
                 LastHitsBy[j] = instigatedBy.Controller;
 
@@ -307,7 +282,7 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
     local int i, j;
     local string newPawn;
 
-    if( BT.ModeIsTrials() && Player != None && Player.PlayerReplicationInfo != None && Player.PlayerReplicationInfo.Team != None )
+    if( BT.ModeIsTrials() && Player != none && Player.PlayerReplicationInfo != none && Player.PlayerReplicationInfo.Team != none )
     {
         if( ASGameInfo(Level.Game) != none )
         {
@@ -324,14 +299,14 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
         }
 
         BT.FindClientSpawn( Player, CS );
-        if( CS != None )
+        if( CS != none )
             return CS;
 
         // Always check after client so that client still functions even when user has a checkpoint!
-        if( BT.CheckPointHandler != None )
+        if( BT.CheckPointHandler != none )
         {
             CS = BT.CheckPointHandler.FindCheckPointStart( Player );
-            if( CS != None )
+            if( CS != none )
                 return CS;
         }
 
@@ -349,7 +324,7 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
                         {
                             for( i = 0; i < j; ++ i )
                             {
-                                if( ASGameInfo(Level.Game).SpawnManagers[i] == None )
+                                if( ASGameInfo(Level.Game).SpawnManagers[i] == none )
                                     continue;
 
                                 if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( S, Player.PlayerReplicationInfo.Team.TeamIndex, Player ) )
