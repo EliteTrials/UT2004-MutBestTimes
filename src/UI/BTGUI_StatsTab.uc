@@ -35,6 +35,18 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
     Summary.MyScrollBar.UpdateGripPosition( 0 );
 }
 
+function ShowPanel( bool bShow )
+{
+    if( CRI == none )
+        CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
+
+    if( CRI == none )
+    {
+        Log( "ShowPanel, CRI not found!" );
+    }
+    super.ShowPanel( bShow );
+}
+
 function bool InternalOnDraw( Canvas C )
 {
     return false;

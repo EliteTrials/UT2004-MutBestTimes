@@ -23,34 +23,27 @@ var automated BTGUI_ComPetPanel     PetPanel;
 var() Color RarityColor[7];
 var() name RarityTitle[7];
 
-event Free()
+function InitComponent( GUIController InController, GUIComponent InOwner )
 {
-    super.Free();
+    super.InitComponent( InController, InOwner );
+    ItemsListBox.List.OnDrawItem = InternalOnDrawItem;
+    ItemsListBox.List.OnRightClick = InternalOnListRightClick;
+    ItemsListBox.List.OnDblClick = InternalOnListDblClick;
+    ItemsListBox.List.OnChange = InternalOnListChange;
+    PetPanel.mInv = self;
 }
 
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
-
-    if( CRI == none )
-    {
-        Log( "ShowPanel, CRI not found!" );
-        return;
-    }
-
-    ItemsListBox.List.OnDrawItem = InternalOnDrawItem;
-    ItemsListBox.List.OnRightClick = InternalOnListRightClick;
-    ItemsListBox.List.OnDblClick = InternalOnListDblClick;
-    ItemsListBox.List.OnChange = InternalOnListChange;
-    if( bShow && CRI.PlayerItems.Length == 0 )
+    if( bShow && CRI != none && CRI.PlayerItems.Length == 0 )
     {
         CRI.OnPlayerItemReceived = InternalOnPlayerItemReceived;
         CRI.ServerRequestPlayerItems();
+
         CRI.OnPlayerItemRemoved = InternalOnPlayerItemRemoved;
         CRI.OnPlayerItemUpdated = InternalOnPlayerItemUpdated;
     }
-
-    PetPanel.mInv = self;
 }
 
 function InternalOnPlayerItemReceived( int index )

@@ -10,20 +10,17 @@ var automated GUITreeListBox        CategoriesListBox;
 var automated GUISectionBackground  AchievementsBackground, CategoriesBackground;
 var automated GUIVertImageListBox   AchievementsListBox;
 
+function InitComponent( GUIController InController, GUIComponent InOwner )
+{
+    super.InitComponent( InController, InOwner );
+    AchievementsListBox.List.OnDrawItem = InternalOnDrawItem;
+    // AchievementsListBox.List.GetItemHeight = InternalGetItemHeight;
+}
+
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
-
-    if( CRI == none )
-    {
-        Log( "ShowPanel, CRI not found!" );
-        return;
-    }
-
-    AchievementsListBox.List.OnDrawItem = InternalOnDrawItem;
-    // AchievementsListBox.List.GetItemHeight = InternalGetItemHeight;
-
-    if( bShow && CRI.AchievementCategories.Length == 0 )
+    if( bShow && CRI != none && CRI.AchievementCategories.Length == 0 )
     {
         CRI.OnAchievementCategoryReceived = InternalOnAchievementCategoryReceived;
         CRI.ServerRequestAchievementCategories();
@@ -116,6 +113,9 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     local float iconSize;
     local float oldClipX, oldClipY;
     local float footerHeight;
+
+    if( CRI == none )
+        return;
 
     list = AchievementsListBox.List;
     X += int((float(Item - list.Top)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
