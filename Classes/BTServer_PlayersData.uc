@@ -9,9 +9,6 @@ class BTServer_PlayersData extends Object
 
 struct sBTPlayerInfo
 {
-    // Temporary reference to this players controller, if currently ingame.
-    var transient PlayerController Controller;
-
     var string
         PLID,                                                                   // GUID
         PLNAME,                                                                 // NAME
@@ -23,9 +20,6 @@ struct sBTPlayerInfo
         PLSF,                                                                   // SOLO FINISH
         PLAP,
         PLAchiev;                                                               // Achievement points
-
-    /** Index(+1) to their All Time, Quarterly and Daily rank! */
-    var transient int PLARank, PLQRank, PLDRank;
 
     /** Last known rank(PLARank) since leaving. */
     var int LastKnownRank;
@@ -47,7 +41,12 @@ struct sBTPlayerInfo
     /** How many hours this player has played. */
     var float PlayHours;
 
+    // Temporary reference to this players controller, if currently ingame.
+    var transient PlayerController Controller;
     var transient float _LastLoginTime;
+
+    /** Index(+1) to their All Time, Quarterly and Daily rank! */
+    var transient int PLARank, PLQRank, PLDRank;
 
     struct sAchievementProgress
     {
@@ -112,19 +111,23 @@ struct sBTPlayerInfo
 };
 
 var array<sBTPlayerInfo> Player;
-
 var int TotalCurrencySpent;
 var int TotalItemsBought;
-
 var int DayTest;
-
 var transient int TotalActivePlayersCount;
-
 var transient MutBestTimes BT;
 
 final function Free()
 {
+    local int i;
+
     BT = none;
+
+    // Ensure we don't withhold any references.
+    for( i = 0; i < Player.Length; ++ i )
+    {
+        Player[i].Controller = none;
+    }
 }
 
 final function bool HasTrophy( int playerSlot, string trophyID )
