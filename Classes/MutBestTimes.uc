@@ -4697,17 +4697,6 @@ function MatchStarting()
         ++ RDat.Rec[UsedSlot].Played;
     }
 
-    if( AssaultGame != none )
-    {
-        if( MRI.bCompetitiveMode )
-        {
-            AssaultGame.bPlayersBalanceTeams = true;
-            BalanceTeams();
-        }
-
-        ASGameReplicationInfo(Level.GRI).bStopCountDown = false;
-    }
-
     CurrentPlaySeconds = 0;
     MRI.ObjectiveTotalTime = 0;
     MRI.RecordState = RS_Active;
@@ -4715,22 +4704,36 @@ function MatchStarting()
 
     if( AssaultGame != none )
     {
+        ASGameReplicationInfo(Level.GRI).bStopCountDown = false;
+        if( IsCompetitiveModeActive() )
+        {
+            AssaultGame.bPlayersBalanceTeams = true;
+            BalanceTeams();
+        }
+
         if( !AssaultGame.IsPracticeRound() )
         {
             SetMatchStartingTime( Level.TimeSeconds );
             SetClientMatchStartingTime();
             if( !IsCompetitiveModeActive() )
             {
-                if( (bEnhancedTime || bSoloMap) && BestPlaySeconds != -1 && Level.NetMode != NM_StandAlone )
+                if( (bEnhancedTime || bSoloMap) && Level.NetMode != NM_StandAlone )
                 {
-                    if( BestPlaySeconds < 60 )
-                        ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundTimeLimit = 600*TimeScaling;
-                    else ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundTimeLimit = Min( (int(Round( BestPlaySeconds )*10))*TimeScaling, 3600 );
+                    if( BestPlaySeconds == -1 )
+                    {
+                        SetRoundTimeLimit( 0 );
+                    }
+                    else
+                    {
+                        if( BestPlaySeconds < 60 )
+                            SetRoundTimeLimit( 600*TimeScaling );
+                        else SetRoundTimeLimit( FMin(int(Round(BestPlaySeconds)*10)*TimeScaling, 3600) );
+                    }
                 }
             }
             else
             {
-                ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundTimeLimit = (CompetitiveTimeLimit * 60) * TimeScaling;
+                SetRoundTimeLimit( CompetitiveTimeLimit*60*TimeScaling );
                 AssaultGame.bMustJoinBeforeStart = true;
                 Level.Game.Broadcast( self, "Players are no longer allowed to join, until the end of the round!" );
             }
@@ -4750,6 +4753,16 @@ function MatchStarting()
             bMaxRoundSet = True;
         }
     }
+}
+
+// in seconds
+final function SetRoundTimeLimit( float timeLimit )
+{
+    local ASGameReplicationInfo gameRep;
+
+    gameRep = ASGameReplicationInfo(AssaultGame.GameReplicationInfo);
+    gameRep.RoundTimeLimit = timeLimit;
+    gameRep.NetUpdateTime = Level.TimeSeconds - 1;
 }
 
 final function SetMatchStartingTime( float t )
@@ -6915,21 +6928,6 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
     // Start replicating rankings
     FullLog( "initializing replication for:" @ %PDat.Player[slot].PLName );
     CreateReplication( client, guid, slot );
-
-    SetClientMatchStartingTime();
-
-    // Server love
-    if( PDat.Player[slot].PlayHours >= 10 )
-    {
-        PDat.ProgressAchievementByID( slot, 'playtime_0' );
-
-        if( PDat.Player[slot].PlayHours >= 1000 )
-        {
-            PDat.ProgressAchievementByID( slot, 'playtime_1' );
-        }
-    }
-
-    //client.ClientTravel( "xfire:game_stats?game=ut2k4&Hours of Trials:=" $ int(PDat.Player[slot].PlayHours), TRAVEL_Absolute, false );
 }
 
 final function BroadcastLocalMessage( Controller instigator, class<BTClient_LocalMessage> messageClass, string message, optional int switch )
@@ -6955,7 +6953,7 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
 
 //==============================================================================
 // Initialize the replication for this player
-final function CreateReplication( PlayerController PC, string SS, int Slot )
+final function CreateReplication( PlayerController PC, string SS, int slot )
 {
     local BTClient_ClientReplication CR;
     local BTStatsReplicator RR;
@@ -6963,22 +6961,32 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
     CR = GetRep( PC );
     if( CR == None )
     {
-        CR = Spawn( Class'BTClient_ClientReplication', PC );
-        CR.NextReplicationInfo = PC.PlayerReplicationInfo.CustomReplicationInfo;
-        PC.PlayerReplicationInfo.CustomReplicationInfo = CR;
+        Warn( "Found no CR for login" @ PC.GetHumanReadableName() );
+        return;
     }
 
-    if( CR == None )
-        return;
+    CR.myPlayerSlot = slot;
+    PDat.Player[slot].Controller = PC; // not saved
+    if( !bSoloMap )
+    {
+        CR.ClientMatchStarting( Level.TimeSeconds );
+    }
 
-    CR.myPlayerSlot = Slot;
-    PDat.Player[Slot].Controller = PC; // not saved
+    // Server love
+    if( PDat.Player[slot].PlayHours >= 10 )
+    {
+        PDat.ProgressAchievementByID( slot, 'playtime_0' );
+        if( PDat.Player[slot].PlayHours >= 1000 )
+        {
+            PDat.ProgressAchievementByID( slot, 'playtime_1' );
+        }
+    }
 
-    CR.Title = PDat.Player[Slot].Title;
-    CR.BTLevel = PDat.GetLevel( Slot, CR.BTExperience );
-    CR.BTPoints = PDat.Player[Slot].LevelData.BTPoints;
-    CR.APoints = PDat.Player[Slot].PLAchiev;
-    CR.bIsPremiumMember = PDat.Player[Slot].bHasPremium;
+    CR.Title = PDat.Player[slot].Title;
+    CR.BTLevel = PDat.GetLevel( slot, CR.BTExperience );
+    CR.BTPoints = PDat.Player[slot].LevelData.BTPoints;
+    CR.APoints = PDat.Player[slot].PLAchiev;
+    CR.bIsPremiumMember = PDat.Player[slot].bHasPremium;
     if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {
         BroadcastLocalMessage( PC, class'BTClient_PremLocalMessage', "Premium player %PLAYER% has entered the game" );
@@ -6986,11 +6994,11 @@ final function CreateReplication( PlayerController PC, string SS, int Slot )
 
     if( Store != none )
     {
-        if( ModeIsTrials() && PDat.Player[Slot].bPendingTeamReward )
+        if( ModeIsTrials() && PDat.Player[slot].bPendingTeamReward )
         {
             Store.RewardTeamPlayer( CR );
-            PDat.Player[Slot].bPendingTeamReward = false;
-            PDat.Player[Slot].TeamPointsContribution = 0;
+            PDat.Player[slot].bPendingTeamReward = false;
+            PDat.Player[slot].TeamPointsContribution = 0;
         }
         Store.ModifyPlayer( PC, PDat, CR );
     }
