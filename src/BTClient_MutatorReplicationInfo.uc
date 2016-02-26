@@ -61,15 +61,9 @@ var struct sTeam{
 replication
 {
     reliable if( Role == ROLE_Authority )
-        PlayersBestTimes, MapBestTime,
+        PlayersBestTimes, MapBestTime, MatchStartTime,
         RecordState, EndMsg, PointsReward, ObjectiveTotalTime,
         MaxMoves, SoloRecords, bCompetitiveMode, Teams;
-
-    reliable if( !bSoloMap )
-        MatchStartTime;
-
-    reliable if( bNetDirty && bCompetitiveMode )
-        TeamTime;
 
     // Only replicated once
     reliable if( bNetInitial )
@@ -80,6 +74,9 @@ replication
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )
         GhostPercent;
+
+    reliable if( bNetDirty && bCompetitiveMode )
+        TeamTime;
 }
 
 simulated Event PostBeginPlay()

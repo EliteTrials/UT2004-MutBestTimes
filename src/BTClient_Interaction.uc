@@ -3143,17 +3143,7 @@ final function float GetTimeLeft()
             return SpectatedClient.PersonalTime - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
         else return MRI.MapBestTime - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
     }
-    else
-    {
-        if( MRI.MatchStartTime != 0 )
-        {
-            return MRI.MapBestTime - (MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime));
-        }
-        else
-        {
-            return MRI.MapBestTime;
-        }
-    }
+    else return MRI.MapBestTime - (MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime));
 }
 
 /*final function DrawTextBox( Canvas C, float X, float Y, string Text, string Value, color ValueColor )
