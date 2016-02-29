@@ -50,7 +50,7 @@ var const
 
 var const array<sTableColumn> PlayersRankingColumns;
 var const array<sTableColumn> RecordsRankingColumns;
-var const array<string> RankingRanges;
+var const array<string> RankingRanges, RankingRangeIds;
 
 var string
     RankingKeyMsg,
@@ -603,9 +603,10 @@ exec function TogglePersonalTimer()
     Options.SaveConfig();
 }
 
-Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
+function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
 {
     local string S;
+    local int pageIndex;
 
     S = Caps( ViewportOwner.Actor.ConsoleCommand( "KEYBINDING"@Chr( Key ) ) );
     if( InStr( S, "SHOWALL" ) != -1 )
@@ -633,7 +634,8 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             {
                 if( MRI.CR.OverallTop.Length == 0 )
                 {
-                    ViewportOwner.Actor.ServerMutate( "BTClient_RequestRankings" );
+                    MRI.CR.ServerRequestPlayerRanks( 0, "All" );
+                    ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ 0 @ "All" );
                 }
             }
             return False;
@@ -682,20 +684,19 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                             Options.GlobalSort = -1;
                         }
                         ++ Options.GlobalSort;
-
                         Options.SaveConfig();
 
                         if( Options.GlobalSort == 0 )
                         {
-                            SelectedIndex = Min( SelectedIndex, MRI.CR.OverallTop.Length - 1 );
+                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.OverallTop.Length, MRI.MaxRankedPlayersCount ) - 1 );
                         }
                         else if( Options.GlobalSort == 0 )
                         {
-                            SelectedIndex = Min( SelectedIndex, MRI.CR.QuarterlyTop.Length - 1 );
+                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.QuarterlyTop.Length, MRI.MaxRankedPlayersCount ) - 1  );
                         }
                         else if( Options.GlobalSort == 0 )
                         {
-                            SelectedIndex = Min( SelectedIndex, MRI.CR.DailyTop.Length - 1 );
+                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.DailyTop.Length, MRI.MaxRankedPlayersCount ) - 1  );
                         }
                         return true;
                     }
@@ -707,6 +708,14 @@ Function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                             if( ++ SelectedIndex >= MRI.CR.OverallTop.Length )
                             {
                                 Selectedindex = 0;
+                            }
+
+                            // Query next page
+                            if( SelectedIndex+1 == MRI.CR.OverallTop.Length && MRI.CR.OverallTop.Length >= MRI.MaxRankedPlayersCount )
+                            {
+                                pageIndex = float(SelectedIndex+1)/(MRI.CR.OverallTop.Length-1);
+                                MRI.CR.ServerRequestPlayerRanks( pageIndex, RankingRangeIds[Options.GlobalSort] );
+                                ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ pageIndex @ RankingRangeIds[Options.GlobalSort] );
                             }
                             return True;
                         }
@@ -2052,7 +2061,7 @@ final static function DrawElementValue( Canvas C, float x, float y, string title
 final function RenderRankingsTable( Canvas C )
 {
     // PRE-RENDERED
-    local int totalRows, itemsCount;
+    local int totalRows, itemIndex, itemsCount, pageIndex;
     local array<sCanvasColumn> columns;
     local float headerWidth, headerHeight;
     local float tableX, tableY;
@@ -2075,7 +2084,7 @@ final function RenderRankingsTable( Canvas C )
     C.StrLen( "T", fontXL, fontYL );
 
     isFocused = IsSelectedTable( 0 );
-    itemsCount = GetRankingsCount();
+    itemsCount = Min( GetRankingsCount(), MRI.MaxRankedPlayersCount );
     totalRows = itemsCount + 1; // +1 TABS ROW
     if( isFocused || itemsCount == 0 )
     {
@@ -2146,9 +2155,11 @@ final function RenderRankingsTable( Canvas C )
         DrawColumnText( C, drawX, drawY, s );
     }
 
+    pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
     for( i = 0; i < itemsCount; ++ i )
     {
-        isRowSelected = isFocused && IsSelectedRow( i );
+        itemIndex = i + pageIndex*MRI.MaxRankedPlayersCount;
+        isRowSelected = isFocused && IsSelectedRow( itemIndex );
         drawY += ROW_MARGIN;
         if( isRowSelected)
         {
@@ -2156,7 +2167,7 @@ final function RenderRankingsTable( Canvas C )
         }
         else
         {
-            if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf || i == MRI.CR.Rank-1 )
+            if( Options.GlobalSort == 0 && MRI.CR.OverallTop[itemIndex].bIsSelf || itemIndex == MRI.CR.Rank-1 )
             {
                 C.DrawColor = #0x33333386;
             }
@@ -2174,56 +2185,56 @@ final function RenderRankingsTable( Canvas C )
             {
                 case 0: // "Rank (Any)"
                     C.DrawColor = #0x666666FF;
-                    if( Options.GlobalSort == 0 && MRI.CR.OverallTop[i].bIsSelf )
+                    if( Options.GlobalSort == 0 && MRI.CR.OverallTop[itemIndex].bIsSelf )
                     {
                         value = string(MRI.CR.Rank);
                     }
                     else
                     {
-                        value = string(i + 1);
+                        value = string(itemIndex + 1);
                     }
                     break;
 
                 case 1: // "Achievement Points (Overall)"
                     C.DrawColor = #0x91A79DFF;
                     if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[i].AP);
+                        value = string(MRI.CR.OverallTop[itemIndex].AP);
                     break;
 
                 case 3: // "Player (All)"
                     C.DrawColor = #0xFFFFFFFF;
                     if( Options.GlobalSort == 0 )
-                        value = MRI.CR.OverallTop[i].Name;
+                        value = MRI.CR.OverallTop[itemIndex].Name;
                     if( Options.GlobalSort == 1 )
-                        value = MRI.CR.QuarterlyTop[i].Name;
+                        value = MRI.CR.QuarterlyTop[itemIndex].Name;
                     if( Options.GlobalSort == 2 )
-                        value = MRI.CR.DailyTop[i].Name;
+                        value = MRI.CR.DailyTop[itemIndex].Name;
                     break;
 
                 case 2: // "Score (All)"
                     C.DrawColor = #0xFFFFF0FF;
                     if( Options.GlobalSort == 0 )
-                        value = string(int(MRI.CR.OverallTop[i].Points));
+                        value = string(int(MRI.CR.OverallTop[itemIndex].Points));
                     if( Options.GlobalSort == 1 )
-                        value = string(int(MRI.CR.QuarterlyTop[i].Points));
+                        value = string(int(MRI.CR.QuarterlyTop[itemIndex].Points));
                     if( Options.GlobalSort == 2 )
-                        value = string(int(MRI.CR.DailyTop[i].Points));
+                        value = string(int(MRI.CR.DailyTop[itemIndex].Points));
                     break;
 
                 case 4: // "Records (All)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[i].Hijacks & 0x0000FFFF);
+                        value = string(MRI.CR.OverallTop[itemIndex].Hijacks & 0x0000FFFF);
                     if( Options.GlobalSort == 1 )
-                        value = string(MRI.CR.QuarterlyTop[i].Records);
+                        value = string(MRI.CR.QuarterlyTop[itemIndex].Records);
                     if( Options.GlobalSort == 2 )
-                        value = string(MRI.CR.DailyTop[i].Records);
+                        value = string(MRI.CR.DailyTop[itemIndex].Records);
                     break;
 
                 case 5: // "Hijacks (Overall)"
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[i].Hijacks >> 16);
+                        value = string(MRI.CR.OverallTop[itemIndex].Hijacks >> 16);
                     break;
             }
 
@@ -2249,6 +2260,11 @@ final function RenderRankingsTable( Canvas C )
         drawX = tableX;
         drawY += headerHeight;
     }
+    drawX = tableX;
+    drawY += headerHeight + ROW_MARGIN;
+    C.SetPos( drawX, drawY );
+    C.DrawColor = Orange;
+    C.DrawText( "Page:" @ pageIndex @ "MaxRankedPlayersCount:" @ MRI.MaxRankedPlayersCount @ "Num Ranks:" @ MRI.CR.OverallTop.Length @ "SelectedRank:" @ SelectedIndex+1 );
     C.bForceAlpha = false;
 }
 
@@ -3365,6 +3381,9 @@ DefaultProperties
     RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00 ") // Space for flag
     RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
 
+    RankingRangeIds(0)="All"
+    RankingRangeIds(1)="Monthly"
+    RankingRangeIds(2)="Daily"
     RankingRanges(0)="All Time"
     RankingRanges(1)="Monthly"
     RankingRanges(2)="Daily"

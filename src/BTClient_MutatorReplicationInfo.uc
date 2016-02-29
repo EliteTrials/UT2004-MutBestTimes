@@ -48,6 +48,7 @@ var int MaxRecords;
 var int PlayersCount;
 var int MaxMoves;
 var int SoloRecords;
+var int MaxRankedPlayersCount;
 
 var float TeamTime[2];
 
@@ -69,7 +70,7 @@ replication
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
-        RecordsCount, MaxRecords, PlayersCount;
+        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount;
 
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )

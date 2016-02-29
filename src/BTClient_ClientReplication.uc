@@ -286,7 +286,7 @@ replication
     reliable if( Role < ROLE_Authority )
         ServerSetPreferedColor,
         ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
-        ServerRequestPlayerItems;
+        ServerRequestPlayerItems, ServerRequestPlayerRanks;
 }
 
 // Server hooks
@@ -294,6 +294,9 @@ delegate OnRequestAchievementCategories( PlayerController requester, BTClient_Cl
 delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
 
 delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter );
+
+/** Queries the server for the all time, quarterly or daily player ranks. */
+delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string category );
 
 // UI hooks
 delegate OnAchievementStateReceived( int index );
@@ -608,7 +611,7 @@ simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
         }
     }
     APacket.bIsSelf = true;
-    ClientSendOverallTop( APacket );
+    // ClientSendOverallTop( APacket );
 }
 
 simulated function ClientSendText( string Packet )
@@ -634,6 +637,11 @@ final function ServerRequestAchievementCategories()
 final function ServerRequestAchievementsByCategory( string catID )
 {
     OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
+}
+
+final function ServerRequestPlayerRanks( int pageIndex, string category )
+{
+    OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, category );
 }
 
 simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )
