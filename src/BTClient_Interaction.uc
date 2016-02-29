@@ -2779,7 +2779,7 @@ function RenderHUDElements( Canvas C )
     drawY = (C.ClipY * 0.5);
     C.Style = 1;
     C.StrLen( "9", xl, yl );
-    if( MRI.CR.ClientSpawnPawn != none )
+    if( SpectatedClient.ClientSpawnPawn != none )
     {
         backupColor = Options.CTable;
         Options.CTable = #0xFB607FFF;
@@ -2795,7 +2795,7 @@ function RenderHUDElements( Canvas C )
         drawY += v.Y*1.2;
     }
 
-    if( MRI.CR.ProhibitedCappingPawn != none )
+    if( SpectatedClient.ProhibitedCappingPawn != none )
     {
         // Draw Level and percent
         S = "Boost";
