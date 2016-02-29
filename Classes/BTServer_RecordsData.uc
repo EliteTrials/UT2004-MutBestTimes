@@ -4,7 +4,7 @@
 class BTServer_RecordsData extends Object
     hidedropdown;
 
-const Version = 2;
+const Version = 3;
 
 const RFLAG_CP = 0x01;
 
@@ -15,6 +15,9 @@ struct sSoloRecord
      * The index is 1 value higher and so should always be decremented by 1 to get the real index.
      */
     var int PLs;
+
+    /** Awarded points for this record time. */
+    var float Points;
 
     /** Solo Record Time as seconds.ms */
     var float SRT;
@@ -123,8 +126,12 @@ struct long sBTRecordInfo
 /** The list of all records made on this server. FIXME: Should be called Maps, as it currently stands ambiguous with solo records. */
 var array<sBTRecordInfo> Rec;
 var int DataVersion;
+var transient MutBestTimes BT;
 
-final function Free();
+final function Free()
+{
+    BT = none;
+}
 
 /**
  * Takes another copy of BTServer_RecordsData, and imports its best records into the current instance.
@@ -253,6 +260,18 @@ final function bool ConvertData()
                     Rec[i].PLs[l] = 0; // deprecated
                 }
                 Rec[i].TMT = 0; // deprecated
+            }
+        }
+    }
+
+    if( DataVersion < 3 )
+    {
+        // From now on we cache points for all records, in order to reduce map loading time.
+        for( i = 0; i < Rec.Length; ++ i )
+        {
+            for( j = 0; j < Rec[i].PSRL.Length; ++ j )
+            {
+                Rec[i].PSRL[j].Points = BT.CalcRecordPoints( i, j );
             }
         }
     }

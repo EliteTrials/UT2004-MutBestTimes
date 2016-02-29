@@ -4,6 +4,8 @@ var private int i, j;
 
 var protected BTClient_ClientReplication CR;
 var protected MutBestTimes P;
+var protected int ItemsToSkip;
+var protected string RankingsCategory;
 
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
@@ -11,18 +13,33 @@ static final preoperator string $( int A )
     return (Chr( 0x1B ) $ (Chr( Max( byte(A & 0xFF000000), 1 )  ) $ Chr( Max( byte(A & 0x00FF0000), 1 ) ) $ Chr( Max( byte(A & 0x0000FF00), 1 ) )));
 }
 
-final function Initialize( BTClient_ClientReplication client )
+final function Initialize( BTClient_ClientReplication client, optional int queriedPageIndex, optional string category )
 {
     if( client == none )
         return;
 
     CR = client;
     P = MutBestTimes(Owner);
+    ItemsToSkip = queriedPageIndex*P.MaxRankedPlayers;
+    RankingsCategory = category;
 }
 
 final function BeginReplication()
 {
-    GotoState( 'ReplicateOverallTop' );
+    switch( RankingsCategory )
+    {
+        case "All":
+            GotoState( 'ReplicateOverallTop' );
+            break;
+
+        case "Monthly":
+            GotoState( 'ReplicateQuarterlyTop' );
+            break;
+
+        case "Daily":
+            GotoState( 'ReplicateDailyTop' );
+            break;
+    }
 }
 
 /** Strips all color tags from A. */
@@ -45,19 +62,18 @@ static final preoperator string %( string A )
 
 final function InitGlobalPacket( int index, optional out BTClient_ClientReplication.sGlobalPacket GP )
 {
-    local int pSlot;
+    local int playerSlot;
 
-    pSlot = P.SortedOverallTop[index].PLSlot;
+    playerSlot = P.OverallTopList.Items[index];
+    if( playerSlot == CR.myPlayerSlot )
+        GP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
+    else GP.Name = P.PDat.Player[playerSlot].PLName;
 
-    if( pSlot == CR.myPlayerSlot )
-        GP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
-    else GP.Name = P.PDat.Player[pSlot].PLName;
-
-    GP.PlayerId     = pSlot + 1;
-    GP.Points       = P.SortedOverallTop[index].PLPoints;
-    GP.AP           = P.PDat.Player[pSlot].PLAchiev;
-    GP.Objectives   = P.PDat.Player[pSlot].PLObjectives;
-    GP.Hijacks      = P.PDat.Player[pSlot].PLHijacks << 16 | P.SortedOverallTop[index].PLRecords;
+    GP.PlayerId     = playerSlot + 1;
+    GP.Points       = P.PDat.Player[playerSlot].PLPoints[0];
+    GP.AP           = P.PDat.Player[playerSlot].PLAchiev;
+    GP.Objectives   = P.PDat.Player[playerSlot].PLObjectives;
+    GP.Hijacks      = P.PDat.Player[playerSlot].PLHijacks << 16 | P.PDat.Player[playerSlot].PLPersonalRecords[0];
 }
 
 final function SendOverallTop( int index, optional out BTClient_ClientReplication.sGlobalPacket GP )
@@ -70,15 +86,10 @@ state ReplicateOverallTop
 {
 Begin:
     // Send OverallTop players
-    j = Min( P.SortedOverallTop.Length, P.MaxRankedPlayers );
+    j = Min( P.OverallTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
-        if( P.SortedOverallTop[i].PLPoints == 0 )
-        {
-            break;
-        }
-
-        SendOverallTop( i );
+        SendOverallTop( i+ItemsToSkip );
         if( Level.NetMode != NM_Standalone && i % 6 == 0 )
         {
             Sleep( 0.4 );
@@ -86,23 +97,20 @@ Begin:
     }
     Sleep( 1 );
     SendAdditionalInfo();
-    GotoState( 'ReplicateQuarterlyTop' );
 }
 
 final function SendQuarterlyTop( int index, optional out BTClient_ClientReplication.sQuarterlyPacket QP )
 {
-    local int pSlot;
+    local int playerSlot;
 
-    pSlot = P.SortedQuarterlyTop[index].PLSlot;
+    playerSlot = P.QuarterlyTopList.Items[index];
+    QP.PlayerId     = playerSlot + 1;
+    if( playerSlot == CR.myPlayerSlot )
+        QP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
+    else QP.Name = P.PDat.Player[playerSlot].PLName;
 
-    QP.PlayerId     = pSlot + 1;
-    if( pSlot == CR.myPlayerSlot )
-        QP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
-    else QP.Name = P.PDat.Player[pSlot].PLName;
-
-    QP.Points       = P.SortedQuarterlyTop[index].PLPoints;
-    QP.Records      = P.SortedQuarterlyTop[index].PLRecords;
-
+    QP.Points       = P.PDat.Player[playerSlot].PLPoints[1];
+    QP.Records      = P.PDat.Player[playerSlot].PLPersonalRecords[1];
     CR.ClientSendQuarterlyTop( QP );
 }
 
@@ -110,38 +118,30 @@ state ReplicateQuarterlyTop
 {
 Begin:
     // Send QuarterlyTop players
-    j = Min( P.SortedQuarterlyTop.Length, P.MaxRankedPlayers );
+    j = Min( P.QuarterlyTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
-        if( P.SortedQuarterlyTop[i].PLPoints == 0 )
-        {
-            break;
-        }
-
-        SendQuarterlyTop( i );
-        if( Level.NetMode != NM_Standalone && i % 6 == 0 )
+        SendQuarterlyTop( i+ItemsToSkip );
+        if( Level.NetMode != NM_Standalone && (i+ItemsToSkip) % 6 == 0 )
         {
             Sleep( 0.4 );
         }
     }
     Sleep( 1 );
-    GotoState( 'ReplicateDailyTop' );
 }
 
 final function SendDailyTop( int index, optional out BTClient_ClientReplication.sDailyPacket DP )
 {
-    local int pSlot;
+    local int playerSlot;
 
-    pSlot = P.SortedDailyTop[index].PLSlot;
+    playerSlot = P.DailyTopList.Items[index];
+    DP.PlayerId     = playerSlot + 1;
+    if( playerSlot == CR.myPlayerSlot )
+        DP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
+    else DP.Name = P.PDat.Player[playerSlot].PLName;
 
-    DP.PlayerId     = pSlot + 1;
-    if( pSlot == CR.myPlayerSlot )
-        DP.Name = $0xFFFFFF00 $ P.PDat.Player[pSlot].PLName;
-    else DP.Name = P.PDat.Player[pSlot].PLName;
-
-    DP.Points       = P.SortedDailyTop[index].PLPoints;
-    DP.Records      = P.SortedDailyTop[index].PLRecords;
-
+    DP.Points       = P.PDat.Player[playerSlot].PLPoints[2];
+    DP.Records      = P.PDat.Player[playerSlot].PLPersonalRecords[2];
     CR.ClientSendDailyTop( DP );
 }
 
@@ -149,16 +149,11 @@ state ReplicateDailyTop
 {
 Begin:
     // Send DailyTop players
-    j = Min( P.SortedDailyTop.Length, P.MaxRankedPlayers );
+    j = Min( P.DailyTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
-        if( P.SortedDailyTop[i].PLPoints == 0 )
-        {
-            break;
-        }
-
-        SendDailyTop( i );
-        if( Level.NetMode != NM_Standalone && i % 6 == 0 )
+        SendDailyTop( i+ItemsToSkip );
+        if( Level.NetMode != NM_Standalone && (i+ItemsToSkip) % 6 == 0 )
         {
             Sleep( 0.4 );
         }
@@ -187,7 +182,7 @@ state ReplicateSoloTop
                 SP.name = $0xFFFFFF00 $ P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
                 if( i >= P.MaxRankedPlayers )
                 {
-                    SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
+                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points;
                     SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                     SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                     SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
@@ -203,7 +198,7 @@ state ReplicateSoloTop
 
             if( i < P.MaxRankedPlayers )
             {
-                SP.Points = P.CalcRecordPoints( P.UsedSlot, i );
+                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points;
                 SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                 SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                 SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
@@ -225,7 +220,7 @@ final function SendAdditionalInfo()
     i = GetOverallTopFor( CR.myPlayerSlot );
     if( i != -1 )
     {
-        if( P.SortedOverallTop[i].PLPoints > 0 )
+        if( P.PDat.Player[CR.myPlayerSlot].PLPoints[0] > 0 )
         {
             CR.Rank = i+1;
             if( i > P.MaxRankedPlayers-1 )
@@ -240,9 +235,9 @@ final function SendAdditionalInfo()
 
 final function int GetOverallTopFor( int playerSlot )
 {
-    for( i = 0; i < P.SortedOverallTop.Length; ++ i )
+    for( i = 0; i < P.OverallTopList.Items.Length; ++ i )
     {
-        if( P.SortedOverallTop[i].PLSlot == playerSlot )
+        if( P.OverallTopList.Items[i] == playerSlot )
             return i;
     }
     return -1;

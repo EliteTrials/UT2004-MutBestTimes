@@ -44,9 +44,16 @@ struct sBTPlayerInfo
     // Temporary reference to this players controller, if currently ingame.
     var transient PlayerController Controller;
     var transient float _LastLoginTime;
+    var transient bool bIsActive;
 
     /** Index(+1) to their All Time, Quarterly and Daily rank! */
     var transient int PLARank, PLQRank, PLDRank;
+    var transient float PLPoints[3];
+    var transient int PLPersonalRecords[3];
+    var transient int PLTopRecords[3];
+
+    // bitmasked indexes to all maps that the player has a record on, including its personal time index which is shifted to the right.
+    var transient array<int> Records;
 
     struct sAchievementProgress
     {
