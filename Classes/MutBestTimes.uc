@@ -1210,6 +1210,7 @@ function ModifyPlayer( Pawn Other )
         {
             PimpClientSpawn( i, Other );
             CRI.ClientSpawnPawn = other;
+            CRI.NetUpdateTime = Level.TimeSeconds - 1;
 
             if( Holiday != "" )
             {
@@ -4507,6 +4508,7 @@ final function Revoted()
     local Controller C;
     local BTClient_ClientReplication CR;
 
+    FullLog( "*** "$CurrentMapName@"Revoted ***" );
     for( C = Level.ControllerList; C != none; C = C.NextController )
     {
         if( PlayerController(C) == none )
@@ -4524,13 +4526,7 @@ final function Revoted()
     if( bSpawnGhost )
         KillGhostRecorders();
 
-    SaveAll();
-    SaveConfig();
-
-    FullLog( "*** "$CurrentMapName@"Revoted ***" );
-
     StartCountDown();
-
     if( AssaultGame != none )
     {
         // Add an extra round so the game won't auto end the next time.
@@ -4555,6 +4551,7 @@ final function Revoted()
 
     // All pawns should be killed on revote!
     KillAllPawns();
+    SaveAll();
 }
 
 function ServerTraveling( string URL, bool bItems )
@@ -4584,8 +4581,6 @@ function ServerTraveling( string URL, bool bItems )
 
     // Map is switching, save everything!
     SaveAll();
-    SaveConfig();
-
     Free();
 }
 
@@ -5450,7 +5445,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     }
 
                     FullLog( "*** New Best Solo Speed-Record ***" );
-
                     if( BestPlaySeconds != -1 ) // Faster!
                     {
                         TimeBoost = (BestPlaySeconds - CurrentPlaySeconds);
@@ -5470,7 +5464,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
                             j = PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length;
                             PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( TimeBoost )$cWhite$CurrentMapName;
+                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = $cGold$TimeToStr( TimeBoost )$cWhite @ CurrentMapName @ "by" @ PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
                         }
 
                         if( RDat.Rec[UsedSlot].TMFailures >= 50 )
@@ -5656,14 +5650,12 @@ final function NotifyNewRecord( int playerSlot )
     }
 
     LastRecords[MaxRecentRecords - 1] = CurrentMapName @ cDarkGray$TimeToStr( CurrentPlaySeconds )$cWhite @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
-
-    SaveAll();
-
     if( bGenerateBTWebsite )
     {
         bUpdateWebOnNextMap = True;
     }
 
+    SaveAll();
     SaveConfig();
 }
 
