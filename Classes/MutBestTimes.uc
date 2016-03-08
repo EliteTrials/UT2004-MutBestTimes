@@ -12,7 +12,6 @@ class MutBestTimes extends Mutator
     dependson(BTServer_CheckPoint);
 
 #exec obj load file="TrialGroup.u"
-#exec obj load file="AnnouncerSexy.uax"
 
 //==============================================================================
 // Macros
@@ -294,7 +293,7 @@ var() globalconfig
     name
     // AnnouncerFemale2K4.Generic.HolyShit_F
     AnnouncementRecordImprovedVeryClose,
-    // AnnouncerFemale2K4.Generic.Last_Second_Save
+    // AnnouncerFemale2K4.Generic.Unstoppable
     AnnouncementRecordImprovedClose,
     // AnnouncerFemale2K4.Generic.Hijacked
     AnnouncementRecordHijacked,
@@ -5238,10 +5237,10 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional out byte bNewTopRecord )
 {
     local BTServer_RecordsData.sSoloRecord Tmp;
-    local bool b;
+    local bool b, bWasHijacked;
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
-    local int i, j, PLs, PLi, y, z, l;
+    local int i, j, PLs, PLi, y, z, l, tmpSlot;
     local float TimeBoost, score;
     local Pawn P;
     local int numObjectives;
@@ -5275,6 +5274,11 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 break;
             }
         }
+    }
+
+    if( !b )
+    {
+        PLi = -1;
     }
 
     // Player was found!
@@ -5449,22 +5453,32 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     {
                         TimeBoost = (BestPlaySeconds - CurrentPlaySeconds);
                         EndMsg = "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$ ", new time "$TimeToStr( CurrentPlaySeconds );
-                        if( TimeBoost <= 0.10f )
-                            BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
-                        else if( TimeBoost <= 1.0f )
-                            BroadcastAnnouncement( AnnouncementRecordImprovedClose );
-                        else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
-                        // Add lost record.
                         // Check avoids to print a message if the record owner beated his own record!
-                        if( j > 1 && PLs != RDat.Rec[UsedSlot].PSRL[1].PLs && PLi != i )
+                        bWasHijacked = j > 1 && PLs != RDat.Rec[UsedSlot].PSRL[1].PLs && PLi != i;
+                        if( bWasHijacked )
                         {
+                            BroadcastAnnouncement( AnnouncementRecordHijacked );
+
                             // Robin Hood
                             PDat.ProgressAchievementByType( PLs-1, 'StealRecord', 1 );
 
-                            j = PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length;
-                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                            PDat.Player[RDat.Rec[UsedSlot].PSRL[1].PLs-1].RecentLostRecords[j] = $cGold$TimeToStr( TimeBoost )$cWhite @ CurrentMapName @ "by" @ PDat.Player[RDat.Rec[UsedSlot].PSRL[i].PLs-1].PLNAME;
+                            tmpSlot = RDat.Rec[UsedSlot].PSRL[1].PLs-1;
+                            PDat.Player[tmpSlot].RecentLostRecords[PDat.Player[tmpSlot].RecentLostRecords.Length] =
+                                $cGold$TimeToStr( TimeBoost )$cWhite
+                                @ CurrentMapName @ "by" @ PDat.Player[PLs-1].PLNAME;
+
+
+                            RDat.Rec[UsedSlot].TMFailures = 0;
+                            ++ RDat.Rec[UsedSlot].TMHijacks;    // Amount of times this record has been hijacked.
+                            ++ PDat.Player[PLs-1].PLHijacks;    // Amount of records this player has hijacked in total.
+                        }
+                        else
+                        {
+                            if( TimeBoost <= 0.10f )
+                                BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
+                            else if( TimeBoost <= 1.0f )
+                                BroadcastAnnouncement( AnnouncementRecordImprovedClose );
                         }
 
                         if( RDat.Rec[UsedSlot].TMFailures >= 50 )
@@ -5475,25 +5489,19 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     }
                     else    // 1st time record
                     {
+                        RDat.Rec[UsedSlot].TMFailures = 0;
+
                         EndMsg = "A record has been set, time " $ TimeToStr( CurrentPlaySeconds );
                         BroadcastAnnouncement( AnnouncementRecordSet );
                     }
 
                     BroadcastConsoleMessage( EndMsg );
-
-                    // Update map stats.
-                    RDat.Rec[UsedSlot].TMFailures = 0;                          // Reset this :)
-                    ++ RDat.Rec[UsedSlot].TMHijacks;                            // Amount of times this record has been hijacked.
-
                     if( GroupManager != none )
                         RDat.Rec[UsedSlot].TMContributors = GroupManager.MaxGroupSize;
                     else if( bSoloMap )
                     {
                         RDat.Rec[UsedSlot].TMContributors = 1;
                     }
-
-                    // Update player stats.
-                    ++ PDat.Player[PLs-1].PLHijacks;
 
                     //======================================================
                     // Update clients. .
@@ -6854,7 +6862,7 @@ final Function BroadcastAnnouncement( name soundName )
 
     for( C = Level.ControllerList; C != none; C = C.NextController )
         if( PlayerController(C) != none )
-            PlayerController(C).QueueAnnouncement( soundName, 1 );
+            PlayerController(C).PlayRewardAnnouncement( soundName, 255, true );
 }
 
 final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
@@ -6872,20 +6880,6 @@ final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
     for( C = Level.ControllerList; C != None; C = C.NextController )
         if( PlayerController(C) != None )
             PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
-}
-
-final function int GetMapSlotByName( string mapName )
-{
-    local int i;
-
-    for( i = 0; i < RDat.Rec.Length; ++ i )
-    {
-        if( RDat.Rec[i].TMN ~= mapName )
-        {
-            return i;
-        }
-    }
-    return -1;
 }
 
 final function NotifyPostLogin( PlayerController client, string guid, int slot )
@@ -7105,7 +7099,7 @@ private final function BuildEventDescription( out array<string> messages )
     Split( EventDescription, "\\n", messages );
     if( mapname != "" )
     {
-        i = GetMapSlotByName( mapname );
+        i = RDat.FindRecord( mapname );
         for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
         {
             l = messages.Length;
@@ -7971,7 +7965,7 @@ DefaultProperties
     UsedSlot=-1
 
     AnnouncementRecordImprovedVeryClose=HolyShit_F
-    AnnouncementRecordImprovedClose=Last_Second_Save
+    AnnouncementRecordImprovedClose=Unstoppable
     AnnouncementRecordHijacked=Hijacked
     AnnouncementRecordSet=WhickedSick
     AnnouncementRecordTied=Invulnerable

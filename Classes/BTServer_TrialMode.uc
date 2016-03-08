@@ -3,6 +3,8 @@
 //=============================================================================
 class BTServer_TrialMode extends BTServer_Mode;
 
+#exec obj load file="AnnouncerSexy.uax"
+
 var() float MinRecordTime;
 var() float MaxRecordTime;
 var() float PointsPenalty;
