@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005 - 2016 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTServer_GhostController extends PlayerController;
 
@@ -28,8 +28,9 @@ function GameHasEnded();
 function ClientGameEnded();
 function RoundHasEnded();
 function ClientRoundEnded();
+event Reset();
 function ClientReset();
-// function AskForPawn();
+function AskForPawn();
 
 function PawnDied(Pawn P)
 {
@@ -45,31 +46,20 @@ function PawnDied(Pawn P)
     PendingMover = None;
 }
 
-function Reset()
-{
-    super.Reset();
-    if( Pawn != none )
-    {
-        Pawn.SetCollision( false, false, false );
-    }
-}
-
 state GameEnded
 {
-ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
-
-    function BeginState()
-    {
-    }
+    function BeginState();
 }
 
 state RoundEnded
 {
-ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
+    function BeginState();
+}
 
-    function BeginState()
-    {
-    }
+state Spectating
+{
+    function BeginState();
+    function EndState();
 }
 
 defaultproperties
@@ -78,4 +68,5 @@ defaultproperties
     PawnClass=class'BTClient_Ghost'
     bGodMode=true
     bCanOpenDoors=false
+    bIsPlayer=false
 }

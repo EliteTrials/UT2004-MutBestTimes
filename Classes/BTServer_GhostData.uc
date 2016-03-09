@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005 - 2016 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class BTServer_GhostData extends Object;
 
@@ -69,25 +69,23 @@ final function bool LoadNextMoveData()
 
     if( Ghost != none )
     {
+        // FIXME: Something is removing the pawn reference, and losing the PRI changes.
         if( Ghost.Controller.Pawn == none )
         {
             Ghost.Controller.Pawn = Ghost;
+            Ghost.Controller.PlayerReplicationInfo.bIsSpectator = true; // hides the bot from the scoreboard(or as spectator board), but can still be spectated.
+            Ghost.Controller.PlayerReplicationInfo.bOnlySpectator = false;
+            Ghost.Controller.PlayerReplicationInfo.bBot = true;
         }
 
         if( Ghost.Health != MO[CurrentMove].H )
         {
-            Ghost.TakeDamage( MO[CurrentMove].H - Ghost.Health, none, Ghost.Location, vect(0,0,0), class'Suicided' );
             Ghost.Health = MO[CurrentMove].H;
             Ghost.bHidden = Ghost.Health <= 0;
         }
 
         // Pawns don't use pitch!
         Ghost.SetLocation( MO[CurrentMove].P );
-        // if( CurrentMove+1 < MO.Length )
-        // {
-            // Controller.Destination = MO[CurrentMove+1].P;
-            // Controller.FocalPoint = Controller.Destination + 100*vector(TinyRotToRot( MO[CurrentMove+1].R ));
-        // }
         Ghost.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
         Ghost.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
         Ghost.Velocity = MO[CurrentMove].V;
@@ -158,11 +156,10 @@ final function BTClient_Ghost InitializeGhost( BTServer_GhostLoader other, int g
         Controller.PlayerReplicationInfo.bNoTeam = !other.Level.Game.bTeamGame;
         Controller.PlayerReplicationInfo.bIsSpectator = true; // hides the bot from the scoreboard(or as spectator board), but can still be spectated.
         Controller.PlayerReplicationInfo.bOnlySpectator = false;
-        // Controller.PlayerReplicationInfo.bBot = true;
+        Controller.PlayerReplicationInfo.bBot = true;
         Controller.PlayerReplicationInfo.bWelcomed = true;
     }
 
-    // Initialize the PRI! or GRI!
     Controller.Possess( Ghost );
 
     // Intiialize the character
