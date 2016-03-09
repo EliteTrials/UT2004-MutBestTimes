@@ -1,24 +1,56 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-Class BTServer_GhostController Extends AIController;//MessagingSpectator;
+class BTServer_GhostController extends PlayerController;
+
+var BTServer_GhostData Data;
 
 event PostBeginPlay();
 function InitPlayerReplicationInfo();
+
+// We should not interfere with the Controller's pitch!
+// function AdjustView( float deltaTime )
+// {
+//     super(Controller).AdjustView( deltaTime );
+// }
+
+// function ClientSetRotation( rotator NewRotation )
+// {
+//     SetRotation(NewRotation);
+//     if ( Pawn != None )
+//     {
+//         NewRotation.Roll  = 0;
+//         Pawn.SetRotation( NewRotation );
+//     }
+// }
 
 function GameHasEnded();
 function ClientGameEnded();
 function RoundHasEnded();
 function ClientRoundEnded();
 function ClientReset();
+// function AskForPawn();
+
+function PawnDied(Pawn P)
+{
+    if ( Pawn != P )
+        return;
+
+    if ( Pawn != None )
+    {
+        SetLocation(Pawn.Location);
+        Pawn.UnPossessed();
+    }
+    Pawn = None;
+    PendingMover = None;
+}
 
 function Reset()
 {
-    Super.Reset();
-
-    if( Pawn != None )
+    super.Reset();
+    if( Pawn != none )
     {
-        Pawn.SetCollision( False, False, False );
+        Pawn.SetCollision( false, false, false );
     }
 }
 
@@ -40,14 +72,10 @@ ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVol
     }
 }
 
-function UpdatePawnViewPitch()
-{
-    if (Pawn != None)
-        Pawn.SetViewPitch(Rotation.Pitch);
-}
-
 defaultproperties
 {
-     RotationRate=(Pitch=3072,Yaw=30000,Roll=0)
-     FovAngle=90
+    PlayerReplicationInfoClass=class'PlayerReplicationInfo'
+    PawnClass=class'BTClient_Ghost'
+    bGodMode=true
+    bCanOpenDoors=false
 }
