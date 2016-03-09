@@ -39,61 +39,37 @@ var string PLID;
 var float RelativeStartTime;
 
 var transient int CurrentMove;
-var transient float
-    TZERO,
-    TONE;
 
-// The ghost playing the data of this Data Object
-var transient BTClient_Ghost Ghost;
-var transient BTServer_GhostController Controller;
-
-final function InterpolateMove()
+final function GetCurrentMove( out Vector p, out Rotator r )
 {
-    local Vector NextMove;
-
-    if( Ghost == none || CurrentMove >= MO.Length-1 || CurrentMove == 0 )
-        return;
-
-    NextMove = MO[CurrentMove].P + (Ghost.Level.TimeSeconds - TZERO)/(TONE - TZERO) * (MO[CurrentMove+1].P - MO[CurrentMove].P);
-    Ghost.SetLocation( NextMove );
+    p = MO[CurrentMove].P;
+    r = TinyRotToRot( MO[CurrentMove].R );
 }
 
 /**
  * Plays the next movement for Ghost.
  * Returns true if more moves are available.
  */
-final function bool LoadNextMoveData()
+final function bool PerformNextMove( Pawn p )
 {
     if( CurrentMove >= MO.Length )
         return false;
 
-    if( Ghost != none )
+    if( p != none )
     {
-        // FIXME: Something is removing the pawn reference, and losing the PRI changes.
-        if( Ghost.Controller.Pawn == none )
+        if( p.Health != MO[CurrentMove].H )
         {
-            Ghost.Controller.Pawn = Ghost;
-            Ghost.Controller.PlayerReplicationInfo.bIsSpectator = true; // hides the bot from the scoreboard(or as spectator board), but can still be spectated.
-            Ghost.Controller.PlayerReplicationInfo.bOnlySpectator = false;
-            Ghost.Controller.PlayerReplicationInfo.bBot = true;
-        }
-
-        if( Ghost.Health != MO[CurrentMove].H )
-        {
-            Ghost.Health = MO[CurrentMove].H;
-            Ghost.bHidden = Ghost.Health <= 0;
+            p.Health = MO[CurrentMove].H;
+            p.bHidden = p.Health <= 0;
         }
 
         // Pawns don't use pitch!
-        Ghost.SetLocation( MO[CurrentMove].P );
-        Ghost.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
-        Ghost.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
-        Ghost.Velocity = MO[CurrentMove].V;
-        Ghost.Acceleration = MO[CurrentMove].A;
-        Ghost.NetUpdateTime = Ghost.Level.TimeSeconds - 1;
-
-        TZERO = Controller.Level.TimeSeconds;
-        TONE = TZERO + 1.0f/UsedGhostFPS;
+        p.SetLocation( MO[CurrentMove].P );
+        p.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
+        p.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
+        p.Velocity = MO[CurrentMove].V;
+        p.Acceleration = MO[CurrentMove].A;
+        p.NetUpdateTime = p.Level.TimeSeconds - 1;
     }
     return !(++ CurrentMove >= MO.Length);
 }
@@ -113,65 +89,9 @@ final function Rotator TinyRotToRot( sTinyRot TR, optional bool bIgnorePitch )
     return Rot;
 }
 
-// Spawns all the neccasery things for our ghost!
-// Called by GhostLoader
-final function BTClient_Ghost InitializeGhost( BTServer_GhostLoader other, int ghostIndex )
-{
-    // This data object has no moves, don't try spawn a ghost
-    if( MO.Length == 0 )
-        return none;
-
-    // Incase the ghost already existed?
-    if( Ghost != none )
-    {
-        // Reset then
-        CurrentMove = 0;
-        return Ghost;
-    }
-
-    TZERO = 0.0f;
-    TONE = 0.0f;
-
-    // Spawn the ghost!
-    Ghost = other.Spawn( Class'BTClient_Ghost',,, MO[CurrentMove].P, TinyRotToRot( MO[CurrentMove].R ) );
-    if( Ghost == none )
-    {
-        Log( "Failed to spawn the ghost", Name );
-        return none;
-    }
-
-    // Ghost's can't touch people!
-    Ghost.SetCollision( false, false, false );
-
-    // Initialize the Controller!
-    if( Controller == none )
-    {
-        Controller = other.Spawn( class'BTServer_GhostController' );
-        Controller.Pawn = Ghost;
-        Controller.Data = self;
-
-        Controller.PlayerReplicationInfo = other.Spawn( class'PlayerReplicationInfo', Controller );
-        Controller.PlayerReplicationInfo.PlayerName = other.Ghosts[ghostIndex].GhostName;
-        Controller.PlayerReplicationInfo.Team = other.Ghosts[ghostIndex].GhostTeam;
-        Controller.PlayerReplicationInfo.bNoTeam = !other.Level.Game.bTeamGame;
-        Controller.PlayerReplicationInfo.bIsSpectator = true; // hides the bot from the scoreboard(or as spectator board), but can still be spectated.
-        Controller.PlayerReplicationInfo.bOnlySpectator = false;
-        Controller.PlayerReplicationInfo.bBot = true;
-        Controller.PlayerReplicationInfo.bWelcomed = true;
-    }
-
-    Controller.Possess( Ghost );
-
-    // Intiialize the character
-    Ghost.Setup( class'xUtil'.static.FindPlayerRecord( other.Ghosts[ghostIndex].GhostChar ) );
-    return Ghost;
-}
-
 // Called by BTimes
 final function Presave( MutBestTimes BT, string playerGUID )
 {
-    Ghost = none;
-    Controller = none;
     PLID = playerGUID;
 
     UsedGhostFPS = BT.GhostPlaybackFPS;
@@ -189,6 +109,4 @@ final function ClearGhostData()
 
 final function Free()
 {
-    Ghost = none;
-    Controller = none;
 }

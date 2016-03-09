@@ -8,7 +8,8 @@ class BTServer_GhostLoader extends Info;
 
 struct sGhostInfo
 {
-    var BTClient_Ghost      GhostPawn;
+    var BTServer_GhostController
+                            Controller;
     var string              GhostName;
     var string              GhostChar;
     var UnrealTeamInfo      GhostTeam;
@@ -24,6 +25,7 @@ var const int MaxGhosts;
 var const string GhostTag;
 
 var const class<BTServer_GhostData> GhostDataClass;
+var const class<BTServer_GhostController> GhostControllerClass;
 var const class<BTClient_GhostMarker> GhostMarkerClass;
 var MutBestTimes BT;
 
@@ -42,6 +44,13 @@ final function LoadGhosts( string mapName, string ghostDataName )
     local BTServer_GhostData data;
 
     // BT.FullLog( "Ghost::LoadGhosts" );
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        if( Ghosts[i].Controller != none )
+        {
+            Ghosts[i].Controller.Destroy();
+        }
+    }
     Ghosts.Length = 0;
     for( i = 0; i < MaxGhosts; ++ i )
     {
@@ -55,6 +64,19 @@ final function LoadGhosts( string mapName, string ghostDataName )
         Ghosts.Length = j + 1;
         Ghosts[j].GhostData = data;
 
+        Ghosts[j].GhostSlot = BT.FindPlayerSlot( Ghosts[j].GhostData.PLID );
+        if( Ghosts[j].GhostSlot != -1 )
+        {
+            Ghosts[j].GhostName = BT.PDat.Player[Ghosts[j].GhostSlot-1].PLName $ GhostTag;
+            Ghosts[j].GhostChar = BT.PDat.Player[Ghosts[j].GhostSlot-1].PLChar;
+            Ghosts[j].GhostTeam = ASGameInfo(Level.Game).Teams[ASGameInfo(Level.Game).CurrentAttackingTeam];
+        }
+        else
+        {
+            Ghosts[i].GhostName = "Unknown" $ GhostTag;
+        }
+        Ghosts[j].Controller = CreateGhostController( j );
+
         if( data.MO.Length > 0 )
         {
             Log( "GhostData" @ data.PackageName @ "with" @ data.MO.Length @ "frames loaded", Name );
@@ -65,8 +87,24 @@ final function LoadGhosts( string mapName, string ghostDataName )
         }
     }
 
-    UpdateGhostsInfo();
+    if( BT.bAddGhostTimerPaths && BT.bSoloMap )
+    {
+        AddGhostMarkers();
+    }
     Log( "Loaded" @ Ghosts.Length @ "ghosts", Name );
+}
+
+final function BTServer_GhostController CreateGhostController( int ghostIndex )
+{
+    local BTServer_GhostController controller;
+    local PlayerReplicationInfo PRI;
+
+    controller = Spawn( GhostControllerClass );
+    PRI = controller.PlayerReplicationInfo;
+    PRI.PlayerName = Ghosts[ghostIndex].GhostName;
+    PRI.Team = Ghosts[ghostIndex].GhostTeam;
+    PRI.CharacterName = Ghosts[ghostIndex].GhostChar;
+    return controller;
 }
 
 final function CreateGhostsData( string mapName, string ghostDataName, array<string> IDs, out array<BTServer_GhostData> dataObjects )
@@ -83,28 +121,12 @@ final function CreateGhostsData( string mapName, string ghostDataName, array<str
     }
 }
 
-final function UpdateGhostsInfo()
+final function AddGhostMarkers()
 {
     local int i;
     local BTClient_GhostMarker Marking;
 
-    // BT.FullLog( "Ghost::UpdateGhostsInfo" );
-    for( i = 0; i < Ghosts.Length; ++ i )
-    {
-        Ghosts[i].GhostSlot = BT.FindPlayerSlot( Ghosts[i].GhostData.PLID );
-        if( Ghosts[i].GhostSlot != -1 )
-        {
-            Ghosts[i].GhostName = BT.PDat.Player[Ghosts[i].GhostSlot-1].PLName $ GhostTag;
-            Ghosts[i].GhostChar = BT.PDat.Player[Ghosts[i].GhostSlot-1].PLChar;
-            Ghosts[i].GhostTeam = ASGameInfo(Level.Game).Teams[ASGameInfo(Level.Game).CurrentAttackingTeam];
-        }
-        else
-        {
-            Ghosts[i].GhostName = "Unknown" $ GhostTag;
-        }
-    }
-
-    if( BT.bAddGhostTimerPaths && BT.bSoloMap && Ghosts.Length > 0 && Ghosts[0].GhostData.MO.Length < 2000 )
+    if( Ghosts.Length > 0 && Ghosts[0].GhostData.MO.Length < 2000 )
     {
         for( i = 0; i < Ghosts[0].GhostData.MO.Length; ++ i )
         {
@@ -114,7 +136,6 @@ final function UpdateGhostsInfo()
                 Marking.MoveIndex = i;
             }
         }
-
         BT.MRI.MaxMoves = Ghosts[0].GhostData.MO.Length;
     }
 }
@@ -133,9 +154,9 @@ final function UpdateGhostsName( int playerSlot, string newName )
         }
 
         Ghosts[i].GhostName = newName $ GhostTag;
-        if( Ghosts[i].GhostPawn != none )
+        if( Ghosts[i].Controller != none )
         {
-            Ghosts[i].GhostPawn.PlayerReplicationInfo.PlayerName = Ghosts[i].GhostName;
+            Ghosts[i].Controller.PlayerReplicationInfo.PlayerName = Ghosts[i].GhostName;
         }
     }
 }
@@ -192,9 +213,6 @@ final function GhostsPlay()
             BT.FullLog( "Ghost::" $ i @ "tried to play ghost with no data!" );
             continue;
         }
-
-        Ghosts[i].GhostData.TZERO = 0f;
-        Ghosts[i].GhostData.TONE = 0f;
     }
 
     SetTimer( GhostFramesPerSecond( 0 ), true );
@@ -212,7 +230,6 @@ final function GhostsRespawn()
     local int i;
 
     BT.FullLog( "Ghost::GhostsRespawn" );
-    GhostsPause();
     for( i = 0; i < Ghosts.Length; ++ i )
     {
         if( Ghosts[i].GhostData == none )
@@ -237,29 +254,14 @@ final function GhostsKill()
 {
     local int i;
 
-    // BT.FullLog( "Ghost::GhostsKill" );
+    BT.FullLog( "Ghost::GhostsKill" );
     GhostsPause();
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        if( Ghosts[i].GhostPawn == none )
-            continue;
-
-        if( Ghosts[i].GhostPawn.PlayerReplicationInfo != none )
+        if( Ghosts[i].Controller != none && Ghosts[i].Controller.Pawn != none )
         {
-            Ghosts[i].GhostPawn.PlayerReplicationInfo.Destroy();
+            Ghosts[i].Controller.Pawn.Destroy();
         }
-
-        if( Ghosts[i].GhostPawn.Controller != none )
-        {
-            Ghosts[i].GhostPawn.Controller.Destroy();
-        }
-
-        if( Ghosts[i].GhostPawn != none )
-        {
-            Ghosts[i].GhostPawn.Destroy();
-        }
-
-        Ghosts[i].GhostData.Ghost = none;
     }
 }
 
@@ -272,25 +274,35 @@ event Timer()
 {
     local int i;
     local bool primairGhostDone, allGhostsDone;
+    local Pawn p;
 
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        if( Ghosts[i].GhostDisabled || Ghosts[i].GhostData == none )
+        if( Ghosts[i].GhostDisabled
+            || Ghosts[i].GhostData == none
+            || Level.TimeSeconds - BT.MRI.MatchStartTime < Ghosts[i].GhostData.RelativeStartTime )
         {
             continue;
         }
 
-        if( Ghosts[i].GhostPawn == none )
+        p = GetGhostPawn( i );
+        if( p == none )
         {
-            if( Level.TimeSeconds - BT.MRI.MatchStartTime >= Ghosts[i].GhostData.RelativeStartTime )
+            if( Ghosts[i].Controller == none )
             {
-                BT.FullLog( "Spawning ghost for" @ Ghosts[i].GhostName );
-                Ghosts[i].GhostPawn = Ghosts[i].GhostData.InitializeGhost( self, i );
+                Log( "Creating unexpectedly new ghost controller!!" );
+                Ghosts[i].Controller = CreateGhostController( i );
+            }
+            p = Ghosts[i].Controller.CreateGhostPawn( Ghosts[i].GhostData );
+            if( p == none )
+            {
+                // Perhaps we tried to spawn the ghost in an invalid location.
+                ++ Ghosts[i].GhostData.CurrentMove;
+                continue;
             }
         }
 
-        // BT.FullLog( "Moving ghost[" $ i $ "]" @ Ghosts[i].GhostData.CurrentMove $ "/" $ Ghosts[i].GhostData.MO.Length );
-        if( !Ghosts[i].GhostData.LoadNextMoveData() )
+        if( !Ghosts[i].GhostData.PerformNextMove( p ) )
         {
             if( BT.bSoloMap )
             {
@@ -331,24 +343,39 @@ event Timer()
     }
 }
 
-/**event Tick( float deltaTime )
+final function Pawn GetGhostPawn( int ghostIndex )
 {
-    local int i;
-    for( i = 0; i < Ghosts.Length; ++ i )
+    if( Ghosts[ghostIndex].Controller == none )
+        return none;
+
+    return Ghosts[ghostIndex].Controller.Pawn;
+}
+
+final function ForceViewGhost()
+{
+    local Controller C;
+    local Pawn p;
+
+    if( Ghosts.Length == 0 )
+        return;
+
+    for( C = Level.ControllerList; C != none; C = C.NextController )
     {
-        if( Ghosts[i].GhostDisabled || Ghosts[i].GhostData == none || Ghosts[i].GhostPawn == none )
+        if( PlayerController(C) != none && C.bIsPlayer )
         {
-            continue;
+            p = GetGhostPawn( 0 );
+            if( p != none )
+            {
+                PlayerController(C).SetViewTarget( p );
+                PlayerController(C).ClientSetViewTarget( p );
+            }
         }
-        // Smooth the movement
-        Ghosts[i].GhostData.InterpolateMove();
     }
-}*/
+}
 
 function Reset()
 {
     super.Reset();
-
     // Kill to undo NewRound modifications
     GhostsKill();
     GhostsRespawn();
@@ -366,5 +393,6 @@ defaultproperties
     GhostTag="' ghost"
 
     GhostDataClass=class'BTServer_GhostData'
+    GhostControllerClass=class'BTServer_GhostController'
     GhostMarkerClass=class'BTClient_GhostMarker'
 }
