@@ -1,41 +1,72 @@
 //=============================================================================
-// Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005 - 2016 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-Class BTServer_GhostController Extends AIController;//MessagingSpectator;
+class BTServer_GhostController extends PlayerController;
+
+var BTServer_GhostData Data;
 
 event PostBeginPlay();
 function InitPlayerReplicationInfo();
+
+// We should not interfere with the Controller's pitch!
+// function AdjustView( float deltaTime )
+// {
+//     super(Controller).AdjustView( deltaTime );
+// }
+
+// function ClientSetRotation( rotator NewRotation )
+// {
+//     SetRotation(NewRotation);
+//     if ( Pawn != None )
+//     {
+//         NewRotation.Roll  = 0;
+//         Pawn.SetRotation( NewRotation );
+//     }
+// }
 
 function GameHasEnded();
 function ClientGameEnded();
 function RoundHasEnded();
 function ClientRoundEnded();
+event Reset();
 function ClientReset();
+function AskForPawn();
 
-function Reset()
+function PawnDied(Pawn P)
 {
-    Super.Reset();
+    if ( Pawn != P )
+        return;
 
-    if( Pawn != None )
+    if ( Pawn != None )
     {
-        Pawn.SetCollision( False, False, False );
+        SetLocation(Pawn.Location);
+        Pawn.UnPossessed();
     }
+    Pawn = None;
+    PendingMover = None;
 }
 
 state GameEnded
 {
-ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
-
-    function BeginState()
-    {
-    }
+    function BeginState();
 }
 
 state RoundEnded
 {
-ignores SeePlayer, HearNoise, KilledBy, NotifyPhysicsVolumeChange, NotifyHeadVolumeChange, TakeDamage, ReceiveWarning;
+    function BeginState();
+}
 
-    function BeginState()
-    {
-    }
+state Spectating
+{
+    function BeginState();
+    function EndState();
+}
+
+defaultproperties
+{
+    PlayerReplicationInfoClass=class'PlayerReplicationInfo'
+    PawnClass=class'BTClient_Ghost'
+    bGodMode=true
+    bCanOpenDoors=false
+    bIsPlayer=false
 }
