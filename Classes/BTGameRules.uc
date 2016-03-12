@@ -113,14 +113,13 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
                 return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
             C = Killed.Controller;
-
             if( Killed.DrivenVehicle != none )
             {
                 Killed.DrivenVehicle.DriverDied();
                 Killed.DrivenVehicle = none;
             }
 
-            if( Killed.LastStartSpot != none )
+            if( Killed.LastStartSpot != none && (Level.TimeSeconds - 2.0 > Killed.LastStartTime || class<Suicided>(damageType) == none) )
             {
                 if( Killed.LastStartSpot.Class != Class'BTServer_ClientStartPoint' )   // Died without a 'ClientSpawn'
                 {
