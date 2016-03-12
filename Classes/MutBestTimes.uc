@@ -4232,6 +4232,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
     local int i, j;
     local vector v;
     local float d;
+    local PlayerStart oldSpawn;
 
     // Secure code...
     j = Objectives.Length;
@@ -4280,14 +4281,19 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
                 ClientPlayerStarts[i].PStart != None
             )
             {
-                ClientPlayerStarts[i].PStart.Destroy();
-                ClientPlayerStarts[i].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.ViewTarget.Rotation );
+                oldSpawn = ClientPlayerStarts[i].PStart;
+                ClientPlayerStarts[i].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.Rotation );
                 if( ClientPlayerStarts[i].PStart == None )
                 {
                     SendErrorMessage( Sender, lzCS_Failed );
-                    ClientPlayerStarts.Remove( i, 1 );
                     return;
                 }
+
+                if( oldSpawn != none )
+                {
+                    oldSpawn.Destroy();
+                }
+
                 ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
                 CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[i].SavedStats );
                 SendSucceedMessage( Sender, lzCS_Set );
@@ -4299,7 +4305,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
     // not found, create new one
     ClientPlayerStarts.Length = j + 1;
     ClientPlayerStarts[j].PC = Sender;
-    ClientPlayerStarts[j].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.ViewTarget.Rotation );
+    ClientPlayerStarts[j].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.Rotation );
     if( ClientPlayerStarts[j].PStart == None )
     {
         SendErrorMessage( Sender, lzCS_Failed );
