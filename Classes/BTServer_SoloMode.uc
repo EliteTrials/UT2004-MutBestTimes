@@ -54,7 +54,7 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 
     switch( command )
     {
-        case "resetcheckpoint":
+        case "resetcp":
             if( bQuickStart )
             {
                 break;
