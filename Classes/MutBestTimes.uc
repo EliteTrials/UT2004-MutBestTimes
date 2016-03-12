@@ -4243,7 +4243,7 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
             v = (Sender.Pawn.Location - Objectives[i].Location);
             v.Z = 0;
             d = VSize( v );
-            if( d <= (Objectives[i].CollisionRadius + Sender.Pawn.CollisionRadius)*2.5 )
+            if( d <= (Objectives[i].CollisionRadius + Sender.Pawn.CollisionRadius)*1.2 )
             {
                 SendErrorMessage( Sender, lzCS_NotAllowed );
                 return;
@@ -4251,18 +4251,21 @@ Final Function CreateClientSpawn( PlayerController Sender )                     
         }
     }
 
-    j = Triggers.Length;
-    for( i = 0; i < j; ++ i )
+    if( bTriggersKillClientSpawnPlayers || bAlwaysKillClientSpawnPlayersNearTriggers )
     {
-        if( Triggers[i] != None && Triggers[i].bBlockNonZeroExtentTraces )
+        j = Triggers.Length;
+        for( i = 0; i < j; ++ i )
         {
-            v = (Sender.Pawn.Location - Triggers[i].Location);
-            v.Z = 0;
-            d = VSize( v );
-            if( d <= (Triggers[i].CollisionRadius + Sender.Pawn.CollisionRadius)*2.5 )
+            if( Triggers[i] != None && Triggers[i].bBlockNonZeroExtentTraces )
             {
-                SendErrorMessage( Sender, lzCS_NotAllowed );
-                return;
+                v = (Sender.Pawn.Location - Triggers[i].Location);
+                v.Z = 0;
+                d = VSize( v );
+                if( d <= (Triggers[i].CollisionRadius + Sender.Pawn.CollisionRadius)*1.2 )
+                {
+                    SendErrorMessage( Sender, lzCS_NotAllowed );
+                    return;
+                }
             }
         }
     }
@@ -8000,7 +8003,7 @@ DefaultProperties
 
     lzCS_Set="'Client Spawn' set"
     lzCS_Deleted="'Client Spawn' deleted"
-    lzCS_NotAllowed="Sorry you are not allowed to create a 'Client Spawn' at this location"
+    lzCS_NotAllowed="Sorry! You cannot create a 'Client Spawn' nearby objectives, or certain triggers!"
     lzCS_Failed="Failed to set a 'Client Spawn' here. Please try move a little and try again"
     lzCS_ObjAndTrigger="You cannot interact with any objectives nor triggers while using a 'Client Spawn'"
     lzCS_Obj="You cannot interact with any objectives while using a 'Client Spawn'"

@@ -33,7 +33,7 @@ protected function InitializeMode()
         bKeyMap = true;
         MRI.bKeyMap = true;
     }
-    else if( Objectives[0].IsA('TriggeredObjective') )
+    else if( Objectives[0].IsA('TriggeredObjective') && !ClientSpawnCanCompleteMap() )
     {
         bAlwaysKillClientSpawnPlayersNearTriggers = true;
     }
