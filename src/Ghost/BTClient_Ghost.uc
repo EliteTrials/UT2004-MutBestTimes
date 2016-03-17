@@ -117,20 +117,63 @@ event Landed(vector v)
 simulated function PostRender2D( Canvas C, float ScreenLocX, float ScreenLocY );
 function AddVelocity( vector NewVelocity);
 function GiveWeapon(string aClassName );
+function AddDefaultInventory();
 function CreateInventory(string InventoryClassName);
 simulated function FootStepping(int Side);
 
 // Ghosts should never die.
 simulated function TurnOff();
 function TakeDamage(int Damage, Pawn instigatedBy, Vector hitlocation, Vector momentum, class<DamageType> damageType);
-function Died(Controller Killer, class<DamageType> damageType, vector HitLocation);
+simulated function ChunkUp( Rotator HitRotation, float ChunkPerterbation );
+// function Died(Controller Killer, class<DamageType> damageType, vector HitLocation);
 function Suicide();
 function Reset();
+event FellOutOfWorld(eKillZType KillType);
 
 // To support spectating features.
 simulated function bool IsPlayerPawn()
 {
     return true;
+}
+
+state TimingOut
+{
+    // Fix: Don't kill our Controller!
+    function BeginState()
+    {
+        SetPhysics(PHYS_None);
+        SetCollision(false,false,false);
+        LifeSpan = 1.0;
+        if ( Controller != None )
+        {
+            Controller.PawnDied(self);
+        }
+    }
+}
+
+state Dying
+{
+    // Fix: Don't kill our Controller!
+    function BeginState()
+    {
+        local int i;
+
+        SetCollision(true,false,false);
+        if ( bTearOff && (Level.NetMode == NM_DedicatedServer) )
+            LifeSpan = 1.0;
+        else
+            SetTimer(2.0, false);
+        SetPhysics(PHYS_Falling);
+        bInvulnerableBody = true;
+        if ( Controller != None )
+        {
+            Controller.PawnDied(self);
+        }
+
+        for (i = 0; i < Attached.length; i++)
+            if (Attached[i] != None)
+                Attached[i].PawnBaseDied();
+    }
 }
 
 defaultproperties
