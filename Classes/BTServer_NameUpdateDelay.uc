@@ -1,23 +1,27 @@
 //=============================================================================
 // Copyright 2005-2010 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-Class BTServer_NameUpdateDelay Extends Info;
+class BTServer_NameUpdateDelay extends Info;
 
 var PlayerController Client;
 
-Event PreBeginPlay();
-Event PostBeginPlay();
-
-Event Timer()
+event PreBeginPlay()
 {
-    local int Slot;
+    SetTimer( 0.25, false );
+}
 
-    if( Client != None )
+event PostBeginPlay();
+
+event Timer()
+{
+    local int playerSlot;
+
+    if( client != None )
     {
-        Slot = MutBestTimes(Owner).FastFindPlayerSlot( Client );
-        if( Slot > 0 )
+        playerSlot = MutBestTimes(Owner).FastFindPlayerSlot( Client );
+        if( playerSlot != -1 )
         {
-            MutBestTimes(Owner).UpdatePlayerSlot( Client, Slot - 1, True );
+            MutBestTimes(Owner).UpdatePlayerSlot( Client, playerSlot-1, true );
         }
     }
     Destroy();

@@ -3986,15 +3986,11 @@ function Mutate( string MutateString, PlayerController Sender )
             return;
 
         i = FastFindPlayerSlot( Sender );
-        if( i > 0 )
+        if( i != -1 )
         {
-            // -1 because FindPlayerSlot returns slot + 1
-            UpdatePlayerSlot( Sender, i - 1, True );
-
             // Catch utcomp color name change
-            NUD = Spawn( Class'BTServer_NameUpdateDelay', Self );
+            NUD = Spawn( Class'BTServer_NameUpdateDelay', self );
             NUD.Client = Sender;
-            NUD.SetTimer( 0.25, False );
         }
         return;
     }
@@ -5986,7 +5982,7 @@ Function ModifyLogin(out string Portal, out string Options)                     
 
 //==============================================================================
 // RetriveScore
-final function RetrieveScore( PlayerController Other, string ClientID, int Slot )       // .:..:, Eliot
+final function RetrieveScore( PlayerController Other, string ClientID )       // .:..:, Eliot
 {
     local int i, j;
 
@@ -6069,7 +6065,7 @@ final function int FastFindPlayerSlot( PlayerController PC )
 // Create player account by using a players GUID
 // Note to access the real Slot always cut the return value by -1
 // 0 and -1 are used as NONE
-final Function int CreatePlayerSlot( PlayerController PC, string ClientID )
+final function int CreatePlayerSlot( PlayerController PC, string ClientID )
 {
     local int j;
 
@@ -6088,32 +6084,32 @@ final Function int CreatePlayerSlot( PlayerController PC, string ClientID )
 //==============================================================================
 // Update player account Name and character
 // bUpdateScoreboard only set this to true after the BTClient_ClientReplication is initialized!
-final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bUpdateScoreboard )
+final function UpdatePlayerSlot( PlayerController PC, int playerSlot, Optional bool bUpdateScoreboard )
 {
     local LinkedReplicationInfo LRI;
     local string S;
 
     //FullLog( "UpdatePlayerSlot" );
-    if( PC == None || PC.PlayerReplicationInfo == None || MessagingSpectator(PC) != None )
+    if( PC == none || PC.PlayerReplicationInfo == none )
         return;
 
-    if( Slot >= PDat.Player.Length || Slot < 0 )
+    if( playerSlot == -1 )
     {
         FullLog( "UpdatePlayerSlot::Slot is not valid!" );
         return;
     }
 
-    PDat.Player[Slot].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
+    PDat.Player[playerSlot].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
 
     // Try find the colored name
-    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
     {
         if( LRI.IsA('UTComp_PRI') )
         {
             S = LRI.GetPropertyText( "ColoredName" );
             if( S != "" && InStr( S, Chr( 0x1B ) ) != -1 )
             {
-                PDat.Player[Slot].PLNAME = /*Class'HUD'.Default.GoldColor$*/S$Class'HUD'.Default.WhiteColor;
+                PDat.Player[playerSlot].PLNAME = S$Class'HUD'.Default.WhiteColor;
                 if( bUpdateScoreboard )
                     UpdateScoreboard( PC );
 
@@ -6123,9 +6119,9 @@ final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bU
     }
 
     // Prevents the colored name from being overwritten
-    if( %PDat.Player[Slot].PLNAME != %PC.PlayerReplicationInfo.PlayerName )
+    if( %PDat.Player[playerSlot].PLNAME != %PC.PlayerReplicationInfo.PlayerName )
     {
-        PDat.Player[Slot].PLNAME = /*Class'HUD'.Default.GoldColor $*/PC.PlayerReplicationInfo.PlayerName$Class'HUD'.Default.WhiteColor;
+        PDat.Player[playerSlot].PLNAME = PC.PlayerReplicationInfo.PlayerName$Class'HUD'.Default.WhiteColor;
         if( bUpdateScoreboard )
             UpdateScoreboard( PC );
     }
@@ -6134,7 +6130,7 @@ final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bU
 // =============================================================================
 // Updates the name of PC for everyones local Rankings/Solo Scoreboard!
 // CR required!
-final Function UpdateScoreboard( PlayerController PC )
+final function UpdateScoreboard( PlayerController PC )
 {
     local Controller C;
     local BTClient_ClientReplication myCR, CR;
@@ -6891,7 +6887,7 @@ final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
             PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
 }
 
-final function NotifyPostLogin( PlayerController client, string guid, int slot )
+final function NotifyPostLogin( PlayerController client, string guid )
 {
     // Player joined while server traveling?
     if( PDat == none )
@@ -6900,11 +6896,8 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
         return;
     }
 
-    // True if ModifyPlayer called NotifyPostLogin( which happens if the player spawns very early like before the replication is created )
-    //if( GetRep( client ) != none )
-    //  return;
-
     // Create one if none found.
+    slot = FindPlayerSlot( guid );
     if( slot == -1 )
         slot = CreatePlayerSlot( client, guid );
 
@@ -6918,7 +6911,7 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
     ++ PDat.Player[slot].Played;
 
     // Get his score from last time he logged on this current round
-    RetrieveScore( client, guid, slot );
+    RetrieveScore( client, guid );
 
     // Start replicating rankings
     FullLog( "initializing replication for:" @ %PDat.Player[slot].PLName );
