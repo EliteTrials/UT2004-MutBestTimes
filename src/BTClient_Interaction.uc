@@ -1073,14 +1073,14 @@ function Vector RenderDodgeReady( Canvas C, float drawY )
     }
     else if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
     {
-        C.DrawColor = Orange;
+        C.DrawColor = class'HUD'.default.CyanColor;
     }
     else
     {
         C.DrawColor = class'HUD'.default.RedColor;
     }
     C.StrLen( s, xl, yl );
-    return DrawElement( C, C.ClipX*0.5, drawY, Mid(GetEnum( enum'EDoubleClickDir', ViewportOwner.Actor.DoubleClickDir ), 7), s, true, xl, 1.0, C.DrawColor );
+    return DrawElement( C, C.ClipX*0.5, drawY, Mid(GetEnum( enum'EDoubleClickDir', ViewportOwner.Actor.DoubleClickDir ), 7), s, true, 200, 1.0, C.DrawColor );
 }
 
 event Initialized()
@@ -2924,9 +2924,11 @@ function RenderHUDElements( Canvas C )
     if( Pawn(ViewportOwner.Actor.ViewTarget) != none )
     {
         drawY = C.ClipY*0.825f;
-        s = VSize(ViewportOwner.Actor.ViewTarget.Velocity*vector(ViewportOwner.Actor.ViewTarget.Rotation))/128f@"m/s";
+        v = ViewportOwner.Actor.ViewTarget.Velocity;
+        v.Z = 0;
+        s = Decimal(VSize(v))@":"@Decimal(VSize(ViewportOwner.Actor.ViewTarget.Velocity*vect(0,0,1)))@"uu/s";
         C.StrLen( s, xl, yl );
-        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Speed", s, true, xl, 1.0, class'HUD'.default.GoldColor ).Y*1.2;
+        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Speed", s, true, 200, 1.0, class'HUD'.default.GoldColor ).Y*1.2;
         if( MRI.CR.bAllowDodgePerk && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
         {
             RenderDodgeReady( C, drawY );
