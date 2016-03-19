@@ -100,9 +100,8 @@ var const class<BTServer_HttpNotificator>           NotifyClass;
 var array<GameObjective>                            Objectives;                 // An array containig all objectives for ClientSpawn performance
 var array<Triggers>                                 Triggers;                   // An array containig all triggers for ClientSpawn performance
 
+var BTRanks                                         Ranks;
 var private array<KeepScoreSE>                      KeepScoreTable;             // Backed up score from leaving players.
-
-var BTRanksList                                     OverallTopList, QuarterlyTopList, DailyTopList;
 
 var array<float>                                    ObjCompT;                   // Temporary Objective Complete Times, moves to saved BMTL.ObjCompT when new rec.
 var array<sClientSpawn>                             ClientPlayerStarts;         // Current playerstarts in the current map, cleaned when user performs 'DeleteClientSpawn' or when server travels or on QuickStart
@@ -1697,72 +1696,7 @@ event PostBeginPlay()
 
     if( bShowRankings )
     {
-        /*Class'GameInfo'.Static.LoadMapList( "AS", Maps );
-        if( Maps.Length > 0 )
-        {
-            ii = RDat.Rec.Length;
-            for( i = 0; i < ii; ++ i )
-            {
-                // Ignore stats on maps that are no longer available in the server maps folder.
-                bFound = False;
-                for( l = 0; l < Maps.Length; ++ l )
-                {
-                    if( RDat.Rec[i].TMN == Maps[l] )
-                    {
-                        bFound = True;
-                        break;
-                    }
-                }
-                RDat.Rec[i].bIgnoreStats = !bFound;
-            }
-        }
-        else
-        {
-            VH = xVotingHandler(Level.Game.VotingHandler);
-            if( VH != None )
-            {
-                for( i = 0; i < RDat.Rec.Length; ++ i )
-                {
-                    bFound = False;
-                    for( l = 0; l < VH.MapList.Length; ++ l )
-                    {
-                        if( RDat.Rec[i].TMN == VH.MapList[l].MapName )
-                        {
-                            bFound = True;
-                            break;
-                        }
-                    }
-                    RDat.Rec[i].bIgnoreStats = !bFound;
-                }
-            }
-            goto 'SkipMTTest';
-        }
-
-        Class'GameInfo'.Static.LoadMapList( "MT", Maps );
-        if( Maps.Length > 0 )
-        {
-            for( i = 0; i < ii; ++ i )
-            {
-                if( Left( RDat.Rec[i].TMN, 3 ) ~= "MT-" )   // Only compare mt maps
-                {
-                    // Ignore stats on maps that are no longer available in the server maps folder.
-                    bFound = False;
-                    for( l = 0; l < Maps.Length; ++ l )
-                    {
-                        if( RDat.Rec[i].TMN == Maps[l] )
-                        {
-                            bFound = True;
-                            break;
-                        }
-                    }
-                    RDat.Rec[i].bIgnoreStats = !bFound;
-                }
-            }
-        }
-
-        SkipMTTest:*/
-
-        CalcTopLists();
+        Ranks = Spawn( class'BTRanks', self );
         if( bUpdateWebOnNextMap )
         {
             FullLog( "Writing WebBTimes.html" );
@@ -6219,17 +6153,17 @@ final function CreateWebBTimes()                                                
 
     // Write table content...
     ++ Pos;
-    j = OverallTopList.Items.Length;
+    j = Ranks.OverallTopList.Items.Length;
     for( i = 0; i < j; ++ i )
     {
-        if( Len( PDat.Player[OverallTopList.Items[i]].PLName ) == 0 )
+        if( Len( PDat.Player[Ranks.OverallTopList.Items[i]].PLName ) == 0 )
             continue;
 
-        if( PDat.Player[OverallTopList.Items[i]].PLPoints[0] == 0 )
+        if( PDat.Player[Ranks.OverallTopList.Items[i]].PLPoints[0] == 0 )
             break;
 
         SS.Length = Pos+1;
-        SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[OverallTopList.Items[i]].PLName$"</p></td><td><p>"$int( PDat.Player[OverallTopList.Items[i]].PLPoints[0] )$"</p></td><td><p>"$PDat.Player[OverallTopList.Items[i]].PLObjectives$"</p></td><td><p>"$PDat.Player[OverallTopList.Items[i]].PLPersonalRecords[0]$"</p></td><td><p>"$PDat.Player[OverallTopList.Items[i]].PLID$"</p></td></tr>";
+        SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[Ranks.OverallTopList.Items[i]].PLName$"</p></td><td><p>"$int( PDat.Player[Ranks.OverallTopList.Items[i]].PLPoints[0] )$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLObjectives$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLPersonalRecords[0]$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLID$"</p></td></tr>";
         ++ Pos;
     }
     SS.Length = Pos+1;
@@ -6337,151 +6271,6 @@ static final function string TimeToStr( float Value )                           
     if( Value < 0 )
         return "-"$HourString$":"$MinuteString$":"$SecondString;
     else return HourString$":"$MinuteString$":"$SecondString;
-}
-
-/** Caches the awarded points for every map's times. */
-final function CacheRecords()
-{
-    local int mapIndex;
-    local float time;
-
-    Clock( time );
-    for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
-    {
-        // This map is no longer in maplist so don't give any points for the record on it.
-        if( RDat.Rec[mapIndex].bIgnoreStats )
-            continue;
-
-        // Just skip any map that isn't recorded yet, waste of performance and should not be counted towards the total records count anyway!
-        if( RDat.Rec[mapIndex].PSRL.Length == 0 )
-            continue;
-
-        ++ MRI.RecordsCount;
-        CacheRecord( mapIndex );
-    }
-    UnClock( time );
-    Log( time );
-}
-
-final function CacheRecord( int mapIndex )
-{
-    local int recordIndex, playerSlot;
-
-    for( recordIndex = 0; recordIndex < RDat.Rec[mapIndex].PSRL.Length; ++ recordIndex )
-    {
-        playerSlot = RDat.Rec[mapIndex].PSRL[recordIndex].PLs;
-        if( playerSlot == 0 )
-            continue;
-
-        -- playerSlot;
-        // Register this record's index to the owner.
-        // RDat.Rec[mapIndex].PSRL[recordIndex].Points = CalcRecordPoints( mapIndex, recordIndex );
-        PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = mapIndex << 16 | recordIndex;
-    }
-}
-
-final function CachePlayers()
-{
-    local int i;
-    local int ly, lm, ld;
-
-    StopWatch( false );
-    for( i = 0; i < PDat.Player.Length; ++ i )
-    {
-        // Skips most players that are inactive, as this is the most common case.
-        if( PDat.Player[i].LastPlayedDate == 0 )
-            continue;
-
-        // Skip inactive players.
-        RDat.GetCompactDate( PDat.Player[i].LastPlayedDate, ly, lm, ld );
-        if( GetDaysSince( ly, lm, ld ) > DaysCountToConsiderPlayerInactive )
-            continue;
-
-        PDat.Player[i].bIsActive = true;
-        CachePlayer( i );
-        ++ PDat.TotalActivePlayersCount;
-    }
-    StopWatch( true );
-}
-
-final function CachePlayer( int playerSlot )
-{
-    local int i, mapIndex, recordIndex;
-    local int recordsAge;
-
-    for( i = 0; i < PDat.Player[playerSlot].Records.Length; ++ i )
-    {
-        mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
-        recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
-
-        recordsAge = GetDaysSince( RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2], RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1], RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] );
-        // All time
-        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0 );
-        if( recordsAge <= 30 ) // Monthly
-            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1 );
-        if( recordsAge == 0 ) // Daily
-            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2 );
-    }
-}
-
-final function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex, int listIndex )
-{
-    PDat.Player[playerSlot].PLPoints[listIndex] += RDat.Rec[mapIndex].PSRL[recordIndex].Points;
-    ++ PDat.Player[playerSlot].PLPersonalRecords[listIndex];
-
-    // If the personal best time equals that of the #1 ranked time then it counts as Top Record,
-    // - i.e. tied times with the best player are considered #1 as well!
-    if( RDat.Rec[mapIndex].PSRL[recordIndex].SRT == RDat.Rec[mapIndex].PSRL[listIndex].SRT )
-    {
-        ++ PDat.Player[playerSlot].PLTopRecords[listIndex];
-    }
-}
-
-final function CalcTopLists()
-{
-    local int i;
-
-    // Cache the points for all maps to reduce the time spent calculating stats.
-    FullLog("Caching record stats");
-    CacheRecords();
-    FullLog("Caching player stats");
-    CachePlayers();
-
-    OverallTopList = new (self) class'BTRanksList';
-    OverallTopList.RanksTable = 0;
-    for( i = 0; i < PDat.Player.Length; ++ i )
-    {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[OverallTopList.RanksTable] <= 0 )
-            continue;
-
-        OverallTopList.Items[OverallTopList.Items.Length] = i;
-    }
-    Log( "Sorting ranks" );
-    StopWatch( false );
-    OverallTopList.Sort();
-    StopWatch(true);
-
-    QuarterlyTopList = new (self) class'BTRanksList';
-    QuarterlyTopList.RanksTable = 1;
-    for( i = 0; i < PDat.Player.Length; ++ i )
-    {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[QuarterlyTopList.RanksTable] <= 0 )
-            continue;
-
-        QuarterlyTopList.Items[QuarterlyTopList.Items.Length] = i;
-    }
-    QuarterlyTopList.Sort();
-
-    DailyTopList = new (self) class'BTRanksList';
-    DailyTopList.RanksTable = 2;
-    for( i = 0; i < PDat.Player.Length; ++ i )
-    {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[DailyTopList.RanksTable] <= 0 )
-            continue;
-
-        DailyTopList.Items[DailyTopList.Items.Length] = i;
-    }
-    DailyTopList.Sort();
 }
 
 // Thx to: http://alcor.concordia.ca/~gpkatch/gdate-algorithm.html

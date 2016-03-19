@@ -2,10 +2,11 @@ class BTStatsReplicator extends Info;
 
 var private int i, j;
 
-var protected BTClient_ClientReplication CR;
-var protected MutBestTimes P;
-var protected int ItemsToSkip;
-var protected string RankingsCategory;
+var private BTRanks Ranks;
+var private BTClient_ClientReplication CR;
+var private MutBestTimes P;
+var private int ItemsToSkip;
+var private string RankingsCategory;
 
 /** Returns int A as a color tag. */
 static final preoperator string $( int A )
@@ -20,6 +21,7 @@ final function Initialize( BTClient_ClientReplication client, optional int queri
 
     CR = client;
     P = MutBestTimes(Owner);
+    Ranks = P.Ranks;
     ItemsToSkip = queriedPageIndex*P.MaxRankedPlayers;
     RankingsCategory = category;
 }
@@ -64,7 +66,7 @@ final function InitGlobalPacket( int index, optional out BTClient_ClientReplicat
 {
     local int playerSlot;
 
-    playerSlot = P.OverallTopList.Items[index];
+    playerSlot = Ranks.OverallTopList.Items[index];
     if( playerSlot == CR.myPlayerSlot )
         GP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
     else GP.Name = P.PDat.Player[playerSlot].PLName;
@@ -86,7 +88,7 @@ state ReplicateOverallTop
 {
 Begin:
     // Send OverallTop players
-    j = Min( P.OverallTopList.Items.Length, P.MaxRankedPlayers );
+    j = Min( Ranks.OverallTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
         SendOverallTop( i+ItemsToSkip );
@@ -103,7 +105,7 @@ final function SendQuarterlyTop( int index, optional out BTClient_ClientReplicat
 {
     local int playerSlot;
 
-    playerSlot = P.QuarterlyTopList.Items[index];
+    playerSlot = Ranks.QuarterlyTopList.Items[index];
     QP.PlayerId     = playerSlot + 1;
     if( playerSlot == CR.myPlayerSlot )
         QP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
@@ -118,7 +120,7 @@ state ReplicateQuarterlyTop
 {
 Begin:
     // Send QuarterlyTop players
-    j = Min( P.QuarterlyTopList.Items.Length, P.MaxRankedPlayers );
+    j = Min( Ranks.QuarterlyTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
         SendQuarterlyTop( i+ItemsToSkip );
@@ -134,7 +136,7 @@ final function SendDailyTop( int index, optional out BTClient_ClientReplication.
 {
     local int playerSlot;
 
-    playerSlot = P.DailyTopList.Items[index];
+    playerSlot = Ranks.DailyTopList.Items[index];
     DP.PlayerId     = playerSlot + 1;
     if( playerSlot == CR.myPlayerSlot )
         DP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
@@ -149,7 +151,7 @@ state ReplicateDailyTop
 {
 Begin:
     // Send DailyTop players
-    j = Min( P.DailyTopList.Items.Length, P.MaxRankedPlayers );
+    j = Min( Ranks.DailyTopList.Items.Length, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
         SendDailyTop( i+ItemsToSkip );
@@ -235,9 +237,9 @@ final function SendAdditionalInfo()
 
 final function int GetOverallTopFor( int playerSlot )
 {
-    for( i = 0; i < P.OverallTopList.Items.Length; ++ i )
+    for( i = 0; i < Ranks.OverallTopList.Items.Length; ++ i )
     {
-        if( P.OverallTopList.Items[i] == playerSlot )
+        if( Ranks.OverallTopList.Items[i] == playerSlot )
             return i;
     }
     return -1;
