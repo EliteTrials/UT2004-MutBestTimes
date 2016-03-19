@@ -54,7 +54,7 @@ final function CacheRecord( int mapIndex )
         -- playerSlot;
         // Register this record's index to the owner.
         // RDat.Rec[mapIndex].PSRL[recordIndex].Points = CalcRecordPoints( mapIndex, recordIndex );
-        PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = mapIndex << 16 | recordIndex;
+        PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
     }
 }
 
@@ -109,7 +109,7 @@ final function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex,
 
     // If the personal best time equals that of the #1 ranked time then it counts as Top Record,
     // - i.e. tied times with the best player are considered #1 as well!
-    if( RDat.Rec[mapIndex].PSRL[recordIndex].SRT == RDat.Rec[mapIndex].PSRL[listIndex].SRT )
+    if( RDat.Rec[mapIndex].PSRL[recordIndex].SRT == RDat.Rec[mapIndex].PSRL[0].SRT )
     {
         ++ PDat.Player[playerSlot].PLTopRecords[listIndex];
     }
