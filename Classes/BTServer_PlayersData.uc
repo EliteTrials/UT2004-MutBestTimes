@@ -137,6 +137,11 @@ final function Free()
     }
 }
 
+final function Init( MutBestTimes mut )
+{
+    BT = mut;
+}
+
 final function bool HasTrophy( int playerSlot, string trophyID )
 {
     local int i, j;

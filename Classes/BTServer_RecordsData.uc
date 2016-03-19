@@ -4,7 +4,8 @@
 class BTServer_RecordsData extends Object
     hidedropdown;
 
-const Version = 3;
+const VERSION = 3;
+const POINTS_VERSION = 1;
 
 const RFLAG_CP = 0x01;
 
@@ -126,11 +127,85 @@ struct long sBTRecordInfo
 /** The list of all records made on this server. FIXME: Should be called Maps, as it currently stands ambiguous with solo records. */
 var array<sBTRecordInfo> Rec;
 var int DataVersion;
+var int SavedPointsVersion;
 var transient MutBestTimes BT;
 
 final function Free()
 {
     BT = none;
+}
+
+final function Init( MutBestTimes mut )
+{
+    BT = mut;
+    ConvertData();
+    if( SavedPointsVersion != POINTS_VERSION || mut.bDebugMode )
+    {
+        CacheRecordPoints();
+        SavedPointsVersion = POINTS_VERSION;
+    }
+}
+
+final function bool ConvertData()
+{
+    local int i, j, l;
+    local int y, m, d;
+
+    if( DataVersion >= VERSION )
+    {
+        return false;
+    }
+
+    Log( "Updating the data format of records to version" @ VERSION @ "from version" @ DataVersion, 'MutBestTimes' );
+    if( DataVersion == 0 )
+    {
+        for( i = 0; i < Rec.Length; ++ i )
+        {
+            // Make each solo/group record have atleast one objective.
+            for( j = 0; j < Rec[i].PSRL.Length; ++ j )
+            {
+                Rec[i].PSRL[j].ObjectivesCount = 1;
+            }
+
+            // Convert RTR records to the solo format.
+            if( Rec[i].TMT != 0 && Rec[i].PLs[0] != 0 && Rec[i].PSRL.Length == 0 )
+            {
+                GetCompactDate( Rec[i].LastRecordedDate, y, m, d );
+                for( l = 0; l < 4; ++ l )
+                {
+                    if( Rec[i].PLs[l] == 0 )
+                    {
+                        break;
+                    }
+                    j = Rec[i].PSRL.Length;
+                    Rec[i].PSRL.Length = j + 1;
+                    Rec[i].PSRL[j].PLs = Rec[i].PLs[l];
+                    Rec[i].PSRL[j].SRT = Rec[i].TMT;
+                    Rec[i].PSRL[j].SRD[0] = d;
+                    Rec[i].PSRL[j].SRD[1] = m;
+                    Rec[i].PSRL[j].SRD[2] = y;
+                    Rec[i].PSRL[j].ObjectivesCount = Rec[i].Objs[l];
+                    Rec[i].PLs[l] = 0; // deprecated
+                }
+                Rec[i].TMT = 0; // deprecated
+            }
+        }
+    }
+    DataVersion = VERSION;
+    return true;
+}
+
+final function CacheRecordPoints()
+{
+    local int i, j;
+
+    for( i = 0; i < Rec.Length; ++ i )
+    {
+        for( j = 0; j < Rec[i].PSRL.Length; ++ j )
+        {
+            Rec[i].PSRL[j].Points = BT.CalcRecordPoints( i, j );
+        }
+    }
 }
 
 /**
@@ -216,67 +291,6 @@ final function MergeDataFrom( BTServer_PlayersData PDat, BTServer_RecordsData ot
             Log( "Registering new record" @ other.Rec[i].TMN, 'MutBestTimes' );
         }
     }
-}
-
-final function bool ConvertData()
-{
-    local int i, j, l;
-    local int y, m, d;
-
-    if( DataVersion >= Version )
-    {
-        return false;
-    }
-
-    Log( "Updating the data format of records to version" @ Version @ "from version" @ DataVersion, 'MutBestTimes' );
-    if( DataVersion == 0 )
-    {
-        for( i = 0; i < Rec.Length; ++ i )
-        {
-            // Make each solo/group record have atleast one objective.
-            for( j = 0; j < Rec[i].PSRL.Length; ++ j )
-            {
-                Rec[i].PSRL[j].ObjectivesCount = 1;
-            }
-
-            // Convert RTR records to the solo format.
-            if( Rec[i].TMT != 0 && Rec[i].PLs[0] != 0 && Rec[i].PSRL.Length == 0 )
-            {
-                GetCompactDate( Rec[i].LastRecordedDate, y, m, d );
-                for( l = 0; l < 4; ++ l )
-                {
-                    if( Rec[i].PLs[l] == 0 )
-                    {
-                        break;
-                    }
-                    j = Rec[i].PSRL.Length;
-                    Rec[i].PSRL.Length = j + 1;
-                    Rec[i].PSRL[j].PLs = Rec[i].PLs[l];
-                    Rec[i].PSRL[j].SRT = Rec[i].TMT;
-                    Rec[i].PSRL[j].SRD[0] = d;
-                    Rec[i].PSRL[j].SRD[1] = m;
-                    Rec[i].PSRL[j].SRD[2] = y;
-                    Rec[i].PSRL[j].ObjectivesCount = Rec[i].Objs[l];
-                    Rec[i].PLs[l] = 0; // deprecated
-                }
-                Rec[i].TMT = 0; // deprecated
-            }
-        }
-    }
-
-    if( DataVersion < 3 )
-    {
-        // From now on we cache points for all records, in order to reduce map loading time.
-        for( i = 0; i < Rec.Length; ++ i )
-        {
-            for( j = 0; j < Rec[i].PSRL.Length; ++ j )
-            {
-                Rec[i].PSRL[j].Points = BT.CalcRecordPoints( i, j );
-            }
-        }
-    }
-    DataVersion = Version;
-    return true;
 }
 
 final function int CreateRecord( string mapName, int registerDate )

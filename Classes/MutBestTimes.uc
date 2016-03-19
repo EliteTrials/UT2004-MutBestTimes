@@ -5129,11 +5129,10 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional int xp,
     optional out byte bNewTopRecord )
 {
-    local BTServer_RecordsData.sSoloRecord Tmp;
     local bool b;
     local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
-    local int i, j, PLs, PLi, y, z, l;
+    local int i, j, PLs, PLi, l;
     local float TimeBoost, score;
     local Pawn P;
     local int numObjectives;
@@ -6343,7 +6342,7 @@ static final function string TimeToStr( float Value )                           
 /** Caches the awarded points for every map's times. */
 final function CacheRecords()
 {
-    local int mapIndex, recordIndex;
+    local int mapIndex;
     local float time;
 
     Clock( time );
@@ -7266,33 +7265,18 @@ Final Function BroadcastConsoleMessage( coerce string Msg )
 final function LoadData()
 {
     PDat = Level.Game.LoadDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
-    if( PDat != none )
-    {
-        PDat.BT = self;
-    }
-    else
+    if( PDat == none )
     {
         PDat = Level.Game.CreateDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
-        PDat.BT = self;
-        SavePlayers();
     }
+    PDat.Init( self );
 
     RDat = Level.Game.LoadDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-    if( RDat != none )
-    {
-        RDat.BT = self;
-        // Update the data format if necessary.
-        if( RDat.ConvertData() )
-        {
-            SaveRecords();  // sync
-        }
-    }
-    else
+    if( RDat == none )
     {
         RDat = Level.Game.CreateDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-        RDat.BT = self;
-        SaveRecords();
     }
+    RDat.Init( self );
 }
 
 Final Function SaveRecords()
