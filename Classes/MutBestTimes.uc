@@ -1697,6 +1697,7 @@ event PostBeginPlay()
     if( bShowRankings )
     {
         Ranks = Spawn( class'BTRanks', self );
+        Ranks.CalcTopLists();
         if( bUpdateWebOnNextMap )
         {
             FullLog( "Writing WebBTimes.html" );
@@ -1774,7 +1775,7 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
     {
         if( InStr( Caps( RDat.Rec[i].TMN ), MapName ) != -1 )
         {
-            MapInfo[MapInfo.Length] = lzMapName$": "$RDat.Rec[i].TMN @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
+            MapInfo[MapInfo.Length] = lzMapName$": "$RDat.Rec[i].TMN$"."$i+1 @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
             MapInfo[MapInfo.Length] = lzFinished$": "$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
             MapInfo[MapInfo.Length] = "Average Time: "$cDarkGray$TimeToStr(GetAverageRecordTime( i ));
             if( RDat.Rec[i].TMRatingSet )
@@ -5192,10 +5193,9 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         b = False;
         RDat.SortRecords( UsedSlot );
         // Re-calculate the points, because points are time and position based, all RECORDS must be calculated.
-        j = RDat.Rec[UsedSlot].PSRL.Length;
-        for( i = 0; i < j; ++ i )
+        if( Ranks != none )
         {
-            RDat.Rec[UsedSlot].PSRL[i].Points = CalcRecordPoints( UsedSlot, i );
+            Ranks.RateMapTimes( UsedSlot );
         }
 
         for( i = 0; i < j; ++ i )
@@ -6631,8 +6631,12 @@ final function CreateReplication( PlayerController PC, string SS, int slot )
 
     CR.Title = PDat.Player[slot].Title;
     CR.BTLevel = PDat.GetLevel( slot, CR.BTExperience );
+    // Currency
     CR.BTPoints = PDat.Player[slot].LevelData.BTPoints;
+    // Achievement points
     CR.APoints = PDat.Player[slot].PLAchiev;
+    // Overalltop rank
+    CR.Rank = PDat.Player[slot].PLARank;
     CR.bIsPremiumMember = PDat.Player[slot].bHasPremium;
     if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {
@@ -6856,130 +6860,14 @@ Final Function ClientForcePacketUpdate()
     }
 }
 
-//==============================================================================
-// Scales the points by certain map values
-final function float ScalingPoints( int Slot )
-{
-    local float Scaler;
-
-    if( RDat.Rec[Slot].PSRL.Length > 0 )
-    {
-        if( RDat.Rec[Slot].PSRL.Length < MaxRankedPlayers )
-        {
-            // Increment the points if too few people have a record on this map.
-            Scaler = float(MaxRankedPlayers - Min( RDat.Rec[Slot].PSRL.Length, MaxRankedPlayers ));
-            return RPScale[RDat.Rec[Slot].TMRating] * (1.0f + (Scaler / float(MaxRankedPlayers)));
-        }
-        else if( RDat.Rec[Slot].PSRL.Length > MaxRankedPlayers )
-        {
-            // Decrement the points if too many people have a record on this map.
-            Scaler = float(RDat.Rec[Slot].PSRL.Length - MaxRankedPlayers) / MaxRankedPlayers;
-            return RPScale[RDat.Rec[Slot].TMRating] * (1.0f - (Scaler / float(MaxRankedPlayers)));
-
-            // Calc: 70 / 30 = 2.33f
-            //  1.0 * (1.0f - (2.33f / 5)) = -0.5;
-        }
-    }
-    else
-    {
-        return RPScale[RDat.Rec[Slot].TMRating] * 2f;
-    }
-    return RPScale[RDat.Rec[Slot].TMRating];
-
-    // old method...
-    //+(RDat.Rec[Slot].TMFailures/10);
-    //return FClamp( (((float(RDat.Rec[Slot].MapSkill)+1.f)/**((((RDat.Rec[Slot].TMHijacks-(Players-RDat.Rec[Slot].TMContributors)))+(RDat.Rec[Slot].TMFailures*0.25f))/2.5f)*/)), 0.000000, MaxPoint );
-}
-
-//==============================================================================
-// Returns the amount of points for the solo record
-// Start off with 20 then multiply by Percent (1.0 if 100% or 0.5 if 50%) and then scale it by ScalingPoints which is based on stats of the map/record and then add NumObjs as points
-// Short example: (20 * ( ( BestTime(scaled by rank) / SlowerTime ) * Difficulty ) + NumObjs
-final function float CalcRecordPoints( int RecordSlot, int SoloRecordSlot )
-{
-    local float BestTime;
-    local float Scaler;
-    local float performanceBonus;
-    local float points;
-    local float difference, bonusSec;
-    local float penalty;
-    local int bonusMin;
-    local int i;
-    local int indexWithLowerTime;
-    local float averageTime;
-
-    // Zero points for ClientSpawn times.
-    if( (RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].Flags & 0x01/**RFLAG_CP*/) != 0 )
-    {
-        return 0.00;
-    }
-
-    penalty = 1.00;
-    if( RDat.Rec[RecordSlot].AverageRecordTime == 00.00 )
-    {
-        RDat.Rec[RecordSlot].AverageRecordTime = GetAverageRecordTime( RecordSlot );
-    }
-
-    averageTime = RDat.Rec[RecordSlot].AverageRecordTime;
-    // Awful maps get punished by a 75% points discount.
-    if( averageTime < class'BTServer_SoloMode'.default.MinRecordTime
-    || averageTime > class'BTServer_SoloMode'.default.MaxRecordTime )
-    {
-        penalty = class'BTServer_SoloMode'.default.PointsPenalty;
-    }
-
-    points = 5*(averageTime/60f) * ScalingPoints( RecordSlot );
-    performanceBonus += PointsPerObjective*RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ObjectivesCount
-        + RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].ExtraPoints;
-
-    Scaler = float(SoloRecordSlot);
-    if( Scaler > 0 )
-    {
-	    for( i = SoloRecordSlot; i >= 0; -- i )
-	    {
-	        if( RDat.Rec[RecordSlot].PSRL[i].SRT == RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
-	        {
-	            Scaler = float(i);
-	        }
-	    }
-    }
-
-    // best time gets extra points.
-    if( Scaler == 0 && RDat.Rec[RecordSlot].PSRL.Length > 1 )
-    {
-        for( i = 0; i < RDat.Rec[RecordSlot].PSRL.Length; ++ i )
-        {
-            if( RDat.Rec[RecordSlot].PSRL[i].SRT != RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT )
-            {
-                indexWithLowerTime = i;
-                break;
-            }
-        }
-
-        // How much better the top record is than the player's rec below.
-        difference = (RDat.Rec[RecordSlot].PSRL[indexWithLowerTime].SRT - RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT);
-        // Give 1 point for every remaining minute.
-        bonusMin = difference / 60;
-        // Give 1 point for every 0.08 remaining centiseconds.
-        bonusSec = difference - bonusMin * 60;
-        // Add them points and cap it at 100 points.
-        performanceBonus += bonusMin + (bonusSec / 0.12f);
-    }
-
-    BestTime = RDat.Rec[RecordSlot].PSRL[0].SRT - (0.5f + Scaler/1000)*(Scaler*1.5f);
-    points *= BestTime / RDat.Rec[RecordSlot].PSRL[SoloRecordSlot].SRT;
-    return FMin( points + performanceBonus, 99.99 ) * penalty;
-}
-
 final function float GetAverageRecordTime( int recordSlot )
 {
-    local int i;//j, c, cc;
+    local int i;
     local float mean;
 
     if( RDat.Rec[recordSlot].PSRL.Length == 0 )
     {
-        // Regular best time.
-        return RDat.Rec[recordSlot].TMT;
+        return 0.0;
     }
 
     for( i = 0; i < RDat.Rec[recordSlot].PSRL.Length; ++ i )
@@ -6987,32 +6875,6 @@ final function float GetAverageRecordTime( int recordSlot )
         mean += RDat.Rec[recordSlot].PSRL[i].SRT;
     }
     return mean / i;
-
-    /*i = (RDat.Rec[recordSlot].PSRL.Length - 1) * 0.5;
-    if( RDat.Rec[recordSlot].PSRL.Length % 2 == 0 )
-    {
-        median = RDat.Rec[recordSlot].PSRL[i].SRT;
-    }
-    else
-    {
-        median = (RDat.Rec[recordSlot].PSRL[i].SRT + RDat.Rec[recordSlot].PSRL[i + 1].SRT) / 2;
-    }
-
-    for( i = 0; i < RDat.Rec[recordSlot].PSRL.Length; ++ i )
-    {
-        for( j = 0; j < RDat.Rec[recordSlot].PSRL.Length; ++ j )
-        {
-            if( int(RDat.Rec[recordSlot].PSRL[i].SRT) == int(RDat.Rec[recordSlot].PSRL[j].SRT) )
-                ++ c;
-        }
-
-        if( c >= cc )
-        {
-            cc = c;
-            c = 0;
-            mode = RDat.Rec[recordSlot].PSRL[i].SRT;
-        }
-    }*/
 }
 
 final protected function StartCountDown()

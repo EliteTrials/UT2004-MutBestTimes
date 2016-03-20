@@ -139,11 +139,6 @@ final function Init( MutBestTimes mut )
 {
     BT = mut;
     ConvertData();
-    if( SavedPointsVersion != POINTS_VERSION || mut.bDebugMode )
-    {
-        CacheRecordPoints();
-        SavedPointsVersion = POINTS_VERSION;
-    }
 }
 
 final function bool ConvertData()
@@ -195,17 +190,16 @@ final function bool ConvertData()
     return true;
 }
 
-final function CacheRecordPoints()
+final function bool StatsNeedUpdate()
 {
-    local int i, j;
+    local bool needsUpdate;
 
-    for( i = 0; i < Rec.Length; ++ i )
+    needsUpdate = SavedPointsVersion < POINTS_VERSION;
+    if( needsUpdate )
     {
-        for( j = 0; j < Rec[i].PSRL.Length; ++ j )
-        {
-            Rec[i].PSRL[j].Points = BT.CalcRecordPoints( i, j );
-        }
+        SavedPointsVersion = POINTS_VERSION;
     }
+    return needsUpdate;
 }
 
 /**
