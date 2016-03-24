@@ -55,6 +55,7 @@ struct sBTPlayerInfo
 
     // bitmasked indexes to all maps that the player has a record on, including its personal time index which is shifted to the right.
     var transient array<int> Records;
+    var transient array<int> RankedRecords;
 
     struct sAchievementProgress
     {

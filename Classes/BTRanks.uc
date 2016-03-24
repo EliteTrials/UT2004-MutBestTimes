@@ -1,6 +1,6 @@
 class BTRanks extends Info;
 
-const MIN_MAP_RECORDS = 10;
+const MIN_MAP_RECORDS = 1;
 const MAX_MAP_RECORDS = 15;
 const MIN_PLAYER_RECORDS = 5;
 
@@ -20,6 +20,29 @@ event PostBeginPlay()
 	RDat = BT.RDat;
 }
 
+final function DebugLog( coerce string str )
+{
+	Log( str );
+}
+
+/** Strips all color tags from A. */
+static final preoperator string %( string A )
+{
+    local int i;
+
+    while( true )
+    {
+        i = InStr( A, Chr( 0x1B ) );
+        if( i != -1 )
+        {
+            A = Left( A, i ) $ Mid( A, i + 4 );
+            continue;
+        }
+        break;
+    }
+    return A;
+}
+
 /** Caches the awarded points for every map's times. */
 final function CacheRecords()
 {
@@ -27,17 +50,10 @@ final function CacheRecords()
     local float time;
 
     Clock( time );
+    BT.MRI.RecordsCount = 0;
     for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
     {
-        // This map is no longer in maplist so don't give any points for the record on it.
-        if( RDat.Rec[mapIndex].bIgnoreStats )
-            continue;
-
-        // Just skip any map that isn't recorded yet, waste of performance and should not be counted towards the total records count anyway!
-        if( RDat.Rec[mapIndex].PSRL.Length == 0 )
-            continue;
-
-        ++ BT.MRI.RecordsCount;
+        // DebugLog("Caching map" @ RDat.Rec[mapIndex].TMN);
         CacheRecord( mapIndex );
     }
     UnClock( time );
@@ -47,6 +63,13 @@ final function CacheRecords()
 final function CacheRecord( int mapIndex )
 {
     local int recordIndex, playerSlot;
+    local bool isRanked;
+
+    isRanked = IsRankedMap( mapIndex );
+    if( isRanked )
+    {
+        ++ BT.MRI.RecordsCount;
+    }
 
     for( recordIndex = 0; recordIndex < RDat.Rec[mapIndex].PSRL.Length; ++ recordIndex )
     {
@@ -55,10 +78,35 @@ final function CacheRecord( int mapIndex )
             continue;
 
         -- playerSlot;
-        // Register this record's index to the owner.
-        // RDat.Rec[mapIndex].PSRL[recordIndex].Points = CalcRecordPoints( mapIndex, recordIndex );
         PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
+
+        if( isRanked )
+        {
+        	AddTopRankedRecord( playerSlot, mapIndex, recordIndex );
+        }
     }
+}
+
+final function AddTopRankedRecord( int playerSlot, int mapIndex, int recordIndex )
+{
+	local int curMapIndex, curRecIndex;
+	local int i;
+    local float points;
+
+    points = RDat.Rec[mapIndex].PSRL[recordIndex].Points;
+    for( i = 0; i < PDat.Player[playerSlot].RankedRecords.Length; ++ i )
+    {
+    	curMapIndex = PDat.Player[playerSlot].RankedRecords[i] >> 16;
+		curRecIndex = PDat.Player[playerSlot].RankedRecords[i] & 0x0000FFFF;
+
+    	if( RDat.Rec[curMapIndex].PSRL[curRecIndex].Points < points )
+    	{
+    		PDat.Player[playerSlot].RankedRecords.Insert( i, 1 );
+    		PDat.Player[playerSlot].RankedRecords[i] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
+    		return;
+    	}
+    }
+	PDat.Player[playerSlot].RankedRecords[PDat.Player[playerSlot].RankedRecords.Length] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
 }
 
 final function CachePlayers()
@@ -68,6 +116,7 @@ final function CachePlayers()
     local float time;
 
     Clock( time );
+    PDat.TotalActivePlayersCount = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
         // Skips most players that are inactive, as this is the most common case.
@@ -76,7 +125,7 @@ final function CachePlayers()
 
         // Skip inactive players.
         RDat.GetCompactDate( PDat.Player[i].LastPlayedDate, ly, lm, ld );
-        if( !BT.bDebugMode && BT.GetDaysSince( ly, lm, ld ) > BT.DaysCountToConsiderPlayerInactive )
+        if( BT.GetDaysSince( ly, lm, ld ) > BT.DaysCountToConsiderPlayerInactive )
             continue;
 
         PDat.Player[i].bIsActive = true;
@@ -89,34 +138,36 @@ final function CachePlayers()
 
 final function CachePlayer( int playerSlot )
 {
-    local int i, mapIndex, recordIndex;
+    local int i, mapIndex, recordIndex, numRankedRecords;
 
     PDat.Player[playerSlot].PLPoints[0] = 0;
     PDat.Player[playerSlot].PLPoints[1] = 0;
     PDat.Player[playerSlot].PLPoints[2] = 0;
 
-    // Players with lesser than 10 records will not be ranked, however we still want to be able to display the amount of records that have been set!
-    if( PDat.Player[playerSlot].Records.Length < MIN_PLAYER_RECORDS )
-    {
-    	for( i = 0; i < PDat.Player[playerSlot].Records.Length; ++ i )
-    	{
-        	mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
-    		recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
-    		CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
-    	}
-    	return;
-    }
+	for( i = 0; i < PDat.Player[playerSlot].Records.Length; ++ i )
+	{
+    	mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
+		recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
 
-    for( i = 0; i < PDat.Player[playerSlot].Records.Length; ++ i )
-    {
-        mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
-        recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
-
-        if( !IsRankedMap( mapIndex ) || recordIndex+1 >= MAX_MAP_RECORDS )
+        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
+        if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
+        	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1] ) // Monthly
         {
-    		CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
-        	continue;
+            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1, false );
+            if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
+            	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1]
+            	&& Level.Day == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] )
+            {
+            	CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2, false );
+            }
         }
+	}
+
+    numRankedRecords = Min( PDat.Player[playerSlot].RankedRecords.Length, MAX_MAP_RECORDS );
+    for( i = 0; i < numRankedRecords; ++ i )
+    {
+        mapIndex = PDat.Player[playerSlot].RankedRecords[i] >> 16;
+        recordIndex = PDat.Player[playerSlot].RankedRecords[i] & 0x0000FFFF;
 
         // All time
         CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, true );
@@ -162,17 +213,16 @@ final function CachePlayer( int playerSlot )
     }
 }
 
-final function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex, int listIndex, optional bool bRanked )
+final function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex, int listIndex, optional bool bAddPoints )
 {
-	if( bRanked )
+	if( bAddPoints )
 	{
-		// Log("Adding" @ RDat.Rec[mapIndex].PSRL[recordIndex].Points @ "points to" @ PDat.Player[playerSlot].PLPoints[listIndex]);
     	PDat.Player[playerSlot].PLPoints[listIndex] += RDat.Rec[mapIndex].PSRL[recordIndex].Points;
     	++ PDat.Player[playerSlot].PLRankedRecords[listIndex];
+    	return;
 	}
 
     ++ PDat.Player[playerSlot].PLPersonalRecords[listIndex];
-
     // If the personal best time equals that of the #1 ranked time then it counts as Top Record,
     // - i.e. tied times with the best player are considered #1 as well!
     if( RDat.Rec[mapIndex].PSRL[recordIndex].SRT == RDat.Rec[mapIndex].PSRL[0].SRT )
@@ -207,11 +257,11 @@ final function CalcTopLists()
 
     // Cache the points for all maps to reduce the time spent calculating stats.
     Log("Caching record stats");
-    CacheRecords();
     if( BT.bDebugMode || RDat.StatsNeedUpdate() )
     {
     	CacheRecordPoints();
     }
+    CacheRecords();
 
     Log("Caching player stats");
     CachePlayers();
