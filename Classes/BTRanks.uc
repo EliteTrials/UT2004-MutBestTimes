@@ -112,7 +112,7 @@ final function CachePlayer( int playerSlot )
         mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
         recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
 
-        if( RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS || recordIndex+1 >= MAX_MAP_RECORDS )
+        if( !IsRankedMap( mapIndex ) || recordIndex+1 >= MAX_MAP_RECORDS )
         {
     		CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
         	continue;
@@ -258,7 +258,7 @@ final function LogTimes( int mapIndex, out array<float> times )
 	times.Length = Min( RDat.Rec[mapIndex].PSRL.Length, MAX_MAP_RECORDS );
 	for( i = 0; i < times.Length; ++ i )
 	{
-		times[i] = Loge(Loge(RDat.Rec[mapIndex].PSRL[i].SRT));
+		times[i] = loge( loge( RDat.Rec[mapIndex].PSRL[i].SRT ) );
 	}
 }
 
@@ -274,44 +274,43 @@ final static function float Mean( out array<float> values )
     return mean / values.Length;
 }
 
+final static function float Std( out array<float> values, float meanValue )
+{
+	local int i;
+	local float variance;
+
+	for( i = 0; i < values.Length; ++ i )
+	{
+		variance += Square( values[i] - meanValue );
+	}
+	return Sqrt( variance/float(values.Length - 1) );
+}
+
 final function RateMapTimes( int mapIndex )
 {
 	local int i;
 	local array<float> times;
-	local float meanTime, std, tmpStd;
+	local float timeMean, timeStd;
 
-	if( RDat.Rec[mapIndex].bIgnoreStats || RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS )
+	if( !IsRankedMap( mapIndex ) )
 	{
 		ResetRecordCache( mapIndex );
 		return;
 	}
 
-	// log(log(time))
 	LogTimes( mapIndex, times );
-	// time_transformed
-	meanTime = Mean( times );
-	// Log("mean" @ meanTime);
-	// z_val = (time_transformed - mean(time_transformed))./std(time_transformed);
+	timeMean = Mean( times );
+	timeStd = Std( times, timeMean );
 	for( i = 0; i < times.Length; ++ i )
 	{
-		tmpStd = Square((times[i] - meanTime)*100.0);
-		std += tmpStd;
-		// Log("time" @ RDat.Rec[mapIndex].PSRL[i].SRT);
-		// Log("loged time" @ times[i]);
-		// Log("squared time" @ tmpStd);
+		times[i] = (times[i] - timeMean) / timeStd;
+		RDat.Rec[mapIndex].PSRL[i].Points = -100.0*times[i];
 	}
-	std = Sqrt(std/float(times.Length - 1));
-	// Log("std"@std);
-	for( i = 0; i < times.Length; ++ i )
-	{
-		/* z_val */
-		// log(std);
-		times[i] = (times[i] - meanTime)*100.0 / std;
-		// log(times[i]);
-		// elo_diff = -100*z_val;
-		RDat.Rec[mapIndex].PSRL[i].Points = times[i]*-100;
-		// log(RDat.Rec[mapIndex].PSRL[i].Points);
-	}
+}
+
+final function bool IsRankedMap( int mapIndex )
+{
+	return !(RDat.Rec[mapIndex].bIgnoreStats || RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS);
 }
 
 defaultproperties
