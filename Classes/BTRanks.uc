@@ -13,6 +13,8 @@ var private MutBestTimes BT;
 var protected BTServer_PlayersData PDat;
 var protected BTServer_RecordsData RDat;
 
+var array<CacheManager.MapRecord> CachedMaps;
+
 event PostBeginPlay()
 {
 	BT = MutBestTimes(Owner);
@@ -53,6 +55,9 @@ final function CacheRecords()
     BT.MRI.RecordsCount = 0;
     for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
     {
+    	if( !RDat.Rec[mapIndex].bMapIsActive && !BT.bDebugMode )
+    		continue;
+
         // DebugLog("Caching map" @ RDat.Rec[mapIndex].TMN);
         CacheRecord( mapIndex );
     }
@@ -237,7 +242,7 @@ final function CacheRecordPoints()
 
 	for( i = 0; i < RDat.Rec.Length; ++ i )
 	{
-		RateMapTimes( i );
+		CalcRecordPoints( i );
 	}
 }
 
@@ -253,10 +258,19 @@ final function ResetRecordCache( int mapIndex )
 
 final function CalcTopLists()
 {
-    local int i;
+    local int i, mapIndex;
 
     // Cache the points for all maps to reduce the time spent calculating stats.
     Log("Caching record stats");
+	class'CacheManager'.static.GetMapList( CachedMaps );
+	for( i = 0; i < CachedMaps.Length; ++ i )
+	{
+		mapIndex = BT.RDat.FindRecord( CachedMaps[i].MapName );
+		if( mapIndex == -1 )
+			continue;
+
+		BT.RDat.Rec[mapIndex].bMapIsActive = true;
+	}
     if( BT.bDebugMode || RDat.StatsNeedUpdate() )
     {
     	CacheRecordPoints();
@@ -336,7 +350,7 @@ final static function float Std( out array<float> values, float meanValue )
 	return Sqrt( variance/float(values.Length - 1) );
 }
 
-final function RateMapTimes( int mapIndex )
+final function CalcRecordPoints( int mapIndex )
 {
 	local int i;
 	local array<float> times;

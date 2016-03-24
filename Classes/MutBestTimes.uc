@@ -1871,6 +1871,28 @@ final function QueryPlayerRecentRecords( int playerSlot, out array<string> recor
     }
 }
 
+final function GetObsoleteRecords( PlayerController PC, out array<string> records )
+{
+    local int i;
+
+    for( i = 0; i < RDat.Rec.Length; ++ i )
+    {
+        if( RDat.Rec[i].bMapIsActive )
+        {
+            continue;
+        }
+
+        if( RDat.Rec[i].PSRL.Length > 0 )
+        {
+            records[records.Length] = cDarkGray$TimeToStr(RDat.Rec[i].PSRL[0].SRT) @ cWhite$"-" @ RDat.Rec[i].TMN @ "set by" @ PDat.Player[RDat.Rec[i].PSRL[0].PLs-1].PLName;
+        }
+        else
+        {
+            records[records.Length] = RDat.Rec[i].TMN;
+        }
+    }
+}
+
 final function GetMissingRecords( PlayerController PC, out array<string> records, out int NumHave, out int NumMissing )
 {
     local int CurRec, NumRecs;
@@ -2107,6 +2129,27 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             }
             break;
 
+        case "showobsoleterecords":
+            Rep = GetRep( sender );
+            if( Rep != none )
+            {
+                Rep.ClientCleanText();
+
+                Rep.ClientSendText("Obsolete Records");
+                GetObsoleteRecords( sender, output );
+                Rep.ClientSendText("");   // new line!
+                Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
+                for( i = 0; i < output.Length && n < 15; ++ i )
+                {
+                    j = Rand( output.Length - 1 );
+                    Rep.ClientSendText( output[j] );
+                    output.Remove( j, 1 );
+                    -- i;
+                    ++ n;
+                }
+            }
+            break;
+
         case "showmissingrecords":
             Rep = GetRep( sender );
             if( Rep != none )
@@ -2116,8 +2159,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 Rep.ClientSendText("Missing Records");
                 Rep.ClientSendText("");   // new line!
                 GetMissingRecords( sender, output, j, i );
-                Rep.ClientSendText( "You are missing" @ i @ "solo records!" );
-                Rep.ClientSendText( "You have" @ j @ "solo records!" );
+                Rep.ClientSendText( "You are missing" @ i @ "records!" );
+                Rep.ClientSendText( "You have" @ j @ "records!" );
                 Rep.ClientSendText("");   // new line!
                 Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
                 for( i = 0; i < output.Length && n < 15; ++ i )
@@ -2140,7 +2183,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 Rep.ClientSendText("Bad Records");
                 Rep.ClientSendText("");   // new line!
                 GetBadRecords( sender, output, j );
-                Rep.ClientSendText( "You have" @ j @ "bad solo records!" );
+                Rep.ClientSendText( "You have" @ j @ "bad records!" );
                 Rep.ClientSendText("");   // new line!
                 Rep.ClientSendText( class'HUD'.default.GoldColor $ Min( output.Length, 15 ) @ lzRandomPick );
                 for( i = 0; i < output.Length && n < 15; ++ i )
@@ -5180,7 +5223,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         // Re-calculate the points, because points are time and position based, all RECORDS must be calculated.
         if( Ranks != none )
         {
-            Ranks.RateMapTimes( UsedSlot );
+            Ranks.CalcRecordPoints( UsedSlot );
         }
 
         for( i = 0; i < j; ++ i )

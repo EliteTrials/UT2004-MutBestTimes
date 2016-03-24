@@ -95,6 +95,9 @@ struct long sBTRecordInfo
     /** Whether to ignore any point rewards for this record. */
     var bool bIgnoreStats;
 
+    /** True if we have this map in our maps folder. */
+    var transient bool bMapIsActive;
+
     // First 16 bits are the Year, next 8 bits is Month, last 8 bits is Day.
     var int RegisterDate;
     var int LastPlayedDate;
