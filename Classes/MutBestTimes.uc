@@ -1370,10 +1370,6 @@ event PreBeginPlay()
         }
     }*/
 
-    MRI.PlayersCount = PDat.Player.Length;
-    MRI.MaxRecords = RDat.Rec.Length;
-    MRI.MaxRankedPlayersCount = MaxRankedPlayers;
-
     // Get a list of all the objectives, for ClientSpawn performance
     if( AssaultGame != none )
     {
@@ -1705,6 +1701,10 @@ event PostBeginPlay()
             bUpdateWebOnNextMap = False;
             SaveConfig();
         }
+
+        MRI.PlayersCount = PDat.TotalActivePlayersCount;
+        MRI.MaxRecords = RDat.Rec.Length;
+        MRI.MaxRankedPlayersCount = MaxRankedPlayers;
     }
 
     ModeRules = Spawn( Class'BTGameRules', self );
@@ -1845,31 +1845,21 @@ final function QueryPlayerMeta( int playerSlot, out array<string> columns )
 
 final function QueryPlayerRecords( int playerSlot, out array<string> records )
 {
-    local int i, j;
+    local int i;
+    local int mapIndex, recordIndex;
 
-    for( i = 0; i < RDat.Rec.Length; ++ i )
+    for( i = 0; i < Min( PDat.Player[playerSlot].RankedRecords.Length, 15 ); ++ i )
     {
-        if( RDat.Rec[i].bIgnoreStats || RDat.Rec[i].PSRL.Length == 0)
-        {
-            continue;
-        }
+        mapIndex = PDat.Player[playerSlot].RankedRecords[i] >> 16;
+        recordIndex = PDat.Player[playerSlot].RankedRecords[i] & 0x0000FFFF;
 
-        // Possesses the top record?
-        for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
-        {
-            if( RDat.Rec[i].PSRL[j].SRT == RDat.Rec[i].PSRL[0].SRT )
-            {
-                if( RDat.Rec[i].PSRL[j].PLs-1 == playerSlot )
-                {
-                    records[records.Length] = "#" @ j+1 @ "-" @ cDarkGray$TimeToStr(RDat.Rec[i].PSRL[j].SRT) @ cWhite$"-" @ RDat.Rec[i].TMN;
-                    break;
-                }
-            }
-            else
-            {
-                break;
-            }
-        }
+        records[records.Length] = "#"
+            @ recordIndex+1
+            @ "-"
+            @ cDarkGray$RDat.Rec[mapIndex].PSRL[recordIndex].Points/RDat.Rec[mapIndex].PSRL[0].Points*99.99
+            @ TimeToStr(RDat.Rec[mapIndex].PSRL[recordIndex].SRT)
+            @ cWhite$"-"
+            @ Eval( RDat.Rec[mapIndex].bIgnoreStats, cRed$RDat.Rec[mapIndex].TMN, RDat.Rec[mapIndex].TMN );
     }
 }
 
@@ -2094,16 +2084,11 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
                 else
                 {
-                    Rep.ClientSendText(cGold$Min(output.Length, 15)$"/"$output.Length @ "top records:");
-                    for( i = 0; i < output.Length && n < 15; ++ i )
+                    Rep.ClientSendText(cGold$Min(output.Length, 15)$"/"$PDat.Player[playerSlot].RankedRecords.Length @ "top records:");
+                    for( i = 0; i < output.Length; ++ i )
                     {
-                        j = Rand(output.Length - 1);
-                        Rep.ClientSendText(output[j]);
-                        output.Remove(j, 1);
-                        -- i;
-                        ++ n;
+                        Rep.ClientSendText(output[i]);
                     }
-                    output.Length = 0;
                     Rep.ClientSendText("");   // new line!
                 }
                 QueryPlayerRecentRecords(playerSlot, output);

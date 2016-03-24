@@ -75,7 +75,7 @@ final function InitGlobalPacket( int index, optional out BTClient_ClientReplicat
     GP.Points       = P.PDat.Player[playerSlot].PLPoints[0];
     GP.AP           = P.PDat.Player[playerSlot].PLAchiev;
     GP.Objectives   = P.PDat.Player[playerSlot].PLObjectives;
-    GP.Hijacks      = P.PDat.Player[playerSlot].PLHijacks << 16 | P.PDat.Player[playerSlot].PLPersonalRecords[0];
+    GP.Hijacks      = P.PDat.Player[playerSlot].RankedRecords.Length << 16 | P.PDat.Player[playerSlot].PLTopRecords[0];
 }
 
 final function SendOverallTop( int index, optional out BTClient_ClientReplication.sGlobalPacket GP )
@@ -88,8 +88,8 @@ state ReplicateOverallTop
 {
 Begin:
     // Send OverallTop players
-    j = Min( Ranks.OverallTopList.Items.Length, P.MaxRankedPlayers );
-    for( i = 0; i < j; ++ i )
+    j = Min( Ranks.OverallTopList.Items.Length, P.MaxRankedPlayers*2 );
+    for( i = 0; i < j && i+(ItemsToSkip-1) < Ranks.OverallTopList.Items.Length; ++ i )
     {
         SendOverallTop( i+ItemsToSkip );
         if( Level.NetMode != NM_Standalone && i % 6 == 0 )
@@ -97,8 +97,6 @@ Begin:
             Sleep( 0.4 );
         }
     }
-    Sleep( 1 );
-    SendAdditionalInfo();
 }
 
 final function SendQuarterlyTop( int index, optional out BTClient_ClientReplication.sQuarterlyPacket QP )
@@ -113,6 +111,7 @@ final function SendQuarterlyTop( int index, optional out BTClient_ClientReplicat
 
     QP.Points       = P.PDat.Player[playerSlot].PLPoints[1];
     QP.Records      = P.PDat.Player[playerSlot].PLPersonalRecords[1];
+    // QP.Hijacks      = P.PDat.Player[playerSlot].PLPersonalRecords[1] << 16 | P.PDat.Player[playerSlot].PLTopRecords[1];
     CR.ClientSendQuarterlyTop( QP );
 }
 
@@ -169,9 +168,14 @@ state ReplicateSoloTop
     final function SendSoloTops()
     {
         local BTClient_ClientReplication.sSoloPacket SP;
+        local float highestPoints;
 
         // Send Map Top (MaxRankedPlayers) structure
         j = P.RDat.Rec[P.UsedSlot].PSRL.Length;
+        if( j > 0 )
+        {
+            highestPoints = P.RDat.Rec[P.UsedSlot].PSRL[0].Points;
+        }
         // Scan whole list, yes including people above <MaxRankedPlayer> cuz of PersonalOverallTop
         for( i = 0; i < j; ++ i )
         {
@@ -181,10 +185,10 @@ state ReplicateSoloTop
             {
                 CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
 
-                SP.name = $0xFFFFFF00 $ P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
+                SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
                 if( i >= P.MaxRankedPlayers )
                 {
-                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points;
+                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*99.99;
                     SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                     SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                     SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
@@ -200,7 +204,7 @@ state ReplicateSoloTop
 
             if( i < P.MaxRankedPlayers )
             {
-                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points;
+                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*99.99;
                 SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                 SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                 SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
@@ -212,37 +216,6 @@ state ReplicateSoloTop
 Begin:
     SendSoloTops();
     Destroy();
-}
-
-final function SendAdditionalInfo()
-{
-    local BTClient_ClientReplication.sGlobalPacket GP;
-
-    // Send rank < (MaxRankedPlayers) player his rank.
-    i = GetOverallTopFor( CR.myPlayerSlot );
-    if( i != -1 )
-    {
-        if( P.PDat.Player[CR.myPlayerSlot].PLPoints[0] > 0 )
-        {
-            CR.Rank = i+1;
-            if( i > P.MaxRankedPlayers-1 )
-            {
-                InitGlobalPacket( i, GP );
-                CR.ClientSendMyOverallTop( GP );
-            }
-        }
-    }
-    CR.bReceivedRankings = true;
-}
-
-final function int GetOverallTopFor( int playerSlot )
-{
-    for( i = 0; i < Ranks.OverallTopList.Items.Length; ++ i )
-    {
-        if( Ranks.OverallTopList.Items[i] == playerSlot )
-            return i;
-    }
-    return -1;
 }
 
 event Tick( float deltaTime )
