@@ -713,7 +713,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                             // Query next page
                             if( SelectedIndex+1 == MRI.CR.OverallTop.Length && MRI.CR.OverallTop.Length >= MRI.MaxRankedPlayersCount )
                             {
-                                pageIndex = float(SelectedIndex+1)/(MRI.CR.OverallTop.Length-1);
+                                pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
                                 MRI.CR.ServerRequestPlayerRanks( pageIndex, RankingRangeIds[Options.GlobalSort] );
                                 ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ pageIndex @ RankingRangeIds[Options.GlobalSort] );
                             }
@@ -2120,7 +2120,8 @@ final function RenderRankingsTable( Canvas C )
     tableX = drawX;
     tableY = drawY;
 
-    s = "Top Players";
+    pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
+    s = "Top Players" @ "(" $ Min((pageIndex+1)*MRI.MaxRankedPlayersCount, MRI.PlayersCount) $ "/" $ MRI.PlayersCount $ ")";
     C.StrLen( s, xl, yl );
 
     // hover: 3d96d8
@@ -2155,7 +2156,6 @@ final function RenderRankingsTable( Canvas C )
         DrawColumnText( C, drawX, drawY, s );
     }
 
-    pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
     for( i = 0; i < itemsCount; ++ i )
     {
         itemIndex = i + pageIndex*MRI.MaxRankedPlayersCount;
