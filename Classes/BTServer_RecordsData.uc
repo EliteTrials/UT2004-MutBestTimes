@@ -44,12 +44,6 @@ struct long sBTRecordInfo
     /** Trial Map Time. */
     var /**deprecated*/ float TMT;
 
-    /** Trial map Previous Time. */
-    var /**deprecated*/ float TMPT;
-
-    /** (OBSOLETE) The time it took to complete an objective. */
-    var /**deprecated*/ array<float> ObjCompT;
-
     /** (Regular) The index of the players that own this record. */
     var /**deprecated*/ int PLs[4];
 
@@ -70,27 +64,11 @@ struct long sBTRecordInfo
     /** Amount of times people have completed this map. */
     var int TMFinish;
 
-    /** (OBOSLETE(was used to display the reward people might get for beating the record))
-     * Amount of points this record gave last time it was recorded.
-     */
-    var /**deprecated*/ float TMPoints;
-
     /** The Ghost is disabled on this map. */
     var bool TMGhostDisabled;
 
     /** All individual records */
     var array<sSoloRecord> PSRL;
-
-    /** The calculated or set rating of this map
-     * i.e. How difficult is this map? How long? each pros should increment the rating,
-     * this can then be used to scale up the points reward for this record.
-     */
-    var int TMRating;
-
-    /** The rating is already set by an admin or automatic by the calculation,
-     * this is used to disable the auto rating for this map so that admins can overwrite it.
-     */
-    var bool TMRatingSet;
 
     /** Whether to ignore any point rewards for this record. */
     var bool bIgnoreStats;

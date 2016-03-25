@@ -301,7 +301,7 @@ var() localized editconst const
     string
     lzMapName,                  lzPlayerName,
     lzRecordTime,               lzRecordAuthor,     lzRecordPoints,
-    lzFinished,                 lzHijacks,          lzFailures,                 lzRating,           lzRecords,
+    lzFinished,                 lzHijacks,          lzFailures,           lzRecords,
     lzCS_Set,                   lzCS_Deleted,       lzCS_NotAllowed,            lzCS_Failed,
     lzCS_ObjAndTrigger,         lzCS_Obj,           lzCS_AllowComplete,
     lzCS_NoPawn,                lzCS_NotEnabled,    lzCS_NoQuickStartDelete,
@@ -1318,8 +1318,7 @@ function Tests()
 // Initialize everything
 event PreBeginPlay()
 {
-    local int i, j, l;
-    local bool bSave;
+    local int i;
     local string Credits;
     local GameObjective Obj;
 
@@ -1388,7 +1387,7 @@ event PreBeginPlay()
         if( TrialModes[i].static.DetectMode( self ) )
         {
             CurMode = TrialModes[i].static.NewInstance( self );
-            FullLog( "BTimes Mode: " $ CurMode.ModeName );
+            FullLog( "Trials mode: " $ CurMode.ModeName );
             break;
         }
     }
@@ -1409,84 +1408,31 @@ event PreBeginPlay()
             }
         }
 
-        // Initialize TMRating for all maps
-        for( i = 0; i < RDat.Rec.Length; ++ i )
+        UsedSlot = RDat.FindRecord( CurrentMapName );
+        if( UsedSlot != -1 )
         {
-            if( RDat.Rec[i].TMRatingSet )
-                continue;
+            FullLog( "Found map index:"$UsedSlot$" for "$CurrentMapName );
+            RDat.Rec[UsedSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
 
-            RDat.Rec[i].TMRating = 4;   // 0 counts
-        }
-
-        // Scan the Registered maps list to find the current map index
-        for( i = 0; i < RDat.Rec.Length; ++ i )
-        {
-            if( RDat.Rec[i].TMN ~= CurrentMapName )
+            FullLog( "*** Initializing map index:"$UsedSlot$" ***" );
+            if( RDat.Rec[UsedSlot].PSRL.Length > 0 )
             {
-                FullLog( "Found BMTL:"$i$" for "$CurrentMapName );
-                UsedSlot = i;
+                MRI.SoloRecords = RDat.Rec[UsedSlot].PSRL.Length;
 
-                if( RDat.Rec[UsedSlot].RegisterDate == 0 )
-                {
-                    RDat.Rec[UsedSlot].RegisterDate = RDat.MakeCompactDate( Level );
-                }
-                RDat.Rec[UsedSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
-
-                FullLog( "*** Initializing BMTL:"$UsedSlot$" ***" );
-
-                // Find out the difficulty of this map!... Defined by mappers in LevelProperties->Event->ExcludeTag
-                if( RDat.Rec[UsedSlot].TMRatingSet )
-                    goto 'SkipRating';
-
-                FullLog( "*** No TMRating found for this map, calculating one! You can use 'Mutate SetMapRating <Num 1-5-10>' to config this ***" );
-
-                InitMapRating();
-
-                bSave = True;
-            SkipRating:
-                j = RDat.Rec[UsedSlot].PSRL.Length;
-                if( j > 0 )
-                {
-                    MRI.SoloRecords = j;
-
-                    // Make sure invalid records are all deleted (caused by .ini corruption!)
-                    for( l = 0; l < j; ++ l )
-                    {
-                        if( RDat.Rec[UsedSlot].PSRL[l].SRT > 1.0f )
-                            break;
-
-                        // No longer need however still remains here incase
-
-                        // delete the record
-                        RDat.Rec[UsedSlot].PSRL.Remove( l, 1 );
-                        -- l;
-                        -- j;
-
-                        // Update the uvx files
-                        bSave = True;
-                    }
-
-                    // Initialize Replication
-                    BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
-                    MRI.MapBestTime = BestPlaySeconds;
-
-                    UpdateRecordHoldersMessage();
-                }
-                else
-                {
-                    BestPlaySeconds = -1;
-                }
-
-                // Save was required
-                if( bSave )
-                    SaveRecords();
-
-                return;
+                // Initialize Replication
+                BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
+                MRI.MapBestTime = BestPlaySeconds;
+                UpdateRecordHoldersMessage();
             }
+            else
+            {
+                BestPlaySeconds = -1;
+            }
+            return;
         }
 
         UsedSlot = RDat.CreateRecord( CurrentMapName, RDat.MakeCompactDate( Level ) );
-        InitMapRating();
+        RDat.Rec[UsedSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
         SaveRecords();
 
         // Initialize current match
@@ -1530,144 +1476,6 @@ final function UpdateRecordHoldersMessage()
             ;
         }
     }
-}
-
-//==============================================================================
-//  Note:   0 counts as a rating! 4 = 5(default)
-//  Note:   SaveRecords() is required after using this function!
-//  ----------------------------------------------------------------------------
-//  Slot    :       Scale       :       Difficulty Name
-//  1       =       0.200       :       Unknown
-//  2       =       0.400       :       Newb
-//  3       =       0.600       :       Very Easy
-//  4       =       0.800       :       Easy
-//  5       =       1.000       :       Normal
-//  6       =       1.500       :       Hard
-//  7       =       2.000       :       Very Hard
-//  8       =       2.500       :       Pro
-//  9       =       3.000       :       Insane
-//  10      =       3.500       :       Near Impossible
-//  ----------------------------------------------------------------------------
-//==============================================================================
-
-// RDat.Rec[UsedSlot].TMRating = Min( Max( int( Right( Caps( Level.ExcludeTag[0] ) == "RATING_", 7 ) )-1, 0 ), 10 );
-// Compiles lol! xd
-private final function InitMapRating()
-{
-    if( InStr( Caps( Level.ExcludeTag[0] ), "RATING_" ) != -1 )
-    {
-        RDat.Rec[UsedSlot].TMRating = Min( Max( int(Mid( Caps( Level.ExcludeTag[0] ), 7 ))-1, 0 ), 10 );
-    }
-    else
-    {
-        // We check first for solo that if theres a sg map and solo at same time it shouldn't get 8 but only 4 because solo sg maps are quite easy!
-        if( bSoloMap )
-            RDat.Rec[UsedSlot].TMRating = 4;    // 0 counts
-        else if( InStr( Caps( CurrentMapName ), "SHIELDGUN" ) != -1 )
-            RDat.Rec[UsedSlot].TMRating = 8;    // 0 counts
-        else RDat.Rec[UsedSlot].TMRating = 5;   // 0 counts
-    }
-
-    RDat.Rec[UsedSlot].TMRatingSet = True;
-}
-
-final function bool IsHoliday()
-{
-    if( Level.Month == 1 && Level.Day == 1 )
-    {
-        Holiday = "New Year's Day";
-        return True;
-    }
-    else if( Level.Month == 4 && Level.Day == 1 )
-    {
-        Holiday = "April Fools' Day";
-        return True;
-    }
-    else if( Level.Month == 4 && (
-        (Level.Year == 2010 && Level.Day == 4)
-        ||
-        (Level.Year == 2011 && Level.Day == 24)
-        ||
-        (Level.Year == 2012 && Level.Day == 8)
-    ))
-    {
-        Holiday = "Easter Day";
-        return True;
-    }
-    else if( Level.Month == 4 && Level.Day == 18 )
-    {
-        Holiday = "Group mode birthday";
-        return True;
-    }
-    else if( Level.Month == 5 && Level.Day == 1 )
-    {
-        Holiday = "Labour Day";
-        return True;
-    }
-    else if( Level.Month == 6 && Level.Day == 5 )
-    {
-        Holiday = "Solo mode birthday";
-        return True;
-    }
-    else if( Level.Month == 7 && Level.Day == 21 )
-    {
-        Holiday = "Belgium's National Holiday";
-        return True;
-    }
-    else if( Level.Month == 8 && Level.Day == 15 )
-    {
-        Holiday = "Assumption of Mary";
-        return True;
-    }
-    else if( Level.Month == 8 && Level.Day == 26 )
-    {
-        Holiday = "Eliot's birthday";
-        return True;
-    }
-    else if( Level.Month == 9 && Level.Day == 19 )
-    {
-        Holiday = "Haydon's birthday";
-        return True;
-    }
-    else if( Level.Month == 10 && Level.Day == 31 )
-    {
-        Holiday = "Halloween";
-        return True;
-    }
-    else if( Level.Month == 11 && Level.Day == 11 )
-    {
-        Holiday = "Armistice Day";
-        return True;
-    }
-    else if( Level.Month == 11 && Level.Day == 1 )
-    {
-        Holiday = "All Saints Day";
-        return True;
-    }
-    else if( Level.Month == 12 )
-    {
-        if( Level.Day == 24 )
-        {
-            Holiday = "Christmas Eve";
-            return True;
-        }
-        else if( Level.Day == 25 )
-        {
-            Holiday = "Christmas Day";
-            return True;
-        }
-        if( Level.Day == 31 )
-        {
-            Holiday = "New Year's Eve";
-            return True;
-        }
-        else
-        {
-            Holiday = "XMas Month";
-            return True;
-        }
-    }
-    return False;
 }
 
 //==============================================================================
@@ -1778,8 +1586,6 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
             MapInfo[MapInfo.Length] = lzMapName$": "$RDat.Rec[i].TMN$"."$i+1 @ "- Played Hours:" $ int(RDat.Rec[i].PlayHours);
             MapInfo[MapInfo.Length] = lzFinished$": "$RDat.Rec[i].TMFinish @ "-" @ lzHijacks$":"$RDat.Rec[i].TMHijacks @ "-" @ lzFailures$":"$RDat.Rec[i].TMFailures;
             MapInfo[MapInfo.Length] = "Average Time: "$cDarkGray$TimeToStr(GetAverageRecordTime( i ));
-            if( RDat.Rec[i].TMRatingSet )
-                MapInfo[MapInfo.Length] = lzRating$": "$RDat.Rec[i].TMRating+1;
 
             // Add the all 3 top records info
             // Check whether its a solo map
@@ -3688,22 +3494,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
     switch( command )
     {
         case "setmaprating":
-            // Check if user entered a digit value
-            if( int( params[0] ) <= 0 || int( params[0] ) > 10 )
-            {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "You must enter a value between 1-10!, 5 = Default" );
-                break;
-            }
-
-            RDat.Rec[UsedSlot].TMRating = Min( Max( int( params[0] )-1, 0 ), 10 );
-            RDat.Rec[UsedSlot].TMRatingSet = True;
-
-            // Update the visual points
-            ClientForcePacketUpdate();
-
-            sender.ClientMessage( "MapRating:"@RDat.Rec[UsedSlot].TMRating+1 );
-
-            SaveRecords();
+            sender.ClientMessage( Class'HUD'.default.RedColor $ "SetMapRating is deprecated, it has been replaced by an automatic system." );
             break;
 
         case "deleterecord": case "resetrecord":
@@ -3722,14 +3513,10 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
                 GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
             }
 
-            i = RDat.Rec[UsedSlot].TMRating;
-
             RDat.Rec.Remove( UsedSlot, 1 );
             j = RDat.Rec.Length;
             RDat.Rec.Length = j + 1;
             RDat.Rec[j].TMN = CurrentMapName;
-            RDat.Rec[j].TMRating = i;
-            RDat.Rec[j].TMRatingSet = True;
             UsedSlot = j;
             SaveRecords();
 
@@ -3954,18 +3741,7 @@ function Mutate( string MutateString, PlayerController Sender )
     // Admin Commands!
     if( IsAdmin( Sender.PlayerReplicationInfo ) )
     {
-        if( MutateString ~= "BT_TestGenRecord" && bDebugMode )                                  // Debug.
-        {
-            Sender.ClientMessage( Class'HUD'.default.GoldColor $ "Created a random generated record!" );
-            RDat.Rec[UsedSlot].TMT = Rand( 1200 ) + 60;
-            RDat.Rec[UsedSlot].TMPT = RDat.Rec[UsedSlot].TMT + 60;
-            RDat.Rec[UsedSlot].PLs[0] = Rand( PDat.Player.Length ) + 1;
-            RDat.Rec[UsedSlot].TMHijacks = Rand( 25 ) + 5;
-            RDat.Rec[UsedSlot].TMFailures = Rand( 10 ) + 1;
-            SaveRecords();
-            return;
-        }
-        else if( MutateString ~= "BT_TestEndGame" && bDebugMode )
+        if( MutateString ~= "BT_TestEndGame" && bDebugMode )
         {
             GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
             return;
@@ -7484,7 +7260,7 @@ event Destroyed()
     Free();
 }
 
-DefaultProperties
+defaultproperties
 {
     UsedSlot=-1
 
@@ -7511,7 +7287,6 @@ DefaultProperties
     lzFinished="Finished"
     lzHijacks="Hijacked"
     lzFailures="Failures"
-    lzRating="Rating"
     lzRecords="Records"
 
     lzRandomPick="Random Picks"
@@ -7627,7 +7402,6 @@ DefaultProperties
     Commands(11)=(Cmd="DeleteGhost",Params=("None"),Help="Deletes the ghost of the currently played map")
     Commands(12)=(Cmd="ExitServer",Params=("None"),Help="Just like Admin Exit but this one also forces the mutator to save its *.uvx BTimes related files")
     Commands(13)=(Cmd="ForceSave",Params=("None"),Help="Forces the mutator to save its *.uvx BTimes related files")
-    Commands(14)=(Cmd="SetMapRating",Params=("Rating(1-10)"),Help="Changes the maprating of the currently played map")
     Commands(15)=(Cmd="RenameRecord",Params=("MapName","MapName"),Help="Renames a record slot with the name of the specified param(1) to param(2)(The server may not be running either of the two maps)")
     Commands(16)=(Cmd="RenameMap",Params=("MapName","MapName"),Help="Renames a record slot with the name of the specified param(1) to param(2)(The server may not be running either of the two maps)")
     Commands(17)=(Cmd="DebugMode",Params=("none"),Help="Makes the debug logs display to all connected clients")
