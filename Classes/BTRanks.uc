@@ -1,8 +1,8 @@
 class BTRanks extends Info;
 
-const MIN_MAP_RECORDS = 1;
+const MIN_MAP_RECORDS = 5;
 const MAX_MAP_RECORDS = 15;
-const MIN_PLAYER_RECORDS = 5;
+const MIN_PLAYER_RECORDS = 10;
 
 var BTRanksList
 	OverallTopList,
@@ -12,8 +12,7 @@ var BTRanksList
 var private MutBestTimes BT;
 var protected BTServer_PlayersData PDat;
 var protected BTServer_RecordsData RDat;
-
-var array<CacheManager.MapRecord> CachedMaps;
+var private array<CacheManager.MapRecord> CachedMaps;
 
 event PostBeginPlay()
 {
@@ -51,7 +50,7 @@ final function CacheRecords()
     local int mapIndex;
     local float time;
 
-    Clock( time );
+    // Clock( time );
     BT.MRI.RecordsCount = 0;
     for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
     {
@@ -61,8 +60,8 @@ final function CacheRecords()
         // DebugLog("Caching map" @ RDat.Rec[mapIndex].TMN);
         CacheRecord( mapIndex );
     }
-    UnClock( time );
-    Log( "CacheRecords() timespent" @ time );
+    // UnClock( time );
+    // Log( "CacheRecords() timespent" @ time );
 }
 
 final function CacheRecord( int mapIndex )
@@ -120,7 +119,7 @@ final function CachePlayers()
     local int ly, lm, ld;
     local float time;
 
-    Clock( time );
+    // Clock( time );
     PDat.TotalActivePlayersCount = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
@@ -137,13 +136,15 @@ final function CachePlayers()
         CachePlayer( i );
         ++ PDat.TotalActivePlayersCount;
     }
-    UnClock( time );
-    Log( "CacheRecords() timespent" @ time );
+    // UnClock( time );
+    // Log( "CacheRecords() timespent" @ time );
 }
 
 final function CachePlayer( int playerSlot )
 {
-    local int i, mapIndex, recordIndex, numRankedRecords;
+	local int mapIndex, recordIndex, mapIndex2, recordIndex2;
+    local int i;
+    local int numRankedRecords;
 
     PDat.Player[playerSlot].PLPoints[0] = 0;
     PDat.Player[playerSlot].PLPoints[1] = 0;
@@ -191,7 +192,17 @@ final function CachePlayer( int playerSlot )
 
     if( PDat.Player[playerSlot].PLRankedRecords[0] >= MIN_PLAYER_RECORDS )
     {
-	   	PDat.Player[playerSlot].PLPoints[0] /= PDat.Player[playerSlot].PLRankedRecords[0];
+    	PDat.Player[playerSlot].PLPoints[0] = (numRankedRecords - 1)/2.0;
+
+       	mapIndex = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0])] >> 16;
+        recordIndex = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0])] & 0x0000FFFF;
+
+        mapIndex2 = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0] + 0.5)] >> 16;
+        recordIndex2 = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0] + 0.5)] & 0x0000FFFF;
+
+		PDat.Player[playerSlot].PLPoints[0] = (RDat.Rec[mapIndex].PSRL[recordIndex].Points + RDat.Rec[mapIndex2].PSRL[recordIndex2].Points)/2.0;
+
+	   	// PDat.Player[playerSlot].PLPoints[0] /= PDat.Player[playerSlot].PLRankedRecords[0];
    	    if( PDat.Player[playerSlot].PLRankedRecords[1] >= MIN_PLAYER_RECORDS )
 	    {
 		   	PDat.Player[playerSlot].PLPoints[1] /= PDat.Player[playerSlot].PLRankedRecords[1];
@@ -261,7 +272,7 @@ final function CalcTopLists()
     local int i, mapIndex;
 
     // Cache the points for all maps to reduce the time spent calculating stats.
-    Log("Caching record stats");
+    // DebugLog("Caching record stats");
 	class'CacheManager'.static.GetMapList( CachedMaps );
 	for( i = 0; i < CachedMaps.Length; ++ i )
 	{
@@ -277,7 +288,7 @@ final function CalcTopLists()
     }
     CacheRecords();
 
-    Log("Caching player stats");
+    // DebugLog("Caching player stats");
     CachePlayers();
 
     OverallTopList = new (BT) class'BTRanksList';
@@ -289,7 +300,7 @@ final function CalcTopLists()
 
         OverallTopList.Items[OverallTopList.Items.Length] = i;
     }
-    Log( "Sorting ranks" );
+    // DebugLog( "Sorting ranks" );
     OverallTopList.Sort();
 
     QuarterlyTopList = new (BT) class'BTRanksList';
@@ -335,7 +346,7 @@ final static function float Mean( out array<float> values )
     {
         mean += values[i];
     }
-    return mean / values.Length;
+    return mean/values.Length;
 }
 
 final static function float Std( out array<float> values, float meanValue )
@@ -354,7 +365,7 @@ final function CalcRecordPoints( int mapIndex )
 {
 	local int i;
 	local array<float> times;
-	local float timeMean, timeStd;
+	local float timeMean, timeStd, timeMedian;
 
 	if( !IsRankedMap( mapIndex ) )
 	{
@@ -367,8 +378,14 @@ final function CalcRecordPoints( int mapIndex )
 	timeStd = Std( times, timeMean );
 	for( i = 0; i < times.Length; ++ i )
 	{
-		times[i] = (times[i] - timeMean) / timeStd;
-		RDat.Rec[mapIndex].PSRL[i].Points = -100.0*times[i];
+		times[i] = -100.0*((times[i] - timeMean)/timeStd);
+	}
+
+	timeMedian = (times.Length - 1)/2.0;
+	timeMedian = (times[int(timeMedian)] + times[int(timeMedian + 0.5)])/2.0;
+	for( i = 0; i < times.Length; ++ i )
+	{
+		RDat.Rec[mapIndex].PSRL[i].Points = times[i] + timeMedian;
 	}
 }
 
