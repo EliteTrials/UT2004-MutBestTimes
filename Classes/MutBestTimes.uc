@@ -1856,7 +1856,7 @@ final function QueryPlayerRecords( int playerSlot, out array<string> records )
         records[records.Length] = "#"
             @ recordIndex+1
             @ "-"
-            @ cDarkGray$RDat.Rec[mapIndex].PSRL[recordIndex].Points/RDat.Rec[mapIndex].PSRL[0].Points*99.99
+            @ cDarkGray$RDat.Rec[mapIndex].PSRL[recordIndex].Points/RDat.Rec[mapIndex].PSRL[0].Points*10.00
             @ TimeToStr(RDat.Rec[mapIndex].PSRL[recordIndex].SRT)
             @ cWhite$"-"
             @ Eval( RDat.Rec[mapIndex].bIgnoreStats, cRed$RDat.Rec[mapIndex].TMN, RDat.Rec[mapIndex].TMN );

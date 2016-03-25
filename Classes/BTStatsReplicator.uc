@@ -188,7 +188,7 @@ state ReplicateSoloTop
                 SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
                 if( i >= P.MaxRankedPlayers )
                 {
-                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*99.99;
+                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*10.00;
                     SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                     SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                     SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
@@ -204,7 +204,7 @@ state ReplicateSoloTop
 
             if( i < P.MaxRankedPlayers )
             {
-                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*99.99;
+                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*10.00;
                 SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
                 SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
                 SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
