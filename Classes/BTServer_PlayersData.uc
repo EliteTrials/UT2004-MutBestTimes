@@ -490,6 +490,7 @@ final function int FindAchievementByIDSTRING( int playerSlot, string id )
     return -1;
 }
 
+// WARN: Relatively expensive; 1231,46 usec.
 final function int FindAchievementByID( int playerSlot, name id )
 {
     local int i;

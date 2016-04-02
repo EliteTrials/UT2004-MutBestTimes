@@ -183,6 +183,7 @@ state ReplicateSoloTop
             // Owner of record?
             if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
             {
+                CR.SoloRank = i+1;
                 CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
 
                 SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
@@ -194,7 +195,6 @@ state ReplicateSoloTop
                     SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
                     CR.ClientSendPersonalOverallTop( SP );
                 }
-                CR.SoloRank = i+1;
             }
             else
             {

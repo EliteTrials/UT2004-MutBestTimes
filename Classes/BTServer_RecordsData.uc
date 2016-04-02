@@ -255,7 +255,7 @@ final function MergeDataFrom( BTServer_PlayersData PDat, BTServer_RecordsData ot
             }
 
             // Re-sort the player records.
-            SortRecords( mapIdx );
+            SortRecords( Rec[mapIdx].PSRL );
         }
         else
         {
@@ -307,9 +307,10 @@ final function int FindRecord( string mapName )
 
 final function int FindRecordSlot( int mapSlot, int playerSlot )
 {
-    local int i;
+    local int i, j;
 
-    for( i = 0; i < Rec[mapSlot].PSRL.Length; ++ i )
+    j = Rec[mapSlot].PSRL.Length;
+    for( i = 0; i < j; ++ i )
     {
         if( Rec[mapSlot].PSRL[i].PLs == playerSlot )
         {
@@ -319,22 +320,53 @@ final function int FindRecordSlot( int mapSlot, int playerSlot )
     return -1;
 }
 
-final function SortRecords( int mapSlot )
+final function int OpenRecordSlot( out array<sSoloRecord> times, float recordTime )
+{
+    local int i, j, k;
+    local float p;
+
+    if( times.Length == 0 )
+    {
+        times.Length = 1;
+        return 0;
+    }
+
+    j = times.Length - 1;
+    while( i <= j )
+    {
+        k = (i + j)/2;
+        p = times[k].SRT;
+        if( recordTime < p )
+        {
+            j = k - 1;
+        }
+        else if( recordTime > p )
+        {
+            i = k + 1;
+        }
+        else break;
+    }
+    k += int(recordTime >= p);
+    times.Insert( k, 1 );
+    return k;
+}
+
+final function SortRecords( out array<sSoloRecord> times )
 {
     local int i, j, y, z;
     local sSoloRecord tmp;
 
-    j = Rec[mapSlot].PSRL.Length;
+    j = times.Length;
     for( i = 0; i < (j - 1); ++ i )
     {
         z = i;
         for( y = (i + 1); y < j; ++ y )
-            if( Rec[mapSlot].PSRL[y].SRT < Rec[mapSlot].PSRL[z].SRT )
+            if( times[y].SRT < times[z].SRT )
                 z = y;
 
-        tmp = Rec[mapSlot].PSRL[z];
-        Rec[mapSlot].PSRL[z] = Rec[mapSlot].PSRL[i];
-        Rec[mapSlot].PSRL[i] = tmp;
+        tmp = times[z];
+        times[z] = times[i];
+        times[i] = tmp;
     }
 }
 
@@ -392,12 +424,12 @@ final function bool PlayerDislikeMap( int recordSlot, int playerSlot )
 
 private function UpdateMapRating( int recordSlot )
 {
-    Rec[recordSlot].Rating = Rec[recordSlot].Likers.Length/(Rec[recordSlot].Dislikers.Length + Rec[recordSlot].Likers.Length);
+    Rec[recordSlot].Rating = float(Rec[recordSlot].Likers.Length)/float(Rec[recordSlot].Dislikers.Length + Rec[recordSlot].Likers.Length);
 }
 
 final function string GetMapRating( int recordSlot )
 {
-    return string(Rec[recordSlot].Rating*10);
+    return string(Rec[recordSlot].Rating*10.00);
 }
 
 defaultproperties
