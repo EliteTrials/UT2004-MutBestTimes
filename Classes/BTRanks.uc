@@ -48,26 +48,26 @@ static final preoperator string %( string A )
 final function CacheRecords()
 {
     local int mapIndex;
-    local float time;
+    // local float time1;
 
-    // Clock( time );
+    // Clock( time1 );
     BT.MRI.RecordsCount = 0;
     for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
     {
     	if( !RDat.Rec[mapIndex].bMapIsActive && !BT.bDebugMode )
     		continue;
 
-        // DebugLog("Caching map" @ RDat.Rec[mapIndex].TMN);
         CacheRecord( mapIndex );
     }
-    // UnClock( time );
-    // Log( "CacheRecords() timespent" @ time );
+    // UnClock( time1 );
+    // Log( "CacheRecords() timespent" @ time1 $"ms" );
 }
 
 final function CacheRecord( int mapIndex )
 {
-    local int recordIndex, playerSlot;
+    local int recordIndex, playerSlot, j;
     local bool isRanked;
+    // local float time1;
 
     isRanked = IsRankedMap( mapIndex );
     if( isRanked )
@@ -75,7 +75,9 @@ final function CacheRecord( int mapIndex )
         ++ BT.MRI.RecordsCount;
     }
 
-    for( recordIndex = 0; recordIndex < RDat.Rec[mapIndex].PSRL.Length; ++ recordIndex )
+    // Clock( time1 );
+    j = RDat.Rec[mapIndex].PSRL.Length;
+    for( recordIndex = 0; recordIndex < j; ++ recordIndex )
     {
         playerSlot = RDat.Rec[mapIndex].PSRL[recordIndex].PLs;
         if( playerSlot == 0 )
@@ -86,40 +88,55 @@ final function CacheRecord( int mapIndex )
 
         if( isRanked )
         {
-        	AddTopRankedRecord( playerSlot, mapIndex, recordIndex );
+        	InsertRankedRecord(
+        		PDat.Player[playerSlot].RankedRecords,
+        		PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length-1],
+        		RDat.Rec[mapIndex].PSRL[recordIndex].Points
+    		);
         }
     }
+    // UnClock( time1 );
+    // Log( "CacheRecord() timespent" @ time1 $"ms" );
 }
 
-final function AddTopRankedRecord( int playerSlot, int mapIndex, int recordIndex )
+private function InsertRankedRecord( out array<int> rankedRecords, int recordReference, float recordPoints )
 {
-	local int curMapIndex, curRecIndex;
-	local int i;
-    local float points;
+	local int i, j, k;
+    local float p;
 
-    points = RDat.Rec[mapIndex].PSRL[recordIndex].Points;
-    for( i = 0; i < PDat.Player[playerSlot].RankedRecords.Length; ++ i )
+    if( rankedRecords.Length == 0 )
     {
-    	curMapIndex = PDat.Player[playerSlot].RankedRecords[i] >> 16;
-		curRecIndex = PDat.Player[playerSlot].RankedRecords[i] & 0x0000FFFF;
-
-    	if( RDat.Rec[curMapIndex].PSRL[curRecIndex].Points < points )
-    	{
-    		PDat.Player[playerSlot].RankedRecords.Insert( i, 1 );
-    		PDat.Player[playerSlot].RankedRecords[i] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
-    		return;
-    	}
+    	RankedRecords[rankedRecords.Length] = recordReference;
+    	return;
     }
-	PDat.Player[playerSlot].RankedRecords[PDat.Player[playerSlot].RankedRecords.Length] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
+
+    j = rankedRecords.Length - 1;
+    while( i <= j )
+    {
+    	k = (i + j)/2;
+    	p = RDat.Rec[rankedRecords[k] >> 16].PSRL[rankedRecords[k] & 0x0000FFFF].Points;
+    	if( recordPoints < p )
+    	{
+    		i = k + 1;
+    	}
+    	else if( recordPoints > p )
+    	{
+    		j = k - 1;
+    	}
+    	else break;
+    }
+    k += int(recordPoints < p);
+	rankedRecords.Insert( k, 1 );
+	rankedRecords[k] = recordReference;
 }
 
 final function CachePlayers()
 {
     local int i;
     local int ly, lm, ld;
-    local float time;
+    local float time1;
 
-    // Clock( time );
+    Clock( time1 );
     PDat.TotalActivePlayersCount = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
@@ -133,14 +150,14 @@ final function CachePlayers()
             continue;
 
         PDat.Player[i].bIsActive = true;
-        CachePlayer( i );
+        CachePlayer( i, PDat.Player[i].Records, PDat.Player[i].RankedRecords );
         ++ PDat.TotalActivePlayersCount;
     }
-    // UnClock( time );
-    // Log( "CacheRecords() timespent" @ time );
+    UnClock( time1 );
+    Log( "CachePlayers() timespent" @ time1 $"ms" );
 }
 
-final function CachePlayer( int playerSlot )
+final function CachePlayer( int playerSlot, out array<int> records, out array<int> rankedRecords )
 {
 	local int mapIndex, recordIndex, mapIndex2, recordIndex2;
     local int i;
@@ -150,10 +167,10 @@ final function CachePlayer( int playerSlot )
     PDat.Player[playerSlot].PLPoints[1] = 0;
     PDat.Player[playerSlot].PLPoints[2] = 0;
 
-	for( i = 0; i < PDat.Player[playerSlot].Records.Length; ++ i )
+	for( i = 0; i < records.Length; ++ i )
 	{
-    	mapIndex = PDat.Player[playerSlot].Records[i] >> 16;
-		recordIndex = PDat.Player[playerSlot].Records[i] & 0x0000FFFF;
+    	mapIndex = records[i] >> 16;
+		recordIndex = records[i] & 0x0000FFFF;
 
         CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
         if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
@@ -169,11 +186,11 @@ final function CachePlayer( int playerSlot )
         }
 	}
 
-    numRankedRecords = Min( PDat.Player[playerSlot].RankedRecords.Length, MAX_MAP_RECORDS );
+    numRankedRecords = Min( rankedRecords.Length, MAX_MAP_RECORDS );
     for( i = 0; i < numRankedRecords; ++ i )
     {
-        mapIndex = PDat.Player[playerSlot].RankedRecords[i] >> 16;
-        recordIndex = PDat.Player[playerSlot].RankedRecords[i] & 0x0000FFFF;
+        mapIndex = rankedRecords[i] >> 16;
+        recordIndex = rankedRecords[i] & 0x0000FFFF;
 
         // All time
         CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, true );
@@ -229,7 +246,7 @@ final function CachePlayer( int playerSlot )
     }
 }
 
-final function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex, int listIndex, optional bool bAddPoints )
+private function CachePlayerRecord( int playerSlot, int mapIndex, int recordIndex, int listIndex, optional bool bAddPoints )
 {
 	if( bAddPoints )
 	{
