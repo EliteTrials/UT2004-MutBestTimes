@@ -2077,7 +2077,7 @@ final function RenderRankingsTable( Canvas C )
     local int columnIdx;
     local int i;
     local string value;
-    local bool isFocused, isRowSelected;
+    local bool isFocused, isRowSelected, isOverflowing;
 
     // PRE-RENDERING
     C.Font = GetScreenFont( C );
@@ -2159,6 +2159,8 @@ final function RenderRankingsTable( Canvas C )
     for( i = 0; i < itemsCount; ++ i )
     {
         itemIndex = i + pageIndex*MRI.MaxRankedPlayersCount;
+        isOverflowing = itemIndex >= MRI.CR.OverallTop.Length - 1;
+        itemIndex = Min( itemIndex, MRI.CR.OverallTop.Length - 1 );
         isRowSelected = isFocused && IsSelectedRow( itemIndex );
         drawY += ROW_MARGIN;
         if( isRowSelected)
@@ -2205,9 +2207,9 @@ final function RenderRankingsTable( Canvas C )
                     C.DrawColor = #0xFFFFFFFF;
                     if( Options.GlobalSort == 0 )
                         value = MRI.CR.OverallTop[itemIndex].Name;
-                    if( Options.GlobalSort == 1 )
+                    else if( Options.GlobalSort == 1 )
                         value = MRI.CR.QuarterlyTop[itemIndex].Name;
-                    if( Options.GlobalSort == 2 )
+                    else if( Options.GlobalSort == 2 )
                         value = MRI.CR.DailyTop[itemIndex].Name;
                     break;
 
@@ -2215,9 +2217,9 @@ final function RenderRankingsTable( Canvas C )
                     C.DrawColor = #0xFFFFF0FF;
                     if( Options.GlobalSort == 0 )
                         value = string(int(MRI.CR.OverallTop[itemIndex].Points));
-                    if( Options.GlobalSort == 1 )
+                    else if( Options.GlobalSort == 1 )
                         value = string(int(MRI.CR.QuarterlyTop[itemIndex].Points));
-                    if( Options.GlobalSort == 2 )
+                    else if( Options.GlobalSort == 2 )
                         value = string(int(MRI.CR.DailyTop[itemIndex].Points));
                     break;
 
@@ -2225,9 +2227,9 @@ final function RenderRankingsTable( Canvas C )
                     C.DrawColor = #0xAAAAAAFF;
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[itemIndex].Hijacks & 0x0000FFFF);
-                    if( Options.GlobalSort == 1 )
+                    else if( Options.GlobalSort == 1 )
                         value = string(MRI.CR.QuarterlyTop[itemIndex].Records);
-                    if( Options.GlobalSort == 2 )
+                    else if( Options.GlobalSort == 2 )
                         value = string(MRI.CR.DailyTop[itemIndex].Records);
                     break;
 
@@ -2236,6 +2238,11 @@ final function RenderRankingsTable( Canvas C )
                     if( Options.GlobalSort == 0 )
                         value = string(MRI.CR.OverallTop[itemIndex].Hijacks >> 16);
                     break;
+            }
+
+            if( isOverflowing )
+            {
+                value = "---";
             }
 
             if( isRowSelected )
@@ -2271,7 +2278,7 @@ final function RenderRankingsTable( Canvas C )
 final function RenderRecordsTable( Canvas C )
 {
     // PRE-RENDERED
-    local int totalRows, itemsCount;
+    local int totalRows, itemsCount, pageIndex;
     local array<sCanvasColumn> columns;
     local float headerWidth, headerHeight;
     local float tableX, tableY;
@@ -2331,9 +2338,12 @@ final function RenderRecordsTable( Canvas C )
     tableX = drawX;
     tableY = drawY;
 
+    pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
+    s = "Top Records" @ "(" $ Min((pageIndex+1)*MRI.MaxRankedPlayersCount, MRI.SoloRecords) $ "/" $ MRI.SoloRecords $ ")";
+
     C.DrawColor = #0x0072C688;
     DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-    DrawHeaderText( C, drawX, drawY, "Top Records" );
+    DrawHeaderText( C, drawX, drawY, s );
     drawY += headerHeight + ROW_MARGIN*2;
 
     // Draw headers
@@ -3370,13 +3380,13 @@ DefaultProperties
 
     PlayersRankingColumns(0)=(Title="#",Format="0000")
     PlayersRankingColumns(1)=(Title="AP",Format="0000")
-    PlayersRankingColumns(2)=(Title="Score",Format="00000")
+    PlayersRankingColumns(2)=(Title="ELO",Format="00000")
     PlayersRankingColumns(3)=(Title="Player",Format="WWWWWWWWWWWW")
     PlayersRankingColumns(4)=(Title="Records",Format="0000")
     PlayersRankingColumns(5)=(Title="Hijacks",Format="0000")
 
     RecordsRankingColumns(0)=(Title="#",Format="000")
-    RecordsRankingColumns(1)=(Title="Score",Format="00.00")
+    RecordsRankingColumns(1)=(Title="Rating",Format="-00.00")
     RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
     RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00 ") // Space for flag
     RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")

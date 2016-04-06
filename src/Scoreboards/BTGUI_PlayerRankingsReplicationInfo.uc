@@ -1,0 +1,6 @@
+class BTGUI_PlayerRankingsReplicationInfo extends BTGUI_ScoreboardReplicationInfo;
+
+defaultproperties
+{
+	MenuClass=class'BTGUI_PlayerRankingsScoreboard'
+}
