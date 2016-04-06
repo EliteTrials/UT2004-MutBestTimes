@@ -22,9 +22,9 @@ function bool InternalOnDraw( Canvas C )
 		{
 			MState = MSAT_Blurry;
 		}
-		xl = MyList.ColumnWidths[i] - 8*isNotLast;
+		xl = MyList.ColumnWidths[i] - 4*isNotLast;
 		Style.Draw( C, MState, x, y, xl, yl );
-		Style.DrawText( C, MState, x + 4, y, xl - 8, yl, TXTA_Left, MyList.ColumnHeadings[i], FontScale );
+		Style.DrawText( C, MState, x + 2, y, xl - 4, yl, TXTA_Left, MyList.ColumnHeadings[i], FontScale );
 		x += MyList.ColumnWidths[i];
 	}
 	return true;

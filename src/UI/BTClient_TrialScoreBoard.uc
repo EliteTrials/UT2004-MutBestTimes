@@ -102,7 +102,7 @@ static function string GetCName( PlayerReplicationInfo PRI )
     return PRI.PlayerName;
 }
 
-Simulated static Function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
 {
     local LinkedReplicationInfo LRI;
 

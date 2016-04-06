@@ -711,12 +711,12 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                             }
 
                             // Query next page
-                            if( SelectedIndex+1 == MRI.CR.OverallTop.Length && MRI.CR.OverallTop.Length >= MRI.MaxRankedPlayersCount )
-                            {
-                                pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
-                                MRI.CR.ServerRequestPlayerRanks( pageIndex, RankingRangeIds[Options.GlobalSort] );
-                                ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ pageIndex @ RankingRangeIds[Options.GlobalSort] );
-                            }
+                            // if( SelectedIndex+1 == MRI.CR.OverallTop.Length && MRI.CR.OverallTop.Length >= MRI.MaxRankedPlayersCount )
+                            // {
+                            //     pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
+                            //     MRI.CR.ServerRequestPlayerRanks( pageIndex, RankingRangeIds[Options.GlobalSort] );
+                            //     ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ pageIndex @ RankingRangeIds[Options.GlobalSort] );
+                            // }
                             return True;
                         }
                         else if( Key == IK_Up )
@@ -1097,6 +1097,7 @@ Event Initialized()
 
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_HUD', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_MultiColumnList', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ListSelection', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Header', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2EditBox', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2SectionHeaderTop', true );

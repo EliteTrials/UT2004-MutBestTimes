@@ -236,6 +236,7 @@ var bool bAutoPress;
 var bool bPermitBoosting;
 var bool bWantsToWage;
 var int AmountToWage;
+var BTGUI_PlayerRankingsReplicationInfo PRRI;
 
 var /**TEMP*/ string ClientMessage;
 
@@ -301,6 +302,9 @@ delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplic
 // UI hooks
 delegate OnAchievementStateReceived( int index );
 delegate OnAchievementCategoryReceived( int index );
+
+delegate OnPlayerRankReceived( int index, name categoryName );
+delegate OnPlayerRankUpdated( int index, name categoryName );
 
 delegate OnPlayerItemReceived( int index );
 delegate OnPlayerItemRemoved( int index );
@@ -505,6 +509,7 @@ simulated function ClientSendOverallTop( sGlobalPacket APacket )
     j = OverallTop.Length;
     OverallTop.Length = j+1;
     OverallTop[j] = APacket;
+    OnPlayerRankReceived( j, 'All' );
 }
 
 simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
@@ -513,6 +518,7 @@ simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
         return;
 
     OverallTop[Slot] = APacket;
+    OnPlayerRankUpdated( Slot, 'All' );
 }
 //==============================================================================
 
@@ -528,6 +534,7 @@ simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
     j = QuarterlyTop.Length;
     QuarterlyTop.Length = j+1;
     QuarterlyTop[j] = APacket;
+    OnPlayerRankReceived( j, 'Quarterly' );
 }
 
 simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
@@ -536,6 +543,7 @@ simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot
         return;
 
     QuarterlyTop[Slot] = APacket;
+    OnPlayerRankReceived( Slot, 'Quarterly' );
 }
 
 simulated function ClientCleanDailyTop()
@@ -550,6 +558,7 @@ simulated function ClientSendDailyTop( sDailyPacket APacket )
     j = DailyTop.Length;
     DailyTop.Length = j+1;
     DailyTop[j] = APacket;
+    OnPlayerRankReceived( j, 'Daily' );
 }
 
 simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
@@ -558,6 +567,7 @@ simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
         return;
 
     DailyTop[Slot] = APacket;
+    OnPlayerRankUpdated( Slot, 'Quarterly' );
 }
 
 simulated function ClientCleanSoloTop()

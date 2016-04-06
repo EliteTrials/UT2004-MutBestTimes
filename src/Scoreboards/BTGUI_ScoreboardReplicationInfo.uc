@@ -4,8 +4,9 @@ var() const class<FloatingWindow> MenuClass;
 
 event PostBeginPlay()
 {
+	Log(self.name);
 	super.PostBeginPlay();
-	if( Level.NetMode == NM_Standalone )
+	if( Level.NetMode != NM_DedicatedServer )
 	{
 		OpenMenu();
 	}
@@ -14,7 +15,7 @@ event PostBeginPlay()
 simulated event PostNetBeginPlay()
 {
 	super.PostNetBeginPlay();
-	OpenMenu();
+	// OpenMenu();
 }
 
 simulated function OpenMenu()
