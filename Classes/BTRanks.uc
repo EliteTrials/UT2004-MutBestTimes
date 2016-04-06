@@ -312,7 +312,7 @@ final function CalcTopLists()
     OverallTopList.RanksTable = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[OverallTopList.RanksTable] <= 0 )
+        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[OverallTopList.RanksTable] < MIN_PLAYER_RECORDS )
             continue;
 
         OverallTopList.Items[OverallTopList.Items.Length] = i;
@@ -324,7 +324,7 @@ final function CalcTopLists()
     QuarterlyTopList.RanksTable = 1;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[QuarterlyTopList.RanksTable] <= 0 )
+        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[QuarterlyTopList.RanksTable] < MIN_PLAYER_RECORDS )
             continue;
 
         QuarterlyTopList.Items[QuarterlyTopList.Items.Length] = i;
@@ -335,7 +335,7 @@ final function CalcTopLists()
     DailyTopList.RanksTable = 2;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLPoints[DailyTopList.RanksTable] <= 0 )
+        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[DailyTopList.RanksTable] < MIN_PLAYER_RECORDS )
             continue;
 
         DailyTopList.Items[DailyTopList.Items.Length] = i;
