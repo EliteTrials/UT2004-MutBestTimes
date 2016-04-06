@@ -1020,6 +1020,8 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
         return;
 
     StartReplicatorFor( CRI, pageIndex, category ).BeginReplication();
+
+    Spawn( class'BTGUI_MenuReplicationInfo', requester ); // test
 }
 
 //==============================================================================
