@@ -1019,9 +1019,11 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
     if( !bShowRankings )
         return;
 
+    if( CRI.PRRI == none )
+    {
+        CRI.PRRI = Spawn( class'BTGUI_PlayerRankingsReplicationInfo', requester ); // test
+    }
     StartReplicatorFor( CRI, pageIndex, category ).BeginReplication();
-
-    Spawn( class'BTGUI_MenuReplicationInfo', requester ); // test
 }
 
 //==============================================================================
