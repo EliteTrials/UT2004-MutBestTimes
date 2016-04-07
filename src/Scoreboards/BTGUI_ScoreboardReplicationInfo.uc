@@ -2,20 +2,13 @@ class BTGUI_ScoreboardReplicationInfo extends ReplicationInfo;
 
 var() const class<FloatingWindow> MenuClass;
 
-event PostBeginPlay()
+simulated event PostBeginPlay()
 {
-	Log(self.name);
 	super.PostBeginPlay();
 	if( Level.NetMode != NM_DedicatedServer )
 	{
 		OpenMenu();
 	}
-}
-
-simulated event PostNetBeginPlay()
-{
-	super.PostNetBeginPlay();
-	// OpenMenu();
 }
 
 simulated function OpenMenu()

@@ -31,10 +31,10 @@ function InternalOnScroll( int newPos )
 
 function QueryNextPlayerRanks()
 {
-    local BTGUI_PlayerRankingsReplicationInfo ranksRep;
+    local BTClient_ClientReplication CRI;
 
-    ranksRep = BTGUI_PlayerRankingsReplicationInfo(BTGUI_PlayerRankingsScoreboard(MenuOwner).GetBoardRep());
-    ranksRep.QueryNextPlayerRanks();
+    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
+    CRI.PRRI.QueryNextPlayerRanks();
 }
 
 defaultproperties

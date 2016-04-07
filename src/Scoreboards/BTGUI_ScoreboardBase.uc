@@ -1,6 +1,6 @@
 class BTGUI_ScoreboardBase extends FloatingWindow;
 
-final function BTClient_Interaction GetInter()
+simulated final function BTClient_Interaction GetInter()
 {
 	local int i;
 
@@ -26,15 +26,15 @@ simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationIn
     return none;
 }
 
-final function BTGUI_ScoreboardReplicationInfo GetBoardRep()
+simulated static function BTGUI_ScoreboardReplicationInfo GetBoardRep( Actor worldSource )
 {
-	local BTGUI_ScoreboardReplicationInfo rep;
+	local BTGUI_ScoreboardReplicationInfo myRep;
 
-	foreach PlayerOwner().DynamicActors( class'BTGUI_ScoreboardReplicationInfo', rep )
+	foreach worldSource.DynamicActors( class'BTGUI_ScoreboardReplicationInfo', myRep )
 	{
-		if( rep.MenuClass == class )
+		if( myRep.MenuClass == default.class )
 		{
-			return rep;
+			return myRep;
 		}
 	}
 	return none;

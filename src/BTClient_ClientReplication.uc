@@ -13,17 +13,6 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 // Structs
 
 // Player Rankings
-struct sGlobalPacket
-{
-    var int PlayerId;
-    var string name;
-    var int AP;
-    var float Points;
-    var int Objectives;
-    var int Hijacks;
-    var transient bool bIsSelf;
-};
-
 struct sDailyPacket
 {
     var int PlayerId;
@@ -144,14 +133,12 @@ var(DEBUG) bool bReceivedAchievementCategories;
 // REPLICATED VARIABLES
 var bool bAllowDodgePerk;
 
-var(DEBUG) array<sGlobalPacket> OverallTop;
 var(DEBUG) array<sDailyPacket> DailyTop;
 var(DEBUG) array<sQuarterlyPacket> QuarterlyTop;
 var(DEBUG) array<sSoloPacket> SoloTop;
 
 // Personal OverallTop for people not in the best of the top solo rankings list e.g. 25
 var(DEBUG) sSoloPacket MySoloTop;           // Solo
-var(DEBUG) sGlobalPacket MyOverallTop;      // Global
 
 /** The states of all achievements that this player is working on. */
 var(DEBUG) array<sAchievementState> AchievementsStates;
@@ -256,7 +243,6 @@ replication
 
     reliable if( Role == ROLE_Authority )
         // Rankings scoreboard
-        ClientSendOverallTop, ClientUpdateOverallTop, ClientCleanOverallTop,
         ClientSendDailyTop, ClientUpdateDailyTop, ClientCleanDailyTop,
         ClientSendQuarterlyTop, ClientUpdateQuarterlyTop, ClientCleanQuarterlyTop,
 
@@ -264,7 +250,7 @@ replication
         ClientSendSoloTop, ClientUpdateSoloTop, ClientCleanSoloTop,
 
         // Personal stuff
-        ClientSendPersonalOverallTop, ClientSendMyOverallTop,
+        ClientSendPersonalOverallTop,
 
         // Reset Timer
         ClientSpawned,
@@ -495,33 +481,6 @@ simulated function ClientSendConsoleMessage( coerce string Msg )
     PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
 }
 
-//==============================================================================
-// OVERALL TOP functionS
-simulated function ClientCleanOverallTop()
-{
-    OverallTop.Length = 0;
-}
-
-simulated function ClientSendOverallTop( sGlobalPacket APacket )
-{
-    local int j;
-
-    j = OverallTop.Length;
-    OverallTop.Length = j+1;
-    OverallTop[j] = APacket;
-    OnPlayerRankReceived( j, 'All' );
-}
-
-simulated function ClientUpdateOverallTop( sGlobalPacket APacket, byte Slot )
-{
-    if( Slot > OverallTop.Length-1 )
-        return;
-
-    OverallTop[Slot] = APacket;
-    OnPlayerRankUpdated( Slot, 'All' );
-}
-//==============================================================================
-
 simulated function ClientCleanQuarterlyTop()
 {
     QuarterlyTop.Length = 0;
@@ -606,22 +565,6 @@ simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
     }
     APacket.bIsSelf = true;
     ClientSendSoloTop( APacket );
-}
-
-simulated function ClientSendMyOverallTop( sGlobalPacket APacket )
-{
-    local int i;
-
-    for( i = 0; i < OverallTop.Length; ++ i )
-    {
-        if( OverallTop[i].bIsSelf )
-        {
-            OverallTop[i] = APacket;
-            return;
-        }
-    }
-    APacket.bIsSelf = true;
-    // ClientSendOverallTop( APacket );
 }
 
 simulated function ClientSendText( string Packet )

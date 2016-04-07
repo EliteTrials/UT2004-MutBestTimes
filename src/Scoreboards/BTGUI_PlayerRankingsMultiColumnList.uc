@@ -1,6 +1,7 @@
 class BTGUI_PlayerRankingsMultiColumnList extends GUIMultiColumnList;
 
 var private BTClient_ClientReplication myCRI;
+var private BTGUI_PlayerRankingsReplicationInfo myRep;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -16,7 +17,8 @@ final static preoperator Color #( int rgbInt )
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
     super.InitComponent(MyController,MyOwner);
-    myCRI = class'BTGUI_PlayerRankingsScoreboard'.static.GetCRI( PlayerOwner().PlayerReplicationInfo );
+    myCRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
+    myRep = myCRI.PRRI;
 }
 
 function float InternalGetItemHeight( Canvas C )
@@ -57,27 +59,27 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = #0x91A79DFF;
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(myCRI.OverallTop[SortData[i].SortItem].AP), FontScale );
+        string(myRep.PlayerRanks[SortData[i].SortItem].AP), FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = #0xFFFFF0FF;
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(int(myCRI.OverallTop[SortData[i].SortItem].Points)), FontScale );
+        string(int(myRep.PlayerRanks[SortData[i].SortItem].Points)), FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = #0xFFFFFFFF;
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        myCRI.OverallTop[SortData[i].SortItem].Name, FontScale );
+        myRep.PlayerRanks[SortData[i].SortItem].Name, FontScale );
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = #0xAAAAAAFF;
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(myCRI.OverallTop[SortData[i].SortItem].Hijacks >> 16), FontScale );
+        string(myRep.PlayerRanks[SortData[i].SortItem].Hijacks >> 16), FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = #0xAAAAAAFF;
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(myCRI.OverallTop[SortData[i].SortItem].Hijacks & 0x0000FFFF), FontScale );
+        string(myRep.PlayerRanks[SortData[i].SortItem].Hijacks & 0x0000FFFF), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
 
@@ -103,19 +105,19 @@ function string GetSortString( int i )
             return MyPadLeft( i, 4, "0" );
 
         case 1:
-            return MyPadLeft( myCRI.OverallTop[i].AP, 4, "0" );
+            return MyPadLeft( myRep.PlayerRanks[i].AP, 4, "0" );
 
         case 1:
-            return MyPadLeft( int(myCRI.OverallTop[i].Points), 4, "0" );
+            return MyPadLeft( int(myRep.PlayerRanks[i].Points), 4, "0" );
 
         case 3:
-            return myCRI.OverallTop[i].Name;
+            return myRep.PlayerRanks[i].Name;
 
         case 4:
-            return MyPadLeft( myCRI.OverallTop[i].Hijacks >> 16, 4, "0" );
+            return MyPadLeft( myRep.PlayerRanks[i].Hijacks >> 16, 4, "0" );
 
         case 5:
-            return MyPadLeft( myCRI.OverallTop[i].Hijacks & 0x0000FFFF, 4, "0" );
+            return MyPadLeft( myRep.PlayerRanks[i].Hijacks & 0x0000FFFF, 4, "0" );
     }
     return string(i);
 }

@@ -50,7 +50,6 @@ var const
 
 var const array<sTableColumn> PlayersRankingColumns;
 var const array<sTableColumn> RecordsRankingColumns;
-var const array<string> RankingRanges, RankingRangeIds;
 
 var string
     RankingKeyMsg,
@@ -606,7 +605,6 @@ exec function TogglePersonalTimer()
 function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
 {
     local string S;
-    local int pageIndex;
 
     S = Caps( ViewportOwner.Actor.ConsoleCommand( "KEYBINDING"@Chr( Key ) ) );
     if( InStr( S, "SHOWALL" ) != -1 )
@@ -632,11 +630,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
             if( bShowRankingTable )
             {
-                if( MRI.CR.OverallTop.Length == 0 )
-                {
-                    MRI.CR.ServerRequestPlayerRanks( -1 );
-                    ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ 0 @ "All" );
-                }
+                MRI.CR.ServerRequestPlayerRanks( -1 );
             }
             return False;
         }
@@ -662,127 +656,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
         {
             if( MRI.CR.Text.Length == 0 )
             {
-                if( Key == IK_Left )
-                {
-                    SelectedTable = 0;
-                    SelectedIndex = Min( SelectedIndex, MRI.CR.OverallTop.Length - 1 );
-                    return true;
-                }
-                else if( Key == IK_Right && MRI.CR.SoloTop.Length > 0 )
-                {
-                    SelectedTable = 1;
-                    SelectedIndex = Min( SelectedIndex, MRI.CR.SoloTop.Length - 1 );
-                    return true;
-                }
-
-                if( SelectedTable == 0 )
-                {
-                    if( Key == IK_Tab )
-                    {
-                        if( Options.GlobalSort >= 2 )
-                        {
-                            Options.GlobalSort = -1;
-                        }
-                        ++ Options.GlobalSort;
-                        Options.SaveConfig();
-
-                        if( Options.GlobalSort == 0 )
-                        {
-                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.OverallTop.Length, MRI.MaxRankedPlayersCount ) - 1 );
-                        }
-                        else if( Options.GlobalSort == 0 )
-                        {
-                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.QuarterlyTop.Length, MRI.MaxRankedPlayersCount ) - 1  );
-                        }
-                        else if( Options.GlobalSort == 0 )
-                        {
-                            SelectedIndex = Min( SelectedIndex, Min( MRI.CR.DailyTop.Length, MRI.MaxRankedPlayersCount ) - 1  );
-                        }
-                        return true;
-                    }
-
-                    if( Options.GlobalSort == 0 )
-                    {
-                        if( Key == IK_Down )
-                        {
-                            if( ++ SelectedIndex >= MRI.CR.OverallTop.Length )
-                            {
-                                Selectedindex = 0;
-                            }
-
-                            // Query next page
-                            // if( SelectedIndex+1 == MRI.CR.OverallTop.Length && MRI.CR.OverallTop.Length >= MRI.MaxRankedPlayersCount )
-                            // {
-                            //     pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
-                            //     MRI.CR.ServerRequestPlayerRanks( pageIndex, RankingRangeIds[Options.GlobalSort] );
-                            //     ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ pageIndex @ RankingRangeIds[Options.GlobalSort] );
-                            // }
-                            return True;
-                        }
-                        else if( Key == IK_Up )
-                        {
-                            if( -- SelectedIndex < 0 )
-                            {
-                                Selectedindex = MRI.CR.OverallTop.Length - 1;
-                            }
-                            return True;
-                        }
-                        else if( Key == IK_Enter )
-                        {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.OverallTop[SelectedIndex].PlayerId );
-                            return True;
-                        }
-                    }
-                    else if( Options.GlobalSort == 1 )
-                    {
-                        if( Key == IK_Down )
-                        {
-                            if( ++ SelectedIndex >= MRI.CR.QuarterlyTop.Length )
-                            {
-                                Selectedindex = 0;
-                            }
-                            return True;
-                        }
-                        else if( Key == IK_Up )
-                        {
-                            if( -- SelectedIndex < 0 )
-                            {
-                                Selectedindex = MRI.CR.QuarterlyTop.Length - 1;
-                            }
-                            return True;
-                        }
-                        else if( Key == IK_Enter )
-                        {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.QuarterlyTop[SelectedIndex].PlayerId );
-                            return True;
-                        }
-                    }
-                    else if( Options.GlobalSort == 2 )
-                    {
-                        if( Key == IK_Down )
-                        {
-                            if( ++ SelectedIndex >= MRI.CR.DailyTop.Length )
-                            {
-                                Selectedindex = 0;
-                            }
-                            return True;
-                        }
-                        else if( Key == IK_Up )
-                        {
-                            if( -- SelectedIndex < 0 )
-                            {
-                                Selectedindex = MRI.CR.DailyTop.Length - 1;
-                            }
-                            return True;
-                        }
-                        else if( Key == IK_Enter )
-                        {
-                            ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.DailyTop[SelectedIndex].PlayerId );
-                            return True;
-                        }
-                    }
-                }
-                else if( SelectedTable == 1 )
+                if( SelectedTable == 1 )
                 {
                     if( Key == IK_Tab )
                     {
@@ -1849,8 +1723,6 @@ function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> colum
 
 final function RenderTables( Canvas C )
 {
-    // RenderRankingsTable( C );
-
     if( GetRecordsCount() > 0 ){
         RenderRecordsTable( C );
     }
@@ -1859,11 +1731,7 @@ final function RenderTables( Canvas C )
 // Top players count
 final function int GetRankingsCount()
 {
-    if( Options.GlobalSort == 0 )
-    {
-        return MRI.CR.OverallTop.Length;
-    }
-    else if( Options.GlobalSort == 1 )
+    if( Options.GlobalSort == 1 )
     {
         return MRI.CR.QuarterlyTop.Length;
     }
@@ -2057,223 +1925,6 @@ final static function DrawElementValue( Canvas C, float x, float y, string title
     }
     C.DrawTextClipped( title );
     C.SetPos( x, y ); // Reset pushment from DrawText
-}
-
-final function RenderRankingsTable( Canvas C )
-{
-    // PRE-RENDERED
-    local int totalRows, itemIndex, itemsCount, pageIndex;
-    local array<sCanvasColumn> columns;
-    local float headerWidth, headerHeight;
-    local float tableX, tableY;
-    local float tableWidth, tableHeight;
-    local float drawX, drawY;
-    local float fontXL, fontYL;
-
-    // Temporary string measures.
-    local float xl, yl;
-    local string s;
-
-    // FLOW
-    local int columnIdx;
-    local int i;
-    local string value;
-    local bool isFocused, isRowSelected, isOverflowing;
-
-    // PRE-RENDERING
-    C.Font = GetScreenFont( C );
-    C.StrLen( "T", fontXL, fontYL );
-
-    isFocused = IsSelectedTable( 0 );
-    itemsCount = Min( GetRankingsCount(), MRI.MaxRankedPlayersCount );
-    totalRows = itemsCount + 1; // +1 TABS ROW
-    if( isFocused || itemsCount == 0 )
-    {
-        ++ totalRows; // Inlined tooltip
-    }
-
-    columns = CreateColumns( C, PlayersRankingColumns, headerWidth, headerHeight );
-
-    tableWidth = headerWidth;
-    tableHeight = (headerHeight + ROW_MARGIN)*(totalRows + 1) + ROW_MARGIN + HEADER_GUTTER;
-
-    tableX = 0;
-    tableY = C.ClipY*0.5 - tableHeight*0.5; // Centered;
-
-    // Progressing render position, starting from the absolute table's position.
-    drawX = tableX;
-    drawY = tableY;
-
-    // STYLING
-    C.DrawColor = #0xFFFFFF;
-
-    if( !isFocused )
-    {
-        C.bForceAlpha = true;
-        C.ForcedAlpha = 0.5;
-    }
-
-    // POST-RENDERING
-    // Draw body
-    C.DrawColor = Options.CTable;
-    DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth + TABLE_PADDING*2, tableHeight + TABLE_PADDING*2 );
-    drawX += TABLE_PADDING;
-    tableX = drawX;
-    tableY = drawY;
-
-    pageIndex = int(float(SelectedIndex+1)/MRI.MaxRankedPlayersCount);
-    s = "Top Players" @ "(" $ Min((pageIndex+1)*MRI.MaxRankedPlayersCount, MRI.PlayersCount) $ "/" $ MRI.PlayersCount $ ")";
-    C.StrLen( s, xl, yl );
-
-    // hover: 3d96d8
-    C.DrawColor = #0x0072C688;
-    DrawColumnTile( C, drawX, drawY, xl + COLUMN_PADDING_X*2, headerHeight );
-    DrawHeaderText( C, drawX, drawY, s );
-
-    s = RankingRanges[Options.GlobalSort] $ " (Tab to switch)";
-    C.Strlen( s, xl, yl );
-    drawX = tableX + tableWidth - TABLE_PADDING - (xl + COLUMN_PADDING_X);
-    C.DrawColor = #0x00529668;
-    DrawColumnTile( C, drawX, drawY, xl + COLUMN_PADDING_X*2, headerHeight );
-    DrawHeaderText( C, drawX, drawY, s );
-
-    drawY += headerHeight + ROW_MARGIN*2;
-    drawX = tableX;
-
-    // Draw headers
-    for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
-    {
-        DrawHeaderTile( C, drawX + COLUMN_MARGIN, drawY, columns[columnIdx].W - COLUMN_MARGIN*2, columns[columnIdx].H );
-        DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, PlayersRankingColumns[columnIdx].Title );
-        drawX += columns[columnIdx].W;
-    }
-    drawX = tableX;
-    drawY += headerHeight + HEADER_GUTTER;
-
-    if( itemsCount == 0 )
-    {
-        C.DrawColor = #0x666666EE;
-        s = "No data found, please try again later...";
-        DrawColumnText( C, drawX, drawY, s );
-    }
-
-    for( i = 0; i < itemsCount; ++ i )
-    {
-        itemIndex = i + pageIndex*MRI.MaxRankedPlayersCount;
-        isOverflowing = itemIndex >= MRI.CR.OverallTop.Length - 1;
-        itemIndex = Min( itemIndex, MRI.CR.OverallTop.Length - 1 );
-        isRowSelected = isFocused && IsSelectedRow( itemIndex );
-        drawY += ROW_MARGIN;
-        if( isRowSelected)
-        {
-            C.DrawColor = #0x222222BB;
-        }
-        else
-        {
-            if( Options.GlobalSort == 0 && MRI.CR.OverallTop[itemIndex].bIsSelf || itemIndex == MRI.CR.Rank-1 )
-            {
-                C.DrawColor = #0x33333386;
-            }
-            else
-            {
-                C.DrawColor = #0x22222244;
-            }
-        }
-
-        DrawColumnTile( C, drawX, drawY, tableWidth, headerHeight );
-        for( columnIdx = 0; columnIdx < columns.length; ++ columnIdx )
-        {
-            value = "---";
-            switch( columnIdx )
-            {
-                case 0: // "Rank (Any)"
-                    C.DrawColor = #0x666666FF;
-                    if( Options.GlobalSort == 0 && MRI.CR.OverallTop[itemIndex].bIsSelf )
-                    {
-                        value = string(MRI.CR.Rank);
-                    }
-                    else
-                    {
-                        value = string(itemIndex + 1);
-                    }
-                    break;
-
-                case 1: // "Achievement Points (Overall)"
-                    C.DrawColor = #0x91A79DFF;
-                    if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[itemIndex].AP);
-                    break;
-
-                case 3: // "Player (All)"
-                    C.DrawColor = #0xFFFFFFFF;
-                    if( Options.GlobalSort == 0 )
-                        value = MRI.CR.OverallTop[itemIndex].Name;
-                    else if( Options.GlobalSort == 1 )
-                        value = MRI.CR.QuarterlyTop[itemIndex].Name;
-                    else if( Options.GlobalSort == 2 )
-                        value = MRI.CR.DailyTop[itemIndex].Name;
-                    break;
-
-                case 2: // "Score (All)"
-                    C.DrawColor = #0xFFFFF0FF;
-                    if( Options.GlobalSort == 0 )
-                        value = string(int(MRI.CR.OverallTop[itemIndex].Points));
-                    else if( Options.GlobalSort == 1 )
-                        value = string(int(MRI.CR.QuarterlyTop[itemIndex].Points));
-                    else if( Options.GlobalSort == 2 )
-                        value = string(int(MRI.CR.DailyTop[itemIndex].Points));
-                    break;
-
-                case 4: // "Records (All)"
-                    C.DrawColor = #0xAAAAAAFF;
-                    if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[itemIndex].Hijacks & 0x0000FFFF);
-                    else if( Options.GlobalSort == 1 )
-                        value = string(MRI.CR.QuarterlyTop[itemIndex].Records);
-                    else if( Options.GlobalSort == 2 )
-                        value = string(MRI.CR.DailyTop[itemIndex].Records);
-                    break;
-
-                case 5: // "Hijacks (Overall)"
-                    C.DrawColor = #0xAAAAAAFF;
-                    if( Options.GlobalSort == 0 )
-                        value = string(MRI.CR.OverallTop[itemIndex].Hijacks >> 16);
-                    break;
-            }
-
-            if( isOverflowing )
-            {
-                value = "---";
-            }
-
-            if( isRowSelected )
-            {
-                C.DrawColor = Lighten( C.DrawColor, 50F );
-            }
-            DrawColumnText( C, drawX, drawY, value );
-            drawX += columns[columnIdx].W;
-        }
-
-        // Tooltip
-        if( isRowSelected )
-        {
-            drawX = tableX;
-            drawY += headerHeight + ROW_MARGIN;
-
-            C.DrawColor = #0x666666EE;
-            s = "Press " $ $class'HUD'.default.GoldColor $ "Enter" $ $C.DrawColor $ " to see more statistics of this player ...";
-            DrawColumnText( C, drawX, drawY, s );
-        }
-
-        drawX = tableX;
-        drawY += headerHeight;
-    }
-    drawX = tableX;
-    drawY += headerHeight + ROW_MARGIN;
-    C.SetPos( drawX, drawY );
-    C.DrawColor = Orange;
-    C.DrawText( "Page:" @ pageIndex @ "MaxRankedPlayersCount:" @ MRI.MaxRankedPlayersCount @ "Num Ranks:" @ MRI.CR.OverallTop.Length @ "SelectedRank:" @ SelectedIndex+1 );
-    C.bForceAlpha = false;
 }
 
 final function RenderRecordsTable( Canvas C )
@@ -3351,6 +3002,7 @@ DefaultProperties
 {
     YOffsetScale=0.6
     TablePage=0
+    SelectedTable=1
 
     Orange=(R=255,G=255,B=0,A=255)
 
@@ -3379,23 +3031,9 @@ DefaultProperties
     RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
     AlphaLayer=Texture'BTScoreBoardBG'
 
-    PlayersRankingColumns(0)=(Title="#",Format="0000")
-    PlayersRankingColumns(1)=(Title="AP",Format="0000")
-    PlayersRankingColumns(2)=(Title="ELO",Format="00000")
-    PlayersRankingColumns(3)=(Title="Player",Format="WWWWWWWWWWWW")
-    PlayersRankingColumns(4)=(Title="Records",Format="0000")
-    PlayersRankingColumns(5)=(Title="Hijacks",Format="0000")
-
     RecordsRankingColumns(0)=(Title="#",Format="000")
     RecordsRankingColumns(1)=(Title="Rating",Format="-00.00")
     RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
     RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00 ") // Space for flag
     RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
-
-    RankingRangeIds(0)="All"
-    RankingRangeIds(1)="Monthly"
-    RankingRangeIds(2)="Daily"
-    RankingRanges(0)="All Time"
-    RankingRanges(1)="Monthly"
-    RankingRanges(2)="Daily"
 }

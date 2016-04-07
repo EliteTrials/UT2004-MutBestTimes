@@ -3,7 +3,7 @@ class BTGUI_PlayerRankingsScoreboard extends BTGUI_ScoreboardBase;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
 var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
 
-var BTClient_Interaction Inter;
+var private BTClient_Interaction Inter;
 
 event Free()
 {
@@ -17,17 +17,15 @@ event InitComponent( GUIController MyController, GUIComponent MyOwner )
 
 	super.InitComponent( MyController, MyOwner );
 
-    BackgroundColor = class'BTClient_Config'.default.CTable;
-    Inter = GetInter();
-
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
 	if( CRI == none )
 	{
 		Warn("Couldn't find a CRI for the current local player!");
 		return;
 	}
-
-	CRI.OnPlayerRankReceived = InternalOnPlayerRankReceived;
+	CRI.PRRI.OnPlayerRankReceived = InternalOnPlayerRankReceived;
+    BackgroundColor = class'BTClient_Config'.default.CTable;
+    Inter = GetInter();
 }
 
 function InternalOnPlayerRankReceived( int index, name categoryName )
