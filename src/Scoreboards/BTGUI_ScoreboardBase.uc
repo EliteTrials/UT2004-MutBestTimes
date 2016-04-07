@@ -61,7 +61,9 @@ function AddSystemMenu()
 
 function bool SystemMenuPreDraw(canvas Canvas)
 {
-	b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + (t_WindowTitle.ActualWidth()-35), t_WindowTitle.ActualTop(), 24, 24, true);
+	b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + t_WindowTitle.ActualWidth() - b_ExitButton.ActualWidth(), t_WindowTitle.ActualTop(), 24, 24, true);
+	b_ExitButton.ActualWidth( t_WindowTitle.ActualHeight(), true );
+	b_ExitButton.ActualHeight( t_WindowTitle.ActualHeight(), true );
 	return true;
 }
 

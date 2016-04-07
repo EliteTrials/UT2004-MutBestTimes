@@ -634,7 +634,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             {
                 if( MRI.CR.OverallTop.Length == 0 )
                 {
-                    MRI.CR.ServerRequestPlayerRanks( 0, "All" );
+                    MRI.CR.ServerRequestPlayerRanks( -1 );
                     ViewportOwner.Actor.ClientMessage( "Downloading rankings" @ 0 @ "All" );
                 }
             }
@@ -1849,7 +1849,7 @@ function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> colum
 
 final function RenderTables( Canvas C )
 {
-    RenderRankingsTable( C );
+    // RenderRankingsTable( C );
 
     if( GetRecordsCount() > 0 ){
         RenderRecordsTable( C );

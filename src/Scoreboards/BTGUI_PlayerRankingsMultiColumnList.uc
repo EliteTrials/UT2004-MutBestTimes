@@ -39,11 +39,11 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     C.SetPos( X, Y );
     if( bSelected )
     {
-        C.DrawColor = #0x222222BB;
+        C.DrawColor = #0x33333386;
     }
     else
     {
-        C.DrawColor = #0x22222244;
+        C.DrawColor = #0x22222266;
     }
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
@@ -126,23 +126,16 @@ defaultproperties
     SelectedStyleName="BTListSelection"
     SelectedBKColor=(R=255,G=255,B=255,A=255)
 
+    bSorted=true
     SortColumn=2
     SortDescending=false
     ExpandLastColumn=true
-    NeedsSorting=true
-    InitColumnPerc(0)=0.05
-    InitColumnPerc(1)=0.08
-    InitColumnPerc(2)=0.08
-    InitColumnPerc(3)=0.55
-    InitColumnPerc(4)=0.11
-    InitColumnPerc(5)=0.11
-
-    ColumnHeadingHints(0)="#"
-    ColumnHeadingHints(1)="AP"
-    ColumnHeadingHints(2)="ELO"
-    ColumnHeadingHints(3)="Player"
-    ColumnHeadingHints(4)="Records"
-    ColumnHeadingHints(5)="Hijacks"
+    InitColumnPerc(0)=0.06
+    InitColumnPerc(1)=0.09
+    InitColumnPerc(2)=0.09
+    InitColumnPerc(3)=0.50
+    InitColumnPerc(4)=0.12
+    InitColumnPerc(5)=0.12
 
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight

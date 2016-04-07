@@ -649,7 +649,7 @@ final function ServerRequestAchievementsByCategory( string catID )
     OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
 }
 
-final function ServerRequestPlayerRanks( int pageIndex, string category )
+final function ServerRequestPlayerRanks( int pageIndex, optional string category )
 {
     OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, category );
 }

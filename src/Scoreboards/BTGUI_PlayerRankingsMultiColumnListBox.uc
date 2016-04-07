@@ -1,24 +1,51 @@
 class BTGUI_PlayerRankingsMultiColumnListBox extends GUIMultiColumnListBox;
 
+var const array<string> RankingRanges, RankingRangeIds;
+var array<BTGUI_PlayerRankingsMultiColumnList> RankingLists;
+
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
+    local int i;
+
 	DefaultListClass = string(class'BTGUI_PlayerRankingsMultiColumnList');
     super.InitComponent(MyController,MyOwner);
+
+    // Skip first list
+    RankingLists[RankingLists.Length] = BTGUI_PlayerRankingsMultiColumnList(List);
+    for( i = 1; i < RankingRanges.Length; ++ i )
+    {
+        RankingLists[RankingLists.Length] = BTGUI_PlayerRankingsMultiColumnList(AddComponent(DefaultListClass));
+        RankingLists[RankingLists.Length - 1].Hide();
+    }
+
+    QueryNextPlayerRanks();
 }
 
 function InternalOnScroll( int newPos )
 {
+    if( newPos > MyScrollBar.ItemCount-15 )
+    {
+        QueryNextPlayerRanks();
+    }
+}
+
+function QueryNextPlayerRanks()
+{
     local BTGUI_PlayerRankingsReplicationInfo ranksRep;
 
-    if( newPos > MyScrollBar.ItemCount-5 )
-    {
-        ranksRep = BTGUI_PlayerRankingsReplicationInfo(BTGUI_PlayerRankingsScoreboard(MenuOwner).GetBoardRep());
-        ranksRep.QueryNextPlayerRanks();
-    }
+    ranksRep = BTGUI_PlayerRankingsReplicationInfo(BTGUI_PlayerRankingsScoreboard(MenuOwner).GetBoardRep());
+    ranksRep.QueryNextPlayerRanks();
 }
 
 defaultproperties
 {
+    RankingRangeIds(0)="All"
+    RankingRangeIds(1)="Monthly"
+    RankingRangeIds(2)="Daily"
+    RankingRanges(0)="All Time"
+    RankingRanges(1)="Monthly"
+    RankingRanges(2)="Daily"
+
     DefaultListClass="" // Manually initialized in InitComponent.
     StyleName="NoBackground"
 

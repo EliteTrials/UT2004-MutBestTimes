@@ -1,7 +1,9 @@
 class BTGUI_PlayerRankingsScoreboard extends BTGUI_ScoreboardBase;
 
-var BTClient_Interaction Inter;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
+var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
+
+var BTClient_Interaction Inter;
 
 event Free()
 {
@@ -30,8 +32,8 @@ event InitComponent( GUIController MyController, GUIComponent MyOwner )
 
 function InternalOnPlayerRankReceived( int index, name categoryName )
 {
-	RankingsListBox.List.AddedItem( index );
-	RankingsListBox.List.Sort();
+	RankingsListBox.List.AddedItem();
+	t_WindowTitle.SetCaption( WindowName @ "(" $ RankingsListBox.List.ItemCount $ "/" $ Inter.MRI.PlayersCount $ ")" );
 }
 
 defaultproperties
@@ -43,7 +45,7 @@ defaultproperties
 	WindowName="Player Ranks"
 
     Begin Object Class=BTGUI_PlayerRankingsMultiColumnListBox Name=ItemsListBox
-        WinWidth=0.98
+        WinWidth=0.68
         WinHeight=0.90
         WinLeft=0.01
         WinTop=0.065
@@ -53,4 +55,12 @@ defaultproperties
         FontScale=FNS_Small
     End Object
     RankingsListBox=ItemsListBox
+
+    Begin Object class=BTGUI_PlayerRankingsPlayerProfile name=oPlayerInfoPanel
+    	WinWidth=0.29
+    	WinHeight=0.90
+    	WinTop=0.065
+    	WinLeft=0.70
+    End Object
+    PlayerInfoPanel=oPlayerInfoPanel
 }

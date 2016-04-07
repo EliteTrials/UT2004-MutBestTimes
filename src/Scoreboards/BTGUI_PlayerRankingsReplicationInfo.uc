@@ -21,6 +21,6 @@ simulated function QueryNextPlayerRanks()
 defaultproperties
 {
 	MenuClass=class'BTGUI_PlayerRankingsScoreboard'
-	CurrentPageIndex=1
+	CurrentPageIndex=-1
 	CurrentCategoryName="All"
 }
