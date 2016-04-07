@@ -36,7 +36,11 @@ function InternalOnPlayerRankReceived( int index, name categoryName )
 {
 	PlayerOwner().ClientMessage("Received a rank packet");
 	RankingsListBox.List.AddedItem();
-	t_WindowTitle.SetCaption( WindowName @ "(" $ RankingsListBox.List.ItemCount $ "/" $ Inter.MRI.PlayersCount $ ")" );
+
+	if( Inter == none ) // None once this menu is reopened :<?
+    	Inter = GetInter();
+
+	t_WindowTitle.SetCaption( WindowName @ "(" $ RankingsListBox.List.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of" @ Inter.MRI.PlayersCount );
 }
 
 function InternalOnPlayerRanksDone( string categoryName, bool bAll )

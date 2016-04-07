@@ -45,7 +45,7 @@ var BTClient_ClientReplication CR;                                              
 // Server side stats
 var int RecordsCount;
 var int MaxRecords;
-var int PlayersCount;
+var int PlayersCount, RankedPlayersCount;
 var int MaxMoves;
 var int SoloRecords;
 var int MaxRankedPlayersCount;
@@ -70,7 +70,7 @@ replication
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
-        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount;
+        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount, RankedPlayersCount;
 
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )
