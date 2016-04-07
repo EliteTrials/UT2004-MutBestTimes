@@ -1023,6 +1023,10 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
     {
         CRI.PRRI = Spawn( class'BTGUI_PlayerRankingsReplicationInfo', requester ); // test
     }
+
+    if( pageIndex == -1 )
+        return;
+
     StartReplicatorFor( CRI, pageIndex, category ).BeginReplication();
 }
 
