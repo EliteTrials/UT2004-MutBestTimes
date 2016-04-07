@@ -319,6 +319,7 @@ final function CalcTopLists()
     }
     // DebugLog( "Sorting ranks" );
     OverallTopList.Sort();
+    BT.MRI.RankedPlayersCount = OverallTopList.Items.Length;
 
     QuarterlyTopList = new (BT) class'BTRanksList';
     QuarterlyTopList.RanksTable = 1;
