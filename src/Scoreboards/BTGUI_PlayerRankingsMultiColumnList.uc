@@ -107,7 +107,7 @@ function string GetSortString( int i )
         case 1:
             return MyPadLeft( myRep.PlayerRanks[i].AP, 4, "0" );
 
-        case 1:
+        case 2:
             return MyPadLeft( int(myRep.PlayerRanks[i].Points), 4, "0" );
 
         case 3:
