@@ -602,6 +602,18 @@ exec function TogglePersonalTimer()
     Options.SaveConfig();
 }
 
+final function OpenRankingsMenu()
+{
+    local BTGUI_PlayerRankingsReplicationInfo ranksRep;
+
+    foreach ViewportOwner.Actor.DynamicActors( class'BTGUI_PlayerRankingsReplicationInfo', ranksRep )
+    {
+        ranksRep.OpenMenu();
+        return;
+    }
+    MRI.CR.ServerRequestPlayerRanks( -1 );
+}
+
 function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
 {
     local string S;
@@ -630,7 +642,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
             if( bShowRankingTable )
             {
-                MRI.CR.ServerRequestPlayerRanks( -1 );
+                OpenRankingsMenu();
             }
             return False;
         }

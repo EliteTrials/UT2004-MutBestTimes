@@ -78,6 +78,7 @@ defaultproperties
 	WinWidth=0.2
 	WinHeight=0.60
 	WindowName="Player Ranks"
+	bPersistent=true
 
     Begin Object Class=BTGUI_PlayerRankingsMultiColumnListBox Name=ItemsListBox
         WinWidth=0.68
