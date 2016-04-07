@@ -62,26 +62,25 @@ static final preoperator string %( string A )
     return A;
 }
 
-final function InitGlobalPacket( int index, optional out BTClient_ClientReplication.sGlobalPacket GP )
+final function InitGlobalPacket( int index, optional out BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank )
 {
     local int playerSlot;
 
     playerSlot = Ranks.OverallTopList.Items[index];
     if( playerSlot == CR.myPlayerSlot )
-        GP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
-    else GP.Name = P.PDat.Player[playerSlot].PLName;
+        playerRank.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
+    else playerRank.Name = P.PDat.Player[playerSlot].PLName;
 
-    GP.PlayerId     = playerSlot + 1;
-    GP.Points       = P.PDat.Player[playerSlot].PLPoints[0];
-    GP.AP           = P.PDat.Player[playerSlot].PLAchiev;
-    GP.Objectives   = P.PDat.Player[playerSlot].PLObjectives;
-    GP.Hijacks      = P.PDat.Player[playerSlot].RankedRecords.Length << 16 | P.PDat.Player[playerSlot].PLTopRecords[0];
+    playerRank.PlayerId     = playerSlot + 1;
+    playerRank.Points       = P.PDat.Player[playerSlot].PLPoints[0];
+    playerRank.AP           = P.PDat.Player[playerSlot].PLAchiev;
+    playerRank.Hijacks      = P.PDat.Player[playerSlot].RankedRecords.Length << 16 | P.PDat.Player[playerSlot].PLTopRecords[0];
 }
 
-final function SendOverallTop( int index, optional out BTClient_ClientReplication.sGlobalPacket GP )
+final function SendOverallTop( int index, optional out BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank )
 {
-    InitGlobalPacket( index, GP );
-    CR.ClientSendOverallTop( GP );
+    InitGlobalPacket( index, playerRank );
+    CR.PRRI.ClientAddPlayerRank( playerRank );
 }
 
 state ReplicateOverallTop

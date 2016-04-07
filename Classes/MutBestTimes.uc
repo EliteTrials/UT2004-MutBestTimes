@@ -5741,7 +5741,6 @@ final Function UpdateScoreboard( PlayerController PC )
 {
     local Controller C;
     local BTClient_ClientReplication myCR, CR;
-    local BTClient_ClientReplication.sGlobalPacket NewPacket;
     local BTClient_ClientReplication.sSoloPacket NewTPacket;
 
     if( !ModeIsTrials() )
@@ -5765,15 +5764,6 @@ final Function UpdateScoreboard( PlayerController PC )
         GhostManager.UpdateGhostsName( myCR.myPlayerSlot, PDat.Player[myCR.myPlayerSlot].PLName );
     }
 
-    if( myCR.Rank-1 >= 0 && myCR.Rank <= MaxRankedPlayers )
-    {
-        NewPacket.AP            = PDat.Player[myCR.myPlayerSlot].PLAchiev;
-        NewPacket.Points        = PDat.Player[myCR.myPlayerSlot].PLPoints[0];
-        NewPacket.Objectives    = PDat.Player[myCR.myPlayerSlot].PLObjectives;
-        NewPacket.Hijacks       = PDat.Player[myCR.myPlayerSlot].PLHijacks << 16 | PDat.Player[myCR.myPlayerSlot].PLPersonalRecords[0];
-        NewPacket.Name          = PDat.Player[myCR.myPlayerSlot].PLName;
-    }
-
     if( myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers )
     {
         NewTPacket.Points       = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Points;
@@ -5783,7 +5773,7 @@ final Function UpdateScoreboard( PlayerController PC )
         NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
     }
 
-    if( NewPacket.Name == "" && NewTPacket.Name == "" )
+    if( NewTPacket.Name == "" )
         return;
 
     // Update the packet of myCR for every other CR
@@ -5795,9 +5785,6 @@ final Function UpdateScoreboard( PlayerController PC )
         CR = GetRep( PlayerController(C) );
         if( CR != none && CR.bReceivedRankings )
         {
-            if( NewPacket.Name != "" )
-                CR.ClientUpdateOverallTop( NewPacket, myCR.Rank-1 );
-
             if( NewTPacket.Name != "" )
                 CR.ClientUpdateSoloTop( NewTPacket, myCR.SoloRank-1 );
 
