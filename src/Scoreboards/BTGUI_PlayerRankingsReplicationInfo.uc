@@ -20,6 +20,7 @@ replication
 {
 	reliable if( Role == ROLE_Authority )
 		ClientCleanPlayerRanks,
+		ClientDonePlayerRanks,
 		ClientAddPlayerRank,
 		ClientUpdatePlayerRank;
 }
@@ -45,13 +46,13 @@ simulated event PostBeginPlay()
 // UI hooks
 delegate OnPlayerRankReceived( int index, name categoryName );
 delegate OnPlayerRankUpdated( int index, name categoryName );
+delegate OnPlayerRanksDone( string categoryName, bool bAll );
 
 simulated function QueryPlayerRanks( int pageIndex, name categoryName )
 {
-	local BTClient_ClientReplication CRI;
-
 	CRI = class'BTClient_TrialScoreBoard'.static.GetCRI( Level.GetLocalPlayerController().PlayerReplicationInfo );
 	CRI.ServerRequestPlayerRanks( pageIndex, string(categoryName) );
+
 	CurrentPageIndex = pageIndex;
 	CurrentCategoryName = categoryName;
 }
@@ -64,6 +65,11 @@ simulated function QueryNextPlayerRanks()
 simulated function ClientCleanPlayerRanks()
 {
     PlayerRanks.Length = 0;
+}
+
+simulated function ClientDonePlayerRanks( string categoryName, optional bool bAll )
+{
+	OnPlayerRanksDone( categoryName, bAll );
 }
 
 simulated function ClientAddPlayerRank( sPlayerRank playerRank )

@@ -4,6 +4,7 @@ var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
 var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
 
 var private BTClient_Interaction Inter;
+var editconst bool bIsQuerying;
 
 event Free()
 {
@@ -16,7 +17,10 @@ event InitComponent( GUIController MyController, GUIComponent MyOwner )
 	local BTClient_ClientReplication CRI;
 
 	super.InitComponent( MyController, MyOwner );
+    BackgroundColor = class'BTClient_Config'.default.CTable;
+	RankingsListBox.MyScrollBar.PositionChanged =  InternalOnScroll;
 
+    Inter = GetInter();
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
 	if( CRI == none )
 	{
@@ -24,14 +28,47 @@ event InitComponent( GUIController MyController, GUIComponent MyOwner )
 		return;
 	}
 	CRI.PRRI.OnPlayerRankReceived = InternalOnPlayerRankReceived;
-    BackgroundColor = class'BTClient_Config'.default.CTable;
-    Inter = GetInter();
+	CRI.PRRI.OnPlayerRanksDone = InternalOnPlayerRanksDone;
+    QueryNextPlayerRanks();
 }
 
 function InternalOnPlayerRankReceived( int index, name categoryName )
 {
+	PlayerOwner().ClientMessage("Received a rank packet");
 	RankingsListBox.List.AddedItem();
 	t_WindowTitle.SetCaption( WindowName @ "(" $ RankingsListBox.List.ItemCount $ "/" $ Inter.MRI.PlayersCount $ ")" );
+}
+
+function InternalOnPlayerRanksDone( string categoryName, bool bAll )
+{
+	PlayerOwner().ClientMessage("Query completed");
+	bIsQuerying = bAll; // Don't ever query again if we have received all there is to be received!
+
+	if( !bIsQuerying && !RankingsListBox.MyScrollBar.bVisible )
+	{
+		QueryNextPlayerRanks();
+	}
+}
+
+function InternalOnScroll( int newPos )
+{
+    if( newPos > RankingsListBox.MyScrollBar.ItemCount-15 )
+    {
+        QueryNextPlayerRanks();
+    }
+}
+
+function QueryNextPlayerRanks()
+{
+    local BTClient_ClientReplication CRI;
+
+	PlayerOwner().ClientMessage("Querying next ranks" @ bIsQuerying);
+    if( bIsQuerying )
+    	return;
+
+    bIsQuerying = true;
+    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
+    CRI.PRRI.QueryNextPlayerRanks();
 }
 
 defaultproperties

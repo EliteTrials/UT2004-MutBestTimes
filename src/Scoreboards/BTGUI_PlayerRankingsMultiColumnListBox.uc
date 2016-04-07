@@ -17,24 +17,6 @@ event InitComponent(GUIController MyController, GUIComponent MyOwner)
         RankingLists[RankingLists.Length] = BTGUI_PlayerRankingsMultiColumnList(AddComponent(DefaultListClass));
         RankingLists[RankingLists.Length - 1].Hide();
     }
-
-    QueryNextPlayerRanks();
-}
-
-function InternalOnScroll( int newPos )
-{
-    if( newPos > MyScrollBar.ItemCount-15 )
-    {
-        QueryNextPlayerRanks();
-    }
-}
-
-function QueryNextPlayerRanks()
-{
-    local BTClient_ClientReplication CRI;
-
-    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
-    CRI.PRRI.QueryNextPlayerRanks();
 }
 
 defaultproperties
@@ -63,7 +45,6 @@ defaultproperties
 
     Begin Object Class=GUIVertScrollBar Name=TheScrollbar
         bVisible=false
-        PositionChanged=InternalOnScroll
     End Object
     MyScrollBar=TheScrollbar
 }
