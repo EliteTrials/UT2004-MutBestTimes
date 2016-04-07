@@ -87,15 +87,16 @@ state ReplicateOverallTop
 {
 Begin:
     // Send OverallTop players
-    j = Min( Ranks.OverallTopList.Items.Length, P.MaxRankedPlayers*2 );
-    for( i = 0; i < j && i+(ItemsToSkip-1) < Ranks.OverallTopList.Items.Length; ++ i )
+    j = Min( Ranks.OverallTopList.Items.Length - ItemsToSkip, P.MaxRankedPlayers );
+    for( i = 0; i < j; ++ i )
     {
-        SendOverallTop( i+ItemsToSkip );
+        SendOverallTop( ItemsToSkip + i );
         if( Level.NetMode != NM_Standalone && i % 6 == 0 )
         {
             Sleep( 0.4 );
         }
     }
+    CR.PRRI.ClientDonePlayerRanks(RankingsCategory, j < P.MaxRankedPlayers);
 }
 
 final function SendQuarterlyTop( int index, optional out BTClient_ClientReplication.sQuarterlyPacket QP )
