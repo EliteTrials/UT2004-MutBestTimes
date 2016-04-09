@@ -578,6 +578,10 @@ exec function Race( string playerName )
 
 exec function ToggleRanking()
 {
+    if( bShowRankingTable )
+    {
+        ViewportOwner.GUIController.CloseMenu( true );
+    }
     bShowRankingTable = !bShowRankingTable;
 }
 

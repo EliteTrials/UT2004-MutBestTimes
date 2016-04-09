@@ -12,7 +12,7 @@ struct sPlayerRank
 var() array<sPlayerRank> PlayerRanks;
 
 var() editconst int CurrentPageIndex;
-var() editconst name CurrentCategoryName;
+var() editconst byte RanksId;
 
 var private BTClient_ClientReplication CRI;
 
@@ -38,28 +38,25 @@ simulated event PostBeginPlay()
 
 	if( CRI != none )
 	{
-		CRI.PRRI = self;
+		CRI.Rankings[RanksId] = self;
 	}
 	super.PostBeginPlay();
 }
 
 // UI hooks
-delegate OnPlayerRankReceived( int index, name categoryName );
-delegate OnPlayerRankUpdated( int index, name categoryName );
-delegate OnPlayerRanksDone( string categoryName, bool bAll );
+delegate OnPlayerRankReceived( int index, BTGUI_PlayerRankingsReplicationInfo source );
+delegate OnPlayerRankUpdated( int index, BTGUI_PlayerRankingsReplicationInfo source );
+delegate OnPlayerRanksDone( BTGUI_PlayerRankingsReplicationInfo source, bool bAll );
 
-simulated function QueryPlayerRanks( int pageIndex, name categoryName )
+simulated function QueryPlayerRanks( int pageIndex )
 {
 	CRI = class'BTClient_TrialScoreBoard'.static.GetCRI( Level.GetLocalPlayerController().PlayerReplicationInfo );
-	CRI.ServerRequestPlayerRanks( pageIndex, string(categoryName) );
-
-	CurrentPageIndex = pageIndex;
-	CurrentCategoryName = categoryName;
+	CRI.ServerRequestPlayerRanks( pageIndex, RanksId );
 }
 
 simulated function QueryNextPlayerRanks()
 {
-	QueryPlayerRanks( CurrentPageIndex + 1, CurrentCategoryName );
+	QueryPlayerRanks( ++ CurrentPageIndex );
 }
 
 simulated function ClientCleanPlayerRanks()
@@ -67,26 +64,26 @@ simulated function ClientCleanPlayerRanks()
     PlayerRanks.Length = 0;
 }
 
-simulated function ClientDonePlayerRanks( string categoryName, optional bool bAll )
+simulated function ClientDonePlayerRanks( optional bool bAll )
 {
-	OnPlayerRanksDone( categoryName, bAll );
+	OnPlayerRanksDone( self, bAll );
 }
 
 simulated function ClientAddPlayerRank( sPlayerRank playerRank )
 {
     PlayerRanks[PlayerRanks.Length] = playerRank;
-    OnPlayerRankReceived( PlayerRanks.Length - 1, 'All' );
+    OnPlayerRankReceived( PlayerRanks.Length - 1, self );
 }
 
 simulated function ClientUpdatePlayerRank( sPlayerRank playerRank, byte index )
 {
     PlayerRanks[index] = playerRank;
-    OnPlayerRankUpdated( index, 'All' );
+    OnPlayerRankUpdated( index, self );
 }
 
 defaultproperties
 {
 	MenuClass=class'BTGUI_PlayerRankingsScoreboard'
 	CurrentPageIndex=-1
-	CurrentCategoryName="All"
+	RanksId=0
 }

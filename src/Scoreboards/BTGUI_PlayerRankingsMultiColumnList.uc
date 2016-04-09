@@ -1,7 +1,10 @@
 class BTGUI_PlayerRankingsMultiColumnList extends GUIMultiColumnList;
 
 var private BTClient_ClientReplication myCRI;
-var private BTGUI_PlayerRankingsReplicationInfo myRep;
+var BTGUI_PlayerRankingsReplicationInfo myRep;
+
+// Which rankings replication actor this GUIList should represent.
+var byte RanksId;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -18,7 +21,7 @@ event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
     super.InitComponent(MyController,MyOwner);
     myCRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
-    myRep = myCRI.PRRI;
+    myRep = myCRI.Rankings[RanksId];
 }
 
 function float InternalGetItemHeight( Canvas C )

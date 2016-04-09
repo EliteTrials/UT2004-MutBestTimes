@@ -223,7 +223,8 @@ var bool bAutoPress;
 var bool bPermitBoosting;
 var bool bWantsToWage;
 var int AmountToWage;
-var BTGUI_PlayerRankingsReplicationInfo PRRI;
+
+var BTGUI_PlayerRankingsReplicationInfo Rankings[3];
 
 var /**TEMP*/ string ClientMessage;
 
@@ -283,7 +284,7 @@ delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_C
 delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter );
 
 /** Queries the server for the all time, quarterly or daily player ranks. */
-delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string category );
+delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 
 // UI hooks
 delegate OnAchievementStateReceived( int index );
@@ -592,9 +593,9 @@ final function ServerRequestAchievementsByCategory( string catID )
     OnRequestAchievementsByCategory( PlayerController(Owner), self, catID );
 }
 
-final function ServerRequestPlayerRanks( int pageIndex, optional string category )
+final function ServerRequestPlayerRanks( int pageIndex, optional byte ranksId )
 {
-    OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, category );
+    OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, ranksId );
 }
 
 simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )
