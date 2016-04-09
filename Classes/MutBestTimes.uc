@@ -1014,20 +1014,20 @@ final function InternalOnRequestPlayerItems( PlayerController requester, BTClien
     Spawn( class'BTPlayerItemsReplicator', self ).Initialize( CRI, filter );
 }
 
-final function InternalOnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string category )
+final function InternalOnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId )
 {
     if( !bShowRankings )
         return;
 
-    if( CRI.PRRI == none )
+    if( CRI.Rankings[ranksId] == none )
     {
-        CRI.PRRI = Spawn( class'BTGUI_PlayerRankingsReplicationInfo', requester ); // test
+        CRI.Rankings[ranksId] = Spawn( class'BTGUI_PlayerRankingsReplicationInfo', requester ); // test
     }
 
     if( pageIndex == -1 )
         return;
 
-    StartReplicatorFor( CRI, pageIndex, category ).BeginReplication();
+    StartReplicatorFor( CRI, pageIndex, ranksId ).BeginReplication();
 }
 
 //==============================================================================
@@ -6602,12 +6602,12 @@ final function string MaskToDate( int date )
     return FixedDate$"/"$Right( year, 2 );
 }
 
-final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR, optional int pageIndex, optional string category )
+final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR, optional int pageIndex, optional byte ranksId )
 {
     local BTStatsReplicator replicator;
 
     replicator = Spawn( class'BTStatsReplicator', self );
-    replicator.Initialize( CR, pageIndex, category );
+    replicator.Initialize( CR, pageIndex, ranksId );
     return replicator;
 }
 

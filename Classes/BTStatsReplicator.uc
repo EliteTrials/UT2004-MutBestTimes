@@ -2,47 +2,11 @@ class BTStatsReplicator extends Info;
 
 var private int i, j;
 
-var private BTRanks Ranks;
 var private BTClient_ClientReplication CR;
 var private MutBestTimes P;
 var private int ItemsToSkip;
-var private string RankingsCategory;
-
-/** Returns int A as a color tag. */
-static final preoperator string $( int A )
-{
-    return (Chr( 0x1B ) $ (Chr( Max( byte(A & 0xFF000000), 1 )  ) $ Chr( Max( byte(A & 0x00FF0000), 1 ) ) $ Chr( Max( byte(A & 0x0000FF00), 1 ) )));
-}
-
-final function Initialize( BTClient_ClientReplication client, optional int queriedPageIndex, optional string category )
-{
-    if( client == none )
-        return;
-
-    CR = client;
-    P = MutBestTimes(Owner);
-    Ranks = P.Ranks;
-    ItemsToSkip = queriedPageIndex*P.MaxRankedPlayers;
-    RankingsCategory = category;
-}
-
-final function BeginReplication()
-{
-    switch( RankingsCategory )
-    {
-        case "All":
-            GotoState( 'ReplicateOverallTop' );
-            break;
-
-        case "Monthly":
-            GotoState( 'ReplicateQuarterlyTop' );
-            break;
-
-        case "Daily":
-            GotoState( 'ReplicateDailyTop' );
-            break;
-    }
-}
+var private byte RanksId;
+var private BTRanksList RanksList;
 
 /** Strips all color tags from A. */
 static final preoperator string %( string A )
@@ -62,105 +26,74 @@ static final preoperator string %( string A )
     return A;
 }
 
-final function InitGlobalPacket( int index, optional out BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank )
+/** Returns int A as a color tag. */
+static final preoperator string $( int A )
 {
-    local int playerSlot;
-
-    playerSlot = Ranks.OverallTopList.Items[index];
-    if( playerSlot == CR.myPlayerSlot )
-        playerRank.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
-    else playerRank.Name = P.PDat.Player[playerSlot].PLName;
-
-    playerRank.PlayerId     = playerSlot + 1;
-    playerRank.Points       = P.PDat.Player[playerSlot].PLPoints[0];
-    playerRank.AP           = P.PDat.Player[playerSlot].PLAchiev;
-    playerRank.Hijacks      = P.PDat.Player[playerSlot].RankedRecords.Length << 16 | P.PDat.Player[playerSlot].PLTopRecords[0];
+    return (Chr( 0x1B ) $ (Chr( Max( byte(A & 0xFF000000), 1 )  ) $ Chr( Max( byte(A & 0x00FF0000), 1 ) ) $ Chr( Max( byte(A & 0x0000FF00), 1 ) )));
 }
 
-final function SendOverallTop( int index, optional out BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank )
+final function Initialize( BTClient_ClientReplication client, optional int queriedPageIndex, optional byte queriedRanksId )
 {
-    InitGlobalPacket( index, playerRank );
-    CR.PRRI.ClientAddPlayerRank( playerRank );
+    if( client == none )
+        return;
+
+    CR = client;
+    P = MutBestTimes(Owner);
+    ItemsToSkip = queriedPageIndex*P.MaxRankedPlayers;
+    RanksId = queriedRanksId;
+    switch( RanksId )
+    {
+        case 0:
+            RanksList = P.Ranks.OverallTopList;
+            break;
+
+        case 1:
+            RanksList = P.Ranks.QuarterlyTopList;
+            break;
+
+        case 2:
+            RanksList = P.Ranks.DailyTopList;
+            break;
+    }
 }
 
-state ReplicateOverallTop
+final function BeginReplication()
+{
+    GotoState( 'ReplicateRanks' );
+}
+
+final function SendPlayerRank( int rankIndex )
+{
+    local int playerIndex;
+    local BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank;
+
+    playerIndex = RanksList.Items[rankIndex];
+    if( playerIndex == CR.myPlayerSlot )
+        playerRank.Name = $0xFFFFFF00 $ P.PDat.Player[playerIndex].PLName;
+    else playerRank.Name = P.PDat.Player[playerIndex].PLName;
+
+    playerRank.PlayerId     = playerIndex + 1;
+    playerRank.Points       = P.PDat.Player[playerIndex].PLPoints[RanksId];
+    playerRank.AP           = P.PDat.Player[playerIndex].PLAchiev;
+    playerRank.Hijacks      = P.PDat.Player[playerIndex].RankedRecords.Length << 16 | P.PDat.Player[playerIndex].PLTopRecords[RanksId];
+
+    CR.Rankings[RanksId].ClientAddPlayerRank( playerRank );
+}
+
+state ReplicateRanks
 {
 Begin:
     // Send OverallTop players
-    j = Min( Ranks.OverallTopList.Items.Length - ItemsToSkip, P.MaxRankedPlayers );
+    j = Min( RanksList.Items.Length - ItemsToSkip, P.MaxRankedPlayers );
     for( i = 0; i < j; ++ i )
     {
-        SendOverallTop( ItemsToSkip + i );
+        SendPlayerRank( ItemsToSkip + i );
         if( Level.NetMode != NM_Standalone && i % 6 == 0 )
         {
             Sleep( 0.4 );
         }
     }
-    CR.PRRI.ClientDonePlayerRanks(RankingsCategory, j < P.MaxRankedPlayers);
-}
-
-final function SendQuarterlyTop( int index, optional out BTClient_ClientReplication.sQuarterlyPacket QP )
-{
-    local int playerSlot;
-
-    playerSlot = Ranks.QuarterlyTopList.Items[index];
-    QP.PlayerId     = playerSlot + 1;
-    if( playerSlot == CR.myPlayerSlot )
-        QP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
-    else QP.Name = P.PDat.Player[playerSlot].PLName;
-
-    QP.Points       = P.PDat.Player[playerSlot].PLPoints[1];
-    QP.Records      = P.PDat.Player[playerSlot].PLPersonalRecords[1];
-    // QP.Hijacks      = P.PDat.Player[playerSlot].PLPersonalRecords[1] << 16 | P.PDat.Player[playerSlot].PLTopRecords[1];
-    CR.ClientSendQuarterlyTop( QP );
-}
-
-state ReplicateQuarterlyTop
-{
-Begin:
-    // Send QuarterlyTop players
-    j = Min( Ranks.QuarterlyTopList.Items.Length, P.MaxRankedPlayers );
-    for( i = 0; i < j; ++ i )
-    {
-        SendQuarterlyTop( i+ItemsToSkip );
-        if( Level.NetMode != NM_Standalone && (i+ItemsToSkip) % 6 == 0 )
-        {
-            Sleep( 0.4 );
-        }
-    }
-    Sleep( 1 );
-}
-
-final function SendDailyTop( int index, optional out BTClient_ClientReplication.sDailyPacket DP )
-{
-    local int playerSlot;
-
-    playerSlot = Ranks.DailyTopList.Items[index];
-    DP.PlayerId     = playerSlot + 1;
-    if( playerSlot == CR.myPlayerSlot )
-        DP.Name = $0xFFFFFF00 $ P.PDat.Player[playerSlot].PLName;
-    else DP.Name = P.PDat.Player[playerSlot].PLName;
-
-    DP.Points       = P.PDat.Player[playerSlot].PLPoints[2];
-    DP.Records      = P.PDat.Player[playerSlot].PLPersonalRecords[2];
-    CR.ClientSendDailyTop( DP );
-}
-
-state ReplicateDailyTop
-{
-Begin:
-    // Send DailyTop players
-    j = Min( Ranks.DailyTopList.Items.Length, P.MaxRankedPlayers );
-    for( i = 0; i < j; ++ i )
-    {
-        SendDailyTop( i+ItemsToSkip );
-        if( Level.NetMode != NM_Standalone && (i+ItemsToSkip) % 6 == 0 )
-        {
-            Sleep( 0.4 );
-        }
-    }
-    Sleep( 1 );
-    GotoState( 'ReplicateSoloTop' );
+    CR.Rankings[RanksId].ClientDonePlayerRanks( j < P.MaxRankedPlayers );
 }
 
 state ReplicateSoloTop
