@@ -315,7 +315,7 @@ final function LogTimes( int mapIndex, out array<float> times )
 {
 	local int i;
 
-	times.Length = Min( RDat.Rec[mapIndex].PSRL.Length, MAX_MAP_RECORDS );
+	times.Length = RDat.Rec[mapIndex].PSRL.Length;
 	for( i = 0; i < times.Length; ++ i )
 	{
 		times[i] = loge( loge( RDat.Rec[mapIndex].PSRL[i].SRT ) );
@@ -324,26 +324,28 @@ final function LogTimes( int mapIndex, out array<float> times )
 
 final static function float Mean( out array<float> values )
 {
-    local int i;
+    local int i, j;
     local float mean;
 
-    for( i = 0; i < values.Length; ++ i )
+    j = Min( values.length, MAX_MAP_RECORDS );
+    for( i = 0; i < j; ++ i )
     {
         mean += values[i];
     }
-    return mean/values.Length;
+    return mean/j;
 }
 
 final static function float Std( out array<float> values, float meanValue )
 {
-	local int i;
+	local int i, j;
 	local float variance;
 
-	for( i = 0; i < values.Length; ++ i )
+    j = Min( values.length, MAX_MAP_RECORDS );
+	for( i = 0; i < j; ++ i )
 	{
 		variance += Square( values[i] - meanValue );
 	}
-	return Sqrt( variance/float(values.Length - 1) );
+	return Sqrt( variance/float(j - 1) );
 }
 
 final function CalcRecordPoints( int mapIndex )
@@ -366,7 +368,7 @@ final function CalcRecordPoints( int mapIndex )
 		times[i] = -100.0*((times[i] - timeMean)/timeStd);
 	}
 
-	timeMedian = (times.Length - 1)/2.0;
+	timeMedian = (Min( times.Length, MAX_MAP_RECORDS ) - 1)/2.0;
 	timeMedian = (times[int(timeMedian)] + times[int(timeMedian + 0.5)])/2.0;
 	for( i = 0; i < times.Length; ++ i )
 	{
