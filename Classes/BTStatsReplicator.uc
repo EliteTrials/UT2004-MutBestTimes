@@ -75,7 +75,7 @@ final function SendPlayerRank( int rankIndex )
     playerRank.PlayerId     = playerIndex + 1;
     playerRank.Points       = P.PDat.Player[playerIndex].PLPoints[RanksId];
     playerRank.AP           = P.PDat.Player[playerIndex].PLAchiev;
-    playerRank.Hijacks      = P.PDat.Player[playerIndex].RankedRecords.Length << 16 | P.PDat.Player[playerIndex].PLTopRecords[RanksId];
+    playerRank.Hijacks      = P.PDat.Player[playerIndex].PLRankedRecords[RanksId] << 16 | P.PDat.Player[playerIndex].PLTopRecords[RanksId];
 
     CR.Rankings[RanksId].ClientAddPlayerRank( playerRank );
 }
@@ -88,10 +88,7 @@ Begin:
     for( i = 0; i < j; ++ i )
     {
         SendPlayerRank( ItemsToSkip + i );
-        if( Level.NetMode != NM_Standalone && i % 6 == 0 )
-        {
-            Sleep( 0.4 );
-        }
+        Sleep(0);
     }
     CR.Rankings[RanksId].ClientDonePlayerRanks( j < P.MaxRankedPlayers );
 }

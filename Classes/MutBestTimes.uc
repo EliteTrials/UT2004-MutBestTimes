@@ -1016,12 +1016,30 @@ final function InternalOnRequestPlayerItems( PlayerController requester, BTClien
 
 final function InternalOnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId )
 {
+    local class<BTGUI_PlayerRankingsReplicationInfo> repClass;
+
     if( !bShowRankings )
         return;
 
+    // Initialize the correct replication channel.
     if( CRI.Rankings[ranksId] == none )
     {
-        CRI.Rankings[ranksId] = Spawn( class'BTGUI_PlayerRankingsReplicationInfo', requester ); // test
+        switch( ranksId )
+        {
+            case 0:
+                repClass = class'BTGUI_PlayerRankingsReplicationInfo';
+                break;
+
+            case 1:
+                repClass = class'BT_QuarterlyPlayerRankingsState';
+                break;
+
+            case 2:
+                repClass = class'BT_DailyPlayerRankingsState';
+                break;
+
+        }
+        CRI.Rankings[ranksId] = Spawn( repClass, requester );
     }
 
     if( pageIndex == -1 )

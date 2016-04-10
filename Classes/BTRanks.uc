@@ -47,12 +47,13 @@ static final preoperator string %( string A )
 /** Caches the awarded points for every map's times. */
 final function CacheRecords()
 {
-    local int mapIndex;
+    local int mapIndex, j;
     // local float time1;
 
     // Clock( time1 );
     BT.MRI.RecordsCount = 0;
-    for( mapIndex = 0; mapIndex < RDat.Rec.Length; ++ mapIndex )
+    j = RDat.Rec.Length;
+    for( mapIndex = 0; mapIndex < j; ++ mapIndex )
     {
     	if( !RDat.Rec[mapIndex].bMapIsActive && !BT.bDebugMode )
     		continue;
@@ -140,14 +141,17 @@ final function CachePlayers()
     PDat.TotalActivePlayersCount = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        // Skips most players that are inactive, as this is the most common case.
-        if( PDat.Player[i].LastPlayedDate == 0 )
-            continue;
-
         // Skip inactive players.
-        RDat.GetCompactDate( PDat.Player[i].LastPlayedDate, ly, lm, ld );
-        if( BT.GetDaysSince( ly, lm, ld ) > BT.DaysCountToConsiderPlayerInactive )
-            continue;
+        if( BT.DaysCountToConsiderPlayerInactive != 0 )
+        {
+            // Skips most players that are inactive, as this is the most common case.
+            if( PDat.Player[i].LastPlayedDate == 0 )
+                continue;
+
+            RDat.GetCompactDate( PDat.Player[i].LastPlayedDate, ly, lm, ld );
+            if( BT.GetDaysSince( ly, lm, ld ) > BT.DaysCountToConsiderPlayerInactive )
+                continue;
+        }
 
         PDat.Player[i].bIsActive = true;
         CachePlayer( i, PDat.Player[i].Records, PDat.Player[i].RankedRecords );
@@ -160,89 +164,54 @@ final function CachePlayers()
 final function CachePlayer( int playerSlot, out array<int> records, out array<int> rankedRecords )
 {
 	local int mapIndex, recordIndex, mapIndex2, recordIndex2;
-    local int i;
-    local int numRankedRecords;
+    local int i, ref;
+    local float p;
 
     PDat.Player[playerSlot].PLPoints[0] = 0;
     PDat.Player[playerSlot].PLPoints[1] = 0;
     PDat.Player[playerSlot].PLPoints[2] = 0;
 
-	for( i = 0; i < records.Length; ++ i )
-	{
-    	mapIndex = records[i] >> 16;
-		recordIndex = records[i] & 0x0000FFFF;
-
-        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, false );
-        if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
-        	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1] ) // Monthly
-        {
-            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1, false );
-            if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
-            	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1]
-            	&& Level.Day == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] )
-            {
-            	CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2, false );
-            }
-        }
-	}
-
-    numRankedRecords = Min( rankedRecords.Length, MAX_MAP_RECORDS );
-    for( i = 0; i < numRankedRecords; ++ i )
+    for( i = 0; i < rankedRecords.Length; ++ i )
     {
         mapIndex = rankedRecords[i] >> 16;
         recordIndex = rankedRecords[i] & 0x0000FFFF;
 
         // All time
-        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, true );
+        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, i < MAX_MAP_RECORDS );
         if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
         	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1] ) // Monthly
         {
             CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1, true );
             if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
-            	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1]
-            	&& Level.Day == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] )
+                && Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1]
+                && Level.Day == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] )
             {
             	CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2, true );
             }
         }
     }
 
-    if( PDat.Player[playerSlot].PLRankedRecords[0] >= MIN_PLAYER_RECORDS )
+    for( i = 0; i < 3; ++ i )
     {
-    	PDat.Player[playerSlot].PLPoints[0] = (numRankedRecords - 1)/2.0;
+        if( PDat.Player[playerSlot].RankedRecords.Length == 0
+            || (i == 0 && PDat.Player[playerSlot].PLRankedRecords[i] < MIN_PLAYER_RECORDS)
+            || (i > 0 && PDat.Player[playerSlot].PLRankedRecords[i] < 1) )
+        {
+            PDat.Player[playerSlot].PLPoints[i] = 0;
+            continue;
+        }
 
-       	mapIndex = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0])] >> 16;
-        recordIndex = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0])] & 0x0000FFFF;
+    	p = (Min( PDat.Player[playerSlot].PLRankedRecords[i], MAX_MAP_RECORDS ) - 1)/2.0;
 
-        mapIndex2 = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0] + 0.5)] >> 16;
-        recordIndex2 = PDat.Player[playerSlot].RankedRecords[int(PDat.Player[playerSlot].PLPoints[0] + 0.5)] & 0x0000FFFF;
+        ref = PDat.Player[playerSlot].RankedRecords[int(p)];
+       	mapIndex = ref >> 16;
+        recordIndex = ref & 0x0000FFFF;
 
-		PDat.Player[playerSlot].PLPoints[0] = (RDat.Rec[mapIndex].PSRL[recordIndex].Points + RDat.Rec[mapIndex2].PSRL[recordIndex2].Points)/2.0;
+        ref = PDat.Player[playerSlot].RankedRecords[int(p + 0.5)];
+        mapIndex2 = ref >> 16;
+        recordIndex2 = ref & 0x0000FFFF;
 
-	   	// PDat.Player[playerSlot].PLPoints[0] /= PDat.Player[playerSlot].PLRankedRecords[0];
-   	    if( PDat.Player[playerSlot].PLRankedRecords[1] >= MIN_PLAYER_RECORDS )
-	    {
-		   	PDat.Player[playerSlot].PLPoints[1] /= PDat.Player[playerSlot].PLRankedRecords[1];
-   	   	    if( PDat.Player[playerSlot].PLRankedRecords[2] >= MIN_PLAYER_RECORDS )
-		    {
-			   	PDat.Player[playerSlot].PLPoints[2] /= PDat.Player[playerSlot].PLRankedRecords[2];
-		    }
-		    else
-		    {
-			   	PDat.Player[playerSlot].PLPoints[2] = 0;
-		    }
-	    }
-	    else
-	    {
-		   	PDat.Player[playerSlot].PLPoints[1] = 0;
-		   	PDat.Player[playerSlot].PLPoints[2] = 0;
-	    }
-    }
-    else
-    {
-	   	PDat.Player[playerSlot].PLPoints[0] = 0;
-	   	PDat.Player[playerSlot].PLPoints[1] = 0;
-	   	PDat.Player[playerSlot].PLPoints[2] = 0;
+		PDat.Player[playerSlot].PLPoints[i] = (RDat.Rec[mapIndex].PSRL[recordIndex].Points + RDat.Rec[mapIndex2].PSRL[recordIndex2].Points)/2.0;
     }
 }
 
@@ -251,11 +220,9 @@ private function CachePlayerRecord( int playerSlot, int mapIndex, int recordInde
 	if( bAddPoints )
 	{
     	PDat.Player[playerSlot].PLPoints[listIndex] += RDat.Rec[mapIndex].PSRL[recordIndex].Points;
-    	++ PDat.Player[playerSlot].PLRankedRecords[listIndex];
-    	return;
-	}
+    }
 
-    ++ PDat.Player[playerSlot].PLPersonalRecords[listIndex];
+	++ PDat.Player[playerSlot].PLRankedRecords[listIndex];
     // If the personal best time equals that of the #1 ranked time then it counts as Top Record,
     // - i.e. tied times with the best player are considered #1 as well!
     if( RDat.Rec[mapIndex].PSRL[recordIndex].SRT == RDat.Rec[mapIndex].PSRL[0].SRT )
@@ -325,7 +292,7 @@ final function CalcTopLists()
     QuarterlyTopList.RanksTable = 1;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[QuarterlyTopList.RanksTable] < MIN_PLAYER_RECORDS )
+        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[QuarterlyTopList.RanksTable] < 1 )
             continue;
 
         QuarterlyTopList.Items[QuarterlyTopList.Items.Length] = i;
@@ -336,7 +303,7 @@ final function CalcTopLists()
     DailyTopList.RanksTable = 2;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
-        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[DailyTopList.RanksTable] < MIN_PLAYER_RECORDS )
+        if( !PDat.Player[i].bIsActive || PDat.Player[i].PLRankedRecords[DailyTopList.RanksTable] < 1 )
             continue;
 
         DailyTopList.Items[DailyTopList.Items.Length] = i;
