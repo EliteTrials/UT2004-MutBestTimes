@@ -12,23 +12,6 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 //==============================================================================
 // Structs
 
-// Player Rankings
-struct sDailyPacket
-{
-    var int PlayerId;
-    var string name;
-    var float Points;
-    var int Records;
-};
-
-struct sQuarterlyPacket
-{
-    var int PlayerId;
-    var string name;
-    var float Points;
-    var int Records;
-};
-
 // Top Solo Rankings
 struct sSoloPacket
 {
@@ -133,8 +116,6 @@ var(DEBUG) bool bReceivedAchievementCategories;
 // REPLICATED VARIABLES
 var bool bAllowDodgePerk;
 
-var(DEBUG) array<sDailyPacket> DailyTop;
-var(DEBUG) array<sQuarterlyPacket> QuarterlyTop;
 var(DEBUG) array<sSoloPacket> SoloTop;
 
 // Personal OverallTop for people not in the best of the top solo rankings list e.g. 25
@@ -243,10 +224,6 @@ replication
         InitServerSpawnTime;
 
     reliable if( Role == ROLE_Authority )
-        // Rankings scoreboard
-        ClientSendDailyTop, ClientUpdateDailyTop, ClientCleanDailyTop,
-        ClientSendQuarterlyTop, ClientUpdateQuarterlyTop, ClientCleanQuarterlyTop,
-
         // Solo scoreboard
         ClientSendSoloTop, ClientUpdateSoloTop, ClientCleanSoloTop,
 
@@ -287,11 +264,10 @@ delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplic
 delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 
 // UI hooks
+delegate OnClientNotify( string message, byte ranksId );
+
 delegate OnAchievementStateReceived( int index );
 delegate OnAchievementCategoryReceived( int index );
-
-delegate OnPlayerRankReceived( int index, name categoryName );
-delegate OnPlayerRankUpdated( int index, name categoryName );
 
 delegate OnPlayerItemReceived( int index );
 delegate OnPlayerItemRemoved( int index );
@@ -480,54 +456,6 @@ simulated function ClientSpawned()
 simulated function ClientSendConsoleMessage( coerce string Msg )
 {
     PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
-}
-
-simulated function ClientCleanQuarterlyTop()
-{
-    QuarterlyTop.Length = 0;
-}
-
-simulated function ClientSendQuarterlyTop( sQuarterlyPacket APacket )
-{
-    local int j;
-
-    j = QuarterlyTop.Length;
-    QuarterlyTop.Length = j+1;
-    QuarterlyTop[j] = APacket;
-    OnPlayerRankReceived( j, 'Quarterly' );
-}
-
-simulated function ClientUpdateQuarterlyTop( sQuarterlyPacket APacket, byte Slot )
-{
-    if( Slot > QuarterlyTop.Length-1 )
-        return;
-
-    QuarterlyTop[Slot] = APacket;
-    OnPlayerRankReceived( Slot, 'Quarterly' );
-}
-
-simulated function ClientCleanDailyTop()
-{
-    DailyTop.Length = 0;
-}
-
-simulated function ClientSendDailyTop( sDailyPacket APacket )
-{
-    local int j;
-
-    j = DailyTop.Length;
-    DailyTop.Length = j+1;
-    DailyTop[j] = APacket;
-    OnPlayerRankReceived( j, 'Daily' );
-}
-
-simulated function ClientUpdateDailyTop( sDailyPacket APacket, byte Slot )
-{
-    if( Slot > DailyTop.Length-1 )
-        return;
-
-    DailyTop[Slot] = APacket;
-    OnPlayerRankUpdated( Slot, 'Quarterly' );
 }
 
 simulated function ClientCleanSoloTop()

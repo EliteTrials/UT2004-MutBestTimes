@@ -1,28 +1,18 @@
 class BTGUI_ScoreboardReplicationInfo extends ReplicationInfo;
 
-var() const class<FloatingWindow> MenuClass;
+var protected BTClient_ClientReplication CRI;
 
 simulated event PostBeginPlay()
 {
 	super.PostBeginPlay();
 	if( Level.NetMode != NM_DedicatedServer )
 	{
-		OpenMenu();
+		CRI = class'BTClient_ClientReplication'.static.GetRep( Level.GetLocalPlayerController() );
 	}
-}
-
-simulated function OpenMenu()
-{
-	local PlayerController PC;
-
-	PC = Level.GetLocalPlayerController();
-	if( PC == none )
+	else
 	{
-		Destroy();
-		return;
+		CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerController(Owner) );
 	}
-
-	PC.ClientOpenMenu( string(MenuClass), false );
 }
 
 defaultproperties

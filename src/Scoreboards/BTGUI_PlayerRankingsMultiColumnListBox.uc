@@ -1,32 +1,36 @@
 class BTGUI_PlayerRankingsMultiColumnListBox extends GUIMultiColumnListBox;
 
-var const array<string> RankingRangeIds;
-var array<BTGUI_PlayerRankingsMultiColumnList> RankingLists;
+var BTGUI_PlayerRankingsMultiColumnList RankingLists[3];
 
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
-    local int i;
-
 	DefaultListClass = string(class'BTGUI_PlayerRankingsMultiColumnList');
-    super.InitComponent(MyController,MyOwner);
+    super.InitComponent( MyController, MyOwner );
 
     // Skip first list
-    RankingLists[RankingLists.Length] = BTGUI_PlayerRankingsMultiColumnList(List);
-    RankingLists[RankingLists.Length - 1].RanksId = 0;
-    for( i = 1; i < RankingRangeIds.Length; ++ i )
+    RankingLists[0] = BTGUI_PlayerRankingsMultiColumnList(List);
+}
+
+final function SwitchRankings( byte newRanksId, BTGUI_PlayerRankingsReplicationInfo source )
+{
+    List.Hide();
+    if( RankingLists[newRanksId] == none )
     {
-        RankingLists[RankingLists.Length] = BTGUI_PlayerRankingsMultiColumnList(AddComponent(DefaultListClass));
-        RankingLists[RankingLists.Length - 1].RanksId = i;
-        RankingLists[RankingLists.Length - 1].Hide();
+        RankingLists[newRanksId] = BTGUI_PlayerRankingsMultiColumnList(AddComponent(DefaultListClass));
     }
+    else
+    {
+        AppendComponent( RankingLists[newRanksId] );
+    }
+    RankingLists[newRanksId].RanksId = newRanksId;
+    RankingLists[newRanksId].Rankings = source;
+
+    RemoveComponent( List );
+    InitBaseList( RankingLists[newRanksId] );
 }
 
 defaultproperties
 {
-    RankingRangeIds(0)="All"
-    RankingRangeIds(1)="Monthly"
-    RankingRangeIds(2)="Daily"
-
     DefaultListClass="" // Manually initialized in InitComponent.
     StyleName="NoBackground"
 

@@ -26,21 +26,6 @@ simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationIn
     return none;
 }
 
-simulated static function BTGUI_ScoreboardReplicationInfo GetBoardRep( Actor worldSource )
-{
-	local BTGUI_ScoreboardReplicationInfo myRep;
-
-	foreach worldSource.DynamicActors( class'BTGUI_ScoreboardReplicationInfo', myRep )
-	{
-		if( myRep.MenuClass == default.class )
-		{
-			return myRep;
-		}
-	}
-	return none;
-}
-
-
 function AddSystemMenu()
 {
 	local eFontScale tFontScale;
@@ -96,10 +81,10 @@ defaultproperties
 	i_FrameBG=FloatingFrameBackground
 
     Begin Object Class=GUIHeader Name=TitleBar
-        WinWidth=0.980000
+        WinWidth=0.87
         WinHeight=0.034286
-        WinLeft=0.010000
-        WinTop=0.010000
+        WinLeft=0.12
+        WinTop=0.01
         RenderWeight=0.1
         FontScale=FNS_Small
         Justification=TXTA_Left

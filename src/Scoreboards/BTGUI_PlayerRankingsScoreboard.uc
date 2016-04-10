@@ -1,5 +1,8 @@
 class BTGUI_PlayerRankingsScoreboard extends BTGUI_ScoreboardBase;
 
+var const array<string> RankingCategories;
+
+var automated GUIComboBox RankingsCombo;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
 var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
 
@@ -12,67 +15,139 @@ event Free()
 	Inter = none;
 }
 
-event InitComponent( GUIController MyController, GUIComponent MyOwner )
+event InitComponent( GUIController myController, GUIComponent myOwner )
 {
-	local BTClient_ClientReplication CRI;
 	local int i;
 
-	super.InitComponent( MyController, MyOwner );
+	super.InitComponent( myController, myOwner );
     BackgroundColor = class'BTClient_Config'.default.CTable;
 	RankingsListBox.MyScrollBar.PositionChanged =  InternalOnScroll;
+    RankingsCombo.Edit.bAlwaysNotify = true;
+    RankingsCombo.Edit.bReadOnly = true;
+  	RankingsCombo.Edit.Style = Controller.GetStyle("BTEditBox", RankingsCombo.Edit.FontScale);
+    RankingsCombo.MyShowListBtn.Style = Controller.GetStyle("BTButton", RankingsCombo.MyShowListBtn.FontScale);
+    RankingsCombo.List.Style = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
+    RankingsCombo.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
 
     Inter = GetInter();
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-	if( CRI == none )
+	for( i = 0; i < RankingCategories.Length; ++ i )
 	{
-		Warn("Couldn't find a CRI for the current local player!");
-		return;
+	    RankingsCombo.AddItem( RankingCategories[i], none, string(i) );
 	}
+}
 
-	for( i = 0; i < RankingsListBox.RankingLists.Length; ++ i )
-	{
-		CRI.Rankings[i].OnPlayerRankReceived = InternalOnPlayerRankReceived;
-		CRI.Rankings[i].OnPlayerRanksDone = InternalOnPlayerRanksDone;
-	}
+event Opened( GUIComponent sender )
+{
+	local BTClient_ClientReplication CRI;
+
+	super.Opened( sender );
+
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    if( CRI.Rankings[GetCurrentRanksId()] == none )
+    {
+    	RequestReplicationChannels();
+    }
+}
+
+function RequestReplicationChannels()
+{
+	local BTClient_ClientReplication CRI;
+	local byte ranksId;
+
+	ranksId = GetCurrentRanksId();
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    CRI.OnClientNotify = InternalOnClientNotify;
+    CRI.ServerRequestPlayerRanks( -1, ranksId ); // Initialize replication channels.
+	// PlayerOwner().ClientMessage("Requesting channel" @ ranksId);
+}
+
+function QueryNextPlayerRanks()
+{
+	local BTClient_ClientReplication CRI;
+
+	// PlayerOwner().ClientMessage("Querying next ranks" @ bIsQuerying);
+    if( bIsQuerying )
+    	return;
+
+    bIsQuerying = true;
+    RankingsCombo.DisableMe();
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    CRI.Rankings[GetCurrentRanksId()].QueryNextPlayerRanks();;
+}
+
+final function byte GetCurrentRanksId()
+{
+	return byte(RankingsCombo.GetExtra());
+}
+
+// Wait for the ready event, before we request ranks.
+function InternalOnClientNotify( string message, byte ranksId )
+{
+	local BTClient_ClientReplication CRI;
+
+	// PlayerOwner().ClientMessage("Received notification" @ message @ ranksId);
+	if( message != "Ready" )
+		return;
+
+	// Start receiving updates.
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+	CRI.Rankings[ranksId].OnPlayerRankReceived = InternalOnPlayerRankReceived;
+	CRI.Rankings[ranksId].OnPlayerRanksDone = InternalOnPlayerRanksDone;
+	RankingsListBox.SwitchRankings( ranksId, CRI.Rankings[ranksId] );
     QueryNextPlayerRanks();
 }
 
-final function BTGUI_PlayerRankingsMultiColumnList GetRankingsListFor( BTGUI_PlayerRankingsReplicationInfo source )
+function InternalOnChangeRankingsCategory( GUIComponent sender )
 {
-	local int i;
+    local BTGUI_PlayerRankingsMultiColumnList list;
+	local BTClient_ClientReplication CRI;
+	local byte ranksId;
 
-	for( i = 0; i < RankingsListBox.RankingLists.Length; ++ i )
+	bIsQuerying = false; // renable querying
+	ranksId = GetCurrentRanksId();
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+	if( CRI.Rankings[ranksId] == none )
 	{
-		if( RankingsListBox.RankingLists[i].myRep == source )
-		{
-			return RankingsListBox.RankingLists[i];
-		}
+		// PlayerOwner().ClientMessage("Requesting new rankings channel" @ ranksId);
+    	CRI.OnClientNotify = InternalOnClientNotify;
+    	CRI.ServerRequestPlayerRanks( -1, ranksId ); // Initialize replication channels.
+    	return;
 	}
-	return none;
+	RankingsListBox.SwitchRankings( ranksId, CRI.Rankings[ranksId] );
+
+    list = RankingsListBox.RankingLists[ranksId];
+    t_WindowTitle.SetCaption(
+        WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
+        @ Inter.MRI.PlayersCount
+    );
 }
 
 function InternalOnPlayerRankReceived( int index, BTGUI_PlayerRankingsReplicationInfo source )
 {
 	local BTGUI_PlayerRankingsMultiColumnList list;
 
-	PlayerOwner().ClientMessage("Received a rank packet");
-	list = GetRankingsListFor( source );
+	// PlayerOwner().ClientMessage("Received a rank packet");
+	list = RankingsListBox.RankingLists[source.RanksId];
 	if( list == none )
 	{
 		Warn("Received a rank for a non existing rankings list!");
 		return;
 	}
-	List.AddedItem();
+	list.AddedItem();
 	if( Inter == none ) // None once this menu is reopened :<?
     	Inter = GetInter();
 
-	t_WindowTitle.SetCaption( WindowName @ "(" $ List.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of" @ Inter.MRI.PlayersCount );
+	t_WindowTitle.SetCaption(
+		WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
+		@ Inter.MRI.PlayersCount
+	);
 }
 
 function InternalOnPlayerRanksDone( BTGUI_PlayerRankingsReplicationInfo source, bool bAll )
 {
-	PlayerOwner().ClientMessage("Query completed");
+	// PlayerOwner().ClientMessage("Query completed");
 	bIsQuerying = bAll; // Don't ever query again if we have received all there is to be received!
+    RankingsCombo.EnableMe();
 
 	if( !bIsQuerying && !RankingsListBox.MyScrollBar.bVisible )
 	{
@@ -88,24 +163,31 @@ function InternalOnScroll( int newPos )
     }
 }
 
-function QueryNextPlayerRanks()
-{
-	PlayerOwner().ClientMessage("Querying next ranks" @ bIsQuerying);
-    if( bIsQuerying )
-    	return;
-
-    bIsQuerying = true;
-    BTGUI_PlayerRankingsMultiColumnList(RankingsListBox.List).myRep.QueryNextPlayerRanks();
-}
-
 defaultproperties
 {
+    RankingCategories(0)="All Time"
+    RankingCategories(1)="Monthly"
+    RankingCategories(2)="Daily"
+
 	WinLeft=0.00
 	WinTop=0.50
 	WinWidth=0.2
 	WinHeight=0.60
 	WindowName="Player Ranks"
 	bPersistent=true
+
+    Begin Object class=GUIComboBox Name=RanksComboBox
+        WinWidth=0.1
+        WinHeight=0.034286
+        WinLeft=0.01
+        WinTop=0.01
+        bScaleToParent=true
+        bBoundToParent=true
+        FontScale=FNS_Small
+        bIgnoreChangeWhenTyping=true
+        OnChange=InternalOnChangeRankingsCategory
+    End Object
+    RankingsCombo=RanksComboBox
 
     Begin Object Class=BTGUI_PlayerRankingsMultiColumnListBox Name=ItemsListBox
         WinWidth=0.68

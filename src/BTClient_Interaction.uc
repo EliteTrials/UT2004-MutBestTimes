@@ -578,11 +578,13 @@ exec function Race( string playerName )
 
 exec function ToggleRanking()
 {
+    bShowRankingTable = !bShowRankingTable;
     if( bShowRankingTable )
     {
-        ViewportOwner.GUIController.CloseMenu( true );
+        bShowRankingTable = ViewPortOwner.GUIController.OpenMenu( string(class'BTGUI_PlayerRankingsScoreboard') );
+        return;
     }
-    bShowRankingTable = !bShowRankingTable;
+    ViewportOwner.GUIController.CloseMenu( true );
 }
 
 exec function SpeedRun()
@@ -606,25 +608,13 @@ exec function TogglePersonalTimer()
     Options.SaveConfig();
 }
 
-final function OpenRankingsMenu()
-{
-    local BTGUI_PlayerRankingsReplicationInfo ranksRep;
-
-    foreach ViewportOwner.Actor.DynamicActors( class'BTGUI_PlayerRankingsReplicationInfo', ranksRep )
-    {
-        ranksRep.OpenMenu();
-        return;
-    }
-    MRI.CR.ServerRequestPlayerRanks( -1 );
-}
-
 function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
 {
     local string S;
 
     S = Caps( ViewportOwner.Actor.ConsoleCommand( "KEYBINDING"@Chr( Key ) ) );
     if( InStr( S, "SHOWALL" ) != -1 )
-        return True;        // Ignore Input!.
+        return true;        // Ignore Input!.
 
     // Wait until the game's state is completely replicated.
     if( MRI.CR == none )
@@ -643,12 +633,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             if( MRI.CR.Text.Length > 0 )
                 MRI.CR.Text.Length = 0;
             else ToggleRanking();
-
-            if( bShowRankingTable )
-            {
-                OpenRankingsMenu();
-            }
-            return False;
+            return false;
         }
 
         if( Key == IK_Escape || (MRI.CR.Text.Length > 0 && Key == IK_Enter) )
@@ -656,14 +641,14 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             if( MRI.CR.Text.Length > 0 )
             {
                 MRI.CR.Text.Length = 0;
-                return True;
+                return true;
             }
 
             if( bShowRankingTable )
             {
-                bShowRankingTable = False;
+                bShowRankingTable = false;
                 TablePage = -1;
-                return True;
+                return true;
             }
             return false;
         }
@@ -696,7 +681,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                         {
                             SelectedIndex = 0;
                         }
-                        return True;
+                        return true;
                     }
                     else if( Key == IK_Up )
                     {
@@ -704,12 +689,12 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                         {
                             SelectedIndex = MRI.CR.SoloTop.Length - 1;
                         }
-                        return True;
+                        return true;
                     }
                     else if( Key == IK_Enter )
                     {
                         ViewportOwner.Actor.ServerMutate( "ShowPlayerInfo" @ MRI.CR.SoloTop[SelectedIndex].PlayerId );
-                        return True;
+                        return true;
                     }
                 }
             }
@@ -1741,19 +1726,6 @@ final function RenderTables( Canvas C )
 {
     if( GetRecordsCount() > 0 ){
         RenderRecordsTable( C );
-    }
-}
-
-// Top players count
-final function int GetRankingsCount()
-{
-    if( Options.GlobalSort == 1 )
-    {
-        return MRI.CR.QuarterlyTop.Length;
-    }
-    else if( Options.GlobalSort == 2 )
-    {
-        return MRI.CR.DailyTop.Length;
     }
 }
 

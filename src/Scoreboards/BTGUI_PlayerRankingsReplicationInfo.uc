@@ -11,10 +11,8 @@ struct sPlayerRank
 
 var() array<sPlayerRank> PlayerRanks;
 
-var() editconst int CurrentPageIndex;
-var() editconst byte RanksId;
-
-var private BTClient_ClientReplication CRI;
+var editconst int CurrentPageIndex;
+var() const byte RanksId;
 
 replication
 {
@@ -27,20 +25,25 @@ replication
 
 simulated event PostBeginPlay()
 {
-	if( Level.NetMode != NM_DedicatedServer )
-	{
-		CRI = class'BTClient_ClientReplication'.static.GetRep( Level.GetLocalPlayerController() );
-	}
-	else
-	{
-		CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerController(Owner) );
-	}
+	super.PostBeginPlay();
 
 	if( CRI != none )
 	{
 		CRI.Rankings[RanksId] = self;
+		if( Level.NetMode == NM_Standalone )
+		{
+    		CRI.OnClientNotify( "Ready", RanksId );
+		}
 	}
-	super.PostBeginPlay();
+}
+
+simulated event PostNetBeginPlay()
+{
+	super.PostNetBeginPlay();
+	if( CRI != none && Level.NetMode != NM_DedicatedServer )
+	{
+		CRI.OnClientNotify( "Ready", RanksId );
+	}
 }
 
 // UI hooks
@@ -50,7 +53,6 @@ delegate OnPlayerRanksDone( BTGUI_PlayerRankingsReplicationInfo source, bool bAl
 
 simulated function QueryPlayerRanks( int pageIndex )
 {
-	CRI = class'BTClient_TrialScoreBoard'.static.GetCRI( Level.GetLocalPlayerController().PlayerReplicationInfo );
 	CRI.ServerRequestPlayerRanks( pageIndex, RanksId );
 }
 
@@ -83,7 +85,6 @@ simulated function ClientUpdatePlayerRank( sPlayerRank playerRank, byte index )
 
 defaultproperties
 {
-	MenuClass=class'BTGUI_PlayerRankingsScoreboard'
 	CurrentPageIndex=-1
 	RanksId=0
 }
