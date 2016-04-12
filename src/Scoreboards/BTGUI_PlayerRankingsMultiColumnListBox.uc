@@ -32,8 +32,6 @@ final function SwitchRankings( byte newRanksId, BTGUI_PlayerRankingsReplicationI
 defaultproperties
 {
     DefaultListClass="" // Manually initialized in InitComponent.
-    StyleName="NoBackground"
-
     ColumnHeadings(0)="#"
     ColumnHeadings(1)="AP"
     ColumnHeadings(2)="ELO"

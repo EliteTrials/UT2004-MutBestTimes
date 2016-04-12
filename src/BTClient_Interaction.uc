@@ -581,7 +581,7 @@ exec function ToggleRanking()
     bShowRankingTable = !bShowRankingTable;
     if( bShowRankingTable )
     {
-        bShowRankingTable = ViewPortOwner.GUIController.OpenMenu( string(class'BTGUI_PlayerRankingsScoreboard') );
+        bShowRankingTable = ViewPortOwner.GUIController.OpenMenu( string(class'BTGUI_RankingsMenu') );
         return;
     }
     ViewportOwner.GUIController.CloseMenu( true );
@@ -977,6 +977,8 @@ Event Initialized()
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2EditBox', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2SectionHeaderTop', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Button', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_TabButton', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_CloseButton', true );
 }
 
 static final function string ReverseString( string s )

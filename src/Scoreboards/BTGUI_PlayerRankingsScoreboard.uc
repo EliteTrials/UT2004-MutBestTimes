@@ -1,13 +1,38 @@
-class BTGUI_PlayerRankingsScoreboard extends BTGUI_ScoreboardBase;
+class BTGUI_PlayerRankingsScoreboard extends UT2K4TabPanel;
 
 var const array<string> RankingCategories;
 
 var automated GUIComboBox RankingsCombo;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
-var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
 
 var private BTClient_Interaction Inter;
 var private editconst bool bIsQuerying;
+
+simulated final function BTClient_Interaction GetInter()
+{
+    local int i;
+
+    for( i = 0; i < Controller.ViewportOwner.LocalInteractions.Length; ++ i )
+    {
+        if( Controller.ViewportOwner.LocalInteractions[i].Class == class'BTClient_Interaction' )
+            return BTClient_Interaction(Controller.ViewportOwner.LocalInteractions[i]);
+    }
+    return none;
+}
+
+simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+{
+    local LinkedReplicationInfo LRI;
+
+    for( LRI = PRI.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+    {
+        if( BTClient_ClientReplication(LRI) != None )
+        {
+            return BTClient_ClientReplication(LRI);
+        }
+    }
+    return none;
+}
 
 event Free()
 {
@@ -20,8 +45,7 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 	local int i;
 
 	super.InitComponent( myController, myOwner );
-    BackgroundColor = class'BTClient_Config'.default.CTable;
-	RankingsListBox.MyScrollBar.PositionChanged =  InternalOnScroll;
+	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
     RankingsCombo.Edit.bAlwaysNotify = true;
     RankingsCombo.Edit.bReadOnly = true;
   	RankingsCombo.Edit.Style = Controller.GetStyle("BTEditBox", RankingsCombo.Edit.FontScale);
@@ -47,6 +71,11 @@ event Opened( GUIComponent sender )
     {
     	RequestReplicationChannels();
     }
+}
+
+function InitPanel()
+{
+    MyButton.Style = Controller.GetStyle("BTTabButton", MyButton.FontScale);
 }
 
 function RequestReplicationChannels()
@@ -116,10 +145,10 @@ function InternalOnChangeRankingsCategory( GUIComponent sender )
 	RankingsListBox.SwitchRankings( ranksId, CRI.Rankings[ranksId] );
 
     list = RankingsListBox.RankingLists[ranksId];
-    t_WindowTitle.SetCaption(
-        WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
-        @ Inter.MRI.PlayersCount
-    );
+    // t_WindowTitle.SetCaption(
+    //     WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
+    //     @ Inter.MRI.PlayersCount
+    // );
 }
 
 function InternalOnPlayerRankReceived( int index, BTGUI_PlayerRankingsReplicationInfo source )
@@ -137,10 +166,10 @@ function InternalOnPlayerRankReceived( int index, BTGUI_PlayerRankingsReplicatio
 	if( Inter == none ) // None once this menu is reopened :<?
     	Inter = GetInter();
 
-	t_WindowTitle.SetCaption(
-		WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
-		@ Inter.MRI.PlayersCount
-	);
+	// t_WindowTitle.SetCaption(
+	// 	WindowName @ "(" $ list.ItemCount $ "/" $ Inter.MRI.RankedPlayersCount $ ") out of"
+	// 	@ Inter.MRI.PlayersCount
+	// );
 }
 
 function InternalOnPlayerRanksDone( BTGUI_PlayerRankingsReplicationInfo source, bool bAll )
@@ -169,15 +198,8 @@ defaultproperties
     RankingCategories(1)="Monthly"
     RankingCategories(2)="Daily"
 
-	WinLeft=0.00
-	WinTop=0.50
-	WinWidth=0.2
-	WinHeight=0.60
-	WindowName="Player Ranks"
-	bPersistent=true
-
     Begin Object class=GUIComboBox Name=RanksComboBox
-        WinWidth=0.1
+        WinWidth=0.3
         WinHeight=0.034286
         WinLeft=0.01
         WinTop=0.01
@@ -190,9 +212,9 @@ defaultproperties
     RankingsCombo=RanksComboBox
 
     Begin Object Class=BTGUI_PlayerRankingsMultiColumnListBox Name=ItemsListBox
-        WinWidth=0.68
-        WinHeight=0.90
-        WinLeft=0.01
+        WinWidth=1.0
+        WinHeight=0.92
+        WinLeft=0.0
         WinTop=0.065
         bVisibleWhenEmpty=true
         bScaleToParent=True
@@ -200,12 +222,4 @@ defaultproperties
         FontScale=FNS_Small
     End Object
     RankingsListBox=ItemsListBox
-
-    Begin Object class=BTGUI_PlayerRankingsPlayerProfile name=oPlayerInfoPanel
-    	WinWidth=0.29
-    	WinHeight=0.90
-    	WinTop=0.065
-    	WinLeft=0.70
-    End Object
-    PlayerInfoPanel=oPlayerInfoPanel
 }
