@@ -305,6 +305,25 @@ final function int FindRecord( string mapName )
     return -1;
 }
 
+final function int FindRecordMatch( string mapName )
+{
+    local int i;
+
+    i = FindRecord( mapName );
+    if( i != -1 )
+        return i;
+
+    mapName = Locs( mapName );
+    for( i = 0; i < Rec.Length; ++ i )
+    {
+        if( InStr( Locs( Rec[i].TMN ), mapName ) != -1 )
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 final function int FindRecordSlot( int mapSlot, int playerSlot )
 {
     local int i, j;
