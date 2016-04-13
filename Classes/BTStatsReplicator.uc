@@ -93,61 +93,6 @@ Begin:
     CR.Rankings[RanksId].ClientDonePlayerRanks( j < P.MaxRankedPlayers );
 }
 
-state ReplicateSoloTop
-{
-    final function SendSoloTops()
-    {
-        local BTClient_ClientReplication.sSoloPacket SP;
-        local float highestPoints;
-
-        // Send Map Top (MaxRankedPlayers) structure
-        j = P.RDat.Rec[P.UsedSlot].PSRL.Length;
-        if( j > 0 )
-        {
-            highestPoints = P.RDat.Rec[P.UsedSlot].PSRL[0].Points;
-        }
-        // Scan whole list, yes including people above <MaxRankedPlayer> cuz of PersonalOverallTop
-        for( i = 0; i < j; ++ i )
-        {
-            SP.PlayerId = P.RDat.Rec[P.UsedSlot].PSRL[i].PLs;
-            // Owner of record?
-            if( P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1 == CR.myPlayerSlot )
-            {
-                CR.SoloRank = i+1;
-                CR.ClientSetPersonalTime( P.RDat.Rec[P.UsedSlot].PSRL[i].SRT );
-
-                SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
-                if( i >= P.MaxRankedPlayers )
-                {
-                    SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*10.00;
-                    SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
-                    SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
-                    SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
-                    CR.ClientSendPersonalOverallTop( SP );
-                }
-            }
-            else
-            {
-                if( i < P.MaxRankedPlayers )
-                    SP.name = P.PDat.Player[P.RDat.Rec[P.UsedSlot].PSRL[i].PLs-1].PLNAME;
-            }
-
-            if( i < P.MaxRankedPlayers )
-            {
-                SP.Points = P.RDat.Rec[P.UsedSlot].PSRL[i].Points/highestPoints*10.00;
-                SP.Time = P.RDat.Rec[P.UsedSlot].PSRL[i].SRT;
-                SP.Date = P.FixDate( P.RDat.Rec[P.UsedSlot].PSRL[i].SRD );
-                SP.Flags = P.RDat.Rec[P.UsedSlot].PSRL[i].Flags;
-                CR.ClientSendSoloTop( SP );
-            }
-        }
-    }
-
-Begin:
-    SendSoloTops();
-    Destroy();
-}
-
 event Tick( float deltaTime )
 {
     if( P != none && CR == none )

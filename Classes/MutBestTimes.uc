@@ -1048,6 +1048,25 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
     StartReplicatorFor( CRI, pageIndex, ranksId ).BeginReplication();
 }
 
+final function InternalOnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName )
+{
+    local BTRecordsReplicator replicator;
+
+    if( !bShowRankings )
+        return;
+
+    if( CRI.RecordsPRI == none )
+    {
+        CRI.RecordsPRI = Spawn( class'BTGUI_RecordRankingsReplicationInfo', requester );
+        CRI.RecordsPRI.RecordsMapName = CurrentMapName;
+    }
+
+    if( pageIndex == -1 )
+        return;
+
+    replicator = Spawn( class'BTRecordsReplicator', self );
+    replicator.Initialize( CRI.RecordsPRI, pageIndex, mapName );
+}
 //==============================================================================
 
 final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
@@ -1380,6 +1399,8 @@ event PreBeginPlay()
 
     MRI = Spawn( Class'BTClient_MutatorReplicationInfo' );
     MRI.AddToPackageMap();  // Temporary ServerPackage
+    MRI.OnRequestPlayerRanks = InternalOnRequestPlayerRanks;
+    MRI.OnRequestRecordRanks = InternalOnRequestRecordRanks;
 
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
@@ -3554,7 +3575,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             }
             else MRI.PlayersBestTimes = "";
 
-            ClientForcePacketUpdate();
+            ClientForcePacketUpdate( UsedSlot );
             sender.ClientMessage( class'HUD'.default.GoldColor $ "Deleted record! Modifications have not been saved yet, don't forget to save before exiting the server!" );
             break;
 
@@ -3603,7 +3624,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
                         UpdateRecordHoldersMessage();
                     }
                 }
-                ClientForcePacketUpdate();
+                ClientForcePacketUpdate( UsedSlot );
             }
             else sender.ClientMessage( class'HUD'.default.RedColor $ "You must use a higher number than 0 and lower than"@j );
             break;
@@ -4890,7 +4911,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional out byte bNewTopRecord )
 {
     local bool b;
-    local BTClient_ClientReplication.sSoloPacket TS;
     local string EndMsg;
     local int j, PLs, oldPLi, PLi, l;
     local float TimeBoost, score;
@@ -5042,25 +5062,11 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
         AddRecentSetRecordToPlayer( PLs, CurrentMapName @ cDarkGray$TimeToStr( CurrentPlaySeconds ) );
 
-        // Update all Clients...
-        if( PLi < MaxRankedPlayers )  // only update new times under top 25
+        CR.SoloRank = PLi + 1;
+        // Don't spam force update for every group member :P
+        if( !bRecursive )
         {
-            // Don't spam force update for every group member :P
-            if( !bRecursive )
-            {
-                ClientForcePacketUpdate();
-            }
-        }
-        else
-        {
-            // Update Personal Record Packet
-            TS.Name = class'HUD'.default.WhiteColor $ PDat.Player[PLs-1].PLNAME;
-            TS.Points = score;
-            TS.Time = newSoloRecord.SRT;
-            TS.Date = FixDate( newSoloRecord.SRD );
-            TS.Flags = newSoloRecord.Flags;
-            CR.SoloRank = PLi + 1;
-            CR.ClientSendPersonalOverallTop( TS );
+            ClientForcePacketUpdate( UsedSlot );
         }
 
         if( PLi == 0 && !bRecursive ) // This is the best one of all...
@@ -5441,10 +5447,11 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
         if( Other.Owner != None && MessagingSpectator(Other.Owner) == None )
         {
             CR = Spawn( Class'BTClient_ClientReplication', Other.Owner );
+            CR.MRI = MRI;
+
             CR.OnRequestAchievementCategories = InternalOnRequestAchievementCategories;
             CR.OnRequestAchievementsByCategory = InternalOnRequestAchievementsByCategory;
             CR.OnRequestPlayerItems = InternalOnRequestPlayerItems;
-            CR.OnRequestPlayerRanks = InternalOnRequestPlayerRanks;
             CR.NextReplicationInfo = PlayerReplicationInfo(Other).CustomReplicationInfo;
             PlayerReplicationInfo(Other).CustomReplicationInfo = CR;
         }
@@ -5757,9 +5764,9 @@ final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bU
 // CR required!
 final Function UpdateScoreboard( PlayerController PC )
 {
-    local Controller C;
-    local BTClient_ClientReplication myCR, CR;
-    local BTClient_ClientReplication.sSoloPacket NewTPacket;
+    // local Controller C;
+    local BTClient_ClientReplication myCR;//, CR;
+    // local BTClient_ClientReplication.sSoloPacket NewTPacket;
 
     if( !ModeIsTrials() )
     {
@@ -5782,33 +5789,34 @@ final Function UpdateScoreboard( PlayerController PC )
         GhostManager.UpdateGhostsName( myCR.myPlayerSlot, PDat.Player[myCR.myPlayerSlot].PLName );
     }
 
-    if( myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers )
-    {
-        NewTPacket.Points       = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Points;
-        NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
-        NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
-        NewTPacket.Date         = FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
-        NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
-    }
+// FIXME: Reimplement solo packets updating.
+    // if( myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers )
+    // {
+    //     NewTPacket.Points       = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Points;
+    //     NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
+    //     NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
+    //     NewTPacket.Date         = FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
+    //     NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
+    // }
 
-    if( NewTPacket.Name == "" )
-        return;
+    // if( NewTPacket.Name == "" )
+    //     return;
 
-    // Update the packet of myCR for every other CR
-    for( C = Level.ControllerList; C != None; C = C.NextController )
-    {
-        if( PlayerController(C) == None || C.PlayerReplicationInfo == None )
-            continue;
+    // // Update the packet of myCR for every other CR
+    // for( C = Level.ControllerList; C != None; C = C.NextController )
+    // {
+    //     if( PlayerController(C) == None || C.PlayerReplicationInfo == None )
+    //         continue;
 
-        CR = GetRep( PlayerController(C) );
-        if( CR != none && CR.bReceivedRankings )
-        {
-            if( NewTPacket.Name != "" )
-                CR.ClientUpdateSoloTop( NewTPacket, myCR.SoloRank-1 );
+    //     CR = GetRep( PlayerController(C) );
+    //     if( CR != none && CR.bReceivedRankings )
+    //     {
+    //         if( NewTPacket.Name != "" )
+    //             CR.ClientUpdateSoloTop( NewTPacket, myCR.SoloRank-1 );
 
-            break;
-        }
-    }
+    //         break;
+    //     }
+    // }
 }
 
 //==============================================================================
@@ -6403,7 +6411,6 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
 final function CreateReplication( PlayerController PC, string SS, int slot )
 {
     local BTClient_ClientReplication CR;
-    local BTStatsReplicator RR;
 
     CR = GetRep( PC );
     if( CR == None )
@@ -6452,12 +6459,6 @@ final function CreateReplication( PlayerController PC, string SS, int slot )
             PDat.Player[slot].TeamPointsContribution = 0;
         }
         Store.ModifyPlayer( PC, PDat, CR );
-    }
-
-    if( bShowRankings && ModeIsTrials() )
-    {
-        RR = StartReplicatorFor( CR );
-        RR.GotoState( 'ReplicateSoloTop' );
     }
     WelcomePlayer( PC, CR );
 }
@@ -6633,30 +6634,26 @@ final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication 
 
 //==============================================================================
 // Update all the ClientReplication Packets
-Final Function ClientForcePacketUpdate()
+Final Function ClientForcePacketUpdate( int mapIndex )
 {
     local Controller C;
-    local LinkedReplicationInfo LRI;
-    local BTStatsReplicator replicator;
+    local BTClient_ClientReplication rep;
 
-    MRI.SoloRecords = RDat.Rec[UsedSlot].PSRL.Length;
+    MRI.SoloRecords = RDat.Rec[mapIndex].PSRL.Length;
     for( C = Level.ControllerList; C != None; C = C.NextController )
     {
         if( PlayerController(C) == None || C.PlayerReplicationInfo == None )
             continue;
 
-        // Find his ClientReplication!
-        for( LRI = C.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
-        {
-            if( BTClient_ClientReplication(LRI) != None )
-            {
-                BTClient_ClientReplication(LRI).ClientCleanSoloTop();
+        rep = GetRep( PlayerController(C) );
+        if( rep == none || rep.RecordsPRI == none )
+            continue;
 
-                replicator = StartReplicatorFor( BTClient_ClientReplication(LRI) );
-                replicator.GotoState( 'ReplicateSoloTop' );
-                break;
-            }
-        }
+        // Only update the records for clients who may have outdated records info.
+        if( rep.RecordsPRI.RecordsMapName != RDat.Rec[mapIndex].TMN )
+            continue;
+
+        rep.RecordsPRI.ClientClearRecordRanks(); // Clients will request new ranks by themselves.
     }
 }
 
