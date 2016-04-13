@@ -80,6 +80,10 @@ replication
         TeamTime;
 }
 
+/** Queries the server for the all time, quarterly or daily player ranks. */
+delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
+delegate OnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName );
+
 simulated Event PostBeginPlay()
 {
     Super.PostBeginPlay();
@@ -140,12 +144,6 @@ simulated function InitializeClient()
 
 function SetBestTime( float NewTime )
 {
-    if( bSoloMap )
-    {
-        MapBestTime = NewTime;
-        return;
-    }
-
     MapBestTime = NewTime;
 }
 

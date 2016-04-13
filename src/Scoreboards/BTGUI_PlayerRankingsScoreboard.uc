@@ -1,44 +1,9 @@
-class BTGUI_PlayerRankingsScoreboard extends UT2K4TabPanel;
+class BTGUI_PlayerRankingsScoreboard extends BTGUI_RankingsBase;
 
 var const array<string> RankingCategories;
 
 var automated GUIComboBox RankingsCombo;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
-
-var private BTClient_Interaction Inter;
-var private editconst bool bIsQuerying;
-
-simulated final function BTClient_Interaction GetInter()
-{
-    local int i;
-
-    for( i = 0; i < Controller.ViewportOwner.LocalInteractions.Length; ++ i )
-    {
-        if( Controller.ViewportOwner.LocalInteractions[i].Class == class'BTClient_Interaction' )
-            return BTClient_Interaction(Controller.ViewportOwner.LocalInteractions[i]);
-    }
-    return none;
-}
-
-simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
-{
-    local LinkedReplicationInfo LRI;
-
-    for( LRI = PRI.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
-    {
-        if( BTClient_ClientReplication(LRI) != None )
-        {
-            return BTClient_ClientReplication(LRI);
-        }
-    }
-    return none;
-}
-
-event Free()
-{
-	super.Free();
-	Inter = none;
-}
 
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
@@ -53,29 +18,25 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
     RankingsCombo.List.Style = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
     RankingsCombo.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
 
-    Inter = GetInter();
 	for( i = 0; i < RankingCategories.Length; ++ i )
 	{
 	    RankingsCombo.AddItem( RankingCategories[i], none, string(i) );
 	}
 }
 
-event Opened( GUIComponent sender )
+event ShowPanel( bool bShow )
 {
-	local BTClient_ClientReplication CRI;
+    local BTClient_ClientReplication CRI;
 
-	super.Opened( sender );
+    super.ShowPanel( bShow );
+    if( !bShow )
+        return;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     if( CRI.Rankings[GetCurrentRanksId()] == none )
     {
     	RequestReplicationChannels();
     }
-}
-
-function InitPanel()
-{
-    MyButton.Style = Controller.GetStyle("BTTabButton", MyButton.FontScale);
 }
 
 function RequestReplicationChannels()
@@ -194,14 +155,14 @@ function InternalOnScroll( int newPos )
 
 defaultproperties
 {
-    RankingCategories(0)="All Time"
-    RankingCategories(1)="Monthly"
-    RankingCategories(2)="Daily"
+    RankingCategories(0)="Ranks - All Time"
+    RankingCategories(1)="Ranks - This Month"
+    RankingCategories(2)="Ranks - Today"
 
     Begin Object class=GUIComboBox Name=RanksComboBox
-        WinWidth=0.3
-        WinHeight=0.034286
-        WinLeft=0.01
+        WinWidth=0.35
+        WinHeight=0.045
+        WinLeft=0.0
         WinTop=0.01
         bScaleToParent=true
         bBoundToParent=true

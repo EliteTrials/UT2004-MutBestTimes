@@ -8,7 +8,7 @@ event InitComponent(GUIController MyController, GUIComponent MyOwner)
 	super.InitComponent(MyController,MyOwner);
 
 	Tabs.AddTab( "Top Players", string(class'BTGUI_PlayerRankingsScoreboard'),, "View the highest ranked players", true  );
-	Tabs.AddTab( "Top Records", string(class'BTGUI_PlayerRankingsScoreboard'),, "View the fastest map records", true  );
+	Tabs.AddTab( "Top Records", string(class'BTGUI_RecordRankingsScoreboard'),, "View the fastest map records", true  );
 }
 
 defaultproperties

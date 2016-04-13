@@ -12,18 +12,6 @@ class BTClient_ClientReplication extends LinkedReplicationInfo;
 //==============================================================================
 // Structs
 
-// Top Solo Rankings
-struct sSoloPacket
-{
-    var int PlayerId;
-    var string name;
-    var float Points;
-    var float Time;
-    var string Date;
-    var int Flags;
-    var transient bool bIsSelf;
-};
-
 /** A structure that defines an earnable achievement. */
 struct sAchievementState
 {
@@ -94,7 +82,6 @@ struct sPlayerItemClient
     var byte Count;
 };
 
-
 var(DEBUG) array<sPlayerItemClient> PlayerItems;
 
 // TODO: FIXME ugly dupe of BTAchievements.sCategory
@@ -115,11 +102,6 @@ var(DEBUG) bool bReceivedAchievementCategories;
 //==============================================================================
 // REPLICATED VARIABLES
 var bool bAllowDodgePerk;
-
-var(DEBUG) array<sSoloPacket> SoloTop;
-
-// Personal OverallTop for people not in the best of the top solo rankings list e.g. 25
-var(DEBUG) sSoloPacket MySoloTop;           // Solo
 
 /** The states of all achievements that this player is working on. */
 var(DEBUG) array<sAchievementState> AchievementsStates;
@@ -193,7 +175,6 @@ var int EventTeamIndex;
 //==============================================================================
 // CLIENTSIDE VARIABLES
 var /**bNetOwner*/ BTClient_Config Options;
-var /**bNetOwner*/ BTClient_MutatorReplicationInfo MRI;
 var bool bNetNotified;
 
 //==============================================================================
@@ -205,7 +186,10 @@ var bool bPermitBoosting;
 var bool bWantsToWage;
 var int AmountToWage;
 
+// SIMULATED, only relevant to owner and server
+var BTClient_MutatorReplicationInfo MRI;
 var BTGUI_PlayerRankingsReplicationInfo Rankings[3];
+var BTGUI_RecordRankingsReplicationInfo RecordsPRI;
 
 var /**TEMP*/ string ClientMessage;
 
@@ -224,12 +208,6 @@ replication
         InitServerSpawnTime;
 
     reliable if( Role == ROLE_Authority )
-        // Solo scoreboard
-        ClientSendSoloTop, ClientUpdateSoloTop, ClientCleanSoloTop,
-
-        // Personal stuff
-        ClientSendPersonalOverallTop,
-
         // Reset Timer
         ClientSpawned,
         ClientMatchStarting,
@@ -251,7 +229,8 @@ replication
     reliable if( Role < ROLE_Authority )
         ServerSetPreferedColor,
         ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
-        ServerRequestPlayerItems, ServerRequestPlayerRanks;
+        ServerRequestPlayerItems,
+        ServerRequestPlayerRanks, ServerRequestRecordRanks;
 }
 
 // Server hooks
@@ -259,9 +238,6 @@ delegate OnRequestAchievementCategories( PlayerController requester, BTClient_Cl
 delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );
 
 delegate OnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter );
-
-/** Queries the server for the all time, quarterly or daily player ranks. */
-delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 
 // UI hooks
 delegate OnClientNotify( string message, byte ranksId );
@@ -458,44 +434,6 @@ simulated function ClientSendConsoleMessage( coerce string Msg )
     PlayerController(Owner).Player.Console.Message( Msg, 1.0 );
 }
 
-simulated function ClientCleanSoloTop()
-{
-    SoloTop.Length = 0;
-}
-
-simulated function ClientSendSoloTop( sSoloPacket APacket )
-{
-    local int j;
-
-    j = SoloTop.Length;
-    SoloTop.Length = j+1;
-    SoloTop[j] = APacket;
-}
-
-simulated function ClientUpdateSoloTop( sSoloPacket APacket, byte Slot )
-{
-    if( Slot > SoloTop.Length-1 )
-        return;
-
-    SoloTop[Slot] = APacket;
-}
-
-simulated function ClientSendPersonalOverallTop( sSoloPacket APacket )
-{
-    local int i;
-
-    for( i = 0; i < SoloTop.Length; ++ i )
-    {
-        if( SoloTop[i].bIsSelf )
-        {
-            SoloTop[i] = APacket;
-            return;
-        }
-    }
-    APacket.bIsSelf = true;
-    ClientSendSoloTop( APacket );
-}
-
 simulated function ClientSendText( string Packet )
 {
     Text[Text.Length] = Packet;
@@ -523,7 +461,12 @@ final function ServerRequestAchievementsByCategory( string catID )
 
 final function ServerRequestPlayerRanks( int pageIndex, optional byte ranksId )
 {
-    OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, ranksId );
+    MRI.OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, ranksId );
+}
+
+final function ServerRequestRecordRanks( int pageIndex, optional string mapName )
+{
+    MRI.OnRequestRecordRanks( PlayerController(Owner), self, pageIndex, mapName );
 }
 
 simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )

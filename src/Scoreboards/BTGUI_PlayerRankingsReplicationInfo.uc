@@ -26,7 +26,6 @@ replication
 simulated event PostBeginPlay()
 {
 	super.PostBeginPlay();
-
 	if( CRI != none )
 	{
 		CRI.Rankings[RanksId] = self;
