@@ -5,6 +5,10 @@ var BTGUI_PlayerRankingsReplicationInfo Rankings;
 // Which rankings replication actor this GUIList should represent.
 var byte RanksId;
 
+var protected transient bool
+    bItemIsSelected,
+    bItemIsOwner;
+
 final static preoperator Color #( int rgbInt )
 {
     local Color c;
@@ -29,56 +33,103 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
 
+    bItemIsSelected = bSelected;
+    bItemIsOwner = Rankings.CRI != none
+        && Rankings.PlayerRanks[SortData[i].SortItem].PlayerId == Rankings.CRI.PlayerId;
+
     Y += 2;
-    H -= 4;
+    H -= 2;
 
     C.Style = 1;
     C.SetPos( X, Y );
-    if( bSelected )
+    if( bItemIsOwner )
     {
-        C.DrawColor = #0x33333386;
+        C.DrawColor = #0x4E4E3382;
+        if( bSelected )
+        {
+            C.DrawColor.A = 0x94;
+        }
+    }
+    else if( bSelected )
+    {
+        C.DrawColor = #0x33333394;
     }
     else
     {
-        C.DrawColor = #0x22222266;
+        C.DrawColor = #0x22222282;
     }
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
     MenuState = MSAT_Blurry;
     DrawStyle = Style;
     GetCellLeftWidth( 0, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0x666666FF;
+    DrawStyle.FontColors[0] = GetColumnColor( 0 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
 		string(SortData[i].SortItem + 1), FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0x91A79DFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 1 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(Rankings.PlayerRanks[SortData[i].SortItem].AP), FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xFFFFF0FF;
+    DrawStyle.FontColors[0] = GetColumnColor( 2 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(int(Rankings.PlayerRanks[SortData[i].SortItem].Points)), FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xFFFFFFFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 3 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         Rankings.PlayerRanks[SortData[i].SortItem].Name, FontScale );
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xAAAAAAFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 4 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(Rankings.PlayerRanks[SortData[i].SortItem].Hijacks >> 16), FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xAAAAAAFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 5 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(Rankings.PlayerRanks[SortData[i].SortItem].Hijacks & 0x0000FFFF), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
 
     // C.DrawColor = Lighten( C.DrawColor, 50F );
+}
+
+function Color GetColumnColor( int column )
+{
+    if( bItemIsOwner )
+    {
+        return #0xFFFF00FF;
+    }
+
+    if( bItemIsSelected )
+    {
+        return #0xFFFFFFFF;
+    }
+
+    switch( column )
+    {
+        case 0:
+            return #0x666666FF;
+
+        case 1:
+            return #0x91A79DFF;
+
+        case 2:
+            return #0xCCCCC0FF;
+
+        case 3:
+            return #0xFFFFFFFF;
+
+        case 4:
+            return #0xAAAAAAFF;
+
+        case 5:
+            return #0xAAAAAAFF;
+    }
+    return #0xFFFFFFFF;
 }
 
 static function string MyPadLeft( coerce string Src, byte StrLen, optional string PadStr )
@@ -103,6 +154,10 @@ function string GetSortString( int i )
             return MyPadLeft( Rankings.PlayerRanks[i].AP, 4, "0" );
 
         case 2:
+            if( Rankings.PlayerRanks[i].Points < 0.00 )
+            {
+                return "-"$MyPadLeft( int(Abs(Rankings.PlayerRanks[i].Points)), 4, "0" );
+            }
             return MyPadLeft( int(Rankings.PlayerRanks[i].Points), 4, "0" );
 
         case 3:

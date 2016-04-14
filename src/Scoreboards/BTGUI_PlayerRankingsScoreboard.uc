@@ -160,7 +160,7 @@ defaultproperties
     RankingCategories(2)="Ranks - Today"
 
     Begin Object class=GUIComboBox Name=RanksComboBox
-        WinWidth=0.35
+        WinWidth=0.38
         WinHeight=0.045
         WinLeft=0.0
         WinTop=0.01

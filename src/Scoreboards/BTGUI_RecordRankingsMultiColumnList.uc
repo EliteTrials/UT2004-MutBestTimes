@@ -1,7 +1,12 @@
 class BTGUI_RecordRankingsMultiColumnList extends GUIMultiColumnList;
 
-var BTClient_ClientReplication CRI;
 var array<BTGUI_RecordRankingsReplicationInfo.sRecordRank> Ranks;
+
+var transient BTClient_ClientReplication CRI;
+var protected transient bool
+    bItemIsSelected,
+    bItemIsOwner,
+    bItemIsClientSpawn;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -26,22 +31,35 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 {
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
-    local bool bCPRecord;
     local float xl, yl;
 
+    bItemIsSelected = bSelected;
+    bItemIsOwner = CRI != none
+        && CRI.RecordsPRI != none
+        && CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].PlayerId == CRI.PlayerId;
+
     Y += 2;
-    H -= 4;
+    H -= 2;
 
     C.Style = 1;
     C.SetPos( X, Y );
-    if( bSelected )
+    if( bItemIsOwner )
     {
-        C.DrawColor = #0x33333386;
+        C.DrawColor = #0x4E4E3382;
+        if( bSelected )
+        {
+            C.DrawColor.A = 0x94;
+        }
+    }
+    else if( bSelected )
+    {
+        C.DrawColor = #0x33333394;
     }
     else
     {
-        C.DrawColor = #0x22222266;
+        C.DrawColor = #0x22222282;
     }
+
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
     if( CRI == none )
@@ -55,33 +73,31 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
         return;
     }
 
+    bItemIsClientSpawn = (CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Flags & 0x01/**RFLAG_CP*/) != 0;
+
     MenuState = MSAT_Blurry;
     DrawStyle = Style;
     GetCellLeftWidth( 0, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0x666666FF;
+    DrawStyle.FontColors[0] = GetColumnColor( 0 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
 		string(SortData[i].SortItem + 1), FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xFFFFF0FF;
+    DrawStyle.FontColors[0] = GetColumnColor( 1 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Points), FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xFFFFFFFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 2 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Name, FontScale );
 
-    bCPRecord = (CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Flags & 0x01/**RFLAG_CP*/) != 0;
-
     GetCellLeftWidth( 3, CellLeft, CellWidth );
-    if( bCPRecord )
-        DrawStyle.FontColors[0] = #0xCB304FFF;
-    else DrawStyle.FontColors[0] = #0xAAAAAAFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 3 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         class'BTClient_Interaction'.static.FormatTimeCompact( CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Time ), FontScale );
 
-    if( bCPRecord )
+    if( bItemIsClientSpawn )
     {
         DrawStyle.TextSize( C, MenuState, "T", xl, yl, FontScale );
 
@@ -92,13 +108,47 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     }
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
-    DrawStyle.FontColors[0] = #0xAAAAAAFF;
+    DrawStyle.FontColors[0] = GetColumnColor( 4 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Date, FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
+}
 
-    // C.DrawColor = Lighten( C.DrawColor, 50F );
+function Color GetColumnColor( int column )
+{
+    if( bItemIsOwner && (column != 3 || !bItemIsClientSpawn) )
+    {
+        return #0xFFFF00FF;
+    }
+
+    if( bItemIsSelected )
+    {
+        return #0xFFFFFFFF;
+    }
+
+    switch( column )
+    {
+        case 0:
+            return #0x666666FF;
+
+        case 1:
+            return #0xCCCCC0FF;
+
+        case 2:
+            return #0xFFFFFFFF;
+
+        case 3:
+            if( bItemIsClientSpawn )
+            {
+                return #0xCB304FFF;
+            }
+            return #0xAAAAAAFF;
+
+        case 4:
+            return #0xAAAAAAFF;
+    }
+    return #0xFFFFFFFF;
 }
 
 static function string MyPadLeft( coerce string Src, byte StrLen, optional string PadStr )
