@@ -1059,6 +1059,12 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     {
         CRI.RecordsPRI = Spawn( class'BTGUI_RecordRankingsReplicationInfo', requester );
         CRI.RecordsPRI.RecordsMapName = CurrentMapName;
+
+        // Must be initiated after RecordsMapName is set.
+        if( Level.NetMode == NM_Standalone )
+        {
+            CRI.OnClientNotify( "Ready", 0 );
+        }
     }
 
     if( pageIndex == -1 )
@@ -6408,7 +6414,7 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
 
 //==============================================================================
 // Initialize the replication for this player
-final function CreateReplication( PlayerController PC, string SS, int slot )
+final function CreateReplication( PlayerController PC, string SS, int playerIndex )
 {
     local BTClient_ClientReplication CR;
 
@@ -6419,32 +6425,33 @@ final function CreateReplication( PlayerController PC, string SS, int slot )
         return;
     }
 
-    CR.myPlayerSlot = slot;
-    PDat.Player[slot].Controller = PC; // not saved
+    CR.myPlayerSlot = playerIndex;
+    CR.PlayerId = playerIndex + 1;
+    PDat.Player[playerIndex].Controller = PC; // not saved
     if( !bSoloMap )
     {
         CR.ClientMatchStarting( Level.TimeSeconds );
     }
 
     // Server love
-    if( PDat.Player[slot].PlayHours >= 10 )
+    if( PDat.Player[playerIndex].PlayHours >= 10 )
     {
-        PDat.ProgressAchievementByID( slot, 'playtime_0' );
-        if( PDat.Player[slot].PlayHours >= 1000 )
+        PDat.ProgressAchievementByID( playerIndex, 'playtime_0' );
+        if( PDat.Player[playerIndex].PlayHours >= 1000 )
         {
-            PDat.ProgressAchievementByID( slot, 'playtime_1' );
+            PDat.ProgressAchievementByID( playerIndex, 'playtime_1' );
         }
     }
 
-    CR.Title = PDat.Player[slot].Title;
-    CR.BTLevel = PDat.GetLevel( slot, CR.BTExperience );
+    CR.Title = PDat.Player[playerIndex].Title;
+    CR.BTLevel = PDat.GetLevel( playerIndex, CR.BTExperience );
     // Currency
-    CR.BTPoints = PDat.Player[slot].LevelData.BTPoints;
+    CR.BTPoints = PDat.Player[playerIndex].LevelData.BTPoints;
     // Achievement points
-    CR.APoints = PDat.Player[slot].PLAchiev;
+    CR.APoints = PDat.Player[playerIndex].PLAchiev;
     // Overalltop rank
-    CR.Rank = PDat.Player[slot].PLARank;
-    CR.bIsPremiumMember = PDat.Player[slot].bHasPremium;
+    CR.Rank = PDat.Player[playerIndex].PLARank;
+    CR.bIsPremiumMember = PDat.Player[playerIndex].bHasPremium;
     if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {
         BroadcastLocalMessage( PC, class'BTClient_PremLocalMessage', "Premium player %PLAYER% has entered the game" );
@@ -6452,11 +6459,11 @@ final function CreateReplication( PlayerController PC, string SS, int slot )
 
     if( Store != none )
     {
-        if( ModeIsTrials() && PDat.Player[slot].bPendingTeamReward )
+        if( ModeIsTrials() && PDat.Player[playerIndex].bPendingTeamReward )
         {
             Store.RewardTeamPlayer( CR );
-            PDat.Player[slot].bPendingTeamReward = false;
-            PDat.Player[slot].TeamPointsContribution = 0;
+            PDat.Player[playerIndex].bPendingTeamReward = false;
+            PDat.Player[playerIndex].TeamPointsContribution = 0;
         }
         Store.ModifyPlayer( PC, PDat, CR );
     }
