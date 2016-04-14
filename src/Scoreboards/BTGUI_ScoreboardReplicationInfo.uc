@@ -1,6 +1,6 @@
 class BTGUI_ScoreboardReplicationInfo extends ReplicationInfo;
 
-var protected BTClient_ClientReplication CRI;
+var BTClient_ClientReplication CRI;
 
 simulated event PostBeginPlay()
 {

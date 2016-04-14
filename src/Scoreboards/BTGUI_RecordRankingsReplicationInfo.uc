@@ -31,10 +31,6 @@ simulated event PostBeginPlay()
 	if( CRI != none )
 	{
 		CRI.RecordsPRI = self;
-		if( Level.NetMode == NM_Standalone )
-		{
-    		CRI.OnClientNotify( "Ready", 0 );
-		}
 	}
 }
 

@@ -121,6 +121,7 @@ var(DEBUG) transient bool bItemsTransferComplete;
 // Cleared when F12 is pressed
 var(DEBUG) array<string> Text;
 
+var int PlayerId;
 // The rank position of this user, and the solo rank of this user
 var int Rank, SoloRank;
 var(DEBUG) string Title;
@@ -202,7 +203,7 @@ replication
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
-        bAllowDodgePerk, ProhibitedCappingPawn, JoinServerTime;
+        bAllowDodgePerk, ProhibitedCappingPawn, JoinServerTime, PlayerId;
 
     reliable if( !bNetOwner && bNetInitial && Role == ROLE_Authority )
         InitServerSpawnTime;
