@@ -2,6 +2,7 @@ class BTGUI_RecordRankingsScoreboard extends BTGUI_RankingsBase;
 
 var automated GUIComboBox RankingsCombo;
 var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
+var private bool bWaitingForReplication;
 
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
@@ -13,89 +14,68 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
     RankingsCombo.MyShowListBtn.Style = Controller.GetStyle("BTButton", RankingsCombo.MyShowListBtn.FontScale);
     RankingsCombo.List.Style = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
     RankingsCombo.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
-    RankingsCombo.AddItem( "STR-TechChallenge-01-A" );
-    RankingsCombo.AddItem( "STR-TechChallenge-01-B" );
-    RankingsCombo.AddItem( "STR-TechChallenge-02-B" );
-    RankingsCombo.AddItem( "STR-TechChallenge-02-Com" );
-    RankingsCombo.AddItem( "STR-TechChallenge-03-Part2" );
-    RankingsCombo.AddItem( "STR-TechChallenge-03" );
-    RankingsCombo.AddItem( "STR-TechChallenge-04-A" );
-    RankingsCombo.AddItem( "STR-TechChallenge-05" );
-    RankingsCombo.AddItem( "STR-TechChallenge-06-b00n-V2" );
-    RankingsCombo.AddItem( "STR-TechChallenge-06-b00n" );
-    RankingsCombo.AddItem( "STR-TechChallenge-06" );
-    RankingsCombo.AddItem( "STR-TechChallenge-07" );
-    RankingsCombo.AddItem( "STR-TechChallenge-08-Short" );
-    RankingsCombo.AddItem( "STR-TechChallenge-08-Long" );
-    RankingsCombo.AddItem( "STR-TechChallenge-09-Com" );
-    RankingsCombo.AddItem( "STR-TechChallenge-10" );
-    RankingsCombo.AddItem( "STR-TechChallenge-11" );
-    RankingsCombo.AddItem( "STR-TechChallenge-12" );
-    RankingsCombo.AddItem( "STR-TechChallenge-13-Com" );
-    RankingsCombo.AddItem( "STR-TechChallenge-14" );
-    RankingsCombo.AddItem( "STR-TechChallenge-15-A" );
-    RankingsCombo.AddItem( "STR-TechChallenge-17" );
-    RankingsCombo.SetText( string(Outer.Name), true );
-    RankingsCombo.OnChange = InternalOnChangeRankingsCategory;
 }
 
-event ShowPanel( bool bShow )
+event Opened( GUIComponent sender )
 {
-	local BTClient_ClientReplication CRI;
+    local BTClient_ClientReplication CRI;
 
-	super.ShowPanel( bShow );
-	if( !bShow )
-		return;
-
+    super.Opened( sender );
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    if( CRI.RecordsPRI == none )
+    if( CRI == none )
+        return;
+
+    if( CRI.RecordsPRI == none && !bWaitingForReplication )
     {
-    	RequestReplicationChannels();
+        bWaitingForReplication = true;
+        RequestReplicationChannels();
     }
 }
 
 function RequestReplicationChannels()
 {
-	local BTClient_ClientReplication CRI;
+    local BTClient_ClientReplication CRI;
 
+    // bWaitingForReplication = true;
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    CRI.OnClientNotify = InternalOnClientNotify;
-    CRI.ServerRequestRecordRanks( -1 ); // Initialize replication channels.
-	PlayerOwner().ClientMessage("Requesting channel" @ RankingsCombo.GetText());
+    CRI.ServerRequestRecordRanks( -1 ); // This will request our replication channel(s)
+}
+
+// Wait for the ready event, before we request ranks.
+function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
+{
+	local BTGUI_RecordRankingsReplicationInfo recordsPRI;
+
+    recordsPRI = BTGUI_RecordRankingsReplicationInfo(repSource);
+    if( recordsPRI == none )
+        return;
+
+	// Start receiving updates.
+	recordsPRI.OnRecordRankReceived = InternalOnRecordRankReceived;
+	recordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
+	recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
+
+	// Note: Will trigger OnChangeRankingsCategory
+	RankingsCombo.SetText( recordsPRI.RecordsMapName );
+    RankingsCombo.OnChange( self ); // ??? wtf stopped working by itself!
+    bWaitingForReplication = false;
 }
 
 function QueryNextRecordRanks( optional bool bReset )
 {
 	local BTClient_ClientReplication CRI;
 
-	// PlayerOwner().ClientMessage("Querying next ranks" @ bIsQuerying);
     if( bIsQuerying )
     	return;
 
     bIsQuerying = true;
     RankingsCombo.DisableMe();
+
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     CRI.RecordsPRI.RecordsMapName = RankingsCombo.GetText();
     CRI.RecordsPRI.QueryNextRecordRanks( bReset );
-}
 
-// Wait for the ready event, before we request ranks.
-function InternalOnClientNotify( string message, byte ranksId )
-{
-	local BTClient_ClientReplication CRI;
-
-	// PlayerOwner().ClientMessage("Received notification" @ message @ ranksId);
-	if( message != "Ready" )
-		return;
-
-	// Start receiving updates.
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-	CRI.RecordsPRI.OnRecordRankReceived = InternalOnRecordRankReceived;
-	CRI.RecordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
-	CRI.RecordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
-
-	// Note: Will trigger OnChangeRankingsCategory
-	RankingsCombo.SetText( CRI.RecordsPRI.RecordsMapName );
+	// Log("Querying next ranks" @ bIsQuerying @ bReset @ CRI.RecordsPRI.RecordsMapName );
 }
 
 function InternalOnChangeRankingsCategory( GUIComponent sender )
@@ -103,12 +83,14 @@ function InternalOnChangeRankingsCategory( GUIComponent sender )
 	local BTClient_ClientReplication CRI;
 	local BTGUI_RecordRankingsMultiColumnList list;
 
-	bIsQuerying = false; // renable querying
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    // Log("InternalOnChangeRankingsCategory" @ bIsQuerying @ CRI.RecordsPRI.RecordsMapName @ RankingsCombo.GetText() );
+
+    bIsQuerying = false; // renable querying
 
     // TODO:
 	list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
-	list.Ranks = CRI.RecordsPRI.RecordRanks;
+	// list.Ranks = CRI.RecordsPRI.RecordRanks;
 	list.Clear();
 
 	CRI.RecordsPRI.RecordRanks.Length = 0;
@@ -119,7 +101,7 @@ function InternalOnRecordRankReceived( int index, BTGUI_RecordRankingsReplicatio
 {
 	local BTGUI_RecordRankingsMultiColumnList list;
 
-	// PlayerOwner().ClientMessage("Received a rank packet");
+	// Log("Received a rank packet");
 	list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
 	list.AddedItem();
 }
@@ -128,7 +110,7 @@ function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInfo source, 
 {
 	local BTClient_ClientReplication CRI;
 
-	// PlayerOwner().ClientMessage("Query completed");
+	// Log("Query completed");
 	bIsQuerying = bAll; // Don't ever query again if we have received all there is to be received!
     RankingsCombo.EnableMe();
 
@@ -174,6 +156,7 @@ defaultproperties
         bBoundToParent=true
         FontScale=FNS_Small
         bIgnoreChangeWhenTyping=true
+        OnChange=InternalOnChangeRankingsCategory
     End Object
     RankingsCombo=RanksComboBox
 

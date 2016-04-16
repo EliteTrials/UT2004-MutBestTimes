@@ -2,13 +2,42 @@ class BTGUI_RankingsMenu extends BTGUI_ScoreboardBase;
 
 var automated GUITabControl Tabs;
 var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
+var BTGUI_PlayerRankingsScoreboard PlayersScoreboard;
+var BTGUI_RecordRankingsScoreboard RecordsScoreboard;
+
+event Free()
+{
+    super.Free();
+    PlayersScoreboard = none;
+    RecordsScoreboard = none;
+}
 
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	super.InitComponent(MyController,MyOwner);
 
-	Tabs.AddTab( "Top Players", string(class'BTGUI_PlayerRankingsScoreboard'),, "View the highest ranked players", true  );
-	Tabs.AddTab( "Top Records", string(class'BTGUI_RecordRankingsScoreboard'),, "View the fastest map records", true  );
+    // To prevent ShowPanel being called before we can assign our scoreboards.
+    Tabs.AddTab(
+        "Top Players",
+        string(class'BTGUI_PlayerRankingsScoreboard'),
+        PlayersScoreboard,
+        "View the highest ranked players",
+        false
+    );
+    Tabs.AddTab(
+        "Top Records",
+        string(class'BTGUI_RecordRankingsScoreboard'),
+        RecordsScoreboard,
+        "View the fastest map records",
+        true
+    );
+}
+
+function ReplicationReady( BTGUI_ScoreboardReplicationInfo repSource )
+{
+    // Log("ReplicationReady", Name);
+    PlayersScoreboard.RepReady( repSource );
+    RecordsScoreboard.RepReady( repSource );
 }
 
 defaultproperties
@@ -21,6 +50,7 @@ defaultproperties
 	WinTop=0.1
 	WinWidth=0.8
 	WinHeight=0.8
+    FadeTime=0.5
 
     Begin Object class=GUITabControl name=oRankPages
         WinWidth=0.59
@@ -37,6 +67,14 @@ defaultproperties
         // BackgroundStyleName="BTHUD"
     End Object
     Tabs=oRankPages
+
+    Begin Object class=BTGUI_PlayerRankingsScoreboard name=oPlayersPanel
+    End Object
+    PlayersScoreboard=oPlayersPanel
+
+    Begin Object class=BTGUI_RecordRankingsScoreboard name=oRecordsPanel
+    End Object
+    RecordsScoreboard=oRecordsPanel
 
     Begin Object class=BTGUI_PlayerRankingsPlayerProfile name=oPlayerInfoPanel
         WinWidth=0.395

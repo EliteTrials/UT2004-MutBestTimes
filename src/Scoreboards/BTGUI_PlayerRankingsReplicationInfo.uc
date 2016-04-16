@@ -29,19 +29,6 @@ simulated event PostBeginPlay()
 	if( CRI != none )
 	{
 		CRI.Rankings[RanksId] = self;
-		if( Level.NetMode == NM_Standalone )
-		{
-    		CRI.OnClientNotify( "Ready", RanksId );
-		}
-	}
-}
-
-simulated event PostNetBeginPlay()
-{
-	super.PostNetBeginPlay();
-	if( CRI != none && Level.NetMode != NM_DedicatedServer )
-	{
-		CRI.OnClientNotify( "Ready", RanksId );
 	}
 }
 

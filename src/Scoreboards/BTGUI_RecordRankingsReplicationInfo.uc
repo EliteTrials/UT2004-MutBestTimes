@@ -34,15 +34,6 @@ simulated event PostBeginPlay()
 	}
 }
 
-simulated event PostNetBeginPlay()
-{
-	super.PostNetBeginPlay();
-	if( CRI != none && Level.NetMode != NM_DedicatedServer )
-	{
-		CRI.OnClientNotify( "Ready", 0 );
-	}
-}
-
 // UI hooks
 delegate OnRecordRankReceived( int index, BTGUI_RecordRankingsReplicationInfo source );
 delegate OnRecordRankUpdated( int index, BTGUI_RecordRankingsReplicationInfo source );

@@ -4,6 +4,7 @@ var const array<string> RankingCategories;
 
 var automated GUIComboBox RankingsCombo;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
+var private bool bWaitingForReplication;
 
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
@@ -24,18 +25,19 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 	}
 }
 
-event ShowPanel( bool bShow )
+event Opened( GUIComponent sender )
 {
     local BTClient_ClientReplication CRI;
 
-    super.ShowPanel( bShow );
-    if( !bShow )
+    super.Opened( sender );
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    if( CRI == none )
         return;
 
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    if( CRI.Rankings[GetCurrentRanksId()] == none )
+    if( CRI.Rankings[GetCurrentRanksId()] == none && !bWaitingForReplication)
     {
-    	RequestReplicationChannels();
+        bWaitingForReplication = true;
+        RequestReplicationChannels();
     }
 }
 
@@ -46,7 +48,6 @@ function RequestReplicationChannels()
 
 	ranksId = GetCurrentRanksId();
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    CRI.OnClientNotify = InternalOnClientNotify;
     CRI.ServerRequestPlayerRanks( -1, ranksId ); // Initialize replication channels.
 	// PlayerOwner().ClientMessage("Requesting channel" @ ranksId);
 }
@@ -71,20 +72,20 @@ final function byte GetCurrentRanksId()
 }
 
 // Wait for the ready event, before we request ranks.
-function InternalOnClientNotify( string message, byte ranksId )
+function RepReady( BTGUI_ScoreboardReplicationInfo source )
 {
-	local BTClient_ClientReplication CRI;
+    local BTGUI_PlayerRankingsReplicationInfo ranksRep;
 
-	// PlayerOwner().ClientMessage("Received notification" @ message @ ranksId);
-	if( message != "Ready" )
-		return;
+    ranksRep = BTGUI_PlayerRankingsReplicationInfo(source);
+    if( ranksRep == none ) // Not meant for this instance
+        return;
 
 	// Start receiving updates.
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-	CRI.Rankings[ranksId].OnPlayerRankReceived = InternalOnPlayerRankReceived;
-	CRI.Rankings[ranksId].OnPlayerRanksDone = InternalOnPlayerRanksDone;
-	RankingsListBox.SwitchRankings( ranksId, CRI.Rankings[ranksId] );
+	ranksRep.OnPlayerRankReceived = InternalOnPlayerRankReceived;
+	ranksRep.OnPlayerRanksDone = InternalOnPlayerRanksDone;
+	RankingsListBox.SwitchRankings( ranksRep.RanksId, ranksRep );
     QueryNextPlayerRanks();
+    bWaitingForReplication = false;
 }
 
 function InternalOnChangeRankingsCategory( GUIComponent sender )
@@ -99,7 +100,6 @@ function InternalOnChangeRankingsCategory( GUIComponent sender )
 	if( CRI.Rankings[ranksId] == none )
 	{
 		// PlayerOwner().ClientMessage("Requesting new rankings channel" @ ranksId);
-    	CRI.OnClientNotify = InternalOnClientNotify;
     	CRI.ServerRequestPlayerRanks( -1, ranksId ); // Initialize replication channels.
     	return;
 	}
