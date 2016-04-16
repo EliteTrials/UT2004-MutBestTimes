@@ -6,7 +6,7 @@ struct sRecordRank
     var string Name;
     var float Points;
     var float Time;
-    var string Date;
+    var int Date;
     var int Flags;
 };
 

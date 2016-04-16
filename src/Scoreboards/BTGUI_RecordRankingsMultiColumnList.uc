@@ -110,7 +110,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 4 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Date, FontScale );
+        class'BTClient_Interaction'.static.CompactDateToString( CRI.RecordsPRI.RecordRanks[SortData[i].SortItem].Date ), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
 }
@@ -185,7 +185,7 @@ function string GetSortString( int i )
             return class'BTClient_Interaction'.static.FormatTimeCompact( CRI.RecordsPRI.RecordRanks[i].Time );
 
         case 4:
-            return CRI.RecordsPRI.RecordRanks[i].Date;
+            return MyPadLeft( CRI.RecordsPRI.RecordRanks[i].Date, 8, "0" );
     }
     return string(i);
 }

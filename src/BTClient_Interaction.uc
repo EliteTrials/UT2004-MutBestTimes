@@ -37,14 +37,6 @@ var const
     RecordEmptyMsg,
     RecordPrevTimeMsg,
     RecordTimeElapsed,
-    Table_Rank,
-    Table_PlayerName,
-    Table_Points,
-    Table_Objectives,
-    Table_Records,
-    Table_Top,
-    Table_Date,
-    Table_Time,
     RankingToggleMsg,
     RankingHideMsg;
 
@@ -80,13 +72,7 @@ var byte RenderMode;
 // Page 0 : Draw Best Ranked Players
 // Page 1 : Draw Best Top Records (current map)
 
-var int
-    ElapsedTime,
-    // Current drawn Table index( see comment above )
-    TablePage,
-    SelectedIndex,
-    SelectedTable,
-    SelectedMapTab;
+var int ElapsedTime;
 
 var float
     LastTickTime,
@@ -297,8 +283,7 @@ exec function BTCommands()
         SendConsoleMessage( "VoteMap <MapName>" );
         SendConsoleMessage( "RevoteMap (Revotes the Current Map)" );
         SendConsoleMessage( "..." );
-        SendConsoleMessage( "ToggleRanking (Toggles the ScoreBoard)" );
-        SendConsoleMessage( "SwitchPage (Switches the Ranking page)" );
+        SendConsoleMessage( "ToggleRanking (Opens the ranks scoreboard)" );
         SendConsoleMessage( "..." );
         SendConsoleMessage( "SpeedRun" );
         SendConsoleMessage( "..." );
@@ -1014,7 +999,6 @@ private function ModifyMenu()
         Menu.BackgroundRStyle = MSTY_None;
         Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_AdvancedButton', True );
-        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_Button', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
@@ -2719,12 +2703,35 @@ static final function string FormatTimeCompact( float value )
     else return output $ secondString;
 }
 
+static final function string CompactDateToString( int date )
+{
+    local int d[3];
+
+    d[0] = byte(date & 0xFF);
+    d[1] = byte(date >> 8);
+    d[2] = date >> 16;
+    return FixDate( d );
+}
+
+static final function string FixDate( int Date[3] )
+{
+    local string FixedDate;
+
+    // Fix date
+    if( Date[0] < 10 )
+        FixedDate = "0"$Date[0];
+    else FixedDate = string(Date[0]);
+
+    if( Date[1] < 10 )
+        FixedDate $= "/0"$Date[1];
+    else FixedDate $= "/"$Date[1];
+
+    return FixedDate$"/"$Right( Date[2], 2 );
+}
+
 DefaultProperties
 {
     YOffsetScale=0.6
-    TablePage=0
-    SelectedTable=1
-
     Orange=(R=255,G=255,B=0,A=255)
 
     bVisible=True
@@ -2740,21 +2747,6 @@ DefaultProperties
     RankingToggleMsg="view next page"
     RankingHideMsg="to show/hide this"
 
-    Table_Rank="Rank"
-    Table_PlayerName="PlayerName"
-    Table_Points="Points"
-    Table_Objectives="Objectives"
-    Table_Records="Records"
-    Table_Time="Time"
-    Table_Top="Top"
-    Table_Date="Date"
-
     RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
     AlphaLayer=Texture'BTScoreBoardBG'
-
-    RecordsRankingColumns(0)=(Title="#",Format="000")
-    RecordsRankingColumns(1)=(Title="Rating",Format="-00.00")
-    RecordsRankingColumns(2)=(Title="Player",Format="WWWWWWWWWWWW")
-    RecordsRankingColumns(3)=(Title="Time",Format="0:00:00.00 ") // Space for flag
-    RecordsRankingColumns(4)=(Title="Date",Format="00/00/00")
 }
