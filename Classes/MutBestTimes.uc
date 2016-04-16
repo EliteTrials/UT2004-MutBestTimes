@@ -5801,7 +5801,7 @@ final Function UpdateScoreboard( PlayerController PC )
     //     NewTPacket.Points       = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Points;
     //     NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
     //     NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
-    //     NewTPacket.Date         = FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
+    //     NewTPacket.Date         = class'BTClient_Interaction'.static.FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
     //     NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
     // }
 
@@ -6594,21 +6594,7 @@ private final function SendEventDescription( BTClient_ClientReplication CR )
 
 //==============================================================================
 // Merge a numeric date to a string date DD/MM/YY
-static final function string FixDate( int Date[3] )
-{
-    local string FixedDate;
 
-    // Fix date
-    if( Date[0] < 10 )
-        FixedDate = "0"$Date[0];
-    else FixedDate = string(Date[0]);
-
-    if( Date[1] < 10 )
-        FixedDate $= "/0"$Date[1];
-    else FixedDate $= "/"$Date[1];
-
-    return FixedDate$"/"$Right( Date[2], 2 );
-}
 
 final function string MaskToDate( int date )
 {

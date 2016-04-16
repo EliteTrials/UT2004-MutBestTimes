@@ -281,7 +281,12 @@ final function int CreateRecord( string mapName, int registerDate )
 
 final static function int MakeCompactDate( LevelInfo Level )
 {
-    return Level.Year << 16 | Level.Month << 8 | Level.Day;
+    return DateToCompactDate( Level.Year, Level.Month, Level.Day );
+}
+
+final static function int DateToCompactDate( int year, int month, int day )
+{
+    return year << 16 | month << 8 | day;
 }
 
 final static function GetCompactDate( int date, out int year, out int month, out int day )

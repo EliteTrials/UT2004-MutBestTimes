@@ -74,7 +74,11 @@ final function SendRecordRank( int rankIndex )
     recordRank.Name 		= PlayersSource.Player[playerIndex].PLName;
     recordRank.Points       = RecordsSource.Rec[MapIndex].PSRL[rankIndex].Points/HighestAcquiredPoints*10.00;
     recordRank.Time         = RecordsSource.Rec[MapIndex].PSRL[rankIndex].SRT;
-    recordRank.Date       	= class'MutBestTimes'.static.FixDate( RecordsSource.Rec[MapIndex].PSRL[rankIndex].SRD );
+    recordRank.Date       	= RecordsSource.DateToCompactDate(
+        RecordsSource.Rec[MapIndex].PSRL[rankIndex].SRD[2],
+        RecordsSource.Rec[MapIndex].PSRL[rankIndex].SRD[1],
+        RecordsSource.Rec[MapIndex].PSRL[rankIndex].SRD[0]
+    );
 	recordRank.Flags        = RecordsSource.Rec[MapIndex].PSRL[rankIndex].Flags;
     Client.ClientAddRecordRank( recordRank );
 }
