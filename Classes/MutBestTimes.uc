@@ -1059,12 +1059,6 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     {
         CRI.RecordsPRI = Spawn( class'BTGUI_RecordRankingsReplicationInfo', requester );
         CRI.RecordsPRI.RecordsMapName = CurrentMapName;
-
-        // Must be initiated after RecordsMapName is set.
-        if( Level.NetMode == NM_Standalone )
-        {
-            CRI.OnClientNotify( "Ready", 0 );
-        }
     }
 
     if( pageIndex == -1 )

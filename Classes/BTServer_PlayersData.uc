@@ -125,6 +125,7 @@ var int TotalItemsBought;
 var int DayTest;
 var transient int TotalActivePlayersCount;
 var transient MutBestTimes BT;
+var transient bool bCachedData;
 
 final function Free()
 {

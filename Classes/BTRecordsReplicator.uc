@@ -23,7 +23,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
     MapIndex = RecordsSource.FindRecordMatch( mapName );
     if( MapIndex == -1 )
     {
-    	Warn("Tried looking for a non existing map!" @ mapName);
+    	// Warn("Tried looking for a non existing map!" @ mapName);
         Client.ClientDoneRecordRanks( true );
     	Destroy();
     	return;

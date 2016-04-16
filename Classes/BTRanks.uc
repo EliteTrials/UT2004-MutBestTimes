@@ -255,25 +255,29 @@ final function CalcTopLists()
 {
     local int i, mapIndex;
 
-    // Cache the points for all maps to reduce the time spent calculating stats.
-    // DebugLog("Caching record stats");
-	class'CacheManager'.static.GetMapList( CachedMaps );
-	for( i = 0; i < CachedMaps.Length; ++ i )
-	{
-		mapIndex = BT.RDat.FindRecord( CachedMaps[i].MapName );
-		if( mapIndex == -1 )
-			continue;
-
-		BT.RDat.Rec[mapIndex].bMapIsActive = true;
-	}
-    if( BT.bDebugMode || RDat.StatsNeedUpdate() )
+    if( !PDat.bCachedData )
     {
-    	CacheRecordPoints();
-    }
-    CacheRecords();
+        // Cache the points for all maps to reduce the time spent calculating stats.
+        // DebugLog("Caching record stats");
+    	class'CacheManager'.static.GetMapList( CachedMaps );
+    	for( i = 0; i < CachedMaps.Length; ++ i )
+    	{
+    		mapIndex = BT.RDat.FindRecord( CachedMaps[i].MapName );
+    		if( mapIndex == -1 )
+    			continue;
 
-    // DebugLog("Caching player stats");
-    CachePlayers();
+    		BT.RDat.Rec[mapIndex].bMapIsActive = true;
+    	}
+        if( BT.bDebugMode || RDat.StatsNeedUpdate() )
+        {
+        	CacheRecordPoints();
+        }
+        CacheRecords();
+
+        // DebugLog("Caching player stats");
+        CachePlayers();
+    }
+    PDat.bCachedData = true;
 
     OverallTopList = new (BT) class'BTRanksList';
     OverallTopList.RanksTable = 0;
