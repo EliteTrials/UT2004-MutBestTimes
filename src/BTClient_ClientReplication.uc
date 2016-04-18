@@ -735,6 +735,25 @@ event Tick( float deltaTime )
     }
 }
 
+event Destroyed()
+{
+    local int i;
+
+    super.Destroyed();
+    for( i = 0 ; i < arraycount(Rankings); ++ i )
+    {
+        if( Rankings[i] != none )
+        {
+            Rankings[i].Destroy();
+        }
+    }
+
+    if( RecordsPRI != none )
+    {
+        RecordsPRI.Destroy();
+    }
+}
+
 defaultproperties
 {
     bNetNotify=true
