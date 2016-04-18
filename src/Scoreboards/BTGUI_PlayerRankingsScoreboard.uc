@@ -2,7 +2,7 @@ class BTGUI_PlayerRankingsScoreboard extends BTGUI_RankingsBase;
 
 var const array<string> RankingCategories;
 
-var automated GUIComboBox RankingsCombo;
+var automated BTGUI_ComboBox RankingsCombo;
 var automated BTGUI_PlayerRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
 
@@ -12,13 +12,6 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 
 	super.InitComponent( myController, myOwner );
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
-    RankingsCombo.Edit.bAlwaysNotify = true;
-    RankingsCombo.Edit.bReadOnly = true;
-  	RankingsCombo.Edit.Style = Controller.GetStyle("BTEditBox", RankingsCombo.Edit.FontScale);
-    RankingsCombo.MyShowListBtn.Style = Controller.GetStyle("BTButton", RankingsCombo.MyShowListBtn.FontScale);
-    RankingsCombo.List.Style = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
-    RankingsCombo.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
-
 	for( i = 0; i < RankingCategories.Length; ++ i )
 	{
 	    RankingsCombo.AddItem( RankingCategories[i], none, string(i) );
@@ -159,7 +152,7 @@ defaultproperties
     RankingCategories(1)="Ranks - This Month"
     RankingCategories(2)="Ranks - Today"
 
-    Begin Object class=GUIComboBox Name=RanksComboBox
+    Begin Object class=BTGUI_ComboBox Name=RanksComboBox
         WinWidth=0.38
         WinHeight=0.045
         WinLeft=0.0
@@ -168,6 +161,7 @@ defaultproperties
         bBoundToParent=true
         FontScale=FNS_Small
         bIgnoreChangeWhenTyping=true
+        bReadOnly=true
         OnChange=InternalOnChangeRankingsCategory
     End Object
     RankingsCombo=RanksComboBox

@@ -1,6 +1,6 @@
 class BTGUI_RecordRankingsScoreboard extends BTGUI_RankingsBase;
 
-var automated GUIComboBox RankingsCombo;
+var automated BTGUI_ComboBox RankingsCombo;
 var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
 
@@ -8,12 +8,6 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 {
 	super.InitComponent( myController, myOwner );
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
-    RankingsCombo.Edit.bAlwaysNotify = true;
-    // RankingsCombo.Edit.bReadOnly = true;
-  	RankingsCombo.Edit.Style = Controller.GetStyle("BTEditBox", RankingsCombo.Edit.FontScale);
-    RankingsCombo.MyShowListBtn.Style = Controller.GetStyle("BTButton", RankingsCombo.MyShowListBtn.FontScale);
-    RankingsCombo.List.Style = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
-    RankingsCombo.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", RankingsCombo.List.FontScale);
 }
 
 event Opened( GUIComponent sender )
@@ -147,7 +141,7 @@ function InternalOnScroll( int newPos )
 
 defaultproperties
 {
-    Begin Object class=GUIComboBox Name=RanksComboBox
+    Begin Object class=BTGUI_ComboBox Name=RanksComboBox
         WinWidth=1.0
         WinHeight=0.045
         WinLeft=0.0

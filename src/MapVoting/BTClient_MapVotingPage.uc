@@ -10,7 +10,7 @@ var automated GUILabel FilterLabel;
 var automated BTClient_MapPanel MapPanel;
 
 var automated GUILabel GameTypeFilter;
-var automated GUIComboBox ComboGameType;
+var automated BTGUI_ComboBox ComboGameType;
 
 // Ugly ugly ugly...
 function bool InternalOnBackgroundDraw( Canvas C )
@@ -90,16 +90,8 @@ function InternalOnOpen()
     lb_MapListBox.List.OnDblClick = MapListDblClick;
     lb_MaplistBox.List.bDropSource = True;
     lb_MaplistBox.List.OnChange = MapSelectionChanged;
-    ComboGameType.Edit.bAlwaysNotify = true;
     ComboGameType.OnChange = GameTypeChanged;
     // f_Chat.OnSubmit = Submit;
-
-
-
-    ComboGameType.Edit.Style = Controller.GetStyle("BTEditBox", ComboGameType.Edit.FontScale);
-    ComboGameType.MyShowListBtn.Style = Controller.GetStyle("BTButton", ComboGameType.MyShowListBtn.FontScale);
-    ComboGameType.List.Style = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
-    ComboGameType.List.SelectedStyle = Controller.GetStyle("BTMultiColumnList", ComboGameType.List.FontScale);
 
     // lb_MaplistBox.MyScrollBar.MyIncreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyIncreaseButton.FontScale);
     // lb_MaplistBox.MyScrollBar.MyDecreaseButton.Style = Controller.GetStyle("BTButton", lb_MaplistBox.MyScrollBar.MyDecreaseButton.FontScale);
@@ -265,7 +257,7 @@ defaultproperties
     end object
     GameTypeFilter=oGameTypeFilter
 
-    Begin Object class=GUIComboBox Name=GameTypeCombo
+    Begin Object class=BTGUI_ComboBox Name=GameTypeCombo
         WinWidth=0.235000
         WinHeight=0.035000
         WinLeft=0.650000
