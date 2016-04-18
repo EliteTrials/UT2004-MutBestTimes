@@ -30,6 +30,11 @@ function InternalOnQueryChange( GUIComponent sender )
 function InternalOnQueryReceived( BTQueryDataReplicationInfo queryRI )
 {
 	Log(queryRI);
+
+	if( BTRecordReplicationInfo(queryRI) != none )
+	{
+		QueryBox.SetText( "COmpleted:" $ BTRecordReplicationInfo(queryRI).Completed );
+	}
 }
 
 final function string GetQuery()
