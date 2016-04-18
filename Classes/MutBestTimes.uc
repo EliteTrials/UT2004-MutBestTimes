@@ -1067,6 +1067,14 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     replicator = Spawn( class'BTRecordsReplicator', self );
     replicator.Initialize( CRI.RecordsPRI, pageIndex, mapName );
 }
+
+final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
+{
+    local BTQueryDataReplicationInfo queryRI;
+
+    queryRI = Spawn( class'BTQueryDataReplicationInfo', requester );
+    // TODO;
+}
 //==============================================================================
 
 final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
@@ -1401,6 +1409,7 @@ event PreBeginPlay()
     MRI.AddToPackageMap();  // Temporary ServerPackage
     MRI.OnRequestPlayerRanks = InternalOnRequestPlayerRanks;
     MRI.OnRequestRecordRanks = InternalOnRequestRecordRanks;
+    MRI.OnServerQuery = InternalOnServerQuery;
 
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
