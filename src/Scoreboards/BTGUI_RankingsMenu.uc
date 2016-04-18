@@ -2,8 +2,8 @@ class BTGUI_RankingsMenu extends BTGUI_ScoreboardBase;
 
 var automated GUITabControl Tabs;
 var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
-var BTGUI_PlayerRankingsScoreboard PlayersScoreboard;
-var BTGUI_RecordRankingsScoreboard RecordsScoreboard;
+var private BTGUI_PlayerRankingsScoreboard PlayersScoreboard;
+var private BTGUI_RecordRankingsScoreboard RecordsScoreboard;
 
 event Free()
 {
@@ -38,6 +38,19 @@ function ReplicationReady( BTGUI_ScoreboardReplicationInfo repSource )
     // Log("ReplicationReady", Name);
     PlayersScoreboard.RepReady( repSource );
     RecordsScoreboard.RepReady( repSource );
+}
+
+function PassQueryReceived( BTQueryDataReplicationInfo queryRI )
+{
+    PlayerInfoPanel.OnQueryReceived( queryRi );
+}
+
+final static function BTGUI_RankingsMenu GetMenu( PlayerController localPC )
+{
+    local GUIController myController;
+
+    myController = GUIController(localPC.Player.GUIController);
+    return BTGUI_RankingsMenu(myController.FindPersistentMenuByClass( default.Class ));
 }
 
 defaultproperties

@@ -1,24 +1,9 @@
-class BTGUI_ScoreboardReplicationInfo extends ReplicationInfo;
-
-var BTClient_ClientReplication CRI;
-
-simulated event PostBeginPlay()
-{
-	super.PostBeginPlay();
-	if( Level.NetMode != NM_DedicatedServer )
-	{
-		CRI = class'BTClient_ClientReplication'.static.GetRep( Level.GetLocalPlayerController() );
-	}
-	else
-	{
-		CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerController(Owner) );
-	}
-}
+class BTQueryDataReplicationInfo extends ReplicationInfo;
 
 simulated event PostNetBeginPlay()
 {
 	super.PostNetBeginPlay();
-	if( CRI != none && Level.NetMode != NM_DedicatedServer )
+	if( Level.NetMode != NM_DedicatedServer )
 	{
 		// Need a minor delay so that we can initialize after specific variables have been set(offline only).
 		SetTimer( 0.05, false );
@@ -36,11 +21,15 @@ simulated function RepReady()
 
 	menu = class'BTGUI_RankingsMenu'.static.GetMenu( Level.GetLocalPlayerController() );
 	if( menu == none)
+	{
+		Warn("Received query replication data, but no menu was found");
 		return;
+	}
 
 	// Log("RepReady" @ self, Name);
-	menu.ReplicationReady( self );
+	menu.PassQueryReceived( self );
 }
+
 
 defaultproperties
 {

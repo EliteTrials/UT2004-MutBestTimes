@@ -83,6 +83,7 @@ replication
 /** Queries the server for the all time, quarterly or daily player ranks. */
 delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 delegate OnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName );
+delegate OnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query );
 
 simulated Event PostBeginPlay()
 {

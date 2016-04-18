@@ -231,7 +231,8 @@ replication
         ServerSetPreferedColor,
         ServerRequestAchievementCategories, ServerRequestAchievementsByCategory,
         ServerRequestPlayerItems,
-        ServerRequestPlayerRanks, ServerRequestRecordRanks;
+        ServerRequestPlayerRanks, ServerRequestRecordRanks,
+        ServerPerformQuery;
 }
 
 // Server hooks
@@ -691,6 +692,11 @@ simulated function ServerSellItem( string id )
 simulated function ServerDestroyItem( string id )
 {
     PlayerController(Owner).ConsoleCommand( "Store DestroyItem" @ id );
+}
+
+simulated function ServerPerformQuery( string query )
+{
+    MRI.OnServerQuery( PlayerController(Owner), self, query );
 }
 
 static function BTClient_ClientReplication GetRep( PlayerController PC )
