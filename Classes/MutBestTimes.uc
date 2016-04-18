@@ -1071,10 +1071,62 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
 final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
 {
     local BTQueryDataReplicationInfo queryRI;
+    local array<string> params;
+    local string cmd;
 
-    queryRI = Spawn( class'BTQueryDataReplicationInfo', requester );
-    // TODO;
+    Split(Locs(query), ":", params);
+    if( params.Length == 0 )
+    {
+        // TODO: Send bad query
+        return;
+    }
+
+    cmd = params[0];
+    switch( cmd )
+    {
+        case "record":
+            queryRI = BuildRecordData( Spawn( class'BTRecordReplicationInfo', requester ), params );
+            break;
+    }
+
+    if( queryRI == none )
+    {
+        Warn("Couldn't build query data");
+        return;
+    }
 }
+
+// Expects params to consist of: "record:mapIndex:playerIndex"
+final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, out array<string> params )
+{
+    local int mapIndex, playerIndex, recordIndex;
+
+    mapIndex = int(params[1]);
+    playerIndex = int(params[2]);
+    recordIndex = GetRecordIndexByPlayer( mapIndex, playerIndex );
+    if( recordIndex == -1 )
+    {
+        return none;
+    }
+
+    recordData.Completed = RDat.Rec[mapIndex].PSRL[recordIndex].ObjectivesCount;
+    return recordData;
+}
+
+final function int GetRecordIndexByPlayer( int mapIndex, int playerIndex )
+{
+    local int i;
+
+    for( i = 0; i < RDat.Rec[mapIndex].PSRL.Length; ++ i )
+    {
+        if( RDat.Rec[mapIndex].PSRL[i].PLs-1 == playerIndex )
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
 //==============================================================================
 
 final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
