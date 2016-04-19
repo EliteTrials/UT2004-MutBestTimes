@@ -4,10 +4,13 @@ var automated BTGUI_ComboBox RankingsCombo;
 var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
 
+delegate OnQueryRecord( BTGUI_RecordRankingsReplicationInfo recordsPRI, int index );
+
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
 	super.InitComponent( myController, myOwner );
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
+    RankingsListBox.List.OnChange = InternalOnSelected;
 }
 
 event Opened( GUIComponent sender )
@@ -137,6 +140,14 @@ function InternalOnScroll( int newPos )
     {
         QueryNextRecordRanks();
     }
+}
+
+function InternalOnSelected( GUIComponent sender )
+{
+    local BTClient_ClientReplication CRI;
+
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    OnQueryRecord( CRI.RecordsPRI, RankingsListBox.List.CurrentListId() );
 }
 
 defaultproperties

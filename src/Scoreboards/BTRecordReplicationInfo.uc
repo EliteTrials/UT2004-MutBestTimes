@@ -10,4 +10,5 @@ replication
 
 defaultproperties
 {
+	DataPanelClass=class'BTGUI_RecordQueryDataPanel'
 }

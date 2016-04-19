@@ -1,40 +1,52 @@
-class BTGUI_PlayerRankingsPlayerProfile extends GUIPanel;
+class BTGUI_QueryPanel extends GUIPanel;
 
 var automated GUIHeader Header;
 var automated GUILabel QueryLabel;
 var automated GUIEditBox QueryBox;
 var automated GUIImage PanelImage;
+var automated BTGUI_QueryDataPanel DataPanel;
 
 delegate OnQueryReceived( BTQueryDataReplicationInfo queryRI );
 
-event InitComponent( GUIController myController, GUIComponent myOwner )
+function InternalOnQueryChange( GUIComponent sender )
 {
-	super.InitComponent( myController, myOwner );
-	PanelImage.ImageColor = class'BTClient_Config'.default.CTable;
+	DoQuery( GetQuery() );
 }
 
-function InternalOnQueryChange( GUIComponent sender )
+function DoQuery( string query )
 {
     local BTClient_ClientReplication CRI;
 
+    Log( query );
     CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
     if( CRI == none )
     {
     	Warn("Attempt to query with no CRI");
     	return;
     }
-
-    CRI.ServerPerformQuery( GetQuery() );
+    CRI.ServerPerformQuery( query );
 }
 
 function InternalOnQueryReceived( BTQueryDataReplicationInfo queryRI )
 {
-	Log(queryRI);
+	SwitchDataPanel( queryRI );
+}
 
-	if( BTRecordReplicationInfo(queryRI) != none )
-	{
-		QueryBox.SetText( "COmpleted:" $ BTRecordReplicationInfo(queryRI).Completed );
-	}
+final function SwitchDataPanel( BTQueryDataReplicationInfo queryRI )
+{
+	local BTGUI_QueryDataPanel newDataPanel;
+
+	newDataPanel = BTGUI_QueryDataPanel(AddComponent( string(queryRI.DataPanelClass) ));
+	newDataPanel.WinWidth = DataPanel.WinWidth;
+	newDataPanel.WinHeight = DataPanel.WinHeight;
+	newDataPanel.WinTop = DataPanel.WinTop;
+	newDataPanel.WinLeft = DataPanel.WinLeft;
+	newDataPanel.bScaleToParent = DataPanel.bScaleToParent;
+	newDataPanel.bBoundToParent = DataPanel.bBoundToParent;
+	DataPanel.Free();
+	RemoveComponent( DataPanel );
+	DataPanel = newDataPanel;
+	DataPanel.ApplyData( queryRI );
 }
 
 final function string GetQuery()
@@ -75,7 +87,7 @@ defaultproperties
     QueryBox=oQueryBox
 
 	Begin Object class=GUIHeader name=oHeader
-		Caption="Player Profile"
+		Caption="Details"
 		WinWidth=1
 		WinHeight=0.043750
 		WinLeft=0
@@ -88,14 +100,13 @@ defaultproperties
 	End Object
 	Header=oHeader
 
-	Begin Object class=GUIImage name=oBackground
+	Begin Object class=BTGUI_QueryDataPanel name=oQueryDataPanel
 		WinWidth=1.0
-		WinHeight=0.955
-		WinTop=0.045
+		WinHeight=0.9
+		WinTop=0.1
 		WinLeft=0.0
         bScaleToParent=True
         bBoundToParent=True
-		Image=Texture'BTScoreBoardBG'
 	End Object
-	PanelImage=oBackground
+	DataPanel=oQueryDataPanel
 }

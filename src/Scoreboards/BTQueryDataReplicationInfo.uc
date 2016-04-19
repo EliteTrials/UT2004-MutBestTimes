@@ -1,5 +1,7 @@
 class BTQueryDataReplicationInfo extends ReplicationInfo;
 
+var() const class<BTGUI_QueryDataPanel> DataPanelClass;
+
 simulated event PostNetBeginPlay()
 {
 	super.PostNetBeginPlay();

@@ -1,7 +1,7 @@
 class BTGUI_RankingsMenu extends BTGUI_ScoreboardBase;
 
 var automated GUITabControl Tabs;
-var automated BTGUI_PlayerRankingsPlayerProfile PlayerInfoPanel;
+var automated BTGUI_QueryPanel QueryPanel;
 var private BTGUI_PlayerRankingsScoreboard PlayersScoreboard;
 var private BTGUI_RecordRankingsScoreboard RecordsScoreboard;
 
@@ -42,7 +42,15 @@ function ReplicationReady( BTGUI_ScoreboardReplicationInfo repSource )
 
 function PassQueryReceived( BTQueryDataReplicationInfo queryRI )
 {
-    PlayerInfoPanel.OnQueryReceived( queryRi );
+    QueryPanel.OnQueryReceived( queryRi );
+}
+
+function InternalOnQueryRecord( BTGUI_RecordRankingsReplicationInfo recordsPRI, int recordIndex )
+{
+    local string query;
+
+    query = "record:" $ recordsPRI.RecordsMapId $ ":" $ recordsPRI.RecordRanks[recordIndex].PlayerId;
+    QueryPanel.DoQuery( query );
 }
 
 final static function BTGUI_RankingsMenu GetMenu( PlayerController localPC )
@@ -86,14 +94,15 @@ defaultproperties
     PlayersScoreboard=oPlayersPanel
 
     Begin Object class=BTGUI_RecordRankingsScoreboard name=oRecordsPanel
+        OnQueryRecord=InternalOnQueryRecord
     End Object
     RecordsScoreboard=oRecordsPanel
 
-    Begin Object class=BTGUI_PlayerRankingsPlayerProfile name=oPlayerInfoPanel
+    Begin Object class=BTGUI_QueryPanel name=oQueryPanel
         WinWidth=0.395
         WinHeight=0.925
         WinTop=0.065
         WinLeft=0.6
     End Object
-    PlayerInfoPanel=oPlayerInfoPanel
+    QueryPanel=oQueryPanel
 }

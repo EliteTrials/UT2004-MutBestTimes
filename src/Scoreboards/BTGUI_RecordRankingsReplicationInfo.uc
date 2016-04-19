@@ -14,11 +14,12 @@ var() array<sRecordRank> RecordRanks;
 
 var private editconst int CurrentPageIndex;
 var editconst string RecordsMapName;
+var editconst int RecordsMapId;
 
 replication
 {
 	reliable if( Role == ROLE_Authority )
-		RecordsMapName,
+		RecordsMapName, RecordsMapId,
 		ClientClearRecordRanks,
 		ClientDoneRecordRanks,
 		ClientAddRecordRank,
