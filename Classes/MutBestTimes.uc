@@ -1101,8 +1101,8 @@ final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo 
 {
     local int mapIndex, playerIndex, recordIndex;
 
-    mapIndex = int(params[1]);
-    playerIndex = int(params[2]);
+    mapIndex = int(params[1])-1;
+    playerIndex = int(params[2])-1;
     recordIndex = GetRecordIndexByPlayer( mapIndex, playerIndex );
     if( recordIndex == -1 )
     {

@@ -29,6 +29,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
     	return;
     }
     Client.RecordsMapName = RecordsSource.Rec[MapIndex].TMN;
+    Client.RecordsMapId = MapIndex + 1;
 
     numItems = RecordsSource.Rec[MapIndex].PSRL.Length;
     if( numItems == 0 )
