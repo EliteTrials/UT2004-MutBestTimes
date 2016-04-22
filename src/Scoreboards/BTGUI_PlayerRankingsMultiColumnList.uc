@@ -30,8 +30,10 @@ function float InternalGetItemHeight( Canvas C )
 
 function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSelected, bool bPending)
 {
+    local float xl, yl;
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
+    local Texture countryFlag;
 
     bItemIsSelected = bSelected;
     bItemIsOwner = Rankings.CRI != none
@@ -79,8 +81,24 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 3 );
-    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.DrawText( C, MenuState, CellLeft + 32, Y, CellWidth - 32, H, TXTA_Left,
         Rankings.PlayerRanks[SortData[i].SortItem].Name, FontScale );
+
+    DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
+    yl = yl*0.8 - 2.0;
+    xl = 10f/8f*yl;
+    C.DrawColor = class'HUD'.default.WhiteColor;
+    countryFlag = Texture(DynamicLoadObject( Class.Outer.Name$"."$Rankings.PlayerRanks[SortData[i].SortItem].Country, class'Texture', true ));
+    if( countryFlag != none )
+    {
+        C.SetPos( CellLeft, Y + H*0.5 - yl*0.5 );
+        C.DrawTile( countryFlag, xl, yl, 1, 0, 15, 10 );
+    }
+    else
+    {
+        DrawStyle.DrawText( C, MenuState, CellLeft, Y, 32, H, TXTA_Left,
+            Rankings.PlayerRanks[SortData[i].SortItem].Country, FontScale );
+    }
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 4 );

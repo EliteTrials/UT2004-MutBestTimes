@@ -17,6 +17,7 @@ cd %project_name%
 
 xcopy content "..\%project_build_name%\content" /i /y /q
 copy /y "ClientBTimes.utx" "..\%project_build_name%\ClientBTimes.utx"
+copy /y "CountryFlagsUT2K4.utx" "..\%project_build_name%\CountryFlagsUT2K4.utx"
 
 cd src
 for /r %%i in (*.uc) do (
