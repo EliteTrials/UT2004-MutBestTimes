@@ -1,9 +1,26 @@
 class BTGUI_RecordRankingsMultiColumnListBox extends GUIMultiColumnListBox;
 
+var() const localized string EraseRecordName;
+
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	DefaultListClass = string(class'BTGUI_RecordRankingsMultiColumnList');
     super.InitComponent( MyController, MyOwner );
+}
+
+function bool InternalOnOpen( GUIContextMenu Sender )
+{
+    if( PlayerOwner().PlayerReplicationInfo.bAdmin || PlayerOwner().Level.NetMode == NM_Standalone )
+    {
+        ContextMenu.AddItem( EraseRecordName );
+    }
+    return true;
+}
+
+function bool InternalOnClose( GUIContextMenu Sender )
+{
+    ContextMenu.RemoveItemByName( EraseRecordName );
+    return true;
 }
 
 // final function SwitchRankings( byte newRanksId, BTGUI_RecordRankingsReplicationInfo source )
@@ -26,6 +43,8 @@ event InitComponent(GUIController MyController, GUIComponent MyOwner)
 
 defaultproperties
 {
+    EraseRecordName="Erase Record"
+
     DefaultListClass="" // Manually initialized in InitComponent.
     ColumnHeadings(0)="#"
     ColumnHeadings(1)="Rating"
@@ -42,4 +61,12 @@ defaultproperties
         bVisible=false
     End Object
     MyScrollBar=TheScrollbar
+
+    Begin Object Class=GUIContextMenu Name=oContextMenu
+        ContextItems(0)="View Record Details"
+        ContextItems(1)="View Player Details"
+        OnOpen=InternalOnOpen
+        OnClose=InternalOnClose
+    End Object
+    ContextMenu=oContextMenu
 }

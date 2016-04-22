@@ -48,4 +48,11 @@ defaultproperties
         bVisible=false
     End Object
     MyScrollBar=TheScrollbar
+
+    Begin Object Class=GUIContextMenu Name=oContextMenu
+        ContextItems(0)="View Player Details"
+        // OnOpen=InternalOnOpen
+        // OnClose=InternalOnClose
+    End Object
+    ContextMenu=oContextMenu
 }

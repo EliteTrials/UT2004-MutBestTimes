@@ -12,6 +12,12 @@ event Free()
     RecordsScoreboard = none;
 }
 
+event bool NotifyLevelChange()
+{
+    bPersistent = false;
+    return super.NotifyLevelChange();
+}
+
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	super.InitComponent(MyController,MyOwner);
@@ -45,12 +51,32 @@ function PassQueryReceived( BTQueryDataReplicationInfo queryRI )
     QueryPanel.OnQueryReceived( queryRi );
 }
 
-function InternalOnQueryRecord( BTGUI_RecordRankingsReplicationInfo recordsPRI, int recordIndex )
+function InternalOnQueryPlayerRecord( int mapId, int playerId )
 {
     local string query;
 
-    query = "record:" $ recordsPRI.RecordsMapId $ ":" $ recordsPRI.RecordRanks[recordIndex].PlayerId;
-    QueryPanel.DoQuery( query );
+    if( mapId == 0 || playerId == 0 )
+    {
+        Warn("Received request with invalid data");
+        return;
+    }
+
+    query = "player:" $ playerId @ "map:" $ mapId;
+    QueryPanel.SetQuery( query );
+}
+
+function InternalOnQueryPlayer( int playerId )
+{
+    local string query;
+
+    if( playerId == 0 )
+    {
+        Warn("Received request with invalid data");
+        return;
+    }
+
+    query = "player:" $ playerId;
+    QueryPanel.SetQuery( query );
 }
 
 final static function BTGUI_RankingsMenu GetMenu( PlayerController localPC )
@@ -90,11 +116,13 @@ defaultproperties
     Tabs=oRankPages
 
     Begin Object class=BTGUI_PlayerRankingsScoreboard name=oPlayersPanel
+        OnQueryPlayer=InternalOnQueryPlayer
     End Object
     PlayersScoreboard=oPlayersPanel
 
     Begin Object class=BTGUI_RecordRankingsScoreboard name=oRecordsPanel
-        OnQueryRecord=InternalOnQueryRecord
+        OnQueryPlayer=InternalOnQueryPlayer
+        OnQueryPlayerRecord=InternalOnQueryPlayerRecord
     End Object
     RecordsScoreboard=oRecordsPanel
 

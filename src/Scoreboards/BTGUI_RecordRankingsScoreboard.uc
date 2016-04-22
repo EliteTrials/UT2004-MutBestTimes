@@ -4,13 +4,14 @@ var automated BTGUI_ComboBox RankingsCombo;
 var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
 
-delegate OnQueryRecord( BTGUI_RecordRankingsReplicationInfo recordsPRI, int index );
+delegate OnQueryPlayerRecord( int mapId, int playerId );
 
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
 	super.InitComponent( myController, myOwner );
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
-    RankingsListBox.List.OnChange = InternalOnSelected;
+    RankingsListBox.ContextMenu.OnSelect = InternalOnContext;
+    RankingsListBox.List.OnDblClick = InternalOnSelected;
 }
 
 event Opened( GUIComponent sender )
@@ -29,7 +30,7 @@ event Opened( GUIComponent sender )
     }
 }
 
-function RequestReplicationChannels()
+private function RequestReplicationChannels()
 {
     local BTClient_ClientReplication CRI;
 
@@ -58,7 +59,7 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
     bWaitingForReplication = false;
 }
 
-function QueryNextRecordRanks( optional bool bReset )
+private function QueryNextRecordRanks( optional bool bReset )
 {
 	local BTClient_ClientReplication CRI;
 
@@ -67,6 +68,7 @@ function QueryNextRecordRanks( optional bool bReset )
 
     bIsQuerying = true;
     RankingsCombo.DisableMe();
+    RankingsListBox.List.SetIndex( 0 );
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     CRI.RecordsPRI.RecordsMapName = RankingsCombo.GetText();
@@ -142,12 +144,60 @@ function InternalOnScroll( int newPos )
     }
 }
 
-function InternalOnSelected( GUIComponent sender )
+function InternalOnContext( GUIContextMenu sender, int clickIndex )
+{
+    switch( clickIndex )
+    {
+        // Record
+        case 0:
+            ViewPlayerRecord( RankingsListBox.List.CurrentListId() );
+            break;
+
+        // Player
+        case 1:
+            ViewPlayer( RankingsListBox.List.CurrentListId() );
+            break;
+
+        // Erase
+        case 2:
+            ErasePlayerRecord( RankingsListBox.List.CurrentListId() );
+            break;
+    }
+}
+
+function bool InternalOnSelected( GUIComponent sender )
+{
+    local int itemIndex;
+
+    itemIndex = RankingsListBox.List.CurrentListId();
+    ViewPlayerRecord( itemIndex );
+    return false;
+}
+
+private function ViewPlayerRecord( int itemIndex )
 {
     local BTClient_ClientReplication CRI;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    OnQueryRecord( CRI.RecordsPRI, RankingsListBox.List.CurrentListId() );
+    OnQueryPlayerRecord( CRI.RecordsPRI.RecordsMapId, CRI.RecordsPRI.RecordRanks[itemIndex].PlayerId );
+}
+
+private function ViewPlayer( int itemIndex )
+{
+    local BTClient_ClientReplication CRI;
+
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    OnQueryPlayer( CRI.RecordsPRI.RecordRanks[itemIndex].PlayerId );
+}
+
+private function ErasePlayerRecord( int itemIndex )
+{
+    local BTClient_ClientReplication CRI;
+    local int playerId;
+
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    playerId = CRI.RecordsPRI.RecordRanks[itemIndex].PlayerId;
+    PlayerOwner().ConsoleCommand( "mutate ErasePlayerRecord" @ playerId );
 }
 
 defaultproperties

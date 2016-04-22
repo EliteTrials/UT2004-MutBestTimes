@@ -12,6 +12,8 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 
 	super.InitComponent( myController, myOwner );
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
+    RankingsListBox.ContextMenu.OnSelect = InternalOnContext;
+    RankingsListBox.List.OnDblClick = InternalOnSelected;
 	for( i = 0; i < RankingCategories.Length; ++ i )
 	{
 	    RankingsCombo.AddItem( RankingCategories[i], none, string(i) );
@@ -34,7 +36,7 @@ event Opened( GUIComponent sender )
     }
 }
 
-function RequestReplicationChannels()
+private function RequestReplicationChannels()
 {
 	local BTClient_ClientReplication CRI;
 	local byte ranksId;
@@ -45,7 +47,7 @@ function RequestReplicationChannels()
 	// PlayerOwner().ClientMessage("Requesting channel" @ ranksId);
 }
 
-function QueryNextPlayerRanks()
+private function QueryNextPlayerRanks()
 {
 	local BTClient_ClientReplication CRI;
 
@@ -144,6 +146,36 @@ function InternalOnScroll( int newPos )
     {
         QueryNextPlayerRanks();
     }
+}
+
+function InternalOnContext( GUIContextMenu sender, int clickIndex )
+{
+    switch( clickIndex )
+    {
+        // Player
+        case 0:
+            ViewPlayer( RankingsListBox.List.CurrentListId() );
+            break;
+    }
+}
+
+function bool InternalOnSelected( GUIComponent sender )
+{
+    local int itemIndex;
+
+    itemIndex = RankingsListBox.List.CurrentListId();
+    ViewPlayer( itemIndex );
+    return false;
+}
+
+private function ViewPlayer( int itemIndex )
+{
+    local BTClient_ClientReplication CRI;
+    local byte ranksId;
+
+    ranksId = GetCurrentRanksId();
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    OnQueryPlayer( CRI.Rankings[ranksId].PlayerRanks[itemIndex].PlayerId );
 }
 
 defaultproperties
