@@ -37,7 +37,7 @@ defaultproperties
     ColumnHeadings(2)="ELO"
     ColumnHeadings(3)="Player"
     ColumnHeadings(4)="Records"
-    ColumnHeadings(5)="Hijacks"
+    ColumnHeadings(5)="Stars"
     bDisplayHeader=true
 
     Begin Object Class=BTClient_MultiColumnListHeader Name=MyHeader

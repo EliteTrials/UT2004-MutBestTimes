@@ -206,6 +206,11 @@ defaultproperties
     InitColumnPerc(2)=0.435
     InitColumnPerc(3)=0.20
     InitColumnPerc(4)=0.165
+    ColumnHeadingHints(0)="Record rank; Achieved by setting a better time."
+    ColumnHeadingHints(1)="Performance Rating. Based on the players performance relative to that of other players, and the map's rated difficulty."
+    ColumnHeadingHints(2)="Player's Name."
+    ColumnHeadingHints(3)="The player's record time."
+    ColumnHeadingHints(4)="The date when the player did set this record time. In the following order Day/Month/Year"
 
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight

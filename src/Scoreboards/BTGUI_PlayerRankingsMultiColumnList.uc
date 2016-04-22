@@ -182,6 +182,12 @@ defaultproperties
     InitColumnPerc(3)=0.475
     InitColumnPerc(4)=0.13
     InitColumnPerc(5)=0.12
+    ColumnHeadingHints(0)="The player's rank; Calculated by the player's performance (ELO)."
+    ColumnHeadingHints(1)="Achievement Points"
+    ColumnHeadingHints(2)="Performance Rating. A players rating is determined by your best performance on competitive maps that are rated by comparison to other performers."
+    ColumnHeadingHints(3)="Player's name."
+    ColumnHeadingHints(4)="Number of records that the player has set a time on."
+    ColumnHeadingHints(5)="Stars are the amount of top records a player has, i.e. #1 time."
 
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight
