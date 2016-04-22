@@ -1071,22 +1071,47 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
 final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
 {
     local BTQueryDataReplicationInfo queryRI;
+    local int i;
     local array<string> params;
-    local string cmd;
+    local array<string> variable;
+    local string playerId, mapId;
 
-    Split(Locs(query), ":", params);
+    Split(Locs(query), " ", params);
     if( params.Length == 0 )
     {
         // TODO: Send bad query
         return;
     }
 
-    cmd = params[0];
-    switch( cmd )
+    for( i = 0; i < params.Length; ++ i )
     {
-        case "record":
-            queryRI = BuildRecordData( Spawn( class'BTRecordReplicationInfo', requester ), params );
-            break;
+        Split(params[i], ":", variable);
+        if( variable.Length < 2 )
+            continue;
+
+        switch( variable[0] )
+        {
+            case "map":
+                mapId = variable[1];
+                break;
+
+            case "player":
+                playerId = variable[1];
+                break;
+        }
+    }
+
+    if( mapId != "" && playerId != "" )
+    {
+        queryRI = BuildRecordData( Spawn( class'BTRecordReplicationInfo', requester ), mapId, playerId );
+    }
+    else if( mapId != "" )
+    {
+
+    }
+    else if( playerId != "" )
+    {
+
     }
 
     if( queryRI == none )
@@ -1097,17 +1122,18 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
 }
 
 // Expects params to consist of: "record:mapIndex:playerIndex"
-final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, out array<string> params )
+final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, string playerId, string mapId )
 {
     local int mapIndex, playerIndex, recordIndex;
 
-    mapIndex = int(params[1])-1;
-    playerIndex = int(params[2])-1;
+    playerIndex = QueryPlayerIndex( playerId );
+    mapIndex = QueryMapIndex( mapId );
+    if( playerIndex == -1 || mapIndex == -1 )
+        return none;
+
     recordIndex = GetRecordIndexByPlayer( mapIndex, playerIndex );
     if( recordIndex == -1 )
-    {
         return none;
-    }
 
     recordData.Completed = RDat.Rec[mapIndex].PSRL[recordIndex].ObjectivesCount;
     return recordData;
@@ -1721,31 +1747,34 @@ Final Function GetMapInfo( string MapName, out array<string> MapInfo )
     return;
 }
 
-final function int QueryPlayerSlot( string q )
+final function int QueryPlayerIndex( string q )
 {
     local int i;
-    local int qId;
     local string pName;
 
-    pName = Caps(q);
-    qId = int(q);
-    for( i = 0; i< PDat.Player.Length; ++ i )
+    if( int(q) > 0 )
     {
-        if( (i == qId-1 && qId != 0) )
-        {
-            return i;
-        }
+        return Min(int(q)-1, PDat.Player.Length-1);
     }
 
-    for( i = 0; i< PDat.Player.Length; ++ i )
+    pName = Caps(q);
+    for( i = 0; i < PDat.Player.Length; ++ i )
     {
         if( InStr(Caps(%PDat.Player[i].PLName), pName) != -1 )
         {
             return i;
         }
     }
-
     return -1;
+}
+
+final function int QueryMapIndex( string q )
+{
+    if( int(q) > 0 )
+    {
+        return Min(int(q)-1, RDat.Rec.Length-1);
+    }
+    return RDat.FindRecordMatch(q);
 }
 
 final function QueryPlayerMeta( int playerSlot, out array<string> columns )
@@ -1995,7 +2024,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     params[0] = sender.GetHumanReadableName();
                 }
 
-                playerSlot = QueryPlayerSlot(params[0]);
+                playerSlot = QueryPlayerIndex(params[0]);
                 if( playerSlot == -1 )
                 {
                     Rep.ClientSendText("Player Profile");
