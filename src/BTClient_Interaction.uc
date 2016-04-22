@@ -903,6 +903,7 @@ Event Initialized()
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_MultiColumnList', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ListSelection', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Header', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Label', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2EditBox', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY2SectionHeaderTop', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Button', true );
