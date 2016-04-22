@@ -17,7 +17,7 @@ function DoQuery( string query )
 {
     local BTClient_ClientReplication CRI;
 
-    Log( query );
+    Log( "received request for query \"" $ query $ "\"" );
     CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
     if( CRI == none )
     {
@@ -47,11 +47,17 @@ final function SwitchDataPanel( BTQueryDataReplicationInfo queryRI )
 	RemoveComponent( DataPanel );
 	DataPanel = newDataPanel;
 	DataPanel.ApplyData( queryRI );
+	queryRI.Abandon();
 }
 
 final function string GetQuery()
 {
 	return QueryBox.GetText();
+}
+
+final function SetQuery( coerce string query )
+{
+	QueryBox.SetText( query );
 }
 
 defaultproperties

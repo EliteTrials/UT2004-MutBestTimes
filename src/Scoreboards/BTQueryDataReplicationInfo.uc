@@ -2,6 +2,12 @@ class BTQueryDataReplicationInfo extends ReplicationInfo;
 
 var() const class<BTGUI_QueryDataPanel> DataPanelClass;
 
+replication
+{
+	reliable if( Role < ROLE_Authority )
+		Abandon;
+}
+
 simulated event PostNetBeginPlay()
 {
 	super.PostNetBeginPlay();
@@ -32,9 +38,18 @@ simulated function RepReady()
 	menu.PassQueryReceived( self );
 }
 
+// When the client is certain that this actor is no longer needed, it may request the server to destroy it!
+simulated function Abandon()
+{
+	Destroy();
+}
 
 defaultproperties
 {
 	bAlwaysRelevant=true
 	bOnlyRelevantToOwner=true
+	// bTearOff=true
+	// bNetTemporary=true
+	bReplicateMovement=false
+	NetPriority=0.5
 }
