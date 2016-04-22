@@ -138,6 +138,11 @@ function InternalOnPlayerRanksDone( BTGUI_PlayerRankingsReplicationInfo source, 
 	{
 		QueryNextPlayerRanks();
 	}
+    else
+    {
+        // If our end user is sorting by other means than Rank, then we should make sure the newly added data gets sorted straight away!
+        RankingsListBox.List.NeedsSorting = true;
+    }
 }
 
 function InternalOnScroll( int newPos )
