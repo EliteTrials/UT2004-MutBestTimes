@@ -2,12 +2,14 @@ class BTRecordReplicationInfo extends BTQueryDataReplicationInfo;
 
 var int Completed;
 var float AverageDodgeTiming, BestDodgeTiming, WorstDodgeTiming;
+var int GhostId;
 
 replication
 {
 	reliable if( bNetInitial )
 		Completed,
-		AverageDodgeTiming, BestDodgeTiming, WorstDodgeTiming;
+		AverageDodgeTiming, BestDodgeTiming, WorstDodgeTiming,
+		GhostId;
 }
 
 defaultproperties

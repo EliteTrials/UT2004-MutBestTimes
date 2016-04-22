@@ -66,8 +66,8 @@ defaultproperties
 
     begin object class=GUILabel name=oQueryLabel
         WinTop=0.0
-        WinHeight=0.045
-        WinWidth=0.2
+        WinHeight=0.06
+        WinWidth=0.195
         WinLeft=0.0
         bScaleToParent=True
         bBoundToParent=True
@@ -76,13 +76,13 @@ defaultproperties
         TextAlign=TXTA_Center
         bTransparent=false
         FontScale=FNS_Small
-        StyleName="BTHeader"
+        StyleName="BTLabel"
     end object
     QueryLabel=oQueryLabel
 
     begin object class=GUIEditBox name=oQueryBox
         WinTop=0.0
-        WinHeight=0.045
+        WinHeight=0.06
         WinWidth=0.8
         WinLeft=0.2
         bScaleToParent=True
@@ -97,7 +97,7 @@ defaultproperties
 		WinWidth=1
 		WinHeight=0.043750
 		WinLeft=0
-		WinTop=0.045
+		WinTop=0.065
 		RenderWeight=0.1
 		FontScale=FNS_Small
 		bUseTextHeight=true
@@ -108,8 +108,8 @@ defaultproperties
 
 	Begin Object class=BTGUI_QueryDataPanel name=oQueryDataPanel
 		WinWidth=1.0
-		WinHeight=0.9
-		WinTop=0.1
+		WinHeight=0.885
+		WinTop=0.115
 		WinLeft=0.0
         bScaleToParent=True
         bBoundToParent=True

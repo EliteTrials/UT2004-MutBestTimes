@@ -89,28 +89,25 @@ final static function BTGUI_RankingsMenu GetMenu( PlayerController localPC )
 
 defaultproperties
 {
-	WindowName="BTimes Rankings"
+	WindowName="BTimes Leaderboards"
 	bPersistent=true
 	bAllowedAsLast=true
 
 	WinLeft=0.1
-	WinTop=0.1
+	WinTop=0.1085
 	WinWidth=0.8
-	WinHeight=0.8
-    FadeTime=0.5
+	WinHeight=0.817
+    FadeTime=1.0
+    MinPageHeight=0.4
+    MinPageWidth=0.8
 
     Begin Object class=GUITabControl name=oRankPages
         WinWidth=0.59
         WinLeft=0.005
-        // WinTop=0.075
-        WinTop=0.01
-        // WinHeight=0.89
-        WinHeight=0.98
-        // TabHeight=0.04
+        WinTop=0.065
+        WinHeight=0.925
         TabHeight=0.045
-        bAcceptsInput=true
         bDockPanels=true
-        bFillSpace=true
         // BackgroundStyleName="BTHUD"
     End Object
     Tabs=oRankPages

@@ -2482,7 +2482,7 @@ function DrawRecordWidget( Canvas C )
     }
 
     // Press F12 or Escape to hide this.
-    s = "Rankings " $ Options.CGoldText $ "[" $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey ) $ "]";
+    s = "Leaderboards " $ Options.CGoldText $ "[" $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey ) $ "]";
     C.StrLen( s, width, height );
     C.DrawColor = #0x0088BBFF;
     C.DrawColor.A = Options.CTable.A;
