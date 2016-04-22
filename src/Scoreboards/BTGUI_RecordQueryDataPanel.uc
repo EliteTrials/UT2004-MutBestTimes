@@ -1,44 +1,21 @@
 class BTGUI_RecordQueryDataPanel extends BTGUI_QueryDataPanel;
 
-var automated GUILabel ObjectivesLabel, ObjectivesValue;
-
 function ApplyData( BTQueryDataReplicationInfo queryRI )
 {
 	local BTRecordReplicationInfo recordRI;
 
 	recordRI = BTRecordReplicationInfo(queryRI);
-	ObjectivesValue.Caption = string( recordRI.Completed );
+    // Completed Objectives
+    DataRows[0].Value.Caption = string(recordRI.Completed);
+    DataRows[1].Value.Caption = string(recordRI.AverageDodgeTiming);
+    DataRows[2].Value.Caption = string(recordRI.BestDodgeTiming);
+    DataRows[3].Value.Caption = string(recordRI.WorstDodgeTiming);
 }
 
 defaultproperties
 {
-    begin object class=GUILabel name=oObjectivesLabel
-        WinTop=0.0
-        WinHeight=0.045
-        WinWidth=0.5
-        WinLeft=0.0
-        bScaleToParent=True
-        bBoundToParent=True
-        Caption="Completed Objectives"
-        bTransparent=false
-        TextColor=(R=255,G=255,B=255,A=255)
-        TextAlign=TXTA_Left
-        FontScale=FNS_Small
-        StyleName="BTHeader"
-    end object
-    ObjectivesLabel=oObjectivesLabel
-
-    begin object class=GUILabel name=oObjectivesValue
-        WinTop=0.0
-        WinHeight=0.045
-        WinWidth=0.5
-        WinLeft=0.5
-        bScaleToParent=True
-        bBoundToParent=True
-        bTransparent=false
-        TextColor=(R=255,G=255,B=255,A=255)
-        TextAlign=TXTA_Right
-        FontScale=FNS_Small
-    end object
-    ObjectivesValue=oObjectivesValue
+    DataRows(0)=(Caption="Completed Objectives")
+    DataRows(1)=(Caption="Average Dodge Timing")
+    DataRows(2)=(Caption="Best Dodge")
+    DataRows(3)=(Caption="Worst Dodge")
 }
