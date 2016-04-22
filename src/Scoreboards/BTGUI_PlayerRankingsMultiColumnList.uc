@@ -148,17 +148,11 @@ function string GetSortString( int i )
     switch( SortColumn )
     {
         case 0:
+        case 2:
             return MyPadLeft( i, 4, "0" );
 
         case 1:
             return MyPadLeft( Rankings.PlayerRanks[i].AP, 4, "0" );
-
-        case 2:
-            if( Rankings.PlayerRanks[i].Points < 0.00 )
-            {
-                return "-"$MyPadLeft( int(Abs(Rankings.PlayerRanks[i].Points)), 4, "0" );
-            }
-            return MyPadLeft( int(Rankings.PlayerRanks[i].Points), 4, "0" );
 
         case 3:
             return Rankings.PlayerRanks[i].Name;

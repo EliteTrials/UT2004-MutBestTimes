@@ -34,5 +34,5 @@ defaultproperties
 {
 	StyleName="BTSectionHeaderTop"
 	OnDraw=InternalOnDraw
-	FontScale=FNS_Small
+	FontScale=FNS_Medium
 }

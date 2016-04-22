@@ -146,7 +146,7 @@ function Color GetColumnColor( int column )
             {
                 return #0xCB304FFF;
             }
-            return #0xAAAAAAFF;
+            return #0xCCCCAAFF;
 
         case 4:
             return #0xAAAAAAFF;
@@ -176,10 +176,8 @@ function string GetSortString( int i )
     switch( SortColumn )
     {
         case 0:
-            return MyPadLeft( i, 4, "0" );
-
         case 1:
-            return MyPadLeft( int(CRI.RecordsPRI.RecordRanks[i].Points*100f), 4, "0" );
+            return MyPadLeft( i, 4, "0" );
 
         case 2:
             return CRI.RecordsPRI.RecordRanks[i].Name;

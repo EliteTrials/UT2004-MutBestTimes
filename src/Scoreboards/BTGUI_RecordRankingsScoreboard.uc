@@ -204,7 +204,7 @@ defaultproperties
 {
     Begin Object class=BTGUI_ComboBox Name=RanksComboBox
         WinWidth=1.0
-        WinHeight=0.06
+        WinHeight=0.05
         WinLeft=0.0
         WinTop=0.01
         bScaleToParent=true
@@ -217,9 +217,9 @@ defaultproperties
 
     Begin Object Class=BTGUI_RecordRankingsMultiColumnListBox Name=ItemsListBox
         WinWidth=1.0
-        WinHeight=0.905
+        WinHeight=0.915
         WinLeft=0.0
-        WinTop=0.08
+        WinTop=0.07
         bVisibleWhenEmpty=true
         bScaleToParent=True
         bBoundToParent=True
