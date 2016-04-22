@@ -99,14 +99,14 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 
 function Color GetColumnColor( int column )
 {
-    if( bItemIsOwner )
-    {
-        return #0xFFFF00FF;
-    }
-
     if( bItemIsSelected )
     {
         return #0xFFFFFFFF;
+    }
+
+    if( bItemIsOwner )
+    {
+        return #0xFFFF00FF;
     }
 
     switch( column )
