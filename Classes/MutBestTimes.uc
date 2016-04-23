@@ -5787,7 +5787,7 @@ final function int FastFindPlayerSlot( PlayerController PC )
 // Create player account by using a players GUID
 // Note to access the real Slot always cut the return value by -1
 // 0 and -1 are used as NONE
-final Function int CreatePlayerSlot( PlayerController PC, string ClientID )
+final function int CreatePlayerSlot( PlayerController PC, string ClientID )
 {
     local int j;
 
@@ -5806,22 +5806,31 @@ final Function int CreatePlayerSlot( PlayerController PC, string ClientID )
 //==============================================================================
 // Update player account Name and character
 // bUpdateScoreboard only set this to true after the BTClient_ClientReplication is initialized!
-final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bUpdateScoreboard )
+final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional bool bUpdateScoreboard )
 {
     local LinkedReplicationInfo LRI;
-    local string S;
+    local string S, curIp;
 
-    //FullLog( "UpdatePlayerSlot" );
     if( PC == None || PC.PlayerReplicationInfo == None || MessagingSpectator(PC) != None )
         return;
 
-    if( Slot >= PDat.Player.Length || Slot < 0 )
+    if( playerIndex >= PDat.Player.Length || playerIndex < 0 )
     {
-        FullLog( "UpdatePlayerSlot::Slot is not valid!" );
+        FullLog( "UpdatePlayerSlot::playerIndex is not valid!" );
         return;
     }
 
-    PDat.Player[Slot].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
+    PDat.Player[playerIndex].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
+    if( Level.NetMode != NM_Standalone )
+    {
+        s = PC.GetPlayerNetworkAddress();
+        curIp = Left( s, InStr( s, ":" ) );
+        s = "";
+        if( PDat.Player[playerIndex].LastIpAddress != curIp )
+        {
+            QueryPlayerCountry( playerIndex, curIp );
+        }
+    }
 
     // Try find the colored name
     for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
@@ -5831,7 +5840,7 @@ final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bU
             S = LRI.GetPropertyText( "ColoredName" );
             if( S != "" && InStr( S, Chr( 0x1B ) ) != -1 )
             {
-                PDat.Player[Slot].PLNAME = /*Class'HUD'.Default.GoldColor$*/S$Class'HUD'.Default.WhiteColor;
+                PDat.Player[playerIndex].PLNAME = /*Class'HUD'.Default.GoldColor$*/S$Class'HUD'.Default.WhiteColor;
                 if( bUpdateScoreboard )
                     UpdateScoreboard( PC );
 
@@ -5841,18 +5850,37 @@ final Function UpdatePlayerSlot( PlayerController PC, int Slot, Optional bool bU
     }
 
     // Prevents the colored name from being overwritten
-    if( %PDat.Player[Slot].PLNAME != %PC.PlayerReplicationInfo.PlayerName )
+    if( %PDat.Player[playerIndex].PLNAME != %PC.PlayerReplicationInfo.PlayerName )
     {
-        PDat.Player[Slot].PLNAME = /*Class'HUD'.Default.GoldColor $*/PC.PlayerReplicationInfo.PlayerName$Class'HUD'.Default.WhiteColor;
+        PDat.Player[playerIndex].PLNAME = /*Class'HUD'.Default.GoldColor $*/PC.PlayerReplicationInfo.PlayerName$Class'HUD'.Default.WhiteColor;
         if( bUpdateScoreboard )
             UpdateScoreboard( PC );
     }
 }
 
+final function QueryPlayerCountry( int playerIndex, string playerIp )
+{
+    local BTHttpIpToCountry ipToCountry;
+
+    ipToCountry = Spawn( class'BTHttpIpToCountry', self );
+    ipToCountry.OnCountryCodeReceived = InternalOnCountryCodeReceived;
+    ipToCountry.GetCountryFromIp( playerIndex, playerIp );
+}
+
+function InternalOnCountryCodeReceived( BTHttpIpToCountry sender, string countryCode )
+{
+    local int playerIndex;
+
+    playerIndex = sender.PlayerIndex;
+    PDat.Player[playerIndex].LastIpAddress = sender.PlayerIp;
+    PDat.Player[playerIndex].IpCountry = countryCode;
+    // Log( "received IpToCountry data" @ PDat.Player[playerIndex].LastIpAddress @ PDat.Player[playerIndex].IpCountry);
+}
+
 // =============================================================================
 // Updates the name of PC for everyones local Rankings/Solo Scoreboard!
 // CR required!
-final Function UpdateScoreboard( PlayerController PC )
+final function UpdateScoreboard( PlayerController PC )
 {
     // local Controller C;
     local BTClient_ClientReplication myCR;//, CR;

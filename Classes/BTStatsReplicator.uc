@@ -73,6 +73,7 @@ final function SendPlayerRank( int rankIndex )
     else playerRank.Name = P.PDat.Player[playerIndex].PLName;
 
     playerRank.PlayerId     = playerIndex + 1;
+    playerRank.CountryCode  = P.PDat.Player[playerIndex].IpCountry;
     playerRank.Points       = P.PDat.Player[playerIndex].PLPoints[RanksId];
     playerRank.AP           = P.PDat.Player[playerIndex].PLAchiev;
     playerRank.Hijacks      = P.PDat.Player[playerIndex].PLRankedRecords[RanksId] << 16 | P.PDat.Player[playerIndex].PLTopRecords[RanksId];

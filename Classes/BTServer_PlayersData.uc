@@ -34,6 +34,8 @@ struct sBTPlayerInfo
     // First 16 bits are the Year, next 8 bits is Month, last 8 bits is Day.
     var int RegisterDate;
     var int LastPlayedDate;
+    var string LastIpAddress;
+    var string IpCountry;
 
     /** Amount of times this player has played a map inc revotes. */
     var int Played;
