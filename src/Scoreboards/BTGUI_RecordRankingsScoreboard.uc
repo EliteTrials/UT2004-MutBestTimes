@@ -49,7 +49,8 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
         return;
 
 	// Start receiving updates.
-	recordsPRI.OnRecordRankReceived = InternalOnRecordRankReceived;
+    recordsPRI.OnRecordRankReceived = InternalOnRecordRankReceived;
+	recordsPRI.OnRecordRankUpdated = InternalOnRecordRankUpdated;
 	recordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
 	recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
@@ -103,6 +104,18 @@ function InternalOnRecordRankReceived( int index, BTGUI_RecordRankingsReplicatio
 	// Log("Received a rank packet");
 	list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
 	list.AddedItem();
+}
+
+function InternalOnRecordRankUpdated( int index, BTGUI_RecordRankingsReplicationInfo source, optional bool bRemoved )
+{
+    if( bRemoved )
+    {
+        RankingsListBox.List.RemovedItem( index );
+    }
+    else
+    {
+        RankingsListBox.List.UpdatedItem( index );
+    }
 }
 
 function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInfo source, bool bAll )
@@ -198,11 +211,12 @@ private function ViewPlayer( int itemIndex )
 private function ErasePlayerRecord( int itemIndex )
 {
     local BTClient_ClientReplication CRI;
-    local int playerId;
+    local int playerId, mapId;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     playerId = CRI.RecordsPRI.RecordRanks[itemIndex].PlayerId;
-    PlayerOwner().ConsoleCommand( "mutate ErasePlayerRecord" @ playerId );
+    mapId = CRI.RecordsPRI.RecordsMapId;
+    PlayerOwner().ConsoleCommand( "mutate ErasePlayerRecord" @ playerId @ mapId );
 }
 
 defaultproperties

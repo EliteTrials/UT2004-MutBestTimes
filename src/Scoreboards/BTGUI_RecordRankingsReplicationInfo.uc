@@ -20,7 +20,7 @@ replication
 {
 	reliable if( Role == ROLE_Authority )
 		RecordsMapName, RecordsMapId,
-		ClientClearRecordRanks,
+		ClientClearRecordRanks, ClientRemoveRecordRank,
 		ClientDoneRecordRanks,
 		ClientAddRecordRank,
 		ClientUpdateRecordRank;
@@ -37,7 +37,7 @@ simulated event PostBeginPlay()
 
 // UI hooks
 delegate OnRecordRankReceived( int index, BTGUI_RecordRankingsReplicationInfo source );
-delegate OnRecordRankUpdated( int index, BTGUI_RecordRankingsReplicationInfo source );
+delegate OnRecordRankUpdated( int index, BTGUI_RecordRankingsReplicationInfo source, optional bool bRemoved );
 delegate OnRecordRanksDone( BTGUI_RecordRankingsReplicationInfo source, bool bAll );
 delegate OnRecordRanksCleared( BTGUI_RecordRankingsReplicationInfo source );
 
@@ -55,10 +55,34 @@ simulated function QueryNextRecordRanks( optional bool bReset )
 	QueryRecordRanks( ++ CurrentPageIndex );
 }
 
-simulated function ClientClearRecordRanks()
+simulated function ClientAddRecordRank( sRecordRank RecordRank )
 {
-    RecordRanks.Length = 0;
-    OnRecordRanksCleared( self );
+    RecordRanks[RecordRanks.Length] = RecordRank;
+    OnRecordRankReceived( RecordRanks.Length - 1, self );
+}
+
+simulated function ClientUpdateRecordRank( sRecordRank RecordRank, int index )
+{
+	// We didn't receive this record yet, no need to perform any updates.
+	if( index >= RecordRanks.Length )
+	{
+		return;
+	}
+
+    RecordRanks[index] = RecordRank;
+    OnRecordRankUpdated( index, self );
+}
+
+simulated function ClientRemoveRecordRank( int index )
+{
+	// We didn't receive this record yet, no need to perform any updates.
+	if( index >= RecordRanks.Length )
+	{
+		return;
+	}
+
+	OnRecordRankUpdated( index, self, true );
+	RecordRanks.Remove( index, 1 );
 }
 
 simulated function ClientDoneRecordRanks( optional bool bAll )
@@ -66,16 +90,10 @@ simulated function ClientDoneRecordRanks( optional bool bAll )
 	OnRecordRanksDone( self, bAll );
 }
 
-simulated function ClientAddRecordRank( sRecordRank RecordRank )
+simulated function ClientClearRecordRanks()
 {
-    RecordRanks[RecordRanks.Length] = RecordRank;
-    OnRecordRankReceived( RecordRanks.Length - 1, self );
-}
-
-simulated function ClientUpdateRecordRank( sRecordRank RecordRank, byte index )
-{
-    RecordRanks[index] = RecordRank;
-    OnRecordRankUpdated( index, self );
+    RecordRanks.Length = 0;
+    OnRecordRanksCleared( self );
 }
 
 defaultproperties
