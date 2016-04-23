@@ -30,14 +30,15 @@ function float InternalGetItemHeight( Canvas C )
 
 function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSelected, bool bPending)
 {
+    local int sortItem;
     local float xl, yl;
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
-    local Texture countryFlag;
 
+    sortItem = SortData[i].SortItem;
     bItemIsSelected = bSelected;
     bItemIsOwner = Rankings.CRI != none
-        && Rankings.PlayerRanks[SortData[i].SortItem].PlayerId == Rankings.CRI.PlayerId;
+        && Rankings.PlayerRanks[sortItem].PlayerId == Rankings.CRI.PlayerId;
 
     Y += 2;
     H -= 2;
@@ -67,48 +68,65 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 0 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		string(SortData[i].SortItem + 1), FontScale );
+		string(sortItem + 1), FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 1 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(Rankings.PlayerRanks[SortData[i].SortItem].AP), FontScale );
+        string(Rankings.PlayerRanks[sortItem].AP), FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 2 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(int(Rankings.PlayerRanks[SortData[i].SortItem].Points)), FontScale );
+        string(int(Rankings.PlayerRanks[sortItem].Points)), FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 3 );
-    DrawStyle.DrawText( C, MenuState, CellLeft + 32, Y, CellWidth - 32, H, TXTA_Left,
-        Rankings.PlayerRanks[SortData[i].SortItem].Name, FontScale );
 
-    DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
-    yl = yl*0.8 - 2.0;
-    xl = 10f/8f*yl;
-    C.DrawColor = class'HUD'.default.WhiteColor;
-    countryFlag = Texture(DynamicLoadObject( Class.Outer.Name$"."$Rankings.PlayerRanks[SortData[i].SortItem].Country, class'Texture', true ));
-    if( countryFlag != none )
+    if( Rankings.PlayerRanks[sortItem].CountryCode != "" )
     {
-        C.SetPos( CellLeft, Y + H*0.5 - yl*0.5 );
-        C.DrawTile( countryFlag, xl, yl, 1, 0, 15, 10 );
+        DrawStyle.DrawText( C, MenuState, CellLeft + 32, Y, CellWidth - 32, H, TXTA_Left,
+            Rankings.PlayerRanks[sortItem].Name, FontScale );
+
+        DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
+        yl = yl*0.8 - 2.0;
+        xl = 10f/8f*yl;
+        C.DrawColor = class'HUD'.default.WhiteColor;
+        if( Rankings.PlayerRanks[sortItem].CountryFlag == none )
+        {
+            Rankings.PlayerRanks[sortItem].CountryFlag
+                = Texture(DynamicLoadObject(
+                    Class.Outer.Name$"."$Rankings.PlayerRanks[sortItem].CountryCode,
+                    class'Texture',
+                    true
+                ));
+        }
+        if( Rankings.PlayerRanks[sortItem].CountryFlag != none )
+        {
+            C.SetPos( CellLeft, Y + H*0.5 - yl*0.5 );
+            C.DrawTile( Rankings.PlayerRanks[sortItem].CountryFlag, xl, yl, 1, 0, 15, 10 );
+        }
+        else
+        {
+            DrawStyle.DrawText( C, MenuState, CellLeft, Y, 32, H, TXTA_Left,
+                Rankings.PlayerRanks[sortItem].CountryCode, FontScale );
+        }
     }
     else
     {
-        DrawStyle.DrawText( C, MenuState, CellLeft, Y, 32, H, TXTA_Left,
-            Rankings.PlayerRanks[SortData[i].SortItem].Country, FontScale );
+        DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
+            Rankings.PlayerRanks[sortItem].Name, FontScale );
     }
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 4 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(Rankings.PlayerRanks[SortData[i].SortItem].Hijacks >> 16), FontScale );
+        string(Rankings.PlayerRanks[sortItem].Hijacks >> 16), FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 5 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(Rankings.PlayerRanks[SortData[i].SortItem].Hijacks & 0x0000FFFF), FontScale );
+        string(Rankings.PlayerRanks[sortItem].Hijacks & 0x0000FFFF), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
 

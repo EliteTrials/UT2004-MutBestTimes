@@ -3,8 +3,9 @@ class BTGUI_PlayerRankingsReplicationInfo extends BTGUI_ScoreboardReplicationInf
 struct sPlayerRank
 {
     var int PlayerId;
+    var string CountryCode;
+    var transient Texture CountryFlag;
     var string Name;
-    var string Country;
     var int AP;
     var float Points;
     var int Hijacks; // Masked: Records/Stars
