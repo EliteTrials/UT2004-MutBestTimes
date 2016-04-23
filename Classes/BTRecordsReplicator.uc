@@ -5,9 +5,10 @@ var private BTGUI_RecordRankingsReplicationInfo Client;
 var private BTServer_RecordsData RecordsSource;
 var private BTServer_PlayersData PlayersSource;
 
-var private int MapIndex;
 var private int CurrentIndex;
 var private int NumItemsToSkip, NumItemsToReplicate, MaxItemsToReplicate;
+
+var private int MapIndex;
 var private float HighestAcquiredPoints;
 
 final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int queriedPageIndex, string mapName )

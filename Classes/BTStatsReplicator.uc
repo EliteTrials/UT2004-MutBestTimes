@@ -1,65 +1,69 @@
 class BTStatsReplicator extends Info;
 
-var private int i, j;
+var private BTGUI_PlayerRankingsReplicationInfo Client;
 
-var private BTClient_ClientReplication CR;
-var private MutBestTimes P;
-var private int ItemsToSkip;
-var private byte RanksId;
+var private BTServer_RecordsData RecordsSource;
+var private BTServer_PlayersData PlayersSource;
+
+var private int CurrentIndex;
+var private int NumItemsToSkip, NumItemsToReplicate, MaxItemsToReplicate;
+
 var private BTRanksList RanksList;
 
-/** Strips all color tags from A. */
-static final preoperator string %( string A )
+final function Initialize( BTClient_ClientReplication CRI, int queriedPageIndex, byte queriedRanksId )
 {
-    local int i;
+    local MutBestTimes BT;
+    local int numItems;
 
-    while( true )
-    {
-        i = InStr( A, Chr( 0x1B ) );
-        if( i != -1 )
-        {
-            A = Left( A, i ) $ Mid( A, i + 4 );
-            continue;
-        }
-        break;
-    }
-    return A;
-}
+    BT = MutBestTimes(Owner);
+    RecordsSource = BT.RDat;
+    PlayersSource = BT.PDat;
+    Client = CRI.Rankings[queriedRanksId];
 
-/** Returns int A as a color tag. */
-static final preoperator string $( int A )
-{
-    return (Chr( 0x1B ) $ (Chr( Max( byte(A & 0xFF000000), 1 )  ) $ Chr( Max( byte(A & 0x00FF0000), 1 ) ) $ Chr( Max( byte(A & 0x0000FF00), 1 ) )));
-}
-
-final function Initialize( BTClient_ClientReplication client, optional int queriedPageIndex, optional byte queriedRanksId )
-{
-    if( client == none )
-        return;
-
-    CR = client;
-    P = MutBestTimes(Owner);
-    ItemsToSkip = queriedPageIndex*P.MaxRankedPlayers;
-    RanksId = queriedRanksId;
-    switch( RanksId )
+    switch( queriedRanksId )
     {
         case 0:
-            RanksList = P.Ranks.OverallTopList;
+            RanksList = BT.Ranks.OverallTopList;
             break;
 
         case 1:
-            RanksList = P.Ranks.QuarterlyTopList;
+            RanksList = BT.Ranks.QuarterlyTopList;
             break;
 
         case 2:
-            RanksList = P.Ranks.DailyTopList;
+            RanksList = BT.Ranks.DailyTopList;
             break;
     }
+
+    numItems = RanksList.Items.Length;
+    if( numItems == 0 )
+    {
+        Client.ClientDonePlayerRanks( true );
+        Destroy();
+        return;
+    }
+    MaxItemsToReplicate = BT.MaxRankedPlayers;
+    NumItemsToSkip = queriedPageIndex*MaxItemsToReplicate;
+    NumItemsToReplicate = Min( numItems - NumItemsToSkip, MaxItemsToReplicate );
 }
 
-final function BeginReplication()
+event Tick( float deltaTime )
 {
-    GotoState( 'ReplicateRanks' );
+    if( Client == none )
+    {
+        Destroy();
+        return;
+    }
+
+    if( CurrentIndex >= NumItemsToReplicate )
+    {
+        Client.ClientDonePlayerRanks( NumItemsToReplicate < MaxItemsToReplicate );
+        Destroy(); // We are done here
+        return;
+    }
+
+    SendPlayerRank( NumItemsToSkip + CurrentIndex );
+    ++ CurrentIndex;
 }
 
 final function SendPlayerRank( int rankIndex )
@@ -68,36 +72,12 @@ final function SendPlayerRank( int rankIndex )
     local BTGUI_PlayerRankingsReplicationInfo.sPlayerRank playerRank;
 
     playerIndex = RanksList.Items[rankIndex];
-    if( playerIndex == CR.myPlayerSlot )
-        playerRank.Name = $0xFFFFFF00 $ P.PDat.Player[playerIndex].PLName;
-    else playerRank.Name = P.PDat.Player[playerIndex].PLName;
-
     playerRank.PlayerId     = playerIndex + 1;
-    playerRank.CountryCode  = P.PDat.Player[playerIndex].IpCountry;
-    playerRank.Points       = P.PDat.Player[playerIndex].PLPoints[RanksId];
-    playerRank.AP           = P.PDat.Player[playerIndex].PLAchiev;
-    playerRank.Hijacks      = P.PDat.Player[playerIndex].PLRankedRecords[RanksId] << 16 | P.PDat.Player[playerIndex].PLTopRecords[RanksId];
+    playerRank.CountryCode  = PlayersSource.Player[playerIndex].IpCountry;
+    playerRank.Name         = PlayersSource.Player[playerIndex].PLName;
+    playerRank.Points       = PlayersSource.Player[playerIndex].PLPoints[RanksList.RanksTable];
+    playerRank.AP           = PlayersSource.Player[playerIndex].PLAchiev;
+    playerRank.Hijacks      = PlayersSource.Player[playerIndex].PLRankedRecords[RanksList.RanksTable] << 16 | PlayersSource.Player[playerIndex].PLTopRecords[RanksList.RanksTable];
 
-    CR.Rankings[RanksId].ClientAddPlayerRank( playerRank );
-}
-
-state ReplicateRanks
-{
-Begin:
-    // Send OverallTop players
-    j = Min( RanksList.Items.Length - ItemsToSkip, P.MaxRankedPlayers );
-    for( i = 0; i < j; ++ i )
-    {
-        SendPlayerRank( ItemsToSkip + i );
-        Sleep(0);
-    }
-    CR.Rankings[RanksId].ClientDonePlayerRanks( j < P.MaxRankedPlayers );
-}
-
-event Tick( float deltaTime )
-{
-    if( P != none && CR == none )
-    {
-        Destroy();
-    }
+    Client.ClientAddPlayerRank( playerRank );
 }

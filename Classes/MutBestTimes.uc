@@ -1016,6 +1016,7 @@ final function InternalOnRequestPlayerItems( PlayerController requester, BTClien
 
 final function InternalOnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId )
 {
+    local BTStatsReplicator replicator;
     local class<BTGUI_PlayerRankingsReplicationInfo> repClass;
 
     if( !bShowRankings )
@@ -1045,7 +1046,8 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
     if( pageIndex == -1 )
         return;
 
-    StartReplicatorFor( CRI, pageIndex, ranksId ).BeginReplication();
+    replicator = Spawn( class'BTStatsReplicator', self );
+    replicator.Initialize( CRI, pageIndex, ranksId );
 }
 
 final function InternalOnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName )
@@ -6706,8 +6708,6 @@ private final function SendEventDescription( BTClient_ClientReplication CR )
 
 //==============================================================================
 // Merge a numeric date to a string date DD/MM/YY
-
-
 final function string MaskToDate( int date )
 {
     local int day, month, year;
@@ -6725,17 +6725,6 @@ final function string MaskToDate( int date )
 
     return FixedDate$"/"$Right( year, 2 );
 }
-
-final function BTStatsReplicator StartReplicatorFor( BTClient_ClientReplication CR, optional int pageIndex, optional byte ranksId )
-{
-    local BTStatsReplicator replicator;
-
-    replicator = Spawn( class'BTStatsReplicator', self );
-    replicator.Initialize( CR, pageIndex, ranksId );
-    return replicator;
-}
-
-//P.MRI.SoloRecords = j;
 
 //==============================================================================
 // Update all the ClientReplication Packets
