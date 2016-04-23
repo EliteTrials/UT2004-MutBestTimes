@@ -13,10 +13,12 @@ final static preoperator Color #( int rgbInt )
     return c;
 }
 
-event InitComponent(GUIController MyController, GUIComponent MyOwner)
+function float InternalGetItemHeight( Canvas C )
 {
-    super.InitComponent(MyController,MyOwner);
-    Style = Controller.GetStyle("BTMultiColumnList", FontScale);
+    local float xl, yl;
+
+    C.StrLen( "T", xl, yl );
+    return yl + 8;
 }
 
 function string GetSelectedMapName()
@@ -142,7 +144,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
         mapRatingTxt, FontScale );
 
     GetCellLeftWidth( 6, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Right,
         string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
 }
 
@@ -305,6 +307,10 @@ private function bool MatchesFilter( string test, string filter, optional bool b
 
 defaultproperties
 {
+    StyleName="BTMultiColumnList"
+    SelectedStyleName="BTListSelection"
+    SelectedBKColor=(R=255,G=255,B=255,A=255)
+
     InitColumnPerc(0)=0.06
     InitColumnPerc(1)=0.36
     InitColumnPerc(2)=0.08
@@ -330,5 +336,5 @@ defaultproperties
     ColumnHeadingHints(6)="Sequence, The number of games that have been played since this map was last played."
 
     OnFilterVotingList=InternalOnFilterVotingList
-    StyleName="BTMultiColumnList"
+    GetItemHeight=InternalGetItemHeight
 }

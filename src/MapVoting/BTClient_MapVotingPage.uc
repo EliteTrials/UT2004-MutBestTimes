@@ -12,6 +12,30 @@ var automated BTClient_MapPanel MapPanel;
 var automated GUILabel GameTypeFilter;
 var automated BTGUI_ComboBox ComboGameType;
 
+function AddSystemMenu()
+{
+    b_ExitButton = GUIButton(t_WindowTitle.AddComponent( "XInterface.GUIButton" ));
+    b_ExitButton.Style = Controller.GetStyle( "BTCloseButton", t_WindowTitle.FontScale );
+    b_ExitButton.OnClick = XButtonClicked;
+    b_ExitButton.bNeverFocus=true;
+    b_ExitButton.FocusInstead = t_WindowTitle;
+    b_ExitButton.RenderWeight=1.0;
+    b_ExitButton.bScaleToParent=false;
+    b_ExitButton.bAutoShrink=false;
+    b_ExitButton.OnPreDraw = SystemMenuPreDraw;
+    b_ExitButton.Caption = "X";
+
+    // Do not want OnClick() called from MousePressed()
+    b_ExitButton.bRepeatClick = False;
+    BackgroundColor = class'BTClient_Config'.default.CTable;
+}
+
+function bool SystemMenuPreDraw(canvas Canvas)
+{
+    b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + t_WindowTitle.ActualWidth() - b_ExitButton.ActualWidth(), t_WindowTitle.ActualTop(), t_WindowTitle.ActualHeight(), t_WindowTitle.ActualHeight(), true);
+    return true;
+}
+
 // Ugly ugly ugly...
 function bool InternalOnBackgroundDraw( Canvas C )
 {
@@ -225,7 +249,7 @@ defaultproperties
         TextAlign=TXTA_Center
         bTransparent=false
         FontScale=FNS_Small
-        StyleName="BTHeader"
+        StyleName="BTLabel"
     end object
     FilterLabel=oFilterLabel
 
@@ -253,7 +277,7 @@ defaultproperties
         TextAlign=TXTA_Center
         bTransparent=false
         FontScale=FNS_Small
-        StyleName="BTHeader"
+        StyleName="BTLabel"
     end object
     GameTypeFilter=oGameTypeFilter
 
