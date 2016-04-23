@@ -3604,14 +3604,14 @@ final private function bool AdminExecuted( PlayerController sender, string comma
     return true;
 }
 
-final function DeleteRecordBySlot( int recSlot )
+final function DeleteRecordBySlot( int mapIndex )
 {
     local string mapName;
 
-    mapName = RDat.Rec[recSlot].TMN;
+    mapName = RDat.Rec[mapIndex].TMN;
     if( Notify != none )
     {
-        Notify.NotifyRecordDeleted( recSlot );
+        Notify.NotifyRecordDeleted( mapIndex );
     }
 
     if( GhostManager != none )
@@ -3619,11 +3619,60 @@ final function DeleteRecordBySlot( int recSlot )
         GhostManager.ClearGhostsData( mapName, GhostDataFileName );
     }
 
-    RDat.Rec.Remove( recSlot, 1 );
-    if( UsedSlot > recSlot )
+    RDat.Rec.Remove( mapIndex, 1 );
+    if( UsedSlot > mapIndex )
         -- UsedSlot;
 
     SaveRecords();
+}
+
+// Note: mapIndex and playerIndex are assumed valid.
+// FIXME: Cached RankedRecords and such may possibly be no longer valid after a record has been deleted.
+final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
+{
+    local int recordIndex;
+    local bool isCurrentMap;
+
+    recordIndex = RDat.FindRecordSlot( mapIndex, playerIndex + 1/*playerId*/ );
+    if( recordIndex == -1 )
+    {
+        return false;
+    }
+
+    isCurrentMap = mapIndex == UsedSlot;
+
+    // Note: Notification must be instigated while we still have the record item.
+    if( Notify != none )
+    {
+        Notify.NotifySoloRecordDeleted( mapIndex, recordIndex );
+    }
+    RDat.Rec[mapIndex].PSRL.Remove( recordIndex, 1 );
+
+    // We need to cleanup data for top records.
+    if( recordIndex == 0 )
+    {
+        if( GhostManager != none )
+        {
+            GhostManager.ClearGhostsData( RDat.Rec[mapIndex].TMN, GhostDataFileName, isCurrentMap );
+        }
+
+        if( isCurrentMap && RDat.Rec[mapIndex].PSRL.Length > 0 )
+        {
+            // Update the top record state but ensure that are floating decimals are stripped away!
+            BestPlaySeconds = GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT );
+            MRI.MapBestTime = BestPlaySeconds;
+            UpdateRecordHoldersMessage();
+        }
+    }
+
+    // Update map's points cache.
+    if( Ranks != none )
+    {
+        Ranks.CalcRecordPoints( mapIndex );
+    }
+    // Update all our clients state of this map's records.
+    ClientForcePacketUpdate( mapIndex );
+    return true;
 }
 
 final private function bool DeveloperExecuted( PlayerController sender, string command, optional array<string> params )
@@ -3642,7 +3691,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
                 sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you cannot delete this record because there is no time set for it yet!" );
                 break;
             }
-            AddHistory( "Record"@CurrentMapName@"was deleted by"@Class'HUD'.Default.GoldColor$sender.GetHumanReadableName() );
+            AddHistory( "Record" @ CurrentMapName @ "was deleted by" @ sender.GetHumanReadableName() );
 
             if( Notify != none )
                 Notify.NotifyRecordDeleted( UsedSlot );
@@ -3672,53 +3721,48 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             break;
 
         case "deletetoprecord":
-            // Note 1 = 0.
-            j = RDat.Rec[UsedSlot].PSRL.Length;
-            if( j == 0 )
+            sender.ClientMessage( class'HUD'.default.RedColor $ "DeleteTopRecord is deprecated, please instead use Erase or DeletePlayerRecord <PlayerId> |MapId|!" );
+            break;
+
+        case "eraseplayerrecord":
+        case "deleteplayerrecord":
+            if( RDat.Rec[UsedSlot].PSRL.Length == 0 )
             {
                 sender.ClientMessage( class'HUD'.default.RedColor $ "Sorry there are no records to delete!" );
                 break;
             }
 
-            i = int(params[0]);
-            if( i > 0 && i-1 < j )
+            i = QueryPlayerIndex( params[0] );
+            if( i == -1 )
             {
-                if( i != 1 )
-                {
-                    AddHistory( CurrentMapName@"Top record"@i@"was deleted by"@class'HUD'.default.GoldColor$Sender.GetHumanReadableName() );
-                    sender.ClientMessage( class'HUD'.default.GoldColor $ "Top record"@i@"erased. Modifications have not been saved yet, don't forget to save before exiting the server!" );
-                    if( Notify != none )
-                    {
-                        Notify.NotifySoloRecordDeleted( UsedSlot, i-1 );
-                    }
-                    RDat.Rec[UsedSlot].PSRL.Remove( i-1, 1 );
-                }
-                else
-                {
-                    // Number One!
-                    AddHistory( class'HUD'.default.GoldColor $ CurrentMapName@"Top record 1 was deleted by"@class'HUD'.default.GoldColor$Sender.GetHumanReadableName() );
-                    if( Notify != none )
-                    {
-                        Notify.NotifySoloRecordDeleted( UsedSlot, 0 );
-                    }
-                    sender.ClientMessage( "Top record 1 erased. Modifications have not been saved yet, don't forget to save before exiting the server!" );
-
-                    RDat.Rec[UsedSlot].PSRL.Remove( 0, 1 );
-                    if( GhostManager != none )
-                    {
-                        GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
-                    }
-
-                    if( RDat.Rec[UsedSlot].PSRL.Length > 0 )
-                    {
-                        BestPlaySeconds = GetFixedTime( RDat.Rec[UsedSlot].PSRL[0].SRT );
-                        MRI.MapBestTime = BestPlaySeconds;
-                        UpdateRecordHoldersMessage();
-                    }
-                }
-                ClientForcePacketUpdate( UsedSlot );
+                sender.ClientMessage( class'HUD'.default.RedColor $ "Found no player matching" @ params[0]$"!" );
+                break;
             }
-            else sender.ClientMessage( class'HUD'.default.RedColor $ "You must use a higher number than 0 and lower than"@j );
+
+            if( params.Length != 2 )
+            {
+                j = UsedSlot;
+            }
+            else
+            {
+                j = QueryMapIndex( params[1] );
+            }
+
+            if( j == -1 )
+            {
+                sender.ClientMessage( class'HUD'.default.RedColor $ "Found no map matching" @ params[1]$"!" );
+                break;
+            }
+
+            if( DeletePlayerRecord( j, i ) )
+            {
+                AddHistory( PDat.Player[i].PLName $ "'s record was deleted on map" @ RDat.Rec[j].TMN @ "by admin" @ sender.GetHumanReadableName() );
+                sender.ClientMessage( class'HUD'.default.GoldColor $ PDat.Player[i].PLName @ "'s record was successfully deleted! However the modifications have not been saved yet, make sure to save before exiting the server!" );
+            }
+            else
+            {
+                sender.ClientMessage( class'HUD'.default.RedColor $ "No record found by player" @ PDat.Player[i].PLName );
+            }
             break;
 
         case "renamerecord": case "renamemap": case "moverecord":
@@ -6728,7 +6772,7 @@ final function string MaskToDate( int date )
 
 //==============================================================================
 // Update all the ClientReplication Packets
-Final Function ClientForcePacketUpdate( int mapIndex )
+final function ClientForcePacketUpdate( int mapIndex )
 {
     local Controller C;
     local BTClient_ClientReplication rep;

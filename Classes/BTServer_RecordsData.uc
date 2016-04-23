@@ -329,14 +329,14 @@ final function int FindRecordMatch( string mapName )
     return -1;
 }
 
-final function int FindRecordSlot( int mapSlot, int playerSlot )
+final function int FindRecordSlot( int mapIndex, int playerId )
 {
     local int i, j;
 
-    j = Rec[mapSlot].PSRL.Length;
+    j = Rec[mapIndex].PSRL.Length;
     for( i = 0; i < j; ++ i )
     {
-        if( Rec[mapSlot].PSRL[i].PLs == playerSlot )
+        if( Rec[mapIndex].PSRL[i].PLs == playerId )
         {
             return i;
         }
