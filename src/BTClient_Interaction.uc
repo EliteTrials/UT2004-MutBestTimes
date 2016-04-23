@@ -945,6 +945,8 @@ function PerformDodgePerk()
     local Actor.EDoubleClickDir dir;
     local name anim;
     local float animFrame, animRate;
+    local LinkedReplicationInfo LRI;
+    local BTClient_ClientReplication SpectatedClient;
 
     if( bTimeViewTarget )
     {
@@ -957,7 +959,28 @@ function PerformDodgePerk()
     if( p == none )
         return;
 
-    if( MRI.CR.LastPawn != p )
+    SpectatedClient = none;
+    if( bTimeViewTarget && p != none && p != ViewportOwner.Actor.Pawn )
+    {
+        if( p != none && p.PlayerReplicationInfo != none )
+        {
+            for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+            {
+                if( BTClient_ClientReplication(LRI) != none )
+                {
+                    SpectatedClient = BTClient_ClientReplication(LRI);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Not spectating anyone, assign to myself!
+    if( SpectatedClient == none )
+    {
+        SpectatedClient = MRI.CR;
+    }
+    if( SpectatedClient.LastPawn != p )
     {
         bPerformedDodge = false;
         LastLandedTime = ViewportOwner.Actor.Level.TimeSeconds;
@@ -1013,56 +1036,54 @@ function PerformedLanding( Pawn other )
     LastDoubleClickDir = DCLICK_None;
 }
 
-function RenderDodgeReady( Canvas C )
+function Vector RenderDodgeReady( Canvas C, float drawY )
 {
     local string s;
-    local float XL, YL;
+    local float xl, yl;
 
-    if( Options != none )
+    if( Options == none )
     {
-        if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+        return vect(0,0,0);
+    }
+
+    if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+    {
+        s = string(LastPerformedDodgeTime/ViewportOwner.Actor.Level.TimeDilation)$"s";
+    }
+    else
+    {
+        if( !Options.bShowDodgeReady )
         {
-            s = string(LastPerformedDodgeTime/ViewportOwner.Actor.Level.TimeDilation)$"s";
+            return vect(0,0,0);
+        }
+
+        if( Options.bShowDodgeDelay )
+        {
+            s = (ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation$"s";
         }
         else
         {
-            if( !Options.bShowDodgeReady )
-            {
-                return;
-            }
-
-            if( Options.bShowDodgeDelay )
-            {
-                s = "Dodge:" @ (ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation$"s";
-            }
-            else
-            {
-                s = "Dodge: Ready";
-            }
+            s = "Ready";
         }
-
-        C.Font = GetScreenFont( C );
-        C.StrLen( s, XL, YL );
-        C.SetPos( C.ClipX * 0.5 - XL * 0.5, C.ClipY * 0.85 );
-        if( bDodgeReady )
-        {
-            C.DrawColor = class'HUD'.default.GreenColor;
-        }
-        else C.DrawColor = Orange;
-        C.Style = 1;
-        C.DrawText( s );
-
-        // if( PlayerInput == none )
-        // {
-        //     foreach AllObjects( class'PlayerInput', PlayerInput )
-        //         break;
-
-        // }
-        // C.DrawText( PlayerInput.DoubleClickTimer );
     }
+
+    if( bDodgeReady )
+    {
+        C.DrawColor = class'HUD'.default.GreenColor;
+    }
+    else if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+    {
+        C.DrawColor = class'HUD'.default.CyanColor;
+    }
+    else
+    {
+        C.DrawColor = class'HUD'.default.RedColor;
+    }
+    C.StrLen( s, xl, yl );
+    return DrawElement( C, C.ClipX*0.5, drawY, Mid(GetEnum( enum'EDoubleClickDir', ViewportOwner.Actor.DoubleClickDir ), 7), s, true, 200, 1.0, C.DrawColor );
 }
 
-Event Initialized()
+event Initialized()
 {
     local DefaultPhysicsVolume DPV;
 
@@ -2574,11 +2595,6 @@ function PostRender( Canvas C )
         return;
 
     RenderTitle( C );
-    if( MRI.CR.bAllowDodgePerk && Pawn(ViewportOwner.Actor.ViewTarget) != none && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
-    {
-        RenderDodgeReady( C );
-    }
-
     // See if client is spectating someone!
     SpectatedClient = none;
     P = xPawn(ViewportOwner.Actor.ViewTarget);
@@ -2902,6 +2918,20 @@ function RenderHUDElements( Canvas C )
                 s = ">" @ s;
             }
             drawY += DrawElement( C, drawX, drawY, s, MRI.Teams[i].Points,, 200,, class'HUD'.default.WhiteColor, #0xFF224488 ).Y*1.2;
+        }
+    }
+
+    if( Pawn(ViewportOwner.Actor.ViewTarget) != none )
+    {
+        drawY = C.ClipY*0.825f;
+        v = ViewportOwner.Actor.ViewTarget.Velocity;
+        v.Z = 0;
+        s = Decimal(VSize(v))@":"@Decimal(VSize(ViewportOwner.Actor.ViewTarget.Velocity*vect(0,0,1)))@"uu/s";
+        C.StrLen( s, xl, yl );
+        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Speed", s, true, 200, 1.0, class'HUD'.default.GoldColor ).Y*1.2;
+        if( MRI.CR.bAllowDodgePerk && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
+        {
+            RenderDodgeReady( C, drawY );
         }
     }
 }
