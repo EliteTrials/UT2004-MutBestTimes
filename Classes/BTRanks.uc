@@ -385,6 +385,21 @@ final function bool IsRankedMap( int mapIndex )
 	return !(RDat.Rec[mapIndex].bIgnoreStats || RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS);
 }
 
+final function int GetMinMapRecords()
+{
+    return MIN_MAP_RECORDS;
+}
+
+final function int GetMaxMapRecords()
+{
+    return MAX_MAP_RECORDS;
+}
+
+final function int GetMinPlayerRecords()
+{
+    return MIN_PLAYER_RECORDS;
+}
+
 defaultproperties
 {
 }

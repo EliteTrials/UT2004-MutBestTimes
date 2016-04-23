@@ -3665,13 +3665,21 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
         }
     }
 
-    // Update map's points cache.
+    // Update map's points cache if the deleted record was influencing the map's difficulty rating.
     if( Ranks != none )
     {
-        Ranks.CalcRecordPoints( mapIndex );
+        if( recordIndex < Ranks.GetMaxMapRecords() )
+        {
+            Ranks.CalcRecordPoints( mapIndex );
+            // Update all our clients state of this map's records.
+            ClientForcePacketUpdate( mapIndex );
+        }
+        else
+        {
+            // Only notify an update to the erased record.
+            ClientForcePacketUpdate( mapIndex, recordIndex + 1 );
+        }
     }
-    // Update all our clients state of this map's records.
-    ClientForcePacketUpdate( mapIndex );
     return true;
 }
 
@@ -6772,7 +6780,7 @@ final function string MaskToDate( int date )
 
 //==============================================================================
 // Update all the ClientReplication Packets
-final function ClientForcePacketUpdate( int mapIndex )
+final function ClientForcePacketUpdate( int mapIndex, optional int recordRank )
 {
     local Controller C;
     local BTClient_ClientReplication rep;
@@ -6791,7 +6799,14 @@ final function ClientForcePacketUpdate( int mapIndex )
         if( rep.RecordsPRI.RecordsMapName != RDat.Rec[mapIndex].TMN )
             continue;
 
-        rep.RecordsPRI.ClientClearRecordRanks(); // Clients will request new ranks by themselves.
+        if( recordRank > 0 )
+        {
+            rep.RecordsPRI.ClientRemoveRecordRank( recordRank - 1 );
+        }
+        else
+        {
+            rep.RecordsPRI.ClientClearRecordRanks(); // Clients will request new ranks by themselves.
+        }
     }
 }
 
