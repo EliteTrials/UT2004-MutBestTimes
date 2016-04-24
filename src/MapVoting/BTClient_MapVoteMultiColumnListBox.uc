@@ -1,5 +1,11 @@
 class BTClient_MapVoteMultiColumnListBox extends MapVoteMultiColumnListBox;
 
+function InitComponent(GUIController MyController, GUIComponent MyOwner)
+{
+    DefaultListClass = string(class'BTClient_MapVoteMultiColumnList');
+    super.Initcomponent(MyController, MyOwner);
+}
+
 // Ugly copy to replace hardoced class.
 function LoadList(VotingReplicationInfo LoadVRI)
 {
@@ -18,7 +24,7 @@ function LoadList(VotingReplicationInfo LoadVRI)
 
 defaultproperties
 {
-    DefaultListClass="BTClient_MapVoteMultiColumnList"
+    DefaultListClass=""
 
     // Note: Removed view screenshot and map description
     Begin Object Class=GUIContextMenu Name=oRCMenu
