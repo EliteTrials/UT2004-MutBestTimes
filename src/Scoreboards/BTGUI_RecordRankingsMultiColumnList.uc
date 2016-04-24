@@ -31,7 +31,7 @@ function float InternalGetItemHeight( Canvas C )
 {
     local float xl, yl;
 
-    C.StrLen( "T", xl, yl );
+    Style.TextSize( C, MenuState, "T", xl, yl, FontScale );
     return yl + 8;
 }
 
