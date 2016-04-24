@@ -41,7 +41,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     local GUIStyles DrawStyle;
     local float xl, yl;
     local BTGUI_RecordRankingsReplicationInfo recordsPRI;
-    local int itemIndex;
+    local int sortItem;
 
     if( CRI == none )
     {
@@ -55,13 +55,13 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     }
 
     recordsPRI = CRI.RecordsPRI;
-    itemIndex = SortData[i].SortItem;
+    sortItem = SortData[i].SortItem;
     bItemIsSelected = bSelected;
-    bItemIsOwner = recordsPRI.RecordRanks[itemIndex].RankId == 0
-        && recordsPRI.RecordRanks[itemIndex].PlayerId == CRI.PlayerId;
-    bItemIsClientSpawn = (recordsPRI.RecordRanks[itemIndex].Flags & 0x01/**RFLAG_CP*/) != 0;
-    bItemIsUnRanked = (recordsPRI.RecordRanks[itemIndex].Flags & 0x02/**RFLAG_UNRANKED*/) != 0;
-    bItemHasStar = (recordsPRI.RecordRanks[itemIndex].Flags & 0x04/**RFLAG_STAR*/) != 0;
+    bItemIsOwner = recordsPRI.RecordRanks[sortItem].RankId == 0
+        && recordsPRI.RecordRanks[sortItem].PlayerId == CRI.PlayerId;
+    bItemIsClientSpawn = (recordsPRI.RecordRanks[sortItem].Flags & 0x01/**RFLAG_CP*/) != 0;
+    bItemIsUnRanked = (recordsPRI.RecordRanks[sortItem].Flags & 0x02/**RFLAG_UNRANKED*/) != 0;
+    bItemHasStar = (recordsPRI.RecordRanks[sortItem].Flags & 0x04/**RFLAG_STAR*/) != 0;
 
     Y += 2;
     H -= 2;
@@ -100,22 +100,55 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 0 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-		Eval( recordsPRI.RecordRanks[itemIndex].RankId == 0, itemIndex + 1, recordsPRI.RecordRanks[itemIndex].RankId ), FontScale );
+		Eval( recordsPRI.RecordRanks[sortItem].RankId == 0, sortItem + 1, recordsPRI.RecordRanks[sortItem].RankId ), FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 1 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        Eval( recordsPRI.RecordRanks[itemIndex].Points == -MaxInt, "N/A", recordsPRI.RecordRanks[itemIndex].Points ), FontScale );
+        Eval( recordsPRI.RecordRanks[sortItem].Points == -MaxInt, "N/A", recordsPRI.RecordRanks[sortItem].Points ), FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 2 );
-    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        recordsPRI.RecordRanks[itemIndex].Name, FontScale );
+
+    if( recordsPRI.RecordRanks[sortItem].CountryCode != "" )
+    {
+        DrawStyle.DrawText( C, MenuState, CellLeft + 32, Y, CellWidth - 32, H, TXTA_Left,
+            recordsPRI.RecordRanks[sortItem].Name, FontScale );
+
+        DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
+        yl = yl*0.8 - 2.0;
+        xl = 10f/8f*yl;
+        C.DrawColor = class'HUD'.default.WhiteColor;
+        if( recordsPRI.RecordRanks[sortItem].CountryFlag == none )
+        {
+            recordsPRI.RecordRanks[sortItem].CountryFlag
+                = Texture(DynamicLoadObject(
+                    Class.Outer.Name$"."$recordsPRI.RecordRanks[sortItem].CountryCode,
+                    class'Texture',
+                    true
+                ));
+        }
+        if( recordsPRI.RecordRanks[sortItem].CountryFlag != none )
+        {
+            C.SetPos( CellLeft, Y + H*0.5 - yl*0.5 );
+            C.DrawTile( recordsPRI.RecordRanks[sortItem].CountryFlag, xl, yl, 1, 0, 15, 10 );
+        }
+        else
+        {
+            DrawStyle.DrawText( C, MenuState, CellLeft, Y, 32, H, TXTA_Left,
+                recordsPRI.RecordRanks[sortItem].CountryCode, FontScale );
+        }
+    }
+    else
+    {
+        DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
+            recordsPRI.RecordRanks[sortItem].Name, FontScale );
+    }
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 3 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        class'BTClient_Interaction'.static.FormatTimeCompact( recordsPRI.RecordRanks[itemIndex].Time ), FontScale );
+        class'BTClient_Interaction'.static.FormatTimeCompact( recordsPRI.RecordRanks[sortItem].Time ), FontScale );
 
     if( bItemHasStar )
     {
@@ -140,7 +173,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 4 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        class'BTClient_Interaction'.static.CompactDateToString( recordsPRI.RecordRanks[itemIndex].Date ), FontScale );
+        class'BTClient_Interaction'.static.CompactDateToString( recordsPRI.RecordRanks[sortItem].Date ), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
 }

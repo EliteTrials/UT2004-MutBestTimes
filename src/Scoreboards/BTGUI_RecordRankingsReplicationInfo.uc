@@ -2,10 +2,14 @@ class BTGUI_RecordRankingsReplicationInfo extends BTGUI_ScoreboardReplicationInf
 
 struct sRecordRank
 {
+	// sPlayerItem; extending sPlayerItem causes crashes on runtime :(
     var int PlayerId;
-    var int RankId; // Rank starting at 1, 0 if not set
+    var string CountryCode;
+    var transient Texture CountryFlag;
     var string Name;
     var float Points;
+
+    var int RankId; // Rank starting at 1, 0 if not set
     var float Time;
     var int Date;
     var int Flags;
