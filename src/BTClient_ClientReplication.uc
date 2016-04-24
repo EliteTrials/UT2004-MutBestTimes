@@ -466,9 +466,9 @@ final function ServerRequestPlayerRanks( int pageIndex, optional byte ranksId )
     MRI.OnRequestPlayerRanks( PlayerController(Owner), self, pageIndex, ranksId );
 }
 
-final function ServerRequestRecordRanks( int pageIndex, optional string mapName )
+final function ServerRequestRecordRanks( int pageIndex, optional string query )
 {
-    MRI.OnRequestRecordRanks( PlayerController(Owner), self, pageIndex, mapName );
+    MRI.OnRequestRecordRanks( PlayerController(Owner), self, pageIndex, Level.Game.StripColor( query ) );
 }
 
 simulated final function ClientSendAchievementState( string title, string description, string icon, int progress, int count, int points, optional Color effectColor )

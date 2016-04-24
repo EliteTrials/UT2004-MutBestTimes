@@ -51,13 +51,13 @@ function PassQueryReceived( BTQueryDataReplicationInfo queryRI )
     QueryPanel.OnQueryReceived( queryRi );
 }
 
-function InternalOnQueryPlayerRecord( int mapId, int playerId )
+function InternalOnQueryPlayerRecord( coerce string mapId, coerce string playerId )
 {
     local string query;
 
-    if( mapId == 0 || playerId == 0 )
+    if( mapId == "" || playerId == "" )
     {
-        Warn("Received request with invalid data");
+        Warn("Received request with invalid data!");
         return;
     }
 
@@ -65,13 +65,13 @@ function InternalOnQueryPlayerRecord( int mapId, int playerId )
     QueryPanel.SetQuery( query );
 }
 
-function InternalOnQueryPlayer( int playerId )
+function InternalOnQueryPlayer( coerce string playerId )
 {
     local string query;
 
-    if( playerId == 0 )
+    if( playerId == "" )
     {
-        Warn("Received request with invalid data");
+        Warn("Received request with invalid data!");
         return;
     }
 

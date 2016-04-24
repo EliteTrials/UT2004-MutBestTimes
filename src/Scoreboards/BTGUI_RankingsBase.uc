@@ -4,7 +4,7 @@ class BTGUI_RankingsBase extends UT2K4TabPanel
 var protected BTClient_Interaction Inter;
 var protected editconst bool bIsQuerying;
 
-delegate OnQueryPlayer( int playerId );
+delegate OnQueryPlayer( coerce string playerId );
 
 simulated final function BTClient_Interaction GetInter()
 {

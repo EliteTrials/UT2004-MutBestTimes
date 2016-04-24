@@ -3,6 +3,7 @@ class BTGUI_RecordRankingsReplicationInfo extends BTGUI_ScoreboardReplicationInf
 struct sRecordRank
 {
     var int PlayerId;
+    var int RankId; // Rank starting at 1, 0 if not set
     var string Name;
     var float Points;
     var float Time;
@@ -13,13 +14,20 @@ struct sRecordRank
 var() array<sRecordRank> RecordRanks;
 
 var private editconst int CurrentPageIndex;
-var editconst string RecordsMapName;
-var editconst int RecordsMapId;
+
+// Client only.
+var editconst string RecordsSource;
+
+// Set by server. Holds an id of either a map or record, depending on @RecordsSource.
+var editconst int RecordsSourceId;
+
+// Set by client and server.
+var editconst string RecordsQuery;
 
 replication
 {
 	reliable if( Role == ROLE_Authority )
-		RecordsMapName, RecordsMapId,
+		RecordsQuery, RecordsSourceId,
 		ClientClearRecordRanks, ClientRemoveRecordRank,
 		ClientDoneRecordRanks,
 		ClientAddRecordRank,
@@ -43,7 +51,7 @@ delegate OnRecordRanksCleared( BTGUI_RecordRankingsReplicationInfo source );
 
 simulated function QueryRecordRanks( int pageIndex )
 {
-	CRI.ServerRequestRecordRanks( pageIndex, RecordsMapName );
+	CRI.ServerRequestRecordRanks( pageIndex, RecordsSource$":"$RecordsQuery );
 }
 
 simulated function QueryNextRecordRanks( optional bool bReset )
@@ -98,5 +106,6 @@ simulated function ClientClearRecordRanks()
 
 defaultproperties
 {
+	RecordsSource="map"
 	CurrentPageIndex=-1
 }
