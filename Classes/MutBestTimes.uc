@@ -1050,7 +1050,7 @@ final function InternalOnRequestPlayerRanks( PlayerController requester, BTClien
     replicator.Initialize( CRI, pageIndex, ranksId );
 }
 
-final function InternalOnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName )
+final function InternalOnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string query )
 {
     local BTRecordsReplicator replicator;
 
@@ -1060,14 +1060,14 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     if( CRI.RecordsPRI == none )
     {
         CRI.RecordsPRI = Spawn( class'BTGUI_RecordRankingsReplicationInfo', requester );
-        CRI.RecordsPRI.RecordsMapName = CurrentMapName;
+        CRI.RecordsPRI.RecordsQuery = CurrentMapName;
     }
 
     if( pageIndex == -1 )
         return;
 
     replicator = Spawn( class'BTRecordsReplicator', self );
-    replicator.Initialize( CRI.RecordsPRI, pageIndex, mapName );
+    replicator.Initialize( CRI.RecordsPRI, pageIndex, query );
 }
 
 final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
@@ -1772,10 +1772,18 @@ final function int QueryPlayerIndex( string q )
 
 final function int QueryMapIndex( string q )
 {
+    local int index;
+
     if( int(q) > 0 )
     {
         return Min(int(q)-1, RDat.Rec.Length-1);
     }
+
+    index = RDat.FindRecord(q);
+    if( index != -1 )
+        return index;
+
+    // Try partial matching.
     return RDat.FindRecordMatch(q);
 }
 
@@ -6796,7 +6804,7 @@ final function ClientForcePacketUpdate( int mapIndex, optional int recordRank )
             continue;
 
         // Only update the records for clients who may have outdated records info.
-        if( rep.RecordsPRI.RecordsMapName != RDat.Rec[mapIndex].TMN )
+        if( rep.RecordsPRI.RecordsQuery != RDat.Rec[mapIndex].TMN )
             continue;
 
         if( recordRank > 0 )
