@@ -126,6 +126,7 @@ state SendMapRecords extends SendRecords
         playerIndex = RecordsSource.Rec[SourceIndex].PSRL[rankIndex].PLs - 1;
 
         recordRank.PlayerId     = playerIndex + 1;
+        recordRank.CountryCode  = PlayersSource.Player[playerIndex].IpCountry;
         recordRank.Name         = PlayersSource.Player[playerIndex].PLName;
 
         if( HighestAcquiredPoints == 0 ) recordRank.Points = -MaxInt;
