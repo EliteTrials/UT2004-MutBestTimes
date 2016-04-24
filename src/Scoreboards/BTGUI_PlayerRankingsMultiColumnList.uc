@@ -20,6 +20,12 @@ final static preoperator Color #( int rgbInt )
     return c;
 }
 
+function Free()
+{
+    super.Free();
+    Rankings = none;
+}
+
 function float InternalGetItemHeight( Canvas C )
 {
     local float xl, yl;
@@ -78,7 +84,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 2, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 2 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-        string(int(Rankings.PlayerRanks[sortItem].Points)), FontScale );
+        string(Rankings.PlayerRanks[sortItem].Points), FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 3 );
@@ -214,8 +220,8 @@ defaultproperties
     ExpandLastColumn=true
     InitColumnPerc(0)=0.07
     InitColumnPerc(1)=0.09
-    InitColumnPerc(2)=0.095
-    InitColumnPerc(3)=0.475
+    InitColumnPerc(2)=0.12
+    InitColumnPerc(3)=0.445
     InitColumnPerc(4)=0.13
     InitColumnPerc(5)=0.12
     ColumnHeadingHints(0)="The player's rank; Calculated by the player's performance (ELO)."
