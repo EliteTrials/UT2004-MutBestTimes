@@ -910,6 +910,7 @@ Event Initialized()
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_Button', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_TabButton', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_CloseButton', true );
+    GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ContextMenu', true );
 }
 
 static final function string ReverseString( string s )
