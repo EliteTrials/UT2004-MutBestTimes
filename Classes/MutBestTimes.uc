@@ -3773,7 +3773,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             if( DeletePlayerRecord( j, i ) )
             {
                 AddHistory( PDat.Player[i].PLName $ "'s record was deleted on map" @ RDat.Rec[j].TMN @ "by admin" @ sender.GetHumanReadableName() );
-                sender.ClientMessage( class'HUD'.default.GoldColor $ PDat.Player[i].PLName @ "'s record was successfully deleted! However the modifications have not been saved yet, make sure to save before exiting the server!" );
+                sender.ClientMessage( class'HUD'.default.GoldColor $ PDat.Player[i].PLName @ "'s record on" @ RDat.Rec[j].TMN @ "was successfully deleted! However the modifications have not been saved yet, make sure to save before exiting the server!" );
             }
             else
             {
