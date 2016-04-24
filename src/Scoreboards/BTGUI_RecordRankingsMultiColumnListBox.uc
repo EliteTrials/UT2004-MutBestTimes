@@ -67,6 +67,8 @@ defaultproperties
         ContextItems(1)="View Player Details"
         OnOpen=InternalOnOpen
         OnClose=InternalOnClose
+        StyleName="BTContextMenu"
+        SelectionStyleName="BTListSelection"
     End Object
     ContextMenu=oContextMenu
 }

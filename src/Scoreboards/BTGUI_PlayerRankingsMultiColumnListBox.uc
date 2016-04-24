@@ -41,6 +41,12 @@ defaultproperties
     bDisplayHeader=true
 
     Begin Object Class=BTClient_MultiColumnListHeader Name=MyHeader
+        HeadingIcons(0)=none
+        HeadingIcons(1)=none
+        HeadingIcons(2)=none
+        HeadingIcons(3)=none
+        HeadingIcons(4)=none
+        HeadingIcons(5)=ColorModifier'Star'
     End Object
     Header=MyHeader
 
@@ -53,6 +59,8 @@ defaultproperties
         ContextItems(0)="View Player Details"
         // OnOpen=InternalOnOpen
         // OnClose=InternalOnClose
+        StyleName="BTContextMenu"
+        SelectionStyleName="BTListSelection"
     End Object
     ContextMenu=oContextMenu
 }
