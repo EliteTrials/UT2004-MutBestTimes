@@ -13,8 +13,8 @@ final static preoperator Color #( int rgbInt )
 
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
-    super.InitComponent(MyController,MyOwner);
-    Style = Controller.GetStyle("BTMultiColumnList", FontScale);
+    super.InitComponent( MyController, MyOwner );
+    Style = Controller.GetStyle( "BTMultiColumnList", FontScale );
 }
 
 final static function string ParseMapName(string mapName)
@@ -30,6 +30,14 @@ function string GetSelectedMapName()
 		return "";
 }
 
+function float InternalGetItemHeight( Canvas C )
+{
+    local float xl, yl;
+
+    Style.TextSize( C, MenuState, "T", xl, yl, FontScale );
+    return yl + 8;
+}
+
 // Copy, to strip junk from mapname.
 function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSelected, bool bPending)
 {
@@ -40,20 +48,21 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     	return;
 
     Y += 2;
-    H -= 4;
+    H -= 2;
 
     C.Style = 1;
     C.SetPos( X, Y );
     if( bSelected )
     {
-        C.DrawColor = #0x222222BB;
+        C.DrawColor = #0x33333394;
     }
     else
     {
-        C.DrawColor = #0x22222244;
+        C.DrawColor = #0x22222282;
     }
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
+    MenuState = MSAT_Blurry;
     DrawStyle = Style;
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
@@ -83,5 +92,8 @@ function string GetSortString( int i )
 defaultproperties
 {
 	StyleName="BTMultiColumnList"
+    SelectedStyleName="BTListSelection"
+    SelectedBKColor=(R=255,G=255,B=255,A=255)
     ColumnHeadings(1)="Map Name"
+    GetItemHeight=InternalGetItemHeight
 }

@@ -11,7 +11,8 @@ defaultproperties
     Begin Object Class=GUIContextMenu Name=RCMenu
 		ContextItems(0)="Vote for this Map"
         OnSelect=InternalOnClick
-        StyleName="ServerListContextMenu"
+        StyleName="BTContextMenu"
+        SelectionStyleName="BTListSelection"
     End Object
     ContextMenu=RCMenu
     MapInfoPage=""

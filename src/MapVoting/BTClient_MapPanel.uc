@@ -26,8 +26,17 @@ function InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	super.Initcomponent(MyController, MyOwner);
 	MapData.List.Style = Controller.GetStyle( "BTMultiColumnList", MapData.List.FontScale );
+	MapData.List.GetItemHeight = InternalGetItemHeight;
 	MapData.List.OnDrawItem = InternalOnDrawMapValue;
 	MapData.List.OnDblClick = InternalOnViewMapValue;
+}
+
+function float InternalGetItemHeight( Canvas C )
+{
+    local float xl, yl;
+
+    MapData.List.Style.TextSize( C, MapData.List.MenuState, "T", xl, yl, MapData.List.FontScale );
+    return yl + 8;
 }
 
 delegate OnMapSelected( GUIComponent sender, string mapName );
@@ -72,36 +81,36 @@ function InternalOnDrawMapValue( Canvas C, int i, float X, float Y, float W, flo
 {
 	local GUIStyles drawStyle;
 	local float CellLeft, CellWidth;
-	local eMenuState MState;
 
     Y += 2;
-    H -= 4;
+    H -= 2;
 
     C.Style = 1;
     C.SetPos( X, Y );
     if( bSelected )
     {
-        C.DrawColor = #0x222222BB;
+        C.DrawColor = #0x33333394;
     }
     else
     {
-        C.DrawColor = #0x22222244;
+        C.DrawColor = #0x22222282;
     }
+
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
 	drawStyle = MapData.List.Style;
-	MState = MapData.List.MenuState;
+	MenuState = MSAT_Blurry;
 	if( bSelected )
 	{
-		MState = MSAT_Focused;
+		MenuState = MSAT_Focused;
 	}
 
     MapData.List.GetCellLeftWidth( 0, CellLeft, CellWidth );
-    drawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    drawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         MapKeys[i].Key, MapData.List.FontScale );
 
     MapData.List.GetCellLeftWidth( 1, CellLeft, CellWidth );
-    drawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    drawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         MapKeys[i].Value, MapData.List.FontScale );
 }
 
@@ -177,7 +186,7 @@ defaultproperties
     begin object class=GUIMultiColumnListBox Name=oGUIMultiColumnListBox
         WinWidth=0.48
         WinHeight=0.99
-        WinLeft=0.51
+        WinLeft=0.52
         WinTop=0.0
         bVisibleWhenEmpty=true
         bScaleToParent=true

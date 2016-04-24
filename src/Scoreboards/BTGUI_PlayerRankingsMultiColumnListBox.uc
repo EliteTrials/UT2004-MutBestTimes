@@ -2,6 +2,14 @@ class BTGUI_PlayerRankingsMultiColumnListBox extends GUIMultiColumnListBox;
 
 var BTGUI_PlayerRankingsMultiColumnList RankingLists[3];
 
+event Free()
+{
+    super.Free();
+    RankingLists[0] = none;
+    RankingLists[1] = none;
+    RankingLists[2] = none;
+}
+
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	DefaultListClass = string(class'BTGUI_PlayerRankingsMultiColumnList');

@@ -289,6 +289,7 @@ defaultproperties
         bScaleToParent=true
         bBoundToParent=true
         bIgnoreChangeWhenTyping=true
+        bReadOnly=true
     End Object
     ComboGameType=GameTypeCombo
     co_Gametype=none

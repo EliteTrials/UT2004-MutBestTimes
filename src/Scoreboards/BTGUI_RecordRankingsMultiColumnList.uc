@@ -35,6 +35,12 @@ function float InternalGetItemHeight( Canvas C )
     return yl + 8;
 }
 
+event InitComponent(GUIController MyController, GUIComponent MyOwner)
+{
+    super.InitComponent( MyController, MyOwner );
+    Style = Controller.GetStyle( "BTMultiColumnList", FontScale );
+}
+
 function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSelected, bool bPending)
 {
     local float CellLeft, CellWidth;

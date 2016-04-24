@@ -24,6 +24,8 @@ defaultproperties
     Begin Object Class=GUIContextMenu Name=oRCMenu
         ContextItems(0)="Vote for this Map"
         OnSelect=InternalOnClick
+        StyleName="BTContextMenu"
+        SelectionStyleName="BTListSelection"
     End Object
     ContextMenu=oRCMenu
     StyleName="NoBackground"

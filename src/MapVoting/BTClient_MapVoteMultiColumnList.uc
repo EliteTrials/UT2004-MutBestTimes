@@ -13,11 +13,17 @@ final static preoperator Color #( int rgbInt )
     return c;
 }
 
+event InitComponent(GUIController MyController, GUIComponent MyOwner)
+{
+    super.InitComponent( MyController, MyOwner );
+    Style = Controller.GetStyle( "BTMultiColumnList", FontScale );
+}
+
 function float InternalGetItemHeight( Canvas C )
 {
     local float xl, yl;
 
-    C.StrLen( "T", xl, yl );
+    Style.TextSize( C, MenuState, "T", xl, yl, FontScale );
     return yl + 8;
 }
 
@@ -85,7 +91,6 @@ final static function string ParseMapNameData(string mapName, out string timeStr
 function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSelected, bool bPending)
 {
     local float CellLeft, CellWidth;
-    local eMenuState MState;
     local GUIStyles DrawStyle;
     local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt;
 
@@ -94,19 +99,17 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 
     mapTxt = ParseMapNameData(VRI.MapList[MapVoteData[SortData[i].SortItem]].MapName, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt);
     Y += 2;
-    H -= 4;
-    X += 4;
-    W -= 8;
+    H -= 2;
 
     C.Style = 1;
     C.SetPos( X, Y );
     if( bSelected )
     {
-        C.DrawColor = #0x222222BB;
+        C.DrawColor = #0x33333394;
     }
     else
     {
-        C.DrawColor = #0x22222244;
+        C.DrawColor = #0x22222282;
     }
     C.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
 
@@ -114,38 +117,75 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     DrawStyle = Style;
 
     if( !VRI.MapList[MapVoteData[SortData[i].SortItem]].bEnabled )
-        MState = MSAT_Disabled;
+        MenuState = MSAT_Disabled;
     else
-        MState = MenuState;
+        MenuState = MSAT_Blurry;
 
     C.DrawColor = #0xFFFFFFFF;
     GetCellLeftWidth( 0, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 0 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(int(float(VRI.MapList[MapVoteData[SortData[i].SortItem]].PlayCount)/100F))$"h", FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 1 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         mapTxt, FontScale );
 
     GetCellLeftWidth( 2, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 2 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         recordsCountTxt, FontScale );
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 3 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         timeTxt, FontScale );
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 4 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         holderTxt, FontScale );
 
     GetCellLeftWidth( 5, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Left,
+    DrawStyle.FontColors[0] = GetColumnColor( 5 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         mapRatingTxt, FontScale );
 
     GetCellLeftWidth( 6, CellLeft, CellWidth );
-    DrawStyle.DrawText( C, MState, CellLeft, Y, CellWidth, H, TXTA_Right,
+    DrawStyle.FontColors[0] = GetColumnColor( 6 );
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Right,
         string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
+
+    DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
+}
+
+function Color GetColumnColor( int column )
+{
+    switch( column )
+    {
+        case 0:
+            return #0x666666FF;
+
+        case 1:
+            return #0xFFFFFFFF;
+
+        case 2:
+            return #0x666666FF;
+
+        case 3:
+            return #0xCCCCAAFF;
+
+        case 4:
+            return #0xFFFFFFFF;
+
+        case 5:
+            return #0x666666FF;
+
+        case 6:
+            return #0x666666FF;
+    }
+    return #0xFFFFFFFF;
 }
 
 static function string MyPadLeft( string Src, byte StrLen, optional string PadStr )
@@ -314,8 +354,8 @@ defaultproperties
     InitColumnPerc(0)=0.06
     InitColumnPerc(1)=0.36
     InitColumnPerc(2)=0.08
-    InitColumnPerc(3)=0.10
-    InitColumnPerc(4)=0.22
+    InitColumnPerc(3)=0.11
+    InitColumnPerc(4)=0.21
     InitColumnPerc(5)=0.08
     InitColumnPerc(6)=0.10
 
