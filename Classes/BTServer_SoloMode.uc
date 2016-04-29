@@ -7,7 +7,7 @@ var() const bool bAllowWaging;
 
 static function bool DetectMode( MutBestTimes M )
 {
-    return M.Objectives.Length == 1;
+    return M.Objectives.Length == 1 || IsSolo( M.CurrentMapName );
 }
 
 static function bool IsSolo( string mapName )
@@ -17,25 +17,66 @@ static function bool IsSolo( string mapName )
 
 protected function InitializeMode()
 {
+    local int i;
+
     super.InitializeMode();
     bSoloMap = true;
     MRI.bSoloMap = true;
-    Objectives[0].Event = 'BT_SOLORECORD';
+
     Tag = 'BT_SOLORECORD';
-
-    // Remove objective sounds, we got our own!
-    Objectives[0].Announcer_DisabledObjective = none;
-    Objectives[0].Announcer_ObjectiveInfo = none;
-    Objectives[0].Announcer_DefendObjective = none;
-
-    if( Objectives[0].IsA('LCAKeyObjective') || Objectives[0].IsA('LCA_KeyObjective') )
+    for( i = 0; i < Objectives.Length; ++ i )
     {
-        bKeyMap = true;
-        MRI.bKeyMap = true;
+        Objectives[i].Event = 'BT_SOLORECORD';
+        // Remove objective sounds, we got our own!
+        Objectives[i].Announcer_DisabledObjective = none;
+        Objectives[i].Announcer_ObjectiveInfo = none;
+        Objectives[i].Announcer_DefendObjective = none;
+
+        if( Objectives[i].IsA('LCAKeyObjective') || Objectives[i].IsA('LCA_KeyObjective') )
+        {
+            bKeyMap = true;
+            MRI.bKeyMap = true;
+        }
+        else if( Objectives[i].IsA('TriggeredObjective') )
+        {
+            bAlwaysKillClientSpawnPlayersNearTriggers = true;
+        }
     }
-    else if( Objectives[0].IsA('TriggeredObjective') )
+
+    InitializeSoloSupreme();
+}
+
+protected function InitializeSoloSupreme()
+{
+    local int i, mapIndex;
+    local BTClient_LevelReplication myLevel;
+    local string levelName;
+
+    for( i = 0; i < Objectives.Length; ++ i )
     {
-        bAlwaysKillClientSpawnPlayersNearTriggers = true;
+        myLevel = Spawn( class'BTClient_LevelReplication', Objectives[i] );
+        MRI.AddLevelReplication( myLevel );
+        myLevel.InitializeLevel( Objectives[i] );
+
+        levelName = myLevel.GetFullName( CurrentMapName );
+        mapIndex = RDat.FindRecord( levelName );
+        if( mapIndex == -1 )
+        {
+            mapIndex = RDat.CreateRecord( levelName, RDat.MakeCompactDate( Level ) );
+        }
+
+        myLevel.MapIndex = mapIndex;
+        if( RDat.Rec[mapIndex].PSRL.Length > 0 )
+        {
+            myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
+            myLevel.TopTime = GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ); // assumes PSRL is always sorted by lowest time.
+            myLevel.TopRanks = GetRecordTopHolders( mapIndex );
+        }
+    }
+
+    if( Objectives.Length == 1 )
+    {
+        MRI.MapLevel = MRI.BaseLevel;
     }
 }
 
@@ -76,13 +117,40 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 
 function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
+    local BTClient_ClientReplication CRI;
+
     switch( command )
     {
         case "wager":
             ActivateWager( sender, value );
             return true;
+
+        case "level":
+            if( Objectives.Length < 2 )
+                return false;
+
+            CRI = GetRep( sender );
+            CRI.PlayingLevel = GetObjectiveLevelByName( value );
+            CRI.NetUpdateTime = Level.TimeSeconds - 1;
+            if( sender.Pawn != none )
+            {
+                sender.Pawn.Suicide();
+            }
+            return true;
     }
     return super.ChatCommandExecuted( sender, command, value );
+}
+
+function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
+{
+    local BTClient_ClientReplication CRI;
+
+    CRI = GetRep( player );
+    if( CRI.PlayingLevel == none )
+    {
+        return super.ModeValidatePlayerStart( player, start );
+    }
+    return CRI.PlayingLevel.IsValidPlayerStart( player, start );
 }
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )

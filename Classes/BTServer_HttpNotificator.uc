@@ -86,11 +86,11 @@ function NotifyUpdate()
 }
 
 /** Notify that a record was set/updated. */
-function NotifyRecordSet( int playerSlot, float newTime )
+function NotifyRecordSet( int mapIndex, int playerSlot, float newTime )
 {
     SetCode( RSetCode );
     AddParam( TrialMode, CurMode.ModePrefix );                      // STR, GTR, RTR
-    AddParam( TrialMapName, RDat.Rec[UsedSlot].TMN );
+    AddParam( TrialMapName, RDat.Rec[mapIndex].TMN );
     AddParam( TrialMapTime, newTime );                              // in float i.e. 61323.74
     //class'HttpUtil'.static.ReplaceChar( PDat.Player[playerSlot-1].PLNAME, "&", "&amp;");
     AddParam( TrialPlayerName, Eval( bStripNameColors, %PDat.Player[playerSlot-1].PLNAME, PDat.Player[playerSlot-1].PLNAME ) );

@@ -18,6 +18,48 @@ function ModePostBeginPlay()
     RDat.Rec[UsedSlot].AverageRecordTIme = GetAverageRecordTime( UsedSlot );
 }
 
+function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
+{
+    local int i, j;
+    local string newPawn;
+
+    if( ASGameInfo(Level.Game) != none )
+    {
+        if( !start.bEnabled )
+        {
+            return false;
+        }
+
+        j = ASGameInfo(Level.Game).SpawnManagers.Length;
+        if( j > 0 )
+        {
+            for( i = 0; i < j; ++ i )
+            {
+                if( ASGameInfo(Level.Game).SpawnManagers[i] == none )
+                    return false;
+
+                if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( start, player.PlayerReplicationInfo.Team.TeamIndex, player ) )
+                {
+                    newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( player, start, player.PlayerReplicationInfo.Team.TeamIndex );
+                    if( newPawn != "" )
+                        ASPlayerReplicationInfo(player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
+
+                    return true;
+                }
+            }
+        }
+        else return true;
+    }
+    else
+    {
+        if( start.TeamNumber == player.PlayerReplicationInfo.Team.TeamIndex )
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
     super.ModeModifyPlayer( other, c, CRI );

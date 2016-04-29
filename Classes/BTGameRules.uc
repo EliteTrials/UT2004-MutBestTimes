@@ -280,7 +280,6 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
     local BTServer_TeamPlayerStart X;
     local array<BTServer_TeamPlayerStart> AVS;
     local int i, j;
-    local string newPawn;
 
     if( BT.ModeIsTrials() && Player != none && Player.PlayerReplicationInfo != none && Player.PlayerReplicationInfo.Team != none )
     {
@@ -310,43 +309,17 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
                 return CS;
         }
 
-        if( BT.bNoRandomSpawnLocation )
+        if( BT.bNoRandomSpawnLocation || BT.bSoloMap ) // Always force fixed spawns on Solo maps!
         {
-            foreach AllActors( class'PlayerStart', S )
+            foreach AllActors( class'PlayerStart', s )
             {
-                if( IsValidPlayerStart( s ) )
+                if( !IsValidPlayerStart( s ) )
+                    continue;
+
+                if( BT.ValidatePlayerStart( Player, s ) )
                 {
                     Player.Event = '';
-                    if( ASGameInfo(Level.Game) != none )
-                    {
-                        j = ASGameInfo(Level.Game).SpawnManagers.Length;
-                        if( j > 0 )
-                        {
-                            for( i = 0; i < j; ++ i )
-                            {
-                                if( ASGameInfo(Level.Game).SpawnManagers[i] == none )
-                                    continue;
-
-                                if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( S, Player.PlayerReplicationInfo.Team.TeamIndex, Player ) )
-                                {
-                                    newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( Player, S, Player.PlayerReplicationInfo.Team.TeamIndex );
-                                    if( newPawn != "" )
-                                        ASPlayerReplicationInfo(Player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
-
-                                    return S;
-                                }
-                            }
-                            continue;
-                        }
-                        else return S;
-                    }
-                    else
-                    {
-                        if( S.TeamNumber == Player.PlayerReplicationInfo.Team.TeamIndex )
-                        {
-                            return s;
-                        }
-                    }
+                    return s;
                 }
             }
         }
@@ -357,5 +330,5 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
 final function bool IsValidPlayerStart( PlayerStart s )
 {
     // Despite configured with bEnabled=false, something is enabling them at run-time, so ensure that no player can spawn on any these two!
-    return s.bEnabled && !s.IsA( 'BTServer_ClientStartPoint' ) && !s.IsA( 'BTServer_CheckPointNavigation' );
+    return !s.IsA( 'BTServer_ClientStartPoint' ) && !s.IsA( 'BTServer_CheckPointNavigation' );
 }

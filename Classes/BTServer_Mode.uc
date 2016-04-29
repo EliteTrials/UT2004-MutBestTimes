@@ -49,23 +49,25 @@ function ModeReset()
 {
 }
 
+function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
+{
+    return false;
+}
+
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
 }
 
 function ModePlayerKilled( Controller player )
 {
-
 }
 
 function PreRestartRound()
 {
-
 }
 
 function PostRestartRound()
 {
-
 }
 
 /**
@@ -74,7 +76,6 @@ function PostRestartRound()
  */
 function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
 {
-
 }
 
 function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
@@ -89,7 +90,6 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 
 function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
 {
-
 }
 
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )

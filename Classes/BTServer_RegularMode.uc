@@ -18,8 +18,26 @@ static function bool IsRegular( string mapName )
 
 protected function InitializeMode()
 {
+    local int mapIndex;
+    local BTClient_LevelReplication myLevel;
+
     super.InitializeMode();
     bRegularMap = true;
+
+    myLevel = Spawn( class'BTClient_LevelReplication', none );
+    MRI.AddLevelReplication( myLevel );
+    myLevel.InitializeLevel( none );
+
+    // FIXME: UsedSlot is not yet set by BTimes.
+    mapIndex = UsedSlot;
+    myLevel.MapIndex = mapIndex;
+    if( RDat.Rec[mapIndex].PSRL.Length > 0 )
+    {
+        myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
+        myLevel.TopTime = GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ); // assumes PSRL is always sorted by lowest time.
+        myLevel.TopRanks = GetRecordTopHolders( mapIndex );
+    }
+    MRI.MapLevel = MRI.BaseLevel;
 }
 
 function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
