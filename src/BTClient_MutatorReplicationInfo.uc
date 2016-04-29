@@ -59,6 +59,8 @@ var struct sTeam{
     var int Voters;
 } Teams[3];
 
+var BTClient_LevelReplication BaseLevel, MapLevel;
+
 replication
 {
     reliable if( Role == ROLE_Authority )
@@ -70,7 +72,8 @@ replication
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
-        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount, RankedPlayersCount;
+        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount, RankedPlayersCount,
+        BaseLevel, MapLevel;
 
     // Only replicated when saving
     reliable if( bNetDirty && bUpdatingGhost )
@@ -84,6 +87,21 @@ replication
 delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 delegate OnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName );
 delegate OnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query );
+
+final function AddLevelReplication( BTClient_LevelReplication levelRep )
+{
+    local BTClient_LevelReplication other;
+
+    if( BaseLevel == none )
+    {
+        BaseLevel = levelRep;
+        return;
+    }
+
+    other = BaseLevel;
+    BaseLevel = levelRep;
+    levelRep.NextLevel = other;
+}
 
 simulated Event PostBeginPlay()
 {
@@ -165,8 +183,6 @@ final simulated function Color GetFadingColor( Color FadingColor )
 defaultproperties
 {
     RecordState=RS_Active
-
-    bAlwaysRelevant=true
 
     NetUpdateFrequency=1.0
     NetPriority=1.0

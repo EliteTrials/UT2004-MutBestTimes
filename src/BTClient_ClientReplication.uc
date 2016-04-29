@@ -171,6 +171,8 @@ var Pawn ClientSpawnPawn;
 /** This player team's index, @MRI.Teams. */
 var int EventTeamIndex;
 
+var BTClient_LevelReplication PlayingLevel;
+
 //==============================================================================
 
 //==============================================================================
@@ -200,7 +202,8 @@ replication
         myPawn, ClientSpawnPawn/**should only be replicated to spectators!*/,
         PersonalTime, Rank, ClientFlags, SoloRank,
         BTLevel, BTExperience, BTPoints, APoints, BTWage,
-        PreferedColor, bIsPremiumMember, Title, EventTeamIndex;
+        PreferedColor, bIsPremiumMember, Title, EventTeamIndex,
+        PlayingLevel/**should only be replicated to spectators!*/;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
         bAllowDodgePerk, ProhibitedCappingPawn, JoinServerTime, PlayerId;

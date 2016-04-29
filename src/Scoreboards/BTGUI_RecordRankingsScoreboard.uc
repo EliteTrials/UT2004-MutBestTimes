@@ -63,9 +63,30 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
     recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
 	// Note: Will trigger OnChangeRankingsCategory
-	RankingsCombo.SetText( recordsPRI.RecordsQuery );
+    if( Inter.MRI.CR.PlayingLevel != none )
+    {
+	   RankingsCombo.SetText( Inter.MRI.CR.PlayingLevel.GetFullName( string(Inter.MRI.Outer.Name) ) );
+    }
+    else
+    {
+        RankingsCombo.SetText( recordsPRI.RecordsQuery );
+    }
     RankingsCombo.OnChange( self ); // ??? wtf stopped working by itself!
     bWaitingForReplication = false;
+
+    CacheLevels();
+}
+
+private function CacheLevels()
+{
+    local BTClient_LevelReplication myLevel;
+
+    RankingsCombo.OnChange = none;
+    for( myLevel = Inter.MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+    {
+        RankingsCombo.AddItem( myLevel.GetFullName( string(Inter.MRI.Outer.Name) ),, "map" );
+    }
+    RankingsCombo.OnChange = InternalOnChangeQuery;
 }
 
 private function QueryNextRecordRanks( optional bool bReset )

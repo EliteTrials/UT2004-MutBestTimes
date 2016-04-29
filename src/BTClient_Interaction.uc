@@ -36,6 +36,7 @@ var const
     RecordHolderMsg,
     RecordTimeLeftMsg,
     RecordEmptyMsg,
+    RecordHubMsg,
     RecordPrevTimeMsg,
     RecordTimeElapsed,
     RankingToggleMsg,
@@ -53,6 +54,7 @@ var HUD_Assault                             HU;                                 
 var HUD                                     myHUD;
 var BTClient_Config                         Options;                            // Object to Config, set on Initialized()
 var BTClient_ClientReplication              SpectatedClient;                    // Set by PostRender(), used for showing the record timer of other players...
+var BTClient_LevelReplication               ActiveLevel;
 
 var array<Pickup> KeyPickupsList;
 
@@ -692,6 +694,47 @@ event Tick( float DeltaTime )
 {
     local Console C;
     local DefaultPhysicsVolume DPV;
+    local xPawn p;
+    local LinkedReplicationInfo LRI;
+
+    // See if client is spectating someone!
+    SpectatedClient = none;
+    P = xPawn(ViewportOwner.Actor.ViewTarget);
+    if( p != none && p != ViewportOwner.Actor.Pawn )
+    {
+        if( p != none && p.PlayerReplicationInfo != none )
+        {
+            for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+            {
+                if( BTClient_ClientReplication(LRI) != none )
+                {
+                    SpectatedClient = BTClient_ClientReplication(LRI);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Look for our ClientReplication object
+    if( MRI.CR == none )
+    {
+        for( LRI = ViewportOwner.Actor.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+        {
+            if( BTClient_ClientReplication(LRI) != none )
+            {
+                MRI.CR = BTClient_ClientReplication(LRI);
+                MRI.CR.MRI = MRI;
+                break;
+            }
+        }
+    }
+
+    // Not spectating anyone, assign to myself!
+    if( SpectatedClient == none )
+    {
+        SpectatedClient = MRI.CR;
+    }
+    ActiveLevel = GetCurrentLevel();
 
     if( !bMenuModified )
         ModifyMenu();
@@ -1054,6 +1097,7 @@ event NotifyLevelChange()
     myHUD = none;
     Options = none;
     SpectatedClient = none;
+    ActiveLevel = none;
     KeyPickupsList.Length = 0;
     LastBase = none;
     Master.RemoveInteraction( self );
@@ -1446,10 +1490,12 @@ function RenderGhostMarkings( Canvas C )
     local vector Dir, X, Y, Z, CamPos;
     local rotator CamRot;
     local float Dist;
+    local float topTime;
 
     if( MRI == none || SpectatedClient == none )
         return;
 
+    topTime = GetTopTime();
     C.Font = GetScreenFont( C );
     foreach ViewportOwner.Actor.DynamicActors( class'BTClient_GhostMarker', Marking )
     {
@@ -1460,8 +1506,8 @@ function RenderGhostMarkings( Canvas C )
         Dir /= Dist;
         if( (Dir dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
         {
-            T = MRI.MapBestTime * (float(Marking.MoveIndex)/float(MRI.MaxMoves));
-            YT = T - (MRI.MapBestTime - GetTimeLeft());
+            T = topTime * (float(Marking.MoveIndex)/float(MRI.MaxMoves));
+            YT = T - (topTime - GetTimeLeft());
             if( YT >= 0 )
             {
                 C.DrawColor = class'HUD'.default.GreenColor;
@@ -1893,7 +1939,6 @@ function PostRender( Canvas C )
     local int i, j, YLength, FLength;
     local float YP, XP;
     local float XP1;
-    local LinkedReplicationInfo LRI;
     local xPawn p;
 
     if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
@@ -1949,20 +1994,6 @@ function PostRender( Canvas C )
         }
     }
 
-    // Look for our ClientReplication object
-    if( MRI.CR == None )
-    {
-        for( LRI = ViewportOwner.Actor.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
-        {
-            if( BTClient_ClientReplication(LRI) != None )
-            {
-                MRI.CR = BTClient_ClientReplication(LRI);
-                MRI.CR.MRI = MRI;
-                break;
-            }
-        }
-    }
-
     if( MRI.CR == none )
         return;
 
@@ -1970,30 +2001,6 @@ function PostRender( Canvas C )
     if( MRI.CR.bAllowDodgePerk && Pawn(ViewportOwner.Actor.ViewTarget) != none && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
     {
         RenderDodgeReady( C );
-    }
-
-    // See if client is spectating someone!
-    SpectatedClient = none;
-    P = xPawn(ViewportOwner.Actor.ViewTarget);
-    if( p != none && p != ViewportOwner.Actor.Pawn )
-    {
-        if( p != none && p.PlayerReplicationInfo != none )
-        {
-            for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
-            {
-                if( BTClient_ClientReplication(LRI) != none )
-                {
-                    SpectatedClient = BTClient_ClientReplication(LRI);
-                    break;
-                }
-            }
-        }
-    }
-
-    // Not spectating anyone, assign to myself!
-    if( SpectatedClient == none )
-    {
-        SpectatedClient = MRI.CR;
     }
 
     // COMPETITIVE HUD
@@ -2080,27 +2087,24 @@ function PostRender( Canvas C )
             /* Simple drawing */
             if( Options.bUseAltTimer )
             {
-                if( MRI.PlayersBestTimes != "" )
+                // Don't count if game ended etc
+                if( bTimerPaused )
                 {
-                    // Don't count if game ended etc
-                    if( bTimerPaused )
-                    {
-                        if( DrawnTimer == 0.0f )
-                            DrawnTimer = MRI.MapBestTime;
-                    }
-                    else
-                    {
-                        DrawnTimer = GetTimeLeft();
-                    }
-
-                    if( DrawnTimer <= 0 )
-                        C.DrawColor = class'HUD'.default.RedColor;
-                    else C.DrawColor = class'HUD'.default.WhiteColor;
-
-                    C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
-                    DrawTextWithBackground( C, FormatTime( DrawnTimer ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
-                    return;
+                    if( DrawnTimer == 0.0f )
+                        DrawnTimer = GetTopTime();
                 }
+                else
+                {
+                    DrawnTimer = GetTimeLeft();
+                }
+
+                if( DrawnTimer <= 0 )
+                    C.DrawColor = class'HUD'.default.RedColor;
+                else C.DrawColor = class'HUD'.default.WhiteColor;
+
+                C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
+                DrawTextWithBackground( C, FormatTime( DrawnTimer ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
+                return;
             }
 
             // Draw record information!.
@@ -2333,17 +2337,19 @@ function DrawRecordWidget( Canvas C )
     C.Font = GetScreenFont( C );
     drawX -= COLUMN_PADDING_X*2;
 
-    if( MRI.PlayersBestTimes == "" )
+    if( ActiveLevel == none )
+        s = RecordHubMsg;
+    else if( ActiveLevel.TopRanks == "" )
         s = RecordEmptyMsg;
 
-    if( s != RecordEmptyMsg )
+    if( s == "" )
     {
         // =============================================================
         // Record Ticker
         if( bTimerPaused )
         {
             if( DrawnTimer == 0.0f )
-                DrawnTimer = MRI.MapBestTime;
+                DrawnTimer = ActiveLevel.TopTime;
         }
         else
         {
@@ -2382,7 +2388,7 @@ function DrawRecordWidget( Canvas C )
         // Record Time
         if( !MRI.bSoloMap )
         {
-            s = RecordTimeMsg $ " " $ FormatTime( MRI.MapBestTime );
+            s = RecordTimeMsg $ " " $ FormatTime( ActiveLevel.TopTime );
             C.StrLen( s, width, height );
             width = FMax( width, minWidth );
             DrawElementTile( C, drawX - width, drawY, width, height );
@@ -2390,7 +2396,7 @@ function DrawRecordWidget( Canvas C )
             s = RecordTimeMsg $ " ";
             DrawElementText( C, drawX - width, drawY, s );
 
-            s = FormatTime( MRI.MapBestTime );
+            s = FormatTime( ActiveLevel.TopTime );
             C.StrLen( s, xl, yl );
             C.DrawColor = Options.CGoldText;
             DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );
@@ -2399,7 +2405,7 @@ function DrawRecordWidget( Canvas C )
 
         // Record Author
         // Title
-        s = RecordHolderMsg $ " " $ MRI.PlayersBestTimes;
+        s = RecordHolderMsg $ " " $ ActiveLevel.TopRanks;
         C.TextSize( %s, width, height );
         width = FMax( width, minWidth );
         DrawElementTile( C, drawX - width, drawY, width, height );
@@ -2409,7 +2415,7 @@ function DrawRecordWidget( Canvas C )
         DrawElementText( C, drawX - width, drawY, s );
 
         // Right column
-        s = MRI.PlayersBestTimes;
+        s = ActiveLevel.TopRanks;
         C.TextSize( %s, xl, yl );
         DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );
         drawY += height + COLUMN_PADDING_Y*3;
@@ -2418,7 +2424,7 @@ function DrawRecordWidget( Canvas C )
         // Record Timer
         // DRAWS: Time Left: TIMELEFT/BESTTIME
         timeLeftF = FormatTime( DrawnTimer );
-        bestTimeF = FormatTime( MRI.MapBestTime );
+        bestTimeF = FormatTime( ActiveLevel.TopTime );
 
         s = RecordTimeLeftMsg $ " " $ timeLeftF;
         if( MRI.bSoloMap )
@@ -2521,15 +2527,34 @@ final static function DrawBorder( Canvas C, float X1, float Y1, float X2, float 
     C.ClipY = bak[1];
 }
 
+final function BTClient_LevelReplication GetCurrentLevel()
+{
+    local BTClient_LevelReplication curLevel;
+
+    curLevel = SpectatedClient.PlayingLevel;
+    if( curLevel == none )
+        curLevel = MRI.MapLevel;
+
+    return curLevel;
+}
+
+final function float GetTopTime()
+{
+    if( ActiveLevel == none )
+        return 0.00;
+
+    return ActiveLevel.TopTime;
+}
+
 final function float GetTimeLeft()
 {
     if( MRI.bSoloMap )
     {
         if( Options.bBaseTimeLeftOnPersonal && SpectatedClient.PersonalTime > 0.f )
             return SpectatedClient.PersonalTime - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
-        else return MRI.MapBestTime - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
+        else return GetTopTime() - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
     }
-    else return MRI.MapBestTime - (MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime));
+    else return GetTopTime() - (MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime));
 }
 
 /*final function DrawTextBox( Canvas C, float X, float Y, string Text, string Value, color ValueColor )
@@ -2745,6 +2770,7 @@ DefaultProperties
     RecordHolderMsg="Holder"
     RecordTimeLeftMsg="Record"
     RecordEmptyMsg="No record available"
+    RecordHubMsg="Choose a level!"
     RecordTimeElapsed="Time"
     RankingKeyMsg="Escape/%KEY%"
     RankingToggleMsg="view next page"
