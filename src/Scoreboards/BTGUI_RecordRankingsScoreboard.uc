@@ -5,7 +5,8 @@ var automated BTGUI_ComboBox SourceCombo;
 var automated BTGUI_ComboBox RankingsCombo;
 var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
-var private string _LastQuery;
+var private string _LastMapQuery;
+var private string _LastPlayerQuery;
 
 delegate OnQueryPlayerRecord( coerce string mapId, coerce string playerId );
 
@@ -59,7 +60,7 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
     recordsPRI.OnRecordRankReceived = InternalOnRecordRankReceived;
 	recordsPRI.OnRecordRankUpdated = InternalOnRecordRankUpdated;
 	recordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
-	recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
+    recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
 	// Note: Will trigger OnChangeRankingsCategory
 	RankingsCombo.SetText( recordsPRI.RecordsQuery );
@@ -100,38 +101,48 @@ protected function InternalOnChangeSource( GUIComponent sender )
 
     // Map/Player
     source = SourceCombo.GetText();
-    query = RankingsCombo.GetText();
     if( source == CRI.RecordsPRI.RecordsSource )
         return;
 
+    query = RankingsCombo.GetText();
     CRI.RecordsPRI.RecordsSource = source;
     switch( source )
     {
         case "map":
-            RankingsCombo.SetText( Eval( _LastQuery == "", string(CRI.RecordsPRI.RecordsSourceId), _LastQuery ) );
+            _LastPlayerQuery = query;
+            RankingsCombo.SetText( Eval( _LastMapQuery == "", string(CRI.RecordsPRI.RecordsSourceId), _LastMapQuery ) );
             RankingsListBox.List.SortColumn = 3; // Time
-            RankingsListBox.List.ColumnHeadings[2] = "Map";
+            RankingsListBox.List.ColumnHeadings[2] = "Player";
             break;
 
         case "player":
-            RankingsCombo.SetText( Eval( _LastQuery == "", CRI.PlayerId, _LastQuery ) );
+            _LastMapQuery = query;
+            RankingsCombo.SetText( Eval( _LastPlayerQuery == "", CRI.PlayerId, _LastPlayerQuery ) );
             RankingsListBox.List.SortColumn = 1; // Rating
-            RankingsListBox.List.ColumnHeadings[2] = "Player";
+            RankingsListBox.List.ColumnHeadings[2] = "Map";
+            break;
+
+        default:
+            Warn(source @ "is not a queryable source!");
             break;
     }
 
-    _LastQuery = query;
     // Can be PlayerId or PlayerName
     RankingsCombo.OnChange( self ); // ??? wtf stopped working by itself!
 }
 
-protected function InternalOnChangeRankingsCategory( GUIComponent sender )
+protected function InternalOnChangeQuery( GUIComponent sender )
 {
 	local BTClient_ClientReplication CRI;
 	local BTGUI_RecordRankingsMultiColumnList list;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    // Log("InternalOnChangeRankingsCategory" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
+    // Log("InternalOnChangeQuery" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
+    if( RankingsCombo.GetExtra() != "" && RankingsCombo.GetExtra() != CRI.RecordsPRI.RecordsSource )
+    {
+        SourceCombo.SetText( RankingsCombo.GetExtra() );
+        return;
+    }
 
     bIsQuerying = false; // renable querying
 
@@ -177,9 +188,14 @@ protected function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInf
 	// Log("Query completed!" @ CRI.RecordsPRI.RecordsQuery @ CRI.RecordsPRI.RecordsSourceId @ CRI.RecordsPRI.RecordsSource);
     if( RankingsCombo.GetText() != CRI.RecordsPRI.RecordsQuery )
     {
-    	RankingsCombo.OnChange = none;
+        // Prevent infinite recursion.
+        RankingsCombo.OnChange = none;
+        if( RankingsCombo.FindIndex( CRI.RecordsPRI.RecordsQuery, true ) == -1 )
+        {
+            RankingsCombo.AddItem( CRI.RecordsPRI.RecordsQuery,, CRI.RecordsPRI.RecordsSource );
+        }
 		RankingsCombo.SetText( CRI.RecordsPRI.RecordsQuery );
-		RankingsCombo.OnChange = InternalOnChangeRankingsCategory;
+		RankingsCombo.OnChange = InternalOnChangeQuery;
     }
 
 	if( !bIsQuerying && !RankingsListBox.MyScrollBar.bVisible )
@@ -312,7 +328,7 @@ defaultproperties
         bBoundToParent=true
         FontScale=FNS_Small
         bIgnoreChangeWhenTyping=true
-        OnChange=InternalOnChangeRankingsCategory
+        OnChange=InternalOnChangeQuery
     End Object
     RankingsCombo=RanksComboBox
 
