@@ -4899,7 +4899,7 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
     {
         return;
     }
-    LRI.ClientSendMessage( class'BTClient_SoloFinish', message, switch, otherPRI );
+    LRI.ClientSendMessage( class'BTLevelCompletedMessage', message, switch, otherPRI );
 }
 
 final function ProcessGroupFinishAchievement( int playerSlot )
