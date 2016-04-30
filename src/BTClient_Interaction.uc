@@ -1660,11 +1660,11 @@ function RenderCompetitiveLayer( Canvas C )
     C.CurX = StartX;
     C.DrawColor = Class'HUD'.Default.GrayColor;
     C.DrawColor.A = 100;
-    class'BTClient_SoloFinish'.Static.DrawHorizontal( C, StartY-2, SizeX );
-    Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, StartY+YL, SizeX );
+    class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, StartY-2, SizeX );
+    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, StartY+YL, SizeX );
     C.CurY -= 2;
-    Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX, YL+4 );
-    Class'BTClient_SoloFinish'.Static.DrawVertical( C, StartX+SizeX, YL+4 );
+    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, StartX, YL+4 );
+    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, StartX+SizeX, YL+4 );
 }
 
 function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> columns, optional out float totalWidth, optional out float totalHeight )
@@ -2576,11 +2576,11 @@ final function float GetTimeLeft()
     C.DrawColor = Class'HUD'.Default.GrayColor;
     C.DrawColor.A = 100;
     C.CurX -= ((XL + ExTileWidth) + (BorderSize * 2));
-    Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, (Y - BorderSize), ((XL + ExTileWidth) + (BorderSize * 2)) );
-    Class'BTClient_SoloFinish'.Static.DrawHorizontal( C, (Y + YL), ((XL + ExTileWidth) + (BorderSize * 2)) );
+    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, (Y - BorderSize), ((XL + ExTileWidth) + (BorderSize * 2)) );
+    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, (Y + YL), ((XL + ExTileWidth) + (BorderSize * 2)) );
     C.CurY -= BorderSize;
-    Class'BTClient_SoloFinish'.Static.DrawVertical( C, (C.CurX - BorderSize), (YL + (BorderSize * 2)) );
-    Class'BTClient_SoloFinish'.Static.DrawVertical( C, X, (YL + (BorderSize * 2)) );
+    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, (C.CurX - BorderSize), (YL + (BorderSize * 2)) );
+    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, X, (YL + (BorderSize * 2)) );
 
     // Draw Content
     C.SetPos( (X - (XL - (BorderSize * 2))), ((YL + ExTileWidth) + BorderSize + ExTextOffset) );

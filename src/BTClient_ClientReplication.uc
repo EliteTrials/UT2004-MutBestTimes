@@ -385,7 +385,7 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
 		Log( "Received an early client message: " $ message );
 	}
     // HACK: Respect the options specifically for record messages.
-    if( messageClass == class'BTClient_SoloFinish' && Options != none && Options.bDisplayCompletingMessages )
+    if( messageClass == class'BTLevelCompletedMessage' && Options != none && Options.bDisplayCompletingMessages )
     {
         if( (switch == 0 || switch == 2) && Options.bDisplayFail )
         {

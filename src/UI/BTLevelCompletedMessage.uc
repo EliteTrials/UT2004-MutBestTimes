@@ -7,7 +7,7 @@
 //  Updated @ 19/11/2009
 //  Updated @ 16/01/2014
 //==============================================================================
-class BTClient_SoloFinish extends BTClient_LocalMessage;
+class BTLevelCompletedMessage extends BTClient_LocalMessage;
 
 var Color RecordStateColor[3];
 
@@ -72,6 +72,8 @@ static function RenderComplexMessage(
 
     Canvas.DrawTextClipped( MessageString, false );
 
+
+
     IconSize = YL*2;
     Alpha = Canvas.DrawColor.A;
 
@@ -80,6 +82,7 @@ static function RenderComplexMessage(
     {
         Canvas.DrawColor = Canvas.MakeColor(255, 255, 255);
         Canvas.DrawColor.A  = Alpha;
+        // AS_FX_TX.Icons.ScoreBoard_Objective_Final
         Canvas.DrawTile( Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Single', IconSize, IconSize, 0, 0, 128, 128);
     }
     else if( RecordState == 0 || RecordState == 2 )
@@ -119,8 +122,11 @@ DefaultProperties
     bComplexString=True
 
     DrawColor=(R=255,G=128,B=0,A=255)
+    // Fail
     RecordStateColor(0)=(R=255,G=0,B=0,A=255)
+    // Success
     RecordStateColor(1)=(R=255,G=255,B=0,A=255)
+    // Tie
     RecordStateColor(2)=(R=20,G=20,B=20,A=255)
     FontSize=-2
 
