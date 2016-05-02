@@ -28,7 +28,6 @@ protected function InitializeMode()
     MRI.AddLevelReplication( myLevel );
     myLevel.InitializeLevel( none );
 
-    // FIXME: UsedSlot is not yet set by BTimes.
     mapIndex = UsedSlot;
     myLevel.MapIndex = mapIndex;
     if( RDat.Rec[mapIndex].PSRL.Length > 0 )

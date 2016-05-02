@@ -9,15 +9,24 @@ var() float MinRecordTime;
 var() float MaxRecordTime;
 var() float PointsPenalty;
 
+protected function InitializeMode()
+{
+    super.InitializeMode();
+
+    UsedSlot = RDat.FindRecord( CurrentMapName );
+    if( UsedSlot == -1 )
+    {
+        UsedSlot = RDat.CreateRecord( CurrentMapName, RDat.MakeCompactDate( Level ) );
+    }
+
+    FullLog( "Found map index:"$UsedSlot$" for "$CurrentMapName );
+    RDat.Rec[UsedSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
+}
+
 function ModeReset()
 {
     super.ModeReset();
     RecordByTeam = RT_None;
-}
-
-function ModePostBeginPlay()
-{
-    RDat.Rec[UsedSlot].AverageRecordTIme = GetAverageRecordTime( UsedSlot );
 }
 
 function bool ModeValidatePlayerStart( Controller player, PlayerStart start )

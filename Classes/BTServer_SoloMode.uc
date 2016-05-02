@@ -286,7 +286,7 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 
     if( IsCompetitiveModeActive() )
     {
-        TeamFinishedMap( player );
+        TeamFinishedMap( player, playSeconds );
     }
 
     if( Left( Level.Title, 13 ) == "TechChallenge" )
