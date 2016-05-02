@@ -279,7 +279,7 @@ function NavigationPoint FindPlayerStart( Controller Player, optional byte InTea
     local NavigationPoint CS;
     local BTServer_TeamPlayerStart X;
     local array<BTServer_TeamPlayerStart> AVS;
-    local int i, j;
+    local int i;
 
     if( BT.ModeIsTrials() && Player != none && Player.PlayerReplicationInfo != none && Player.PlayerReplicationInfo.Team != none )
     {

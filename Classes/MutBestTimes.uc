@@ -3194,6 +3194,10 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             }
             break;
 
+        case "debuglevelmsg":
+            BroadcastFinishMessage( sender, params[1], byte(params[0]) );
+            break;
+
         case "btcommands":
             sender.ClientMessage( Class'HUD'.Default.RedColor $ "List of all admin commands of" @ Name );
             for( i = 0; i < Commands.Length; ++ i )
@@ -5136,18 +5140,21 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional out byte bNewTopRecord )
 {
     local bool b;
-    local string EndMsg;
+    local string finishMsg, finishTime;
     local int j, PLs, oldPLi, PLi, l;
-    local float TimeBoost, score;
+    local float score, finishDiff;
     local Pawn P;
     local int numObjectives;
     local BTServer_RecordsData.sSoloRecord newSoloRecord;
     local int mapIndex;
 
     FullLog( "Processing record for player" @ PC.GetHumanReadableName() @ CurrentPlaySeconds @ "bRecursive:" @ bRecursive @ myLevel.GetFullName( CurrentMapName ) );
-    mapIndex = myLevel.MapIndex;
 
     // macro to playerslot.
+    mapIndex = myLevel.MapIndex;
+    finishTime = TimeToStr( CurrentPlaySeconds );
+    finishMsg = "%PLAYER% completed" @ #0x00A0FFFF$myLevel.GetLevelName()$cWhite;
+
     PLs = CR.myPlayerSlot + 1;
     UpdatePlayerSlot( PC, PLs - 1, True );      // Update names etc
     ++ PDat.Player[PLs - 1].PLSF;               // Amount of times this user finished a solo map.
@@ -5185,6 +5192,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             {
                 RDat.Rec[mapIndex].PSRL[PLi].Flags = RDat.Rec[mapIndex].PSRL[PLi].Flags & ~0x01/**RFLAG_CP*/;
             }
+            finishDiff = RDat.Rec[mapIndex].PSRL[PLi].SRT - CurrentPlaySeconds;
             SetSoloRecordTime( PC, mapIndex, PLi, CurrentPlaySeconds );
             CR.ClientSetPersonalTime( CurrentPlaySeconds );
             // Broadcast success, on next if( b ).
@@ -5196,10 +5204,12 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         {
             // Broadcast failure!
             ++ RDat.Rec[mapIndex].TMFailures;
+            finishDiff = RDat.Rec[mapIndex].PSRL[PLi].SRT - CurrentPlaySeconds;
             // Tied his own position
             if( GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) == CurrentPlaySeconds )
             {
-                BroadcastFinishMessage( PC, "%PLAYER% tied the personal record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
+                finishMsg @= "with a tie to" @ cDarkGray$finishTime;
+                BroadcastFinishMessage( PC, finishMsg, 2 );
 
                 PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
                 PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
@@ -5207,7 +5217,8 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             // Tied the best record
             else if( GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ) == CurrentPlaySeconds )
             {
-                BroadcastFinishMessage( PC, "%PLAYER% tied the best record, time " $ TimeToStr( CurrentPlaySeconds ), 2 );
+                finishMsg @= "with a record tie to" @ cDarkGray$finishTime;
+                BroadcastFinishMessage( PC, finishMsg, 2 );
 
                 PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
                 PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
@@ -5215,7 +5226,9 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             // Failed record
             else
             {
-                BroadcastFinishMessage( PC, "%PLAYER% failed to improve his/her record, time " $ TimeToStr( CurrentPlaySeconds ), 0 );
+                finishMsg @= "in" @ cRed$finishTime$cWhite$", "$cRed$TimeToStr( finishDiff );
+                BroadcastFinishMessage( PC, finishMsg, 0 );
+
                 if( CR.BTWage > 0 )
                 {
                     BTServer_SoloMode(CurMode).WageFailed( CR, CR.BTWage );
@@ -5287,7 +5300,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             PDat.ProgressAchievementByID( PLs-1, 'points_0' );
         }
 
-        AddRecentSetRecordToPlayer( PLs, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$TimeToStr( CurrentPlaySeconds ) );
+        AddRecentSetRecordToPlayer( PLs, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$finishTime );
 
         CR.SoloRank = PLi + 1;
         // Don't spam force update for every group member :P
@@ -5317,11 +5330,12 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             FullLog( "*** New Best Solo Speed-Record ***" );
             if( BestPlaySeconds != -1 ) // Faster!
             {
-                TimeBoost = (BestPlaySeconds - CurrentPlaySeconds);
-                EndMsg = "The record has been beaten, with an improvement of "$TimeToStr( TimeBoost )$ ", new time "$TimeToStr( CurrentPlaySeconds );
-                if( TimeBoost <= 0.10f )
+                finishDiff = (BestPlaySeconds - CurrentPlaySeconds);
+                finishMsg @= "with a new record time of" @ cGold$finishTime$cWhite $", +" $ cGreen$TimeToStr( finishDiff );
+
+                if( finishDiff <= 0.10f )
                     BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
-                else if( TimeBoost <= 1.0f )
+                else if( finishDiff <= 1.0f )
                     BroadcastAnnouncement( AnnouncementRecordImprovedClose );
                 else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
@@ -5334,7 +5348,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
                     j = PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length;
                     PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( TimeBoost )$cWhite$CurrentMapName;
+                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( finishDiff )$cWhite$CurrentMapName;
                 }
 
                 if( RDat.Rec[mapIndex].TMFailures >= 50 )
@@ -5345,11 +5359,11 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             }
             else    // 1st time record
             {
-                EndMsg = "A record has been set, time " $ TimeToStr( CurrentPlaySeconds );
+                finishMsg @= "setting a first time record of" @ cGold$finishTime;
                 BroadcastAnnouncement( AnnouncementRecordSet );
             }
 
-            BroadcastConsoleMessage( EndMsg );
+            BroadcastConsoleMessage( finishMsg );
 
             // Update map stats.
             RDat.Rec[mapIndex].TMFailures = 0;                          // Reset this :)
@@ -5379,23 +5393,19 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             if( !bDontEndGameOnRecord )
             {
                 MRI.RecordState = RS_Succeed;
-                UpdateEndMsg( EndMsg );
+                UpdateEndMsg( finishMsg );
                 return true;
             }
             else
             {
-                BroadcastFinishMessage( PC, EndMsg, 1 );
+                BroadcastFinishMessage( PC, finishMsg, 1 );
             }
             //======================================================
         }
         else
         {
-            BroadcastFinishMessage( PC,
-                "Record " $ (PLi+1)
-                $ "/" $ RDat.Rec[mapIndex].PSRL.Length
-                $ " has been set, time " $ TimeToStr( CurrentPlaySeconds )
-                $ ", by %PLAYER%", 1
-            );
+            finishMsg @= "in" @ cGold$finishTime$cWhite$", "$cGreen$"+"$TimeToStr( finishDiff )$cWhite @ "achieving best" @ (PLi+1) @ "out of" @ RDat.Rec[mapIndex].PSRL.Length;
+            BroadcastFinishMessage( PC, finishMsg, 1 );
 
             if( CR.BTWage > 0 )
             {
@@ -6315,24 +6325,28 @@ final function CreateWebBTimes()                                                
 static final function string TimeToStr( float Value )                                       // .:..:, Epic Games
 {
     // Rewroten for Milliseconds support by Eliot
-    local int Hours, Minutes;
+    local int Minutes;
     local float Seconds;
-    local string HourString, MinuteString, SecondString;
+    local string MinuteString, SecondString;
 
     Seconds     =   Abs( Value );
     Minutes     =   int( Seconds ) / 60;
-    Hours       =   Minutes / 60;
     Seconds     -=  (Minutes * 60);
-    Minutes     -=  (Hours * 60);
 
     SecondString    = Eval( Seconds < 10, "0"$Seconds, string( Seconds ) );
+    if( Minutes == 0 )
+    {
+        if( Value < 0 )
+            return "-"$SecondString;
+        else return SecondString;
+    }
+
     MinuteString    = Eval( Minutes < 10, "0"$Minutes, string( Minutes ) );
-    HourString      = Eval( Hours < 10, "0"$Hours, string( Hours ) );
 
     // Negative?
     if( Value < 0 )
-        return "-"$HourString$":"$MinuteString$":"$SecondString;
-    else return HourString$":"$MinuteString$":"$SecondString;
+        return "-"$MinuteString$":"$SecondString;
+    else return MinuteString$":"$SecondString;
 }
 
 // Thx to: http://alcor.concordia.ca/~gpkatch/gdate-algorithm.html
