@@ -12,7 +12,6 @@ class MutBestTimes extends Mutator
     dependson(BTServer_CheckPoint);
 
 #exec obj load file="TrialGroup.u"
-#exec obj load file="AnnouncerSexy.uax"
 
 //==============================================================================
 // Macros
@@ -279,7 +278,7 @@ var() globalconfig
     name
     // AnnouncerFemale2K4.Generic.HolyShit_F
     AnnouncementRecordImprovedVeryClose,
-    // AnnouncerFemale2K4.Generic.Last_Second_Save
+    // AnnouncerFemale2K4.Generic.Unstoppable
     AnnouncementRecordImprovedClose,
     // AnnouncerFemale2K4.Generic.Hijacked
     AnnouncementRecordHijacked,
@@ -1329,6 +1328,7 @@ function ModifyPlayer( Pawn Other )
         {
             PimpClientSpawn( i, Other );
             CRI.ClientSpawnPawn = other;
+            CRI.NetUpdateTime = Level.TimeSeconds - 1;
 
             if( Holiday != "" )
             {
@@ -1700,7 +1700,7 @@ final function ProcessSirDickyAchievement( Pawn instigator )
     PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'sirdicky' );
 }
 
-Final Function ResetCheckPoint( PlayerController PC )
+final function ResetCheckPoint( PlayerController PC )
 {
     if( CheckPointHandler == None )
         return;
@@ -1713,7 +1713,7 @@ Final Function ResetCheckPoint( PlayerController PC )
 
 //==============================================================================
 // Return an array with info(i.e Record Time) about the requested map
-Final Function GetMapInfo( string MapName, out array<string> MapInfo )
+final function GetMapInfo( string MapName, out array<string> MapInfo )
 {
     local int i, j;
 
@@ -1941,7 +1941,7 @@ final function GetBadRecords( PlayerController PC, out array<string> records, ou
     }
 }
 
-final static Function BTClient_ClientReplication GetRep( Controller C )
+final static function BTClient_ClientReplication GetRep( Controller C )
 {
     local LinkedReplicationInfo LRI;
 
@@ -3396,11 +3396,14 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
             for( C = Level.ControllerList; C != none; C = C.NextController )
             {
-                if( PlayerController(C) != none && C.PlayerReplicationInfo != none )
+                if( PlayerController(C) != none && C.PlayerReplicationInfo != none && c.bIsPlayer )
                 {
                     Rep = GetRep( C );
-                    Rep.ClientCleanText();
-                    SendEventDescription( Rep );
+                    if( Rep != none )
+                    {
+                        Rep.ClientCleanText();
+                        SendEventDescription( Rep );
+                    }
                 }
             }
             break;
@@ -3915,7 +3918,7 @@ function Mutate( string MutateString, PlayerController Sender )
             return;
 
         i = FastFindPlayerSlot( Sender );
-        if( i > 0 )
+        if( i != -1 )
         {
             // -1 because FindPlayerSlot returns slot + 1
             UpdatePlayerSlot( Sender, i - 1, True );
@@ -4058,7 +4061,7 @@ final function bool ClientSpawnCanCompleteMap()
 
 //==============================================================================
 // Creates a clientspawn for PlayerController
-Final Function CreateClientSpawn( PlayerController Sender )                         // Eliot
+final function CreateClientSpawn( PlayerController Sender )                         // Eliot
 {
     local int i, j;
     local vector v;
@@ -4338,9 +4341,10 @@ final function Revoted()
     local Controller C;
     local BTClient_ClientReplication CR;
 
+    FullLog( "*** "$CurrentMapName@"Revoted ***" );
     for( C = Level.ControllerList; C != none; C = C.NextController )
     {
-        if( PlayerController(C) == none )
+        if( PlayerController(C) == none || !C.bIsPlayer )
         {
             continue;
         }
@@ -4355,13 +4359,7 @@ final function Revoted()
     if( bSpawnGhost )
         KillGhostRecorders();
 
-    SaveAll();
-    SaveConfig();
-
-    FullLog( "*** "$CurrentMapName@"Revoted ***" );
-
     StartCountDown();
-
     if( AssaultGame != none )
     {
         // Add an extra round so the game won't auto end the next time.
@@ -4386,6 +4384,7 @@ final function Revoted()
 
     // All pawns should be killed on revote!
     KillAllPawns();
+    SaveAll();
 }
 
 function ServerTraveling( string URL, bool bItems )
@@ -4402,7 +4401,7 @@ function ServerTraveling( string URL, bool bItems )
 
     for( c = Level.ControllerList; c != none; c = c.NextController )
     {
-        if( PlayerController(c) != none )
+        if( PlayerController(c) != none && c.bIsPlayer )
         {
             ProcessPlayerLogout( c );
         }
@@ -4415,8 +4414,6 @@ function ServerTraveling( string URL, bool bItems )
 
     // Map is switching, save everything!
     SaveAll();
-    SaveConfig();
-
     Free();
 }
 
@@ -4627,7 +4624,7 @@ final function SetClientMatchStartingTime()
 
 //==============================================================================
 // Return rank string based on rank value i.e 1st, 2nd, 3rd, 4th
-Final Function string GetRankPrefix( int i )
+final function string GetRankPrefix( int i )
 {
     if( i > 3 )
         return RankPrefix[3];
@@ -4688,14 +4685,14 @@ function RewardPlayersOfTeam( int teamIndex, int rewardPoints )
             continue;
         }
 
-        playerSlot = FastFindPlayerSlot( PlayerController(C) )-1;
+        playerSlot = FastFindPlayerSlot( PlayerController(C) );
         if( playerSlot == -1 )
         {
             continue;
         }
 
-        PDat.AddExperience( playerSlot, rewardPoints * PDat.GetLevel( playerSlot ) );
-        PDat.GiveCurrencyPoints( playerSlot, 5 );
+        PDat.AddExperience( playerSlot-1, rewardPoints * PDat.GetLevel( playerSlot-1 ) );
+        PDat.GiveCurrencyPoints( playerSlot-1, 5 );
     }
 }
 
@@ -4887,7 +4884,7 @@ final function BroadcastFinishMessage( Controller instigator, string message, op
 
     for( C = Level.ControllerList; C != None; C = C.NextController )
     {
-        if( C.PlayerReplicationInfo == None )
+        if( C.PlayerReplicationInfo == None || !C.bIsPlayer )
         {
             continue;
         }
@@ -5140,9 +5137,9 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional int xp,
     optional out byte bNewTopRecord )
 {
-    local bool b;
+    local bool b, bWasHijacked;
     local string finishMsg, finishTime;
-    local int j, PLs, oldPLi, PLi, l;
+    local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
     local float score, finishDiff;
     local Pawn P;
     local int numObjectives;
@@ -5340,16 +5337,30 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                     BroadcastAnnouncement( AnnouncementRecordImprovedClose );
                 else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
-                // Add lost record.
                 // Check avoids to print a message if the record owner beated his own record!
-                if( j > 1 && PLs != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != oldPLi )
+                bWasHijacked = j > 1 && PLs != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != i;
+                if( bWasHijacked )
                 {
+                    BroadcastAnnouncement( AnnouncementRecordHijacked );
+
                     // Robin Hood
                     PDat.ProgressAchievementByType( PLs-1, 'StealRecord', 1 );
 
-                    j = PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length;
-                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( finishDiff )$cEnd$CurrentMapName;
+                    tmpSlot = RDat.Rec[mapIndex].PSRL[1].PLs-1;
+                    PDat.Player[tmpSlot].RecentLostRecords[PDat.Player[tmpSlot].RecentLostRecords.Length] =
+                        $cGold$TimeToStr( finishDiff )$cWhite
+                        @ myLevel.GetFullName( CurrentMapName ) @ "by" @ PDat.Player[PLs-1].PLNAME;
+
+                    RDat.Rec[mapIndex].TMFailures = 0;
+                    ++ RDat.Rec[mapIndex].TMHijacks;    // Amount of times this record has been hijacked.
+                    ++ PDat.Player[PLs-1].PLHijacks;    // Amount of records this player has hijacked in total.
+                }
+                else
+                {
+                    if( finishDiff <= 0.10f )
+                        BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
+                    else if( finishDiff <= 1.0f )
+                        BroadcastAnnouncement( AnnouncementRecordImprovedClose );
                 }
 
                 if( RDat.Rec[mapIndex].TMFailures >= 50 )
@@ -5360,25 +5371,18 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             }
             else    // 1st time record
             {
+                RDat.Rec[mapIndex].TMFailures = 0;
                 finishMsg @= "setting a first time record of" @ #0xFFFF00FF$finishTime;
                 BroadcastAnnouncement( AnnouncementRecordSet );
             }
 
             BroadcastConsoleMessage( finishMsg );
-
-            // Update map stats.
-            RDat.Rec[mapIndex].TMFailures = 0;                          // Reset this :)
-            ++ RDat.Rec[mapIndex].TMHijacks;                            // Amount of times this record has been hijacked.
-
             if( GroupManager != none )
                 RDat.Rec[mapIndex].TMContributors = GroupManager.MaxGroupSize;
             else if( bSoloMap )
             {
                 RDat.Rec[mapIndex].TMContributors = 1;
             }
-
-            // Update player stats.
-            ++ PDat.Player[PLs-1].PLHijacks;
 
             //======================================================
             // Update clients. .
@@ -5632,7 +5636,7 @@ final function array<BTStructs.sPlayerReference> GetBestPlayers()               
 
 //==============================================================================
 // Objective score = 50 points, Final objective score = 20 points, DestroyedVehciles score = 30 points, W/e goals such as on britishbulldog = 10 points.
-Static Final Function int GetPlayerScore( PlayerController C )                              // .:..:
+static final function int GetPlayerScore( PlayerController C )                              // .:..:
 {
     local ASPlayerReplicationInfo Teh;
 
@@ -5640,7 +5644,7 @@ Static Final Function int GetPlayerScore( PlayerController C )                  
     return (Teh.DisabledObjectivesCount*50) + (Teh.DisabledFinalObjective*20);
 }
 
-Static Final Function int GetPlayerObjectives( PlayerController PC )
+static final function int GetPlayerObjectives( PlayerController PC )
 {
     local ASPlayerReplicationInfo ASPRI;
 
@@ -5653,39 +5657,41 @@ Static Final Function int GetPlayerObjectives( PlayerController PC )
 
 //==============================================================================
 // CheckReplacement
-Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
+function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
 {
     local BTServer_NotifyLogin NL;
     local BTClient_ClientReplication CR;
     local BTServer_NameUpdateDelay NUD;
     local int i;
 
-    if( UTServerAdminSpectator(Other) != none )
-    {
-        WebAdminActor = UTServerAdminSpectator(Other);
-        if( WebAdminActor.PlayerReplicationInfo != None )
-        {
-            WebAdminActor.PlayerReplicationInfo.bBot = True;
-            WebAdminActor.PlayerReplicationInfo.bAdmin = true;
-        }
-        return True;
-    }
-    else if( PlayerController(Other) != none )
+    if( PlayerController(Other) != none )
     {
         // Skip bots etc
-        if( MessagingSpectator(Other) != None )
-            return True;
+        if( !PlayerController(Other).bIsPlayer )
+            return true;
 
-        NL = Spawn( Class'BTServer_NotifyLogin', Self );
-        if( NL != None )
+        NL = Spawn( Class'BTServer_NotifyLogin', self );
+        if( NL != none )
         {
             NL.Player = PlayerController(Other);
-            NL.SetTimer( NL.NotifyDelay, False );
+            NL.SetTimer( NL.NotifyDelay, false );
         }
+        return true;
+    }
+    else if( UTServerAdminSpectator(Other) != none )
+    {
+        WebAdminActor = UTServerAdminSpectator(Other);
+        if( WebAdminActor.PlayerReplicationInfo != none )
+        {
+            WebAdminActor.PlayerReplicationInfo.bBot = True;
+            WebAdminActor.PlayerReplicationInfo.bOnlySpectator = false;
+            WebAdminActor.PlayerReplicationInfo.bAdmin = true;
+        }
+        return true;
     }
     else if( PlayerReplicationInfo(Other) != none )
     {
-        if( Other.Owner != None && MessagingSpectator(Other.Owner) == None )
+        if( PlayerController(Other.Owner) != none && PlayerController(Other.Owner).bIsPlayer )
         {
             CR = Spawn( Class'BTClient_ClientReplication', Other.Owner );
             CR.MRI = MRI;
@@ -5696,15 +5702,17 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
             CR.NextReplicationInfo = PlayerReplicationInfo(Other).CustomReplicationInfo;
             PlayerReplicationInfo(Other).CustomReplicationInfo = CR;
         }
+        return true;
     }
     else if( Other.IsA('UTComp_PRI') )
     {
-        if( Other.Owner != None && MessagingSpectator(Other.Owner) == None )
+        if( PlayerController(Other.Owner) != none && PlayerController(Other.Owner).bIsPlayer )
         {
-            NUD = Spawn( Class'BTServer_NameUpdateDelay', Self );
+            NUD = Spawn( Class'BTServer_NameUpdateDelay', self );
             NUD.Client = PlayerController(Other.Owner);
-            NUD.SetTimer( 5.0, False );
+            NUD.SetTimer( 5.0, false );
         }
+        return true;
     }
     else if( WebServer(Other) != none )
     {
@@ -5720,10 +5728,12 @@ Function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
                 }
             }
         }
+        return true;
     }
     else if( CTFFlag(Other) != none )
     {
         ResembleFlag( CTFFlag(Other ) );
+        return true;
     }
     return true;
 }
@@ -5803,12 +5813,12 @@ final function ProcessPlayerLogout( Controller player )
 
 //==============================================================================
 // NotifyLogout
-Function NotifyLogout( Controller Exiting )                                         // .:..:, Eliot
+function NotifyLogout( Controller Exiting )                                         // .:..:, Eliot
 {
     local int i;
 
     super.NotifyLogout( exiting );
-    if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange )
+    if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange && Exiting.bIsPlayer && !Exiting.PlayerReplicationInfo.bBot )
     {
         ProcessPlayerLogout( Exiting );
         // Because GameInfo does not broadcast a left game message for spectators.
@@ -5847,7 +5857,7 @@ Function NotifyLogout( Controller Exiting )                                     
 
 //==============================================================================
 // ModifyLogin
-Function ModifyLogin(out string Portal, out string Options)                     // .:..:
+function ModifyLogin(out string Portal, out string Options)                     // .:..:
 {
     Super.ModifyLogin(Portal,Options);
     Level.Game.bWelcomePending = true;
@@ -6517,7 +6527,7 @@ final function UpdateGhosts()
 
 //==============================================================================
 // Remove ghost from players list
-Function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
+function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 {
     local int i, j, indexGhost;
 
@@ -6548,7 +6558,7 @@ Function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 
 //==============================================================================
 // Add random stuff
-Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
+function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 {
     if( CurMode != None )
     {
@@ -6577,23 +6587,23 @@ Function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
     }
 }
 
-Static Final Function string MakeColor( byte R, byte G, byte B, optional byte A )
+static final function string MakeColor( byte R, byte G, byte B, optional byte A )
 {
     return Class'GameInfo'.Static.MakeColorCode( Class'Canvas'.Static.MakeColor( R, G, B, A ) );
 }
 
 //==============================================================================
 // Broadcast an announcement
-final Function BroadcastAnnouncement( name soundName )
+final function BroadcastAnnouncement( name soundName )
 {
     local Controller C;
 
     for( C = Level.ControllerList; C != none; C = C.NextController )
         if( PlayerController(C) != none )
-            PlayerController(C).QueueAnnouncement( soundName, 1 );
+            PlayerController(C).PlayRewardAnnouncement( soundName, 2, true );
 }
 
-final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
+final function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
 {
     local Controller C;
 
@@ -6608,20 +6618,6 @@ final Function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
     for( C = Level.ControllerList; C != None; C = C.NextController )
         if( PlayerController(C) != None )
             PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
-}
-
-final function int GetMapSlotByName( string mapName )
-{
-    local int i;
-
-    for( i = 0; i < RDat.Rec.Length; ++ i )
-    {
-        if( RDat.Rec[i].TMN ~= mapName )
-        {
-            return i;
-        }
-    }
-    return -1;
 }
 
 final function NotifyPostLogin( PlayerController client, string guid, int slot )
@@ -6839,7 +6835,7 @@ private final function BuildEventDescription( out array<string> messages )
     Split( EventDescription, "\\n", messages );
     if( mapname != "" )
     {
-        i = GetMapSlotByName( mapname );
+        i = RDat.FindRecord( mapname );
         for( j = 0; j < RDat.Rec[i].PSRL.Length; ++ j )
         {
             l = messages.Length;
@@ -6947,28 +6943,25 @@ final private function ScanSpeedTest()
     StopWatch( True );
 }
 
-Final Function BroadcastConsoleMessage( coerce string Msg )
+final function BroadcastConsoleMessage( coerce string Msg )
 {
     local Controller C;
-    local LinkedReplicationInfo LRI;
+    local BTClient_ClientReplication Rep;
 
     for( C = Level.ControllerList; C != None; C = C.NextController )
     {
-        if( PlayerController(C) != None && C.PlayerReplicationInfo != None )
+        if( PlayerController(C) != None && C.PlayerReplicationInfo != None && C.bIsPlayer )
         {
-            for( LRI = C.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+            Rep = GetRep( C );
+            if( Rep != none )
             {
-                if( BTClient_ClientReplication(LRI) != None )
-                {
-                    BTClient_ClientReplication(LRI).ClientSendConsoleMessage( Msg );
-                    break;
-                }
+                Rep.ClientSendConsoleMessage( Msg );
             }
         }
     }
 }
 
-//==============================Data Functions==================================
+//==============================Data functions==================================
 final function LoadData()
 {
     PDat = Level.Game.LoadDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
@@ -6986,7 +6979,7 @@ final function LoadData()
     RDat.Init( self );
 }
 
-Final Function SaveRecords()
+final function SaveRecords()
 {
     if( RDat != None )
     {
@@ -6994,7 +6987,7 @@ Final Function SaveRecords()
     }
 }
 
-Final Function SavePlayers()
+final function SavePlayers()
 {
     if( PDat != None )
     {
@@ -7002,7 +6995,7 @@ Final Function SavePlayers()
     }
 }
 
-Final Function SaveAll()
+final function SaveAll()
 {
     SaveRecords();
     SavePlayers();
@@ -7010,7 +7003,7 @@ Final Function SaveAll()
 
 //==============================================================================
 // Creates a data file from the current loaded ini/package.
-Final Function CreateBackupData()
+final function CreateBackupData()
 {
     local BTServer_RecordsData tempRDat;
     local BTServer_PlayersData tempPDat;
@@ -7030,7 +7023,7 @@ Final Function CreateBackupData()
 
 //==============================================================================
 // Converts Backup data to current data file
-Final Function RestoreBackupData()
+final function RestoreBackupData()
 {
     local BTServer_RecordsData tempRDat;
     local BTServer_PlayersData tempPDat;
@@ -7071,7 +7064,7 @@ final function bool MergeRecordsData( string uvxFileName )
 
 //==============================================================================
 // Exports a record array element out of RDat into a new .uvx file
-Final Function bool ExportRecordData( string MapName )
+final function bool ExportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
     local int CurMap, MaxMap;
@@ -7110,7 +7103,7 @@ Final Function bool ExportRecordData( string MapName )
 
 //==============================================================================
 // Imports a .uvx file into RDat
-Final Function bool ImportRecordData( string MapName )
+final function bool ImportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
     local int CurMap, MaxMap;
@@ -7151,7 +7144,7 @@ Final Function bool ImportRecordData( string MapName )
     }
     return False;
 }
-//==============================Data Functions==================================
+//==============================Data functions==================================
 
 //==============================================================================
 // Obsolete
@@ -7212,7 +7205,7 @@ final function bool FoundDuplicateID( PlayerController PC, optional bool bIgnore
     return False;
 }
 
-Static Final Function bool IsSpectator( PlayerReplicationInfo PRI )
+static final function bool IsSpectator( PlayerReplicationInfo PRI )
 {
     if( PRI != None && (PRI.bOnlySpectator || PRI.bIsSpectator) )
         return True;
@@ -7220,7 +7213,7 @@ Static Final Function bool IsSpectator( PlayerReplicationInfo PRI )
     return False;
 }
 
-Static Final Function bool IsAdmin( PlayerReplicationInfo PRI )
+static final function bool IsAdmin( PlayerReplicationInfo PRI )
 {
     if( PRI != None && (PRI.bAdmin || PRI.Level.NetMode == NM_StandAlone || MessagingSpectator(PRI.Owner) != none) )
         return True;
@@ -7231,7 +7224,7 @@ Static Final Function bool IsAdmin( PlayerReplicationInfo PRI )
 //==============================================================================
 // Converts 000001.011000 to 000001.01000. So resets last 4 decimals.
 // Used for comparing, and to make Tie'ng records possible!
-Static Final Function float GetFixedTime( float TimeToFix )
+static final function float GetFixedTime( float TimeToFix )
 {
     local string FixedTimeString;
 
@@ -7325,7 +7318,9 @@ Begin:
     MRI.bUpdatingGhost = False;
 
     GhostManager.GhostsRespawn();
-    ForceViewGhost();
+
+    if( !bDontEndGameOnRecord )
+        GhostManager.ForceViewGhost();
 
     if( Level.Game.VotingHandler != None )
     {
@@ -7366,7 +7361,10 @@ Begin:
     CurMode.PreRestartRound();
     UpdateEndMsg( "Next round initializing..." );
     Sleep( 0.5f );
-    BTServer_VotingHandler(Level.Game.VotingHandler).DisableMidGameVote();
+    if( BTServer_VotingHandler(Level.Game.VotingHandler) != none )
+    {
+        BTServer_VotingHandler(Level.Game.VotingHandler).DisableMidGameVote();
+    }
     CurMode.PostRestartRound();
     UpdateEndMsg( "" );
     GotoState( '' );
@@ -7376,23 +7374,6 @@ final function UpdateEndMsg( string endMsg )
 {
     MRI.EndMsg = endMsg;
     MRI.NetUpdateTime = Level.TimeSeconds - 1;
-}
-
-final function ForceViewGhost()
-{
-    local Controller C;
-
-    if( GhostManager != none && GhostManager.Ghosts.Length > 0 && GhostManager.Ghosts[0].GhostData.MO.Length > 0 )
-    {
-        for( C = Level.ControllerList; C != None; C = C.NextController )
-        {
-            if( PlayerController(C) != None && MessagingSpectator(C) == None )
-            {
-                PlayerController(C).ClientSetViewTarget( GhostManager.Ghosts[0].GhostPawn );
-                PlayerController(C).SetViewTarget( GhostManager.Ghosts[0].GhostPawn );
-            }
-        }
-    }
 }
 
 final function AddHistory( string NewLine )
@@ -7517,7 +7498,7 @@ defaultproperties
     UsedSlot=-1
 
     AnnouncementRecordImprovedVeryClose=HolyShit_F
-    AnnouncementRecordImprovedClose=Last_Second_Save
+    AnnouncementRecordImprovedClose=Unstoppable
     AnnouncementRecordHijacked=Hijacked
     AnnouncementRecordSet=WhickedSick
     AnnouncementRecordTied=Invulnerable
