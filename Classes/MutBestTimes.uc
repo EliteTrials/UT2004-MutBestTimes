@@ -314,6 +314,7 @@ var() localized editconst const
 var array<BTStructs.sConfigProperty> ConfigurableProperties;
 var const string InvalidAccessMessage;
 var private editconst const color cDarkGray, cLight, cGold, cWhite, cRed, cGreen;
+var private const string cEnd;
 
 final static preoperator Color #( int rgbInt )
 {
@@ -5153,7 +5154,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     // macro to playerslot.
     mapIndex = myLevel.MapIndex;
     finishTime = TimeToStr( CurrentPlaySeconds );
-    finishMsg = "%PLAYER% completed" @ #0x00A0FFFF$myLevel.GetLevelName()$cWhite;
+    finishMsg = "%PLAYER% completed" @ class'HUD_Assault'.static.GetTeamColor( 1 )$myLevel.GetLevelName()$cEnd;
 
     PLs = CR.myPlayerSlot + 1;
     UpdatePlayerSlot( PC, PLs - 1, True );      // Update names etc
@@ -5208,7 +5209,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             // Tied his own position
             if( GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) == CurrentPlaySeconds )
             {
-                finishMsg @= "with a tie to" @ cDarkGray$finishTime;
+                finishMsg @= "with a tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
                 PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
@@ -5217,7 +5218,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             // Tied the best record
             else if( GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ) == CurrentPlaySeconds )
             {
-                finishMsg @= "with a record tie to" @ cDarkGray$finishTime;
+                finishMsg @= "with a record tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
                 PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
@@ -5226,7 +5227,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             // Failed record
             else
             {
-                finishMsg @= "in" @ cRed$finishTime$cWhite$", "$cRed$TimeToStr( finishDiff );
+                finishMsg @= "in" @ #0xFFFF00FF$finishTime$cEnd$", "$cRed$TimeToStr( finishDiff );
                 BroadcastFinishMessage( PC, finishMsg, 0 );
 
                 if( CR.BTWage > 0 )
@@ -5331,7 +5332,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             if( BestPlaySeconds != -1 ) // Faster!
             {
                 finishDiff = (BestPlaySeconds - CurrentPlaySeconds);
-                finishMsg @= "with a new record time of" @ cGold$finishTime$cWhite $", +" $ cGreen$TimeToStr( finishDiff );
+                finishMsg @= "with a new record time of" @ #0xFFFF00FF$finishTime$cEnd$", +" $ cGreen$TimeToStr( finishDiff );
 
                 if( finishDiff <= 0.10f )
                     BroadcastAnnouncement( AnnouncementRecordImprovedVeryClose );
@@ -5348,7 +5349,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
                     j = PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length;
                     PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords.Length = j + 1;
-                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( finishDiff )$cWhite$CurrentMapName;
+                    PDat.Player[RDat.Rec[mapIndex].PSRL[1].PLs-1].RecentLostRecords[j] = $cDarkGray$TimeToStr( finishDiff )$cEnd$CurrentMapName;
                 }
 
                 if( RDat.Rec[mapIndex].TMFailures >= 50 )
@@ -5359,7 +5360,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             }
             else    // 1st time record
             {
-                finishMsg @= "setting a first time record of" @ cGold$finishTime;
+                finishMsg @= "setting a first time record of" @ #0xFFFF00FF$finishTime;
                 BroadcastAnnouncement( AnnouncementRecordSet );
             }
 
@@ -5393,7 +5394,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             if( !bDontEndGameOnRecord )
             {
                 MRI.RecordState = RS_Succeed;
-                UpdateEndMsg( finishMsg );
+                UpdateEndMsg( Repl( finishMsg, "%PLAYER% completed", "Completed" ) );
                 return true;
             }
             else
@@ -5404,7 +5405,15 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
         }
         else
         {
-            finishMsg @= "in" @ cGold$finishTime$cWhite$", "$cGreen$"+"$TimeToStr( finishDiff )$cWhite @ "achieving best" @ (PLi+1) @ "out of" @ RDat.Rec[mapIndex].PSRL.Length;
+            // Improved
+            if( finishDiff != 0 )
+            {
+                finishMsg @= "in" @ #0xFFFF00FF$finishTime$cEnd$", "$cGreen$"+"$TimeToStr( finishDiff )$cEnd @ "achieving best" @ #0xFFFF00FF$(PLi+1)$cEnd @ "out of" @ #0xFFFF00FF$RDat.Rec[mapIndex].PSRL.Length;
+            }
+            else
+            {
+                finishMsg @= "in" @ #0xFFFF00FF$finishTime$cEnd$", achieving best" @ #0xFFFF00FF$(PLi+1)$cEnd @ "out of" @ #0xFFFF00FF$RDat.Rec[mapIndex].PSRL.Length;
+            }
             BroadcastFinishMessage( PC, finishMsg, 1 );
 
             if( CR.BTWage > 0 )
@@ -5441,11 +5450,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
 
         if( !bRecursive )
         {
-            if( AssaultGame != none )
-            {
-                AssaultGame.LastDisabledObjective = None;
-                myLevel.ResetObjective();
-            }
+            myLevel.ResetObjective();
         }
     }
     return false;
@@ -7560,6 +7565,7 @@ defaultproperties
     cWhite=(R=255,G=255,B=255,A=255)
     cRed=(R=255,G=0,B=0,A=255)
     cGreen=(R=0,G=255,B=0,A=255)
+    cEnd="«"
 
     MaxRewardedPlayers=3
 
