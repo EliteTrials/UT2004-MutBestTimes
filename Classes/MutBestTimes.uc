@@ -3920,13 +3920,9 @@ function Mutate( string MutateString, PlayerController Sender )
         i = FastFindPlayerSlot( Sender );
         if( i != -1 )
         {
-            // -1 because FindPlayerSlot returns slot + 1
-            UpdatePlayerSlot( Sender, i - 1, True );
-
             // Catch utcomp color name change
-            NUD = Spawn( Class'BTServer_NameUpdateDelay', Self );
+            NUD = Spawn( Class'BTServer_NameUpdateDelay', self );
             NUD.Client = Sender;
-            NUD.SetTimer( 0.25, False );
         }
         return;
     }
@@ -4066,6 +4062,7 @@ final function CreateClientSpawn( PlayerController Sender )                     
     local int i, j;
     local vector v;
     local float d;
+    local PlayerStart oldSpawn;
 
     // Secure code...
     j = Objectives.Length;
@@ -4076,7 +4073,7 @@ final function CreateClientSpawn( PlayerController Sender )                     
             v = (Sender.Pawn.Location - Objectives[i].Location);
             v.Z = 0;
             d = VSize( v );
-            if( d <= (Objectives[i].CollisionRadius + Sender.Pawn.CollisionRadius)*2.5 )
+            if( d <= (Objectives[i].CollisionRadius + Sender.Pawn.CollisionRadius)*1.2 )
             {
                 SendErrorMessage( Sender, lzCS_NotAllowed );
                 return;
@@ -4084,18 +4081,21 @@ final function CreateClientSpawn( PlayerController Sender )                     
         }
     }
 
-    j = Triggers.Length;
-    for( i = 0; i < j; ++ i )
+    if( bTriggersKillClientSpawnPlayers || bAlwaysKillClientSpawnPlayersNearTriggers )
     {
-        if( Triggers[i] != None && Triggers[i].bBlockNonZeroExtentTraces )
+        j = Triggers.Length;
+        for( i = 0; i < j; ++ i )
         {
-            v = (Sender.Pawn.Location - Triggers[i].Location);
-            v.Z = 0;
-            d = VSize( v );
-            if( d <= (Triggers[i].CollisionRadius + Sender.Pawn.CollisionRadius)*2.5 )
+            if( Triggers[i] != None && Triggers[i].bBlockNonZeroExtentTraces )
             {
-                SendErrorMessage( Sender, lzCS_NotAllowed );
-                return;
+                v = (Sender.Pawn.Location - Triggers[i].Location);
+                v.Z = 0;
+                d = VSize( v );
+                if( d <= (Triggers[i].CollisionRadius + Sender.Pawn.CollisionRadius)*1.2 )
+                {
+                    SendErrorMessage( Sender, lzCS_NotAllowed );
+                    return;
+                }
             }
         }
     }
@@ -4114,14 +4114,19 @@ final function CreateClientSpawn( PlayerController Sender )                     
                 ClientPlayerStarts[i].PStart != None
             )
             {
-                ClientPlayerStarts[i].PStart.Destroy();
-                ClientPlayerStarts[i].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.ViewTarget.Rotation );
+                oldSpawn = ClientPlayerStarts[i].PStart;
+                ClientPlayerStarts[i].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.Rotation );
                 if( ClientPlayerStarts[i].PStart == None )
                 {
                     SendErrorMessage( Sender, lzCS_Failed );
-                    ClientPlayerStarts.Remove( i, 1 );
                     return;
                 }
+
+                if( oldSpawn != none )
+                {
+                    oldSpawn.Destroy();
+                }
+
                 ClientPlayerStarts[i].TeamIndex = Sender.Pawn.GetTeamNum();
                 CheckPointHandlerClass.static.CapturePlayerState( sender.Pawn, none, ClientPlayerStarts[i].SavedStats );
                 SendSucceedMessage( Sender, lzCS_Set );
@@ -4133,7 +4138,7 @@ final function CreateClientSpawn( PlayerController Sender )                     
     // not found, create new one
     ClientPlayerStarts.Length = j + 1;
     ClientPlayerStarts[j].PC = Sender;
-    ClientPlayerStarts[j].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.ViewTarget.Rotation );
+    ClientPlayerStarts[j].PStart = Spawn( ClientStartPointClass, Sender,, Sender.ViewTarget.Location, Sender.Rotation );
     if( ClientPlayerStarts[j].PStart == None )
     {
         SendErrorMessage( Sender, lzCS_Failed );
@@ -5865,7 +5870,7 @@ function ModifyLogin(out string Portal, out string Options)                     
 
 //==============================================================================
 // RetriveScore
-final function RetrieveScore( PlayerController Other, string ClientID, int Slot )       // .:..:, Eliot
+final function RetrieveScore( PlayerController Other, string ClientID )       // .:..:, Eliot
 {
     local int i, j;
 
@@ -5994,7 +5999,7 @@ final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional 
     }
 
     // Try find the colored name
-    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+    for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
     {
         if( LRI.IsA('UTComp_PRI') )
         {
@@ -6620,8 +6625,10 @@ final function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
             PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
 }
 
-final function NotifyPostLogin( PlayerController client, string guid, int slot )
+final function NotifyPostLogin( PlayerController client, string guid )
 {
+    local int playerSlot;
+
     // Player joined while server traveling?
     if( PDat == none )
     {
@@ -6629,29 +6636,26 @@ final function NotifyPostLogin( PlayerController client, string guid, int slot )
         return;
     }
 
-    // True if ModifyPlayer called NotifyPostLogin( which happens if the player spawns very early like before the replication is created )
-    //if( GetRep( client ) != none )
-    //  return;
-
     // Create one if none found.
-    if( slot == -1 )
-        slot = CreatePlayerSlot( client, guid );
+    playerSlot = FindPlayerSlot( guid );
+    if( playerSlot == -1 )
+        playerSlot = CreatePlayerSlot( client, guid );
 
-    -- slot; // Real slot!
+    -- playerSlot; // Real slot!
 
     // Update names, character etc
-    UpdatePlayerSlot( client, slot, false );
+    UpdatePlayerSlot( client, playerSlot, false );
 
-    PDat.Player[slot]._LastLoginTime = Level.TimeSeconds;
-    PDat.Player[slot].LastPlayedDate = RDat.MakeCompactDate( Level );
-    ++ PDat.Player[slot].Played;
+    PDat.Player[playerSlot]._LastLoginTime = Level.TimeSeconds;
+    PDat.Player[playerSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
+    ++ PDat.Player[playerSlot].Played;
 
     // Get his score from last time he logged on this current round
-    RetrieveScore( client, guid, slot );
+    RetrieveScore( client, guid );
 
     // Start replicating rankings
-    FullLog( "initializing replication for:" @ %PDat.Player[slot].PLName );
-    CreateReplication( client, guid, slot );
+    FullLog( "initializing replication for:" @ %PDat.Player[playerSlot].PLName );
+    CreateReplication( client, guid, playerSlot );
 }
 
 final function BroadcastLocalMessage( Controller instigator, class<BTClient_LocalMessage> messageClass, string message, optional int switch )
@@ -7526,7 +7530,7 @@ defaultproperties
 
     lzCS_Set="'Client Spawn' set"
     lzCS_Deleted="'Client Spawn' deleted"
-    lzCS_NotAllowed="Sorry you are not allowed to create a 'Client Spawn' at this location"
+    lzCS_NotAllowed="Sorry! You cannot create a 'Client Spawn' nearby objectives, or certain triggers!"
     lzCS_Failed="Failed to set a 'Client Spawn' here. Please try move a little and try again"
     lzCS_ObjAndTrigger="You cannot interact with any objectives nor triggers while using a 'Client Spawn'"
     lzCS_Obj="You cannot interact with any objectives while using a 'Client Spawn'"

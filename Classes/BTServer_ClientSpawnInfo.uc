@@ -32,8 +32,8 @@ event Tick( float dt )
         Obj = M.Objectives[i];
         if( Obj != None && Obj.bActive )
         {
-            if( VSize( Owner.Location - Obj.Location ) <= (Obj.CollisionRadius + Owner.CollisionRadius)*4
-            && Obj.Location.Z - Owner.Location.Z <= (Obj.CollisionHeight + Owner.CollisionHeight)*4 )
+            if( VSize( Owner.Location - Obj.Location ) <= (Obj.CollisionRadius + Owner.CollisionRadius)*1.2
+            && Obj.Location.Z - Owner.Location.Z <= (Obj.CollisionHeight + Owner.CollisionHeight)*1.2 )
             {
                 xPawn(Owner).ClientMessage( "You were killed by this Objective. Delete your 'Client Spawn' to continue" );
                 xPawn(Owner).Suicide();
@@ -56,8 +56,8 @@ event Tick( float dt )
             T = M.Triggers[i];
             if( T != None && T.bBlockNonZeroExtentTraces )
             {
-                if( VSize( Owner.Location - T.Location ) <= (T.CollisionRadius + Owner.CollisionRadius)*4
-                && T.Location.Z - Owner.Location.Z <= (T.CollisionHeight + Owner.CollisionHeight)*4 )
+                if( VSize( Owner.Location - T.Location ) <= (T.CollisionRadius + Owner.CollisionRadius)*1.2
+                && T.Location.Z - Owner.Location.Z <= (T.CollisionHeight + Owner.CollisionHeight)*1.2 )
                 {
                     xPawn(Owner).ClientMessage( "You were killed by this Trigger. Delete your 'Client Spawn' to continue" );
                     xPawn(Owner).Suicide();

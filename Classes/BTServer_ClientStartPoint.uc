@@ -14,4 +14,11 @@ defaultproperties
     bEnabled=false
     bStatic=false
     bNoDelete=false
+
+    CollisionRadius=1
+    CollisionHeight=1
+    bCollideWhenPlacing=false
+	bBlockZeroExtentTraces=false
+	bBlockNonZeroExtentTraces=false
+    bMayCausePain=false
 }

@@ -37,7 +37,7 @@ protected function InitializeMode()
             bKeyMap = true;
             MRI.bKeyMap = true;
         }
-        else if( Objectives[i].IsA('TriggeredObjective') )
+        else if( Objectives[i].IsA('TriggeredObjective') && !ClientSpawnCanCompleteMap() )
         {
             bAlwaysKillClientSpawnPlayersNearTriggers = true;
         }
@@ -95,7 +95,7 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 
     switch( command )
     {
-        case "resetcheckpoint":
+        case "resetcp":
             if( bQuickStart )
             {
                 break;
