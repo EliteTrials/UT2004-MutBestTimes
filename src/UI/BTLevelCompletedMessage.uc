@@ -42,7 +42,7 @@ static function string GetString( optional int RecordState,
 {
     local string s;
 
-    s = super.GetString(RecordState, MessageReceiver, MessageInstigator, ReceiverClientReplication);
+    s = Repl( super.GetString(RecordState, MessageReceiver, MessageInstigator, ReceiverClientReplication), "«", $static.GetColor( RecordState, MessageReceiver, MessageInstigator ) );
     if( MessageInstigator == MessageReceiver )
         return Repl( s, "%PLAYER%", "You have" );
 
@@ -97,20 +97,8 @@ static simulated function ClientReceive(
     )
 {
     local BTClient_Config options;
-    // local HUDBase hud;
-    // local int i;
-
-    // hud = HudBase(MessageReceiver.Level.GetLocalPlayerController().myHUD);
-    // for( i = 0; i < 8; ++ i )
-    // {
-    //     if( hud.LocalMessages[i].Message == class'Message_Awards' )
-    //     {
-    //         hud.ClearMessage( hud.LocalMessages[i] );
-    //     }
-    // }
 
     super.ClientReceive( P, RecordState, MessageReceiver, MessageInstigator, ReceiverClientReplication );
-
     options = class'BTClient_Config'.static.FindSavedData();
     if( !options.bDisplayCompletingMessages || !options.bPlayCompletingSounds )
     {
@@ -159,10 +147,10 @@ defaultproperties
     // Fail
     RecordStateColor(0)=(R=255,G=0,B=0,A=255)
     // Success
-    RecordStateColor(1)=(R=255,G=255,B=255,A=255)
+    RecordStateColor(1)=(R=255,G=255,B=0,A=255)
     // Tie
-    RecordStateColor(2)=(R=20,G=20,B=20,A=255)
-    FontSize=1
+    RecordStateColor(2)=(R=60,G=60,B=60,A=255)
+    FontSize=-1
 
     StackMode=SM_Down
     PosY=0.242

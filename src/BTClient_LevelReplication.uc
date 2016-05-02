@@ -35,7 +35,7 @@ simulated event PostNetBeginPlay()
 	if( Level.NetMode != NM_DedicatedServer && MyObjective != none )
 	{
 		MyObjective.SetActive( false );
-		MyObjective.bHidden = true;
+		// MyObjective.bDisabled = true;
 	}
 }
 
@@ -85,9 +85,15 @@ final function string GetLevelName()
 {
 	if( Left( LevelName, 4 ) ~= "Map-" )
 	{
-		return Mid( LevelName, InStr( LevelName, "Map" ) + 4 );
+		return Mid( LevelName, 4 );
 	}
-	return LevelName;
+	else if( Left( LevelName, 6 ) ~= "Level-" )
+	{
+		return Mid( LevelName, 6 );
+	}
+	if( Level.Title == "untitled" || Level.Title == "" )
+		return MyObjective.Objective_Info_Attacker;
+	return Level.Title;
 }
 
 final function bool IsValidPlayerStart( Controller player, PlayerStart start )
@@ -101,9 +107,13 @@ final function string GetFullName( string mapName )
 {
 	if( Left( LevelName, 4 ) ~= "Map-" )
 	{
-		return GetMapTag( mapName )$"-"$Mid( LevelName, InStr( LevelName, "Map" ) + 4 );
+		return GetMapTag( mapName )$"-"$Mid( LevelName, 4 );
 	}
-	return mapName$"-"$LevelName;
+	else if( Left( LevelName, 6 ) ~= "Level-" )
+	{
+		return mapName$"-"$Mid( LevelName, 6 );
+	}
+	return mapName;
 }
 
 final function bool Represents( GameObjective obj )
