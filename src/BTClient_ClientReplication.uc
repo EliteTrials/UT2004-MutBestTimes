@@ -380,31 +380,6 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
     optional PlayerReplicationInfo PRI2
     )
 {
-	if( Options == none )
-	{
-		Log( "Received an early client message: " $ message );
-	}
-    // HACK: Respect the options specifically for record messages.
-    if( messageClass == class'BTLevelCompletedMessage' && Options != none && Options.bDisplayCompletingMessages )
-    {
-        if( (switch == 0 || switch == 2) && Options.bDisplayFail )
-        {
-            if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
-                PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.FailSound, SLOT_Interface, 255, true );
-        }
-        else if( switch == 1 && Options.bDisplayNew )
-        {
-            if( Options.bPlayCompletingSounds && PlayerController(Owner).ViewTarget != none )
-                PlayerController(Owner).ViewTarget.PlayOwnedSound( Options.NewSound, SLOT_Interface, 255, true );
-        }
-        else
-        {
-            // When both are disabled, still print a message in the console
-            ClientSendConsoleMessage( message );
-            return;
-        }
-    }
-
     // Temporary copy for the LocalMessage class to copy.
     ClientMessage = message;
     PlayerController(Owner).ReceiveLocalizedMessage( messageClass,

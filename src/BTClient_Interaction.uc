@@ -923,13 +923,11 @@ Event Initialized()
 {
     local DefaultPhysicsVolume DPV;
 
-    Options = Class'BTClient_Config'.Static.FindSavedData();
-    if( Options == None )
-    {
-        Log( "BTClient_Config not found!", Name );
-        return;
-    }
+    // Hide the existing assault "Objective completed" message, as we have replaced this with our own record message.
+    class'Message_Awards'.default.bComplexString = false;
+    class'Message_Awards'.default.PosY = -1.0;
 
+    Options = Class'BTClient_Config'.Static.FindSavedData();
     ForEach ViewportOwner.Actor.DynamicActors( Class'DefaultPhysicsVolume', DPV )
     {
         DPV.bHidden = True;
@@ -1101,6 +1099,10 @@ event NotifyLevelChange()
     KeyPickupsList.Length = 0;
     LastBase = none;
     Master.RemoveInteraction( self );
+
+    // Restore the objective completed message!
+    class'Message_Awards'.default.bComplexString = true;
+    class'Message_Awards'.default.PosY = 0.242;
 }
 
 final function Color GetFadingColor( color FadingColor )
