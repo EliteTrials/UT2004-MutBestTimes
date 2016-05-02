@@ -1435,7 +1435,6 @@ function OnValidateSuccess( HttpSock sender )
 
     // Only one test a day.
     PDat.DayTest = Level.Day;
-    SaveAll();
 }
 
 final function InvalidAccess()
@@ -5513,16 +5512,11 @@ final function NotifyNewRecord( int playerSlot, int mapIndex, float playTime )
 
         bRecentRecordsUpdated = True;
     }
-
     LastRecords[MaxRecentRecords - 1] = RDat.Rec[mapIndex].TMN @ cDarkGray$TimeToStr( playTime )$cWhite @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
-
-    SaveAll();
-
     if( bGenerateBTWebsite )
     {
         bUpdateWebOnNextMap = True;
     }
-
     SaveConfig();
 }
 
