@@ -166,6 +166,7 @@ final function ClearGhostsData( string mapName, string ghostDataName, optional b
     local int i;
     local BTServer_GhostData data;
     local BTClient_GhostMarker marker;
+    local array<name> dataNames;
 
     // BT.FullLog( "Ghost::ClearGhostsData" );
     if( bCurrentMap )
@@ -181,12 +182,17 @@ final function ClearGhostsData( string mapName, string ghostDataName, optional b
         BT.MRI.MaxMoves = 0;
     }
 
-    data = Level.Game.LoadDataObject( GhostDataClass, ghostDataName $ mapName $ Eval( i > 0, "("$i$")", "" ), ghostDataName $ mapName );
-    if( data == none )
-        return;
-
-    Level.Game.DeletePackage( data.PackageName );
     Log( "Deleted all ghost data files for" @ mapName, Name );
+    // Ensure that all objects are deleted from the package and memory, otherwise the next SavePackage may re-save the ghosts.
+    foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostDataName $ mapName )
+    {
+        dataNames[dataNames.Length] = data.Name;
+    }
+    for( i = 0; i < dataNames.Length; ++ i )
+    {
+        Level.Game.DeleteDataObject( GhostDataClass, string(dataNames[i]), ghostDataName $ mapName );
+    }
+    Level.Game.DeletePackage( data.PackageName );
 }
 
 final function SaveGhosts( string mapName, string ghostDataName )

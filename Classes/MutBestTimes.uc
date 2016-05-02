@@ -6450,17 +6450,11 @@ final function UpdateGhosts()
     GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
     if( MRI.MapLevel != none && MRI.MapLevel.TopTime > 1800 )                            // 30 min.
     {
+        if( bDontEndGameOnRecord && bSoloMap )
+            return;
+
         KillGhostRecorders();
         return;
-    }
-
-    // Pause recording
-    for( i = 0; i < RecordingPlayers.Length; ++ i )
-    {
-        if( RecordingPlayers[i] != none )
-        {
-            RecordingPlayers[i].StopGhostCapturing();
-        }
     }
 
     NewGhostsQue.Length = Min( NewGhostsQue.Length, GhostManager.MaxGhosts );
@@ -6475,7 +6469,7 @@ final function UpdateGhosts()
     GhostManager.CreateGhostsData( CurrentMapName, GhostDataFileName, IDs, dataObjects );
 
     // Clear
-    NewGhostsInfo.Length = dataObjects.Length;;
+    NewGhostsInfo.Length = dataObjects.Length;
     for( iQue = 0; iQue < dataObjects.Length; ++ iQue )
     {
         NewGhostsInfo[iQue].GhostData = dataObjects[iQue];
@@ -6489,6 +6483,7 @@ final function UpdateGhosts()
                 PDat.ProgressAchievementByID( NewGhostsQue[iQue], 'ghost_0' );
 
                 NewGhostsInfo[iQue].Moves = RecordingPlayers[i];
+                NewGhostsInfo[iQue].Moves.StopGhostCapturing();
                 break;
             }
         }
@@ -7221,11 +7216,16 @@ state SaveGhost
         SavedMoves = 0;
         iGhost = 0;
 
+    if( !bDontEndGameOnRecord || !bSoloMap )
+    {
         KillGhostRecorders();       // Clean up all temporary MovementSavers
     }
 
 Begin:
-    PauseGhostRecorders();  // Don't keep on recording until the end of this recording.
+    if( !bDontEndGameOnRecord || !bSoloMap )
+    {
+        PauseGhostRecorders();  // Don't keep on recording until the end of this recording.
+    }
     bGhostIsSaving = True;
     MRI.bUpdatingGhost = True;
     MRI.GhostPercent = 0.00;
