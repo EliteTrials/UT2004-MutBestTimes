@@ -39,6 +39,12 @@ protected function InitializeMode()
     MRI.MapLevel = MRI.BaseLevel;
 }
 
+function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
+{
+    super.ModeModifyPlayer( other, c, CRI );
+    RecordGhostForPlayer( PlayerController(c) );
+}
+
 function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
 {
     super.PlayerCompletedObjective( player, LRI, score );

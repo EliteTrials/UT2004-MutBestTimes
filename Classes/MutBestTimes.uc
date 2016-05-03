@@ -171,7 +171,7 @@ var sSharedPoints                                   PPoints;                    
 var GroupManager                                    GroupManager;
 
 var BTServer_Mode                                   CurMode;
-var private BTGameRules                             ModeRules;
+var BTGameRules                                     ModeRules;
 var BTServer_HttpNotificator                        Notify;
 var BTAchievements                                  AchievementsManager;
 var BTChallenges                                    ChallengesManager;
@@ -1206,142 +1206,38 @@ final function bool ValidatePlayerStart( Controller player, PlayerStart s )
 }
 
 /** Reset Time, add ranked stuff, handle client spawn and checkpoints! */
-function ModifyPlayer( Pawn Other )
+function ModifyPlayer( Pawn other )
 {
-    local int CheckPointIndex;
     local int i;
     local BTClient_ClientReplication CRI;
     local bool bTrailerRegistered;
 
-    super.ModifyPlayer( Other );
-
-    // Invalid!
-    if( xPawn(Other) == None || Other.IsA('BTClient_Ghost') || PlayerController(Other.Controller) == None || Other.PlayerReplicationInfo == none )
+    super.ModifyPlayer( other );
+    if( xPawn(other) == none || other.IsA('BTClient_Ghost') || PlayerController(other.Controller) == none || other.PlayerReplicationInfo == none )
     {
+        Log(other@other.GetHumanReadableName());
         return;
     }
-
-    CRI = GetRep( Other.Controller );
-    if( CRI == none )
-    {
-        FullLog( "===CRI == NONE!! for" @ Other.Controller.GetHumanReadableName() $ "===" );
-        PlayerController(Other.Controller).BecomeSpectator();
-        Other.Destroy();
-        return;
-    }
-
-    if( CRI.myPlayerSlot == -1 )
-    {
-        CRI.myPlayerSlot = FindPlayerSlot( PlayerController(Other.Controller).GetPlayerIDHash() )-1;
-    }
-
-    if( CRI.myPawn == Other )
+    CRI = GetRep( other.Controller );
+    if( CRI == none || CRI.myPawn == other )
     {
         // We have already modified this player.
         return;
     }
 
-    CRI.myPawn = Other;
-    CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
-
+    CRI.myPawn = other;
+    CRI.NetUpdateTime = Level.TimeSeconds - 1;
+    CurMode.ModeModifyPlayer( other, other.Controller, CRI );
     if( Store != none )
     {
         if( !ValidateAccessFor( CRI ) )
         {
-            PlayerController(Other.Controller).BecomeSpectator();
-            Other.Destroy();
+            PlayerController(other.Controller).BecomeSpectator();
+            other.Destroy();
             return;
         }
-    }
 
-    if( ModeIsTrials() )
-    {
-        if( !bGroupMap )
-        {
-            // Respawn all my stalkers!
-            for( i = 0; i < Racers.Length; ++ i )
-            {
-                if( Racers[i].Leader == Other.Controller
-                    && Racers[i].Stalker != none
-                    && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator
-                    && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
-                {
-                    ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
-                }
-            }
-        }
-
-        if( !bSoloMap ) // Regular
-        {
-            RecordGhostForPlayer( PlayerController(Other.Controller) );
-        }
-        else    // Solo or Group
-        {
-            if( Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
-            {
-                /**
-                 * @Todo    Instead of restart recording, delete the few last saved moves
-                 * @Todo    Don't let the timer keep counting, instead remove what has counted since the last dead
-                 */
-                if( CheckPointHandler.HasSavedCheckPoint( Other.Controller, CheckPointIndex ) )
-                {
-                    CheckPointHandler.ApplyPlayerState( Other, CheckPointHandler.SavedCheckPoints[CheckPointIndex].SavedStats );
-                    CRI.ClientSpawnPawn = other; // re-use the ClientSpawn feature for this :), with this the timer won't restart for spectators.
-                }
-            }
-            // Check if a clientspawn is registered, not if we spawned on one, because we don't want to reset the time if a player switches team while having a clientspawn!
-            else if( GetClientSpawnIndex( Other.Controller ) == -1 /**!IsClientSpawnPlayer( Other )*/ )
-            {
-                // Start timer
-                CRI.PlayerSpawned();
-                if( bSpawnGhost )
-                {
-                    // Restart ghost recording!
-                    RestartGhostRecording( PlayerController(Other.Controller) );
-
-                    // Reset ghost, if wanted
-                    if( CRI.HasClientFlags( 0x00000001/**CFRESETGHOST*/ )
-                        && (Other.Controller == LeadingGhost || Level.Game.NumPlayers <= 1) )
-                    {
-                        if( GhostManager != none && !RDat.Rec[UsedSlot].TMGhostDisabled )
-                        {
-                            GhostManager.GhostsRespawn();
-                        }
-                    }
-                }
-            }
-        }
-
-        //Other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
-        i = GetClientSpawnIndex( Other.Controller );
-        if( i != -1 )
-        {
-            PimpClientSpawn( i, Other );
-            CRI.ClientSpawnPawn = other;
-            CRI.NetUpdateTime = Level.TimeSeconds - 1;
-
-            if( Holiday != "" )
-            {
-                // No family
-                PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'holiday_0' );
-            }
-            return; // Don't reset objectives (see below)
-        }
-        else
-        {
-            // Keys are lost after a dead!, except not if your're using a CheckPoint!
-            if( bKeyMap && ASPlayerReplicationInfo(Other.PlayerReplicationInfo) != none && !Other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
-            {
-                ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
-                ASPlayerReplicationInfo(Other.PlayerReplicationInfo).DisabledFinalObjective = 0;
-            }
-        }
-    }
-    CRI.NetUpdateTime = Level.TimeSeconds - 1;
-
-    if( Store != none )
-    {
-        Store.ModifyPawn( Other, PDat, CRI );
+        Store.ModifyPawn( other, PDat, CRI );
         if( PDat.UseItem( CRI.myPlayerSlot, "Trailer" ) )
         {
             for( i = 0; i < Trailers.Length; ++ i )
@@ -1370,7 +1266,7 @@ function ModifyPlayer( Pawn Other )
                             Trailers[i].T.Destroy();
                         }
 
-                        Trailers[i].T = Spawn( TrailerInfoClass, Other.Controller );
+                        Trailers[i].T = Spawn( TrailerInfoClass, other.Controller );
                         if( Trailers[i].T != None )
                         {
                             Trailers[i].T.RankSkin = PDat.Player[CRI.myPlayerSlot].Inventory.TrailerSettings;
@@ -1381,7 +1277,7 @@ function ModifyPlayer( Pawn Other )
                     // Update it, BPI will automaticly spawn new trailers
                     if( Trailers[i].T != None )
                     {
-                        Trailers[i].T.Pawn = Other;
+                        Trailers[i].T.Pawn = other;
                         if( Level.NetMode != NM_DedicatedServer )
                         {
                             Trailers[i].T.PostNetReceive();
@@ -2145,9 +2041,9 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             break;
 
         case "race":
-            if( bGroupMap )
+            if( !bSoloMap || bGroupMap )
             {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry racing is not available in group mode!" );
+                sender.ClientMessage( Class'HUD'.default.RedColor $ "Racing is only available on solo maps!" );
                 break;
             }
 
@@ -7208,9 +7104,10 @@ state SaveGhost
         SavedMoves = 0;
         iGhost = 0;
 
-    if( !bDontEndGameOnRecord || !bSoloMap )
-    {
-        KillGhostRecorders();       // Clean up all temporary MovementSavers
+        if( !bDontEndGameOnRecord || !bSoloMap )
+        {
+            KillGhostRecorders();       // Clean up all temporary MovementSavers
+        }
     }
 
 Begin:

@@ -155,21 +155,66 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
+    local int i, checkPointIndex;
+
     super.ModeModifyPlayer( other, c, CRI );
-
-    // Enable waging for this run.
-    if( CRI != none )
+    /**
+     * @Todo    Instead of restart recording, delete the few last saved moves
+     * @Todo    Don't let the timer keep counting, instead remove what has counted since the last dead
+     */
+    if( other.LastStartSpot.IsA( CheckPointNavigationClass.Name )
+        && CheckPointHandler.HasSavedCheckPoint( c, checkPointIndex ) )
     {
-        if( CRI.bWantsToWage )
+        CheckPointHandler.ApplyPlayerState( other, CheckPointHandler.SavedCheckPoints[checkPointIndex].SavedStats );
+        CRI.ClientSpawnPawn = other; // re-use the ClientSpawn feature for this :), with this the timer won't restart for spectators.
+    }
+    // Check if a clientspawn is registered, not if we spawned on one, because we don't want to reset the time if a player switches team while having a clientspawn!
+    else if( GetClientSpawnIndex( c ) == -1 /**!IsClientSpawnPlayer( other )*/ )
+    {
+        // Start timer
+        CRI.PlayerSpawned();
+        if( GhostManager != none )
         {
-            CRI.BTWage = CRI.AmountToWage;
-            SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose the amount you're waging!, or if you beat your personal/top record you will gain triple the amount you waged!" );
+            // Restart ghost recording!
+            RestartGhostRecording( PlayerController(c) );
 
-            CRI.bWantsToWage = false;
+            // Reset ghost, if wanted
+            if( !RDat.Rec[UsedSlot].TMGhostDisabled && CRI.HasClientFlags( 0x00000001/**CFRESETGHOST*/ )
+                && (c == LeadingGhost || Level.Game.NumPlayers <= 1) )
+            {
+                GhostManager.GhostsRespawn();
+            }
         }
-        else if( CRI.AmountToWage == 0 )
+
+        // Enable waging for this run.
+        if( CRI != none )
         {
-            CRI.BTWage = 0;
+            if( CRI.bWantsToWage )
+            {
+                CRI.BTWage = CRI.AmountToWage;
+                SendSucceedMessage( PlayerController(c), "You are now waging " $ CRI.BTWage $ " currency! Everytime you die you will lose the amount you're waging!, or if you beat your personal/top record you will gain triple the amount you waged!" );
+
+                CRI.bWantsToWage = false;
+            }
+            else if( CRI.AmountToWage == 0 )
+            {
+                CRI.BTWage = 0;
+            }
+        }
+    }
+
+    if( !bGroupMap )
+    {
+        // Respawn all my stalkers!
+        for( i = 0; i < Racers.Length; ++ i )
+        {
+            if( Racers[i].Leader == Other.Controller
+                && Racers[i].Stalker != none
+                && !Racers[i].Stalker.PlayerReplicationInfo.bIsSpectator
+                && !Racers[i].Stalker.PlayerReplicationInfo.bOnlySpectator )
+            {
+                ModeRules.RespawnPlayer( Racers[i].Stalker.Pawn );
+            }
         }
     }
 }

@@ -73,8 +73,27 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
+    local int i;
+
     super.ModeModifyPlayer( other, c, CRI );
     other.SetCollision( true, false, false );
+
+    //other.GiveWeapon( string(class'BTClient_SpawnWeapon') );
+    i = GetClientSpawnIndex( c );
+    if( i != -1 )
+    {
+        PimpClientSpawn( i, other );
+        CRI.ClientSpawnPawn = other;
+    }
+    else
+    {
+        // Keys are lost after a dead!, except not if your're using a CheckPoint!
+        if( bKeyMap && ASPlayerReplicationInfo(other.PlayerReplicationInfo) != none && !other.LastStartSpot.IsA( CheckPointNavigationClass.Name ) )
+        {
+            ASPlayerReplicationInfo(other.PlayerReplicationInfo).DisabledObjectivesCount = 0;
+            ASPlayerReplicationInfo(other.PlayerReplicationInfo).DisabledFinalObjective = 0;
+        }
+    }
 }
 
 function PostRestartRound()

@@ -164,7 +164,7 @@ final function UpdateGhostsName( int playerSlot, string newName )
 final function ClearGhostsData( string mapName, string ghostDataName, optional bool bCurrentMap )
 {
     local int i;
-    local BTServer_GhostData data;
+    local object data;
     local BTClient_GhostMarker marker;
     local array<name> dataNames;
 
@@ -192,7 +192,7 @@ final function ClearGhostsData( string mapName, string ghostDataName, optional b
     {
         Level.Game.DeleteDataObject( GhostDataClass, string(dataNames[i]), ghostDataName $ mapName );
     }
-    Level.Game.DeletePackage( data.PackageName );
+    Level.Game.DeletePackage( ghostDataName $ mapName );
 }
 
 final function SaveGhosts( string mapName, string ghostDataName )
