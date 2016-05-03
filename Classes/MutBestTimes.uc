@@ -1244,14 +1244,6 @@ function ModifyPlayer( Pawn Other )
     CRI.myPawn = Other;
     CurMode.ModeModifyPlayer( Other, Other.Controller, CRI );
 
-    // This Player GUID is in use by someone else on this server! destroy...
-    if( !bSoloMap && FoundDuplicateID( PlayerController(Other.Controller), True ) )
-    {
-        PlayerController(Other.Controller).BecomeSpectator();
-        Other.Destroy();
-        return;
-    }
-
     if( Store != none )
     {
         if( !ValidateAccessFor( CRI ) )
