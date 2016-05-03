@@ -26,9 +26,6 @@ struct sMovesDataType
 var array<sMovesDataType> MO;
 var int UsedGhostFPS;
 
-/** The file name this object resides in. */
-var string PackageName;
-
 /** What version this object was saved in. */
 var int DataVersion;
 

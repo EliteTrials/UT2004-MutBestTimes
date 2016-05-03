@@ -23,6 +23,22 @@ protected function InitializeMode()
     RDat.Rec[UsedSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
 }
 
+function ModeMatchStarting()
+{
+    local BTClient_LevelReplication myLevel;
+
+    super.ModeMatchStarting();
+    if( bSpawnGhost && GhostManager == none )
+    {
+        FullLog( "Loading Ghost Playback data" );
+        GhostManager = Spawn( class'BTServer_GhostLoader', Outer );
+        for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+        {
+            GhostManager.LoadGhosts( myLevel.GetFullName( CurrentMapName ) );
+        }
+    }
+}
+
 function ModeReset()
 {
     super.ModeReset();

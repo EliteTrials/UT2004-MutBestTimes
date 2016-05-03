@@ -160,7 +160,6 @@ var bool bRedoVotingTimer; // for SaveGhost state and votinghandler
 var() globalconfig float GhostSaveSpeed;
 var() globalconfig bool bSpawnGhost;
 var() globalconfig int GhostPlaybackFPS;
-var const noexport string GhostDataFileName;
 //===============</GHOST VARS>====================================
 
 var BTServer_RecordsData                            RDat;                       // Holds all the Records
@@ -1212,10 +1211,12 @@ function ModifyPlayer( Pawn other )
     local BTClient_ClientReplication CRI;
     local bool bTrailerRegistered;
 
+    if( other != none && other.IsA('BTClient_Ghost') )
+        return;
+
     super.ModifyPlayer( other );
-    if( xPawn(other) == none || other.IsA('BTClient_Ghost') || PlayerController(other.Controller) == none || other.PlayerReplicationInfo == none )
+    if( other == none || PlayerController(other.Controller) == none || other.PlayerReplicationInfo == none )
     {
-        Log(other@other.GetHumanReadableName());
         return;
     }
     CRI = GetRep( other.Controller );
@@ -3261,7 +3262,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
         case "deleteghost":
             if( GhostManager != none )
             {
-                GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
+                GhostManager.ClearGhostsData( CurrentMapName, true );
                 sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost data deleted!" );
             }
             else
@@ -3488,7 +3489,7 @@ final function DeleteRecordBySlot( int mapIndex )
 
     if( GhostManager != none )
     {
-        GhostManager.ClearGhostsData( mapName, GhostDataFileName );
+        GhostManager.ClearGhostsData( mapName );
     }
 
     RDat.Rec.Remove( mapIndex, 1 );
@@ -3524,7 +3525,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     {
         if( GhostManager != none )
         {
-            GhostManager.ClearGhostsData( RDat.Rec[mapIndex].TMN, GhostDataFileName, recordLevel != none );
+            GhostManager.ClearGhostsData( RDat.Rec[mapIndex].TMN, recordLevel != none );
         }
 
         if( recordLevel != none )
@@ -3579,7 +3580,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
 
             if( GhostManager != none )
             {
-                GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
+                GhostManager.ClearGhostsData( CurrentMapName, true );
             }
 
             if( MRI.MapLevel != none )
@@ -4173,7 +4174,11 @@ final function KillAllPawns( optional bool bSkipState )
 
     for( C = Level.ControllerList; C != None; C = C.NextController )
     {
-        if( PlayerController(C) != None && C.bIsPlayer && !IsSpectator( C.PlayerReplicationInfo ) && MessagingSpectator(C) == None )
+        if( PlayerController(C) != None
+            && C.bIsPlayer
+            && !IsSpectator( C.PlayerReplicationInfo )
+            && MessagingSpectator(C) == None
+            && BTServer_GhostController(C) == none )
         {
             if( !bSkipState )
             {
@@ -4425,12 +4430,6 @@ function MatchStarting()
                 SetRoundTimeLimit( CompetitiveTimeLimit*60*TimeScaling );
                 AssaultGame.bMustJoinBeforeStart = true;
                 Level.Game.Broadcast( self, "Players are no longer allowed to join, until the end of the round!" );
-            }
-
-            // ActivateGhosts
-            if( bSpawnGhost && GhostManager != none )
-            {
-                GhostManager.GhostsRespawn();
             }
         }
         // FORCE MaxRounds override i.e. Assault makes the minimum rounds 2 which is only editable on runtime.
@@ -6335,7 +6334,7 @@ final function UpdateGhosts()
     }
 
     // We must clear all present data objects and initialize new ones.
-    GhostManager.ClearGhostsData( CurrentMapName, GhostDataFileName, true );
+    GhostManager.ClearGhostsData( CurrentMapName, true );
     if( MRI.MapLevel != none && MRI.MapLevel.TopTime > 1800 )                            // 30 min.
     {
         if( bDontEndGameOnRecord && bSoloMap )
@@ -6354,7 +6353,7 @@ final function UpdateGhosts()
         IDs[i] = PDat.Player[NewGhostsQue[i]].PLID;
     }
 
-    GhostManager.CreateGhostsData( CurrentMapName, GhostDataFileName, IDs, dataObjects );
+    GhostManager.CreateGhostsData( CurrentMapName, IDs, dataObjects );
 
     // Clear
     NewGhostsInfo.Length = dataObjects.Length;
@@ -7166,8 +7165,8 @@ Begin:
         NewGhostsInfo[iGhost].GhostData.RelativeStartTime = NewGhostsInfo[iGhost].Moves.RelativeStartTime;
     }
     // Completed
-    GhostManager.SaveGhosts( CurrentMapName, GhostDataFileName );
-    GhostManager.LoadGhosts( CurrentMapName, GhostDataFileName );
+    GhostManager.SaveGhosts( CurrentMapName );
+    GhostManager.LoadGhosts( CurrentMapName );
 
     bGhostIsSaving = False;
     MRI.GhostPercent = 100.00f;
@@ -7399,7 +7398,6 @@ defaultproperties
 
     RecordsDataFileName="BestTimes_RecordsData"
     PlayersDataFileName="BestTimes_PlayersData"
-    GhostDataFileName="BTGhost_"
 
     cDarkGray=(R=60,G=60,B=60,A=255)
     cLight=(R=204,G=204,B=204,A=255)

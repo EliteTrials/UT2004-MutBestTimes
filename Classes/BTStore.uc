@@ -606,6 +606,9 @@ final function ModifyVehicle( Pawn other, Vehicle v, BTServer_PlayersData data, 
 
 final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
+    if( BTServer_GhostController(other) != none )
+        return;
+
     ApplyOwnedItems( other, data, CRI, ETarget.T_Player );
 }
 

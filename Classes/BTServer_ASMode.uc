@@ -25,17 +25,6 @@ function ModePostBeginPlay()
     // We need to watch out for the end of Practice Round.
     Spawn( class'BTPracticeRoundDetector', Outer );
 
-    if( bSpawnGhost )
-    {
-        FullLog( "Loading Ghost Playback data" );
-        if( GhostManager == none )
-        {
-            GhostManager = Spawn( class'BTServer_GhostLoader', Outer );
-        }
-
-        GhostManager.LoadGhosts( CurrentMapName, GhostDataFileName );
-    }
-
     // We need to replace all the team respawn triggers, to ensure that our ghosts will be ignored.
     foreach AllActors( class'Triggers', Tr )
     {
@@ -68,11 +57,7 @@ function ModeReset()
         // Reset scores etc.
         AssaultGame.PracticeRoundEnded();
         ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundTimeLimit = 0;  // Adjust it again cause assault probably adjusted it.
-
         MatchStarting();
-
-        // Reset!
-        //ObjCompT = RDat.Rec[UsedSlot].ObjCompT;
 
         if( IsCompetitiveModeActive() )
         {

@@ -146,7 +146,7 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
     local BTClient_ClientReplication CRI;
 
     CRI = GetRep( player );
-    if( CRI.PlayingLevel == none )
+    if( CRI == none || CRI.PlayingLevel == none )
     {
         return super.ModeValidatePlayerStart( player, start );
     }
