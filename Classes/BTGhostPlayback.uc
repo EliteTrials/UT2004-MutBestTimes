@@ -14,26 +14,19 @@ var bool                        GhostDisabled;
 var string                      GhostPackageName, GhostMapName;
 
 var private MutBestTimes BT;
+var private BTClient_LevelReplication MyLevel;
 
 delegate OnGhostEndPlay();
 
 event PreBeginPlay()
 {
 	BT = MutBestTimes(Owner);
-    if( BT.bAddGhostTimerPaths && BT.bSoloMap )
-    {
-        AddGhostMarkers();
-    }
 }
 
-final function AddGhostMarkers()
+private function AddGhostMarkers()
 {
     local int i;
     local BTClient_GhostMarker Marking;
-
-    // Already have added markers for a ghost.
-    if( BT.MRI.MaxMoves != 0 )
-    	return;
 
     if( GhostData.MO.Length < 2000 )
     {
@@ -45,12 +38,10 @@ final function AddGhostMarkers()
                 Marking.MoveIndex = i;
             }
         }
-        // FIXME: Multiple level maps
-        BT.MRI.MaxMoves = GhostData.MO.Length;
     }
 }
 
-final function CreateGhostController()
+private function CreateGhostController()
 {
     local PlayerReplicationInfo PRI;
 
@@ -66,9 +57,23 @@ final function CreateGhostController()
         PRI.Team = TeamGame(Level.Game).Teams[0];
     }
     PRI.CharacterName = GhostChar;
+
+    if( MyLevel == none )
+    {
+	    // TODO: add client LRI and replicate @PlayingLevel
+	    MyLevel = BT.GetObjectiveLevelByFullName( GhostMapName );
+	    if( MyLevel != none )
+	    {
+	    	MyLevel.PrimaryGhostNumMoves = GhostData.MO.Length;
+    	    if( BT.bAddGhostTimerPaths && BT.bSoloMap )
+		    {
+		        AddGhostMarkers();
+		    }
+	    }
+    }
 }
 
-final function float PlayFPS()
+private function float PlayFPS()
 {
     return 1f/GhostData.UsedGhostFPS;
 }
@@ -97,7 +102,7 @@ final function RestartPlay()
     StartPlay();
 }
 
-final function PlayNextFrame()
+private function PlayNextFrame()
 {
     local Pawn p;
 
@@ -158,12 +163,17 @@ event Destroyed()
         Controller.Destroy();
     }
 
-    // FIXME: only destroy those which are related to the current map (& instance)
-    foreach DynamicActors( class'BTClient_GhostMarker', marker )
+    if( MyLevel != none )
     {
-        marker.Destroy();
+    	MyLevel.PrimaryGhostNumMoves = 0;
+	    foreach DynamicActors( class'BTClient_GhostMarker', marker )
+	    {
+	    	if( marker.Owner != self )
+	    		continue;
+
+	        marker.Destroy();
+	    }
     }
-    BT.MRI.MaxMoves = 0;
 }
 
 defaultproperties
