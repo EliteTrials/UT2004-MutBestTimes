@@ -98,7 +98,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
     local Controller C;
 
     // FIXME: if bDisableForceSpawn is true then features like !Wager will break.
-    if( !BT.ModeIsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded )
+    if( !BT.ModeIsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded || Killed.IsA('BTClient_Ghost') )
         return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
     if( !Killed.IsA('Monster') && ((Killed != none && Killed.Controller == Killer) || (Killer == none && (Killed != none && Killed.Controller != none))) )

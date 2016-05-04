@@ -3,6 +3,8 @@
 //=============================================================================
 class BTServer_GhostController extends PlayerController;
 
+var private Pawn GhostPawn;
+
 event PostBeginPlay()
 {
     if( !bDeleteMe )
@@ -19,6 +21,7 @@ function InitPlayerReplicationInfo()
     PlayerReplicationInfo.bOnlySpectator = false; // So we can still spectate the ghost.
     PlayerReplicationInfo.bBot = true;
     PlayerReplicationInfo.bWelcomed = true; // We don't have to notify players that this ghost entered the game.
+    PlayerReplicationInfo.bReadyToPlay = true;
 }
 
 function Pawn CreateGhostPawn( BTServer_GhostData data )
@@ -32,16 +35,6 @@ function Pawn CreateGhostPawn( BTServer_GhostData data )
         Warn( "Tried to create a new pawn for ghost, but this Controller already posseses a pawn!" );
         return Pawn;
     }
-
-    foreach DynamicActors( class'Pawn', Pawn )
-    {
-        if( Pawn.Controller == self )
-        {
-            Possess( Pawn );
-            return Pawn;
-        }
-    }
-
     data.GetCurrentMove( initialLocation, initialRotation );
     Pawn = Spawn( default.PawnClass,,, initialLocation, initialRotation );
     if( Pawn == none )
@@ -50,29 +43,30 @@ function Pawn CreateGhostPawn( BTServer_GhostData data )
         return none;
     }
 
-    // Ghost's can't touch people!
-    Pawn.SetCollision( false, false, false );
-    // FIXME: Should be handled inside the Pawn class.
-    xPawn(Pawn).Setup( class'xUtil'.static.FindPlayerRecord( PlayerReplicationInfo.CharacterName ) );
+    // So we know whether the ghost's pawn was created with CreateGhostPawn or an external source.
+    GhostPawn = Pawn;
     Possess( Pawn );
     return Pawn;
 }
 
-// We should not interfere with the Controller's pitch!
-// function AdjustView( float deltaTime )
-// {
-//     super(Controller).AdjustView( deltaTime );
-// }
+function Possess( Pawn p )
+{
+    // Ensure that any remotely created pawn gets the axe. e.g. GameInfo.RestartPlayer
+    if( GhostPawn != none && GhostPawn != p && p == Pawn )
+    {
+        p.Destroy();
+        Pawn = GhostPawn;
+        return;
+    }
 
-// function ClientSetRotation( rotator NewRotation )
-// {
-//     SetRotation(NewRotation);
-//     if ( Pawn != None )
-//     {
-//         NewRotation.Roll  = 0;
-//         Pawn.SetRotation( NewRotation );
-//     }
-// }
+    // FIXME: Should be handled inside the Pawn class.
+    xPawn(p).Setup( class'xUtil'.static.FindPlayerRecord( PlayerReplicationInfo.CharacterName ) );
+
+    if( p != none )
+        p.SetCollision( false, false, false );
+
+    super.Possess( p );
+}
 
 event InitInputSystem();
 event Reset();
@@ -115,11 +109,14 @@ event Destroyed()
 // Don't restart ghosts. Causes the creation of a phantom pawn.
 auto state PlayerWaiting
 {
+    function BeginState();
+    function EndState();
     function ServerRestartPlayer();
 }
 
 state Dead
 {
+    function BeginState();
     function ServerReStartPlayer();
 }
 
