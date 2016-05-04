@@ -4722,6 +4722,23 @@ final function BTClient_LevelReplication GetObjectiveLevelByName( string levelNa
     return none;
 }
 
+final function BTClient_LevelReplication GetObjectiveLevelByFullName( string levelName )
+{
+    local BTClient_LevelReplication levelRep;
+
+    if( levelName == "" )
+        return none;
+
+    for( levelRep = MRI.BaseLevel; levelRep != none; levelRep = levelRep.NextLevel )
+    {
+        if( levelRep.GetFullName( CurrentMapName ) ~= levelName )
+        {
+            return levelRep;
+        }
+    }
+    return none;
+}
+
 final function int GetObjectiveMapIndex( GameObjective obj )
 {
     local BTClient_LevelReplication levelRep;
