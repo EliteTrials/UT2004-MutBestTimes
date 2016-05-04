@@ -46,7 +46,6 @@ var BTClient_ClientReplication CR;                                              
 var int RecordsCount;
 var int MaxRecords;
 var int PlayersCount, RankedPlayersCount;
-var int MaxMoves;
 var int SoloRecords;
 var int MaxRankedPlayersCount;
 
@@ -66,7 +65,7 @@ replication
     reliable if( Role == ROLE_Authority )
         PlayersBestTimes, MapBestTime, MatchStartTime,
         RecordState, EndMsg, PointsReward, ObjectiveTotalTime,
-        MaxMoves, SoloRecords, bCompetitiveMode, Teams;
+        SoloRecords, bCompetitiveMode, Teams;
 
     // Only replicated once
     reliable if( bNetInitial )

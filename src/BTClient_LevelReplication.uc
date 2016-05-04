@@ -10,6 +10,7 @@ var private string LevelName;
 var string TopRanks;
 var float TopTime;
 var int NumRecords;
+var int PrimaryGhostNumMoves;
 
 // Serverside only
 var int MapIndex; // Index to RecordsData.Rec array.
@@ -20,7 +21,8 @@ replication
 		NextLevel, MyObjective, LevelName;
 
 	reliable if( bNetDirty )
-		TopRanks, TopTime, NumRecords;
+		TopRanks, TopTime, NumRecords,
+		PrimaryGhostNumMoves;
 }
 
 simulated event PostNetBeginPlay()

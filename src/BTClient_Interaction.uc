@@ -1492,7 +1492,7 @@ function RenderGhostMarkings( Canvas C )
     local float Dist;
     local float topTime;
 
-    if( MRI == none || SpectatedClient == none )
+    if( ActiveLevel == none )
         return;
 
     topTime = GetTopTime();
@@ -1506,7 +1506,7 @@ function RenderGhostMarkings( Canvas C )
         Dir /= Dist;
         if( (Dir dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
         {
-            T = topTime * (float(Marking.MoveIndex)/float(MRI.MaxMoves));
+            T = topTime * (float(Marking.MoveIndex)/float(ActiveLevel.PrimaryGhostNumMoves));
             YT = T - (topTime - GetTimeLeft());
             if( YT >= 0 )
             {
