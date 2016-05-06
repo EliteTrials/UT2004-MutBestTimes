@@ -173,7 +173,7 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
     {
         // Start timer
         CRI.PlayerSpawned();
-        if( GhostManager != none )
+        if( GhostManager != none && (CRI.PlayingLevel != none || MRI.MapLevel != none) )
         {
             // Restart ghost recording!
             RestartGhostRecording( PlayerController(c) );
