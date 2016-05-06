@@ -344,6 +344,18 @@ final function int FindRecordSlot( int mapIndex, int playerId )
     return -1;
 }
 
+// 0 = no rank
+final function int GetPlayerRank( int mapIndex, int playerId )
+{
+    local int rank;
+
+    rank = FindRecordSlot( mapIndex, playerId );
+    if( rank != -1 )
+        return rank + 1;
+
+    return 0;
+}
+
 final function int OpenRecordSlot( out array<sSoloRecord> times, float recordTime )
 {
     local int i, j, k;
