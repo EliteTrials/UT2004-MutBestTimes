@@ -1,7 +1,7 @@
 //=============================================================================
 // Copyright 2005 - 2016 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_GhostController extends PlayerController;
+class BTGhostController extends PlayerController;
 
 var private Pawn GhostPawn;
 
@@ -24,7 +24,7 @@ function InitPlayerReplicationInfo()
     PlayerReplicationInfo.bReadyToPlay = true;
 }
 
-function Pawn CreateGhostPawn( BTServer_GhostData data )
+function Pawn CreateGhostPawn( BTGhostData data )
 {
     local Vector initialLocation;
     local Rotator initialRotation;

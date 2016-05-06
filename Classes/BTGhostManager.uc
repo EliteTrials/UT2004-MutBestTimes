@@ -4,13 +4,13 @@
 //  Personal ghosts
 // Copyright 2005-2014 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_GhostLoader extends Info;
+class BTGhostManager extends Info;
 
 var const int MaxGhosts;
 var const string GhostTag;
 
 var const noexport string GhostDataPackagePrefix;
-var const class<BTServer_GhostData> GhostDataClass;
+var const class<BTGhostData> GhostDataClass;
 var const class<BTGhostPlayback> GhostPlaybackClass;
 
 var array<BTGhostPlayback> Ghosts;
@@ -29,13 +29,13 @@ final function LoadGhosts( string mapName )
 {
     local int i, j;
     local object data;
-    local BTServer_GhostData ghostData;
+    local BTGhostData ghostData;
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
     foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
     {
-        ghostData = BTServer_GhostData(data);
+        ghostData = BTGhostData(data);
         if( ghostData == none )
             continue;
 
@@ -60,7 +60,7 @@ final function LoadGhosts( string mapName )
     }
 }
 
-final function CreateGhostsData( string mapName, array<string> playerGUIDS, out array<BTServer_GhostData> dataObjects )
+final function CreateGhostsData( string mapName, array<string> playerGUIDS, out array<BTGhostData> dataObjects )
 {
     local int i;
     local string ghostPackageName;
@@ -263,6 +263,6 @@ defaultproperties
     MaxGhosts=8
     GhostTag="' ghost"
     GhostDataPackagePrefix="BTGhost_"
-    GhostDataClass=class'BTServer_GhostData'
+    GhostDataClass=class'BTGhostData'
     GhostPlaybackClass=class'BTGhostPlayback'
 }

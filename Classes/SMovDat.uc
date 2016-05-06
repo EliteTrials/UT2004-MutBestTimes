@@ -3,7 +3,7 @@ Class SMovDat extends Object
     Config(BTMoveData);
 
 var config float LoginTime;
-var config array<BTServer_GhostData.sMovesDataType> MO;
+var config array<BTGhostData.sMovesDataType> MO;
 var config string PlID;
 var config bool bHasStoredData;
 var config int UsedGhostFPS;

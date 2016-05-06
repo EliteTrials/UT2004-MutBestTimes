@@ -1,17 +1,15 @@
 class BTGhostPlayback extends Info;
 
 var const class<BTClient_GhostMarker> GhostMarkerClass;
-var const class<BTServer_GhostController> GhostControllerClass;
+var const class<BTGhostController> GhostControllerClass;
 
-var BTServer_GhostController    Controller;
-var string                      GhostName;
-var string                      GhostChar;
-var UnrealTeamInfo              GhostTeam;
-var int                         GhostSlot;
-var BTServer_GhostData          GhostData;
-var float                       GhostMoved;
-var bool                        GhostDisabled;
-var string                      GhostPackageName, GhostMapName;
+var BTGhostController   Controller;
+var string              GhostName;
+var string              GhostChar;
+var int                 GhostSlot;
+var BTGhostData         GhostData;
+var bool                GhostDisabled;
+var string              GhostPackageName, GhostMapName;
 
 var private MutBestTimes BT;
 var private BTClient_LevelReplication MyLevel;
@@ -21,6 +19,7 @@ delegate OnGhostEndPlay();
 event PreBeginPlay()
 {
 	BT = MutBestTimes(Owner);
+	Disable( 'Tick' );
 }
 
 private function AddGhostMarkers()
@@ -98,7 +97,6 @@ final function RestartPlay()
 		GhostData.CurrentMove = 0;
 
     GhostDisabled = false;
-    GhostMoved = 0f;
     StartPlay();
 }
 
@@ -178,6 +176,6 @@ event Destroyed()
 
 defaultproperties
 {
-    GhostControllerClass=class'BTServer_GhostController'
+    GhostControllerClass=class'BTGhostController'
     GhostMarkerClass=class'BTClient_GhostMarker'
 }

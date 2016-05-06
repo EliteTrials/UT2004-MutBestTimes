@@ -31,7 +31,7 @@ function ModeMatchStarting()
     if( bSpawnGhost && GhostManager == none )
     {
         FullLog( "Loading Ghost Playback data" );
-        GhostManager = Spawn( class'BTServer_GhostLoader', Outer );
+        GhostManager = Spawn( class'BTGhostManager', Outer );
         for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
         {
             GhostManager.LoadGhosts( myLevel.GetFullName( CurrentMapName ) );

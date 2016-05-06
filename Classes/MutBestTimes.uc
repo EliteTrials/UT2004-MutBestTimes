@@ -130,15 +130,15 @@ const Objectives_GhostFollow            = 15000;
 const GhostFollowPrice                  = 25;
 const GhostFollowDiePrice               = 1;
 
-var BTServer_GhostLoader                            GhostManager;               // Currently used ghost data loader.
-var array<BTServer_GhostSaver>                      RecordingPlayers;           // Players we are currently recording.
+var BTGhostManager                                  GhostManager;               // Currently used ghost data loader.
+var array<BTGhostRecorder>                          RecordingPlayers;           // Players we are currently recording.
 
 // Que of ghosts yet to be saved in 'GhostSave's state. Array of playerslots starting with index 0, -1 = none.
 var private array<int>                              NewGhostsQue;
 struct sNewGhostsInfo
 {
-    var BTServer_GhostSaver Moves;
-    var BTServer_GhostData GhostData;
+    var BTGhostRecorder Moves;
+    var BTGhostData GhostData;
 };
 var private array<sNewGhostsInfo>                   NewGhostsInfo;
 var PlayerController                                LeadingGhost;               // PlayerController the ghost should reset CurrentMove for
@@ -4178,7 +4178,7 @@ final function KillAllPawns( optional bool bSkipState )
             && C.bIsPlayer
             && !IsSpectator( C.PlayerReplicationInfo )
             && MessagingSpectator(C) == None
-            && BTServer_GhostController(C) == none )
+            && BTGhostController(C) == none )
         {
             if( !bSkipState )
             {
@@ -6272,7 +6272,7 @@ final function RecordGhostForPlayer( PlayerController other )                   
 
     // FullLog( "Recording ghost for player" @ other.GetHumanReadableName() );
     RecordingPlayers.Length = j+1;
-    RecordingPlayers[j] = Spawn( Class'BTServer_GhostSaver' );
+    RecordingPlayers[j] = Spawn( Class'BTGhostRecorder' );
     RecordingPlayers[j].ImitatedPlayer = other;
     RecordingPlayers[j].StartGhostCapturing( GhostPlaybackFPS );
 
@@ -6338,7 +6338,7 @@ final function UpdateGhosts()
 {
     local int i, iQue;
     local array<string> IDs;
-    local array<BTServer_GhostData> dataObjects;
+    local array<BTGhostData> dataObjects;
 
     if( !bSpawnGhost )
     {

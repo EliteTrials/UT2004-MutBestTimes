@@ -1,12 +1,12 @@
 //=============================================================================
 // Copyright 2005-2014 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
-class BTServer_GhostSaver extends Info
-    dependson(BTServer_GhostData);
+class BTGhostRecorder extends Info
+    dependson(BTGhostData);
 
 var PlayerController ImitatedPlayer;
 var float RelativeStartTime;
-var array<BTServer_GhostData.sMovesDataType> MovementsData;
+var array<BTGhostData.sMovesDataType> MovementsData;
 
 final function StartGhostCapturing( float framesPerSecond )
 {
@@ -60,9 +60,9 @@ event Timer()
 
 // Converts a rotator struct to a small compressed rotator struct
 // Converted back to a normal rotator struct when ghost is being loaded
-static final function BTServer_GhostData.sTinyRot MiniRot( Rotator MR )
+static final function BTGhostData.sTinyRot MiniRot( Rotator MR )
 {
-    local BTServer_GhostData.sTinyRot TR;
+    local BTGhostData.sTinyRot TR;
 
     MR.Yaw /= 1024;
     MR.Pitch /= 1024;
