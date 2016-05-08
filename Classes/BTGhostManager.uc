@@ -1,8 +1,5 @@
 //=============================================================================
-// TODO:
-//  Previous record ghost
-//  Personal ghosts
-// Copyright 2005-2014 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005-2016 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTGhostManager extends Info;
 
@@ -13,12 +10,108 @@ var const noexport string GhostDataPackagePrefix;
 var const class<BTGhostData> GhostDataClass;
 var const class<BTGhostPlayback> GhostPlaybackClass;
 
+// The ghosts that we are currently playing, if a ghost is missing from this array, then it will be deleted from the package on the next save.
 var array<BTGhostPlayback> Ghosts;
+var BTGhostSaver Saver;
+// Pending packages that have became dirty and need to be saved.
+var private array<string> PendingPackageNames;
 var private MutBestTimes BT;
 
 event PreBeginPlay()
 {
     BT = MutBestTimes(Owner);
+    Saver = Spawn( class'BTGhostSaver', Owner );
+    Saver.Manager = self;
+}
+
+// Remove obsolete ghosts from the loaded ghost packages.
+final function SqueezeGhosts( optional bool byRank )
+{
+    local int i, ghostRank;
+
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        // Only erase low ranked ghosts!
+        if( byRank )
+        {
+            ghostRank = GetGhostRank( Ghosts[i] );
+            if( ghostRank != 0 && ghostRank <= 3 )
+            {
+                continue;
+            }
+
+        }
+
+        BT.FullLog( "Deleted old ghost data from map" @ Ghosts[i].GhostMapName @ "belonging to" @ Ghosts[i].GhostData.PLID );
+        Ghosts[i].Destroy();
+        Ghosts.Remove( i --, 1 );
+    }
+}
+
+// Saves all relevant ghosts and their packages, if a ghost does no longer exist, all its data will be erased before saving.
+final function bool SaveRelevantGhosts( string mapName )
+{
+    local int i;
+    local array<string> dataNames;
+    local object data;
+    local BTGhostData ghostData;
+    local string ghostPackageName;
+    local bool skipNext;
+
+    for( i = 0; i < PendingPackageNames.Length; ++ i )
+    {
+        if( PendingPackageNames[i] == mapName )
+        {
+            PendingPackageNames.Remove( i, 1 );
+            skipNext = true;
+            break;
+        }
+    }
+
+    // This package doesn't need saving!
+    if( !skipNext )
+        return false;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
+    {
+        ghostData = BTGhostData(data);
+        if( ghostData == none )
+            continue;
+
+        skipNext = false;
+        for( i = 0; i < Ghosts.Length; ++ i )
+        {
+            if( Ghosts[i].GhostData == ghostData )
+            {
+                skipNext = true;
+                break;
+            }
+        }
+
+        if( skipNext )
+            continue;
+
+        dataNames[dataNames.Length] = ghostData.PLID;
+    }
+    for( i = 0; i < dataNames.Length; ++ i )
+    {
+        DeleteGhostData( mapName, dataNames[i] );
+    }
+    return SaveGhostsPackage( mapName );
+}
+
+// 0 = no rank
+final function int GetGhostRank( BTGhostPlayback playback )
+{
+    local int ghostRank, mapIndex;
+
+    mapIndex = BT.RDat.FindRecord( playback.GhostMapName );
+    if( mapIndex == -1 ) // To delete or keep for nostalgie?
+        return 0;
+
+    ghostRank = BT.RDat.GetPlayerRank( mapIndex, playback.GhostSlot );
+    return ghostRank;
 }
 
 /**
@@ -27,7 +120,6 @@ event PreBeginPlay()
  */
 final function LoadGhosts( string mapName )
 {
-    local int i, j;
     local object data;
     local BTGhostData ghostData;
     local string ghostPackageName;
@@ -39,40 +131,126 @@ final function LoadGhosts( string mapName )
         if( ghostData == none )
             continue;
 
-        j = Ghosts.Length;
-        Ghosts.Length = j + 1;
-        Ghosts[j] = Spawn( GhostPlaybackClass, Owner );
-        Ghosts[j].GhostMapName = mapName;
-        Ghosts[j].GhostPackageName = ghostPackageName;
-        Ghosts[j].GhostData = ghostData;
-        Ghosts[j].GhostSlot = BT.FindPlayerSlot( Ghosts[j].GhostData.PLID );
-        if( Ghosts[j].GhostSlot != -1 )
-        {
-            Ghosts[j].GhostName = BT.PDat.Player[Ghosts[j].GhostSlot-1].PLName $ GhostTag @ "in" @ mapName;
-            Ghosts[j].GhostChar = BT.PDat.Player[Ghosts[j].GhostSlot-1].PLChar;
-        }
-        else
-        {
-            Ghosts[i].GhostName = "Unknown" $ GhostTag;
-        }
-        BT.FullLog( "Loaded ghost" @ Ghosts[j].GhostData.PLID @ "for" @ mapName @ "with" @ ghostData.MO.Length @ "frames" );
-        Ghosts[j].OnGhostEndPlay = InternalOnGhostEndPlay;
+        CreateGhostPlayback( ghostData, mapName );
     }
 }
 
-final function CreateGhostsData( string mapName, array<string> playerGUIDS, out array<BTGhostData> dataObjects )
+final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay )
+{
+    local int j;
+    local string ghostPackageName;
+    local int ghostRank;
+    local BTGhostPlayback playback;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    playback = Spawn( GhostPlaybackClass, Owner );
+    j = Ghosts.Length;
+    Ghosts.Length = j + 1;
+    Ghosts[j] = playback;
+    playback.GhostMapName = mapName;
+    playback.GhostPackageName = ghostPackageName;
+    playback.GhostData = data;
+    playback.GhostSlot = BT.FindPlayerSlot( playback.GhostData.PLID );
+    if( playback.GhostSlot != -1 )
+    {
+        playback.GhostName = BT.PDat.Player[playback.GhostSlot-1].PLName $ GhostTag @ "in" @ mapName;
+        playback.GhostChar = BT.PDat.Player[playback.GhostSlot-1].PLChar;
+    }
+    else
+    {
+        playback.GhostName = "Unknown" $ GhostTag;
+    }
+    BT.FullLog( "Loaded ghost" @ playback.GhostData.PLID @ "for" @ mapName @ "with" @ data.MO.Length @ "frames" );
+    ghostRank = GetGhostRank( playback );
+    if( ghostRank == 1 )
+    {
+        playback.InstallMarkers( instantPlay/**replace old*/ );
+    }
+    playback.OnGhostEndPlay = InternalOnGhostEndPlay;
+    if( instantPlay )
+    {
+        playback.StartPlay();
+    }
+    return playback;
+}
+
+private function AddPendingPackage( string packageName )
+{
+    local int i;
+
+    for( i = 0; i < PendingPackageNames.Length; ++ i )
+    {
+        if( PendingPackageNames[i] == packageName )
+            return;
+    }
+    PendingPackageNames[PendingPackageNames.Length] = packageName;
+}
+
+final function BTGhostData GetGhostData( string mapName, string ghostId )
+{
+    local BTGhostData data;
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    data = Level.Game.LoadDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+    return data;
+}
+
+final function BTGhostData CreateGhostData( string mapName, string ghostId )
+{
+    local BTGhostData data;
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    data = Level.Game.CreateDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+    if( data != none )
+    {
+        data.Init();
+        AddPendingPackage( ghostPackageName );
+    }
+    return data;
+}
+
+final function bool DeleteGhostData( string mapName, string ghostId )
+{
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    AddPendingPackage( ghostPackageName );
+    return Level.Game.DeleteDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+}
+
+final function bool SaveGhostsPackage( string mapName )
+{
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    return Level.Game.SavePackage( ghostPackageName );
+}
+
+final function bool DeleteGhostsPackage( string mapName )
+{
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    return Level.Game.DeletePackage( ghostPackageName );
+}
+
+final function bool RemoveGhost( string mapName, string ghostId )
 {
     local int i;
     local string ghostPackageName;
 
-    // BT.FullLog( "Ghost::CreateGhostsData" );
     ghostPackageName = GhostDataPackagePrefix $ mapName;
-    dataObjects.Length = playerGUIDS.Length;
-    for( i = 0; i < playerGUIDS.Length; ++ i )
+    for( i = 0; i < Ghosts.Length; ++ i )
     {
-        dataObjects[i] = Level.Game.CreateDataObject( GhostDataClass, "BTGhost_"$playerGUIDS[i], ghostPackageName );
-        dataObjects[i].Presave( BT, playerGUIDS[i] );
+        if( Ghosts[i].GhostPackageName == ghostPackageName )
+        {
+            Ghosts.Remove( i, 1 );
+            return true;
+        }
     }
+    return false;
 }
 
 final function UpdateGhostsName( int playerSlot, string newName )
@@ -132,12 +310,6 @@ final function ClearGhostsData( string mapName, optional bool bCurrentMap )
     Level.Game.DeletePackage( ghostPackageName );
 }
 
-final function SaveGhosts( string mapName )
-{
-    BT.FullLog( "Ghost::SaveGhosts" );
-    Level.Game.SavePackage( GhostDataPackagePrefix $ mapName );
-}
-
 final function GhostsPlay()
 {
     local int i;
@@ -164,7 +336,7 @@ final function GhostsPause()
 {
     local int i;
 
-    BT.FullLog( "Ghost::GhostsPause" );
+    // BT.FullLog( "Ghost::GhostsPause" );
     for( i = 0; i < Ghosts.Length; ++ i )
     {
         Ghosts[i].PausePlay();
@@ -175,7 +347,7 @@ final function GhostsRespawn()
 {
     local int i;
 
-    BT.FullLog( "Ghost::GhostsRespawn" );
+    // BT.FullLog( "Ghost::GhostsRespawn" );
     for( i = 0; i < Ghosts.Length; ++ i )
     {
         Ghosts[i].RestartPlay();
@@ -204,16 +376,23 @@ final function GhostsKill()
 }
 
 // Respawn all ghosts once the ghosts have reached the end of their playback.
-final function InternalOnGhostEndPlay()
+final function InternalOnGhostEndPlay( BTGhostPlayback playback )
 {
     local int i;
 
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        if( !Ghosts[i].GhostDisabled )
+        if( Ghosts[i].GhostMapName == playback.GhostMapName && !Ghosts[i].GhostDisabled )
             return;
     }
-    GhostsRespawn();
+
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        if( Ghosts[i].GhostMapName != playback.GhostMapName )
+            continue;
+
+        Ghosts[i].RestartPlay();
+    }
 }
 
 final function Pawn GetGhostPawn( int ghostIndex )

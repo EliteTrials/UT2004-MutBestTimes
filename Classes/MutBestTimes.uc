@@ -128,34 +128,11 @@ var UTServerAdminSpectator                          WebAdminActor;              
 // Rewards related.
 const Objectives_GhostFollow            = 15000;
 const GhostFollowPrice                  = 25;
-const GhostFollowDiePrice               = 1;
 
 var BTGhostManager                                  GhostManager;               // Currently used ghost data loader.
-var array<BTGhostRecorder>                          RecordingPlayers;           // Players we are currently recording.
-
-// Que of ghosts yet to be saved in 'GhostSave's state. Array of playerslots starting with index 0, -1 = none.
-var private array<int>                              NewGhostsQue;
-struct sNewGhostsInfo
-{
-    var BTGhostRecorder Moves;
-    var BTGhostData GhostData;
-};
-var private array<sNewGhostsInfo>                   NewGhostsInfo;
 var PlayerController                                LeadingGhost;               // PlayerController the ghost should reset CurrentMove for
-
 // "GhostFollow <PlayerName>" was used on a player by an Admin.
 var bool                                            bGhostWasAdminAwarded;
-
-// Used in 'SaveGhost' state
-var private int
-    CurMove,
-    MaxMove,
-    SavedMoves,
-    iGhost,
-    TotalSavedMoves;
-
-var bool bGhostIsSaving; // For SaveGhost state and votinghandler
-var bool bRedoVotingTimer; // for SaveGhost state and votinghandler
 
 var() globalconfig float GhostSaveSpeed;
 var() globalconfig bool bSpawnGhost;
@@ -1211,11 +1188,11 @@ function ModifyPlayer( Pawn other )
     local BTClient_ClientReplication CRI;
     local bool bTrailerRegistered;
 
-    if( other != none && other.IsA('BTClient_Ghost') )
-        return;
-
     super.ModifyPlayer( other );
-    if( other == none || PlayerController(other.Controller) == none || other.PlayerReplicationInfo == none )
+    if( other == none
+        || PlayerController(other.Controller) == none
+        || other.PlayerReplicationInfo == none
+        || other.IsA('BTClient_Ghost') )
     {
         return;
     }
@@ -3050,6 +3027,12 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             BroadcastFinishMessage( sender, params[1], byte(params[0]) );
             break;
 
+        case "debugrecord":
+            Rep = GetRep( sender );
+            Rep.LastSpawnTime = Level.TimeSeconds - float(params[0]);
+            Trigger( AssaultGame.CurrentObjective, sender.Pawn );
+            break;
+
         case "btcommands":
             sender.ClientMessage( Class'HUD'.Default.RedColor $ "List of all admin commands of" @ Name );
             for( i = 0; i < Commands.Length; ++ i )
@@ -3477,6 +3460,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
     return true;
 }
 
+// Note: Deletes all data belonging to @mapIndex, including its ghosts.
 final function DeleteRecordBySlot( int mapIndex )
 {
     local string mapName;
@@ -3505,6 +3489,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
 {
     local int recordIndex;
     local BTClient_LevelReplication recordLevel;
+    local string ghostId;
 
     recordIndex = RDat.FindRecordSlot( mapIndex, playerIndex + 1/*playerId*/ );
     if( recordIndex == -1 )
@@ -3520,23 +3505,36 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     }
     RDat.Rec[mapIndex].PSRL.Remove( recordIndex, 1 );
 
-    // We need to cleanup data for top records.
-    if( recordIndex == 0 )
+    if( GhostManager != none )
     {
-        if( GhostManager != none )
+        ghostId = PDat.Player[playerIndex].PLID;
+        if( GhostManager.GetGhostData( RDat.Rec[mapIndex].TMN, ghostId ) != none )
         {
-            GhostManager.ClearGhostsData( RDat.Rec[mapIndex].TMN, recordLevel != none );
-        }
-
-        if( recordLevel != none )
-        {
-            // Update the top record state but ensure that floating decimals are stripped away!
-            if( RDat.Rec[mapIndex].PSRL.Length > 0 )
+            // If the ghost is currently being played then we should just mark it for deletion instead.
+            if( recordLevel != none )
             {
-                recordLevel.TopTime = RDat.Rec[mapIndex].PSRL[0].SRT;
+                if( GhostManager.RemoveGhost( RDat.Rec[mapIndex].TMN, ghostId ) )
+                {
+                    Log( "Removed(and marked for deletion) ghost on" @ RDat.Rec[mapIndex].TMN @ "belonging to" @ ghostId );
+                }
             }
-            recordLevel.TopRanks = GetRecordTopHolders( mapIndex );
+            // Not currently active, delete it immediately!
+            else
+            {
+                GhostManager.DeleteGhostData( RDat.Rec[mapIndex].TMN, ghostId );
+                GhostManager.SaveGhostsPackage( RDat.Rec[mapIndex].TMN ); // to re-save it without the recently deleted data object.
+            }
         }
+    }
+
+    if( recordLevel != none && recordIndex == 0 )
+    {
+        // Update the top record state but ensure that floating decimals are stripped away!
+        if( RDat.Rec[mapIndex].PSRL.Length > 0 )
+        {
+            recordLevel.TopTime = RDat.Rec[mapIndex].PSRL[0].SRT;
+        }
+        recordLevel.TopRanks = GetRecordTopHolders( mapIndex );
     }
 
     // Update map's points cache if the deleted record was influencing the map's difficulty rating.
@@ -3612,12 +3610,6 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
 
         case "eraseplayerrecord":
         case "deleteplayerrecord":
-            if( RDat.Rec[UsedSlot].PSRL.Length == 0 )
-            {
-                sender.ClientMessage( class'HUD'.default.RedColor $ "Sorry there are no records to delete!" );
-                break;
-            }
-
             i = QueryPlayerIndex( params[0] );
             if( i == -1 )
             {
@@ -3637,6 +3629,12 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             if( j == -1 )
             {
                 sender.ClientMessage( class'HUD'.default.RedColor $ "Found no map matching" @ params[1]$"!" );
+                break;
+            }
+
+            if( RDat.Rec[j].PSRL.Length == 0 )
+            {
+                sender.ClientMessage( class'HUD'.default.RedColor $ "Sorry there are no records to delete!" );
                 break;
             }
 
@@ -4221,9 +4219,6 @@ final function Revoted()
         }
     }
 
-    if( bSpawnGhost )
-        KillGhostRecorders();
-
     StartCountDown();
     if( AssaultGame != none )
     {
@@ -4248,6 +4243,7 @@ final function Revoted()
     //ClearClientStarts();
 
     // All pawns should be killed on revote!
+    KillGhostRecorders();
     KillAllPawns();
     SaveAll();
 }
@@ -4978,15 +4974,16 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
 
             if( hasNewRecord == 1 )
             {
-                if( GhostManager != none  )
+                if( GhostManager != none && playTime <= 1800 )
                 {
-                    // Clear
-                    NewGhostsQue.Length = GroupMembers.Length;
                     for( i = 0; i < GroupMembers.Length; ++ i )
                     {
-                        NewGhostsQue[i] = FastFindPlayerSlot( PlayerController(GroupMembers[i]) )-1;
+                        GhostManager.Saver.QueueGhost(
+                            PlayerController(GroupMembers[i]),
+                            FastFindPlayerSlot( PlayerController(GroupMembers[i]) )-1,
+                            myLevel.GetFullName( CurrentMapName )
+                        );
                     }
-                    UpdateGhosts();
                 }
                 NotifyNewRecord( FastFindPlayerSlot( PC )-1, myLevel.MapIndex, playTime );
             }
@@ -4994,16 +4991,21 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
     }
     else
     {
-        CheckPlayerRecord( PC, CR, myLevel, playTime,,, hasNewRecord );
-        if( hasNewRecord == 1 )
+        if( CheckPlayerRecord( PC, CR, myLevel, playTime,,, hasNewRecord ) )
         {
-            if( GhostManager != none )
+            if( hasNewRecord == 1 )
             {
-                NewGhostsQue.Length = 1;
-                NewGhostsQue[0] = CR.myPlayerSlot;
-                UpdateGhosts();
+                NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
             }
-            NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
+
+            if( GhostManager == none || CR.SoloRank > 3 || playTime > 1800 )
+                return;
+
+            GhostManager.Saver.QueueGhost(
+                PC, // PC.GetPlayerIdHash(), // RETURNS a random GUID but the real guid other times WTF?
+                CR.myPlayerSlot,
+                myLevel.GetFullName( CurrentMapName )
+            );
         }
     }
 }
@@ -5013,7 +5015,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     optional int xp,
     optional out byte bNewTopRecord )
 {
-    local bool b, bWasHijacked;
+    local bool b, wasHijacked, hasImprovised;
     local string finishMsg, finishTime;
     local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
     local float score, finishDiff;
@@ -5136,6 +5138,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
     // Somebody improved his or her time.
     if( b )
     {
+        hasImprovised = true;
         b = false;
 
         // Remove player's old time.
@@ -5220,8 +5223,8 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
                 // Check avoids to print a message if the record owner beated his own record!
-                bWasHijacked = j > 1 && PLs != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != i;
-                if( bWasHijacked )
+                wasHijacked = j > 1 && PLs != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != i;
+                if( wasHijacked )
                 {
                     BroadcastAnnouncement( AnnouncementRecordHijacked );
 
@@ -5339,7 +5342,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             myLevel.ResetObjective();
         }
     }
-    return false;
+    return hasImprovised;
 }
 
 // Process end game for regular trials, PC = instigator.
@@ -5384,14 +5387,13 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
             RDat.Rec[myLevel.MapIndex].TMContributors = contributors.Length;
             NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
 
-            if( GhostManager != none )
+            if( GhostManager != none && playTime <= 1800 )
             {
-                NewGhostsQue.Length = contributors.Length;
-                for( i = 0; i < contributors.Length; ++ i )
-                {
-                    NewGhostsQue[i] = contributors[i].playerSlot-1;
-                }
-                UpdateGhosts();
+                GhostManager.Saver.QueueGhost(
+                    contributors[i].player,
+                    contributors[i].playerSlot-1,
+                    myLevel.GetFullName( CurrentMapName )
+                );
             }
         }
         else
@@ -6254,147 +6256,28 @@ final function int GetDaysSince( int y, int m, int d )
     return DateToDays( Level.Year, Level.Month, Level.Day ) - DateToDays( y, m, d );
 }
 
-//==============================================================================
-// Start recording this Player(Other) movements
-final function RecordGhostForPlayer( PlayerController other )                               // .:..:
+final function RecordGhostForPlayer( PlayerController other )
 {
-    local int i, j;
-
-    // Check if this player is being recorded already?
-    j = RecordingPlayers.Length;
-    for( i = 0; i < j; ++ i )
-    {
-        if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer == other )
-        {
-            return;
-        }
-    }
-
-    // FullLog( "Recording ghost for player" @ other.GetHumanReadableName() );
-    RecordingPlayers.Length = j+1;
-    RecordingPlayers[j] = Spawn( Class'BTGhostRecorder' );
-    RecordingPlayers[j].ImitatedPlayer = other;
-    RecordingPlayers[j].StartGhostCapturing( GhostPlaybackFPS );
-
-    if( !bSoloMap )
-    {
-        RecordingPlayers[j].RelativeStartTime = Level.TimeSeconds - MRI.MatchStartTime;
-        // FullLog( "Relative start time:" @ RecordingPlayers[j].RelativeStartTime );
-    }
-}
-
-//==============================================================================
-// (bSoloMap) clear recorded moves, and restart
-final function RestartGhostRecording( PlayerController PC )
-{
-    local int i;
-
-    // Was instigated by leaving player?
-    if( PC.Player == none )
+    if( GhostManager == none )
         return;
 
-    // Find his RecordingPlayers and clear it and re-begin.
-    for( i = 0; i < RecordingPlayers.Length; ++ i )
-    {
-        if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer == PC )
-        {
-            // Restart recording!
-            RecordingPlayers[i].StartGhostCapturing( GhostPlaybackFPS );
-            return;
-        }
-    }
-    RecordGhostForPlayer( PC );
+    GhostManager.Saver.RecordPlayer( other );
 }
 
-private function PauseGhostRecorders()
+final function RestartGhostRecording( PlayerController other )
 {
-    local int i;
+    if( GhostManager == none )
+        return;
 
-    // FullLog( "Pausing ghost recorders" );
-    for( i = 0; i < RecordingPlayers.Length; ++ i )
-    {
-        if( RecordingPlayers[i] != none )
-            RecordingPlayers[i].StopGhostCapturing();
-    }
+    GhostManager.Saver.RecordPlayer( other );
 }
 
 final function KillGhostRecorders()
 {
-    local int i;
-
-    // FullLog( "Killing" @ RecordingPlayers.Length @ "ghost recorders" );
-    if( RecordingPlayers.Length > 0 )
-    {
-        for( i = 0; i < RecordingPlayers.Length; ++ i )
-        {
-            if( RecordingPlayers[i] != none )
-                RecordingPlayers[i].Destroy();
-        }
-        RecordingPlayers.Length = 0;
-    }
-}
-
-final function UpdateGhosts()
-{
-    local int i, iQue;
-    local array<string> IDs;
-    local array<BTGhostData> dataObjects;
-
-    if( !bSpawnGhost )
-    {
+    if( GhostManager == none )
         return;
-    }
 
-    if( RDat.Rec[UsedSlot].TMGhostDisabled )
-    {
-        Level.Game.Broadcast( self, "Ghosts are currently disabled for this map!" );
-    }
-
-    // We must clear all present data objects and initialize new ones.
-    GhostManager.ClearGhostsData( CurrentMapName, true );
-    if( MRI.MapLevel != none && MRI.MapLevel.TopTime > 1800 )                            // 30 min.
-    {
-        if( bDontEndGameOnRecord && bSoloMap )
-            return;
-
-        KillGhostRecorders();
-        return;
-    }
-
-    NewGhostsQue.Length = Min( NewGhostsQue.Length, GhostManager.MaxGhosts );
-    GhostManager.Ghosts.Length = NewGhostsQue.Length;
-
-    IDs.Length = NewGhostsQue.Length;
-    for( i = 0; i < NewGhostsQue.Length; ++ i )
-    {
-        IDs[i] = PDat.Player[NewGhostsQue[i]].PLID;
-    }
-
-    GhostManager.CreateGhostsData( CurrentMapName, IDs, dataObjects );
-
-    // Clear
-    NewGhostsInfo.Length = dataObjects.Length;
-    for( iQue = 0; iQue < dataObjects.Length; ++ iQue )
-    {
-        NewGhostsInfo[iQue].GhostData = dataObjects[iQue];
-
-        for( i = 0; i < RecordingPlayers.Length; ++ i )
-        {
-            if( RecordingPlayers[i] != none && RecordingPlayers[i].ImitatedPlayer != none
-                && RecordingPlayers[i].ImitatedPlayer.GetPlayerIDHash() == IDs[iQue] )
-            {
-                // First ghost!
-                PDat.ProgressAchievementByID( NewGhostsQue[iQue], 'ghost_0' );
-
-                NewGhostsInfo[iQue].Moves = RecordingPlayers[i];
-                NewGhostsInfo[iQue].Moves.StopGhostCapturing();
-                break;
-            }
-        }
-    }
-
-    // Finally start moving all movements into the dataobjects
-    GotoState( 'SaveGhost' );
+    GhostManager.Saver.EndRecording();
 }
 
 //==============================================================================
@@ -6866,10 +6749,25 @@ final function SavePlayers()
     }
 }
 
+final function SaveGhosts()
+{
+    local BTClient_LevelReplication myLevel;
+
+    if( GhostManager == none )
+        return;
+
+    for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+    {
+        // Saves new, but deletes old unneeded ghosts!
+        GhostManager.SaveRelevantGhosts( myLevel.GetFullName( CurrentMapName ) );
+    }
+}
+
 final function SaveAll()
 {
     SaveRecords();
     SavePlayers();
+    SaveGhosts();
 }
 
 //==============================================================================
@@ -7101,114 +6999,6 @@ static final function float GetFixedTime( float TimeToFix )
 
     FixedTimeString = Left( string( TimeToFix ), InStr( string( TimeToFix ), "." ) + 3 );
     return float( FixedTimeString );
-}
-
-//==============================================================================
-// Starts saving ghost once this state activates, slowly to keep clients connected
-state SaveGhost
-{
-    function BeginState();
-
-    function EndState()
-    {
-        NewGhostsInfo.Length = 0;
-        NewGhostsQue.Length = 0;
-
-        // Complete...
-        CurMove = 0;
-        MaxMove = 0;
-        SavedMoves = 0;
-        iGhost = 0;
-
-        if( !bDontEndGameOnRecord || !bSoloMap )
-        {
-            KillGhostRecorders();       // Clean up all temporary MovementSavers
-        }
-    }
-
-Begin:
-    if( !bDontEndGameOnRecord || !bSoloMap )
-    {
-        PauseGhostRecorders();  // Don't keep on recording until the end of this recording.
-    }
-    bGhostIsSaving = True;
-    MRI.bUpdatingGhost = True;
-    MRI.GhostPercent = 0.00;
-    MRI.NetUpdateTime = Level.TimeSeconds-1;
-
-    // Turn off countdown
-    if( Level.Game.VotingHandler != None )
-    {
-        if( Level.Game.VotingHandler.TimerRate > 0 )
-        {
-            bRedoVotingTimer = True;
-            Level.Game.VotingHandler.SetTimer( 0, False );
-        }
-
-        // Extend the TimeLimit by predicted saving speed
-        xVotingHandler(Level.Game.VotingHandler).VoteTimeLimit += 120;
-    }
-
-    //Level.Game.Broadcast( Self, Level.Game.MakeColorCode( Class'HUD'.Default.GoldColor )$"Saving Ghost!, Players can not vote untill Saving is completed!" );
-
-    MaxMove = 0;
-    for( iGhost = 0; iGhost < NewGhostsInfo.Length; ++ iGhost )
-    {
-        MaxMove += NewGhostsInfo[iGhost].Moves.MovementsData.Length;
-    }
-
-    TotalSavedMoves = 0;
-    for( iGhost = 0; iGhost < NewGhostsInfo.Length; ++ iGhost )
-    {
-        // Start moving the Moves list to this Data Object
-        for( CurMove = 0; CurMove < NewGhostsInfo[iGhost].Moves.MovementsData.Length; ++ CurMove )
-        {
-            if( SavedMoves == GhostPlaybackFPS || CurMove+1 == NewGhostsInfo[iGhost].Moves.MovementsData.Length )
-            {
-                Sleep( GhostSaveSpeed );
-                SavedMoves = 0;
-
-                MRI.GhostPercent = (float(TotalSavedMoves)/float(MaxMove))*100;
-                MRI.NetUpdateTime = Level.TimeSeconds-1;
-            }
-
-            NewGhostsInfo[iGhost].GhostData.MO.Insert( CurMove, 1 );
-            NewGhostsInfo[iGhost].GhostData.MO[CurMove] = NewGhostsInfo[iGhost].Moves.MovementsData[CurMove];
-
-            ++ SavedMoves;
-            ++ TotalSavedMoves;
-        }
-
-        NewGhostsInfo[iGhost].GhostData.RelativeStartTime = NewGhostsInfo[iGhost].Moves.RelativeStartTime;
-    }
-    // Completed
-    GhostManager.SaveGhosts( CurrentMapName );
-    GhostManager.LoadGhosts( CurrentMapName );
-
-    bGhostIsSaving = False;
-    MRI.GhostPercent = 100.00f;
-    MRI.NetUpdateTime = Level.TimeSeconds-1;
-
-    // Give the replication some time... before disabling it!
-    Sleep( 0.05f );
-
-    MRI.bUpdatingGhost = False;
-
-    GhostManager.GhostsRespawn();
-
-    if( !bDontEndGameOnRecord )
-        GhostManager.ForceViewGhost();
-
-    if( Level.Game.VotingHandler != None )
-    {
-        if( bRedoVotingTimer )
-            Level.Game.VotingHandler.SetTimer( 1, True );                       // Turn on countdown
-
-        xVotingHandler(Level.Game.VotingHandler).VoteTimeLimit -= 120;
-    }
-
-    //Level.Game.Broadcast( Self, Level.Game.MakeColorCode( Class'HUD'.Default.GoldColor )$"Saving Ghost Completed!, Players can now vote!" );
-    GotoState( '' );
 }
 
 state QuickStart

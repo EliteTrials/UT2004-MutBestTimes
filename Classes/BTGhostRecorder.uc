@@ -4,15 +4,23 @@
 class BTGhostRecorder extends Info
     dependson(BTGhostData);
 
-var PlayerController ImitatedPlayer;
+var string GhostId;
+var private Controller Player;
 var float RelativeStartTime;
-var array<BTGhostData.sMovesDataType> MovementsData;
+var array<BTGhostData.sMovesDataType> Frames;
+var float FramesPerSecond;
 
-final function StartGhostCapturing( float framesPerSecond )
+event PreBeginPlay()
+{
+    Player = Controller(Owner);
+}
+
+final function StartGhostCapturing( float fps )
 {
     // Cleanup any previously captured moves.
-    MovementsData.Length = 0;
-    SetTimer( 1.0f/framesPerSecond, true );
+    Frames.Length = 0;
+    FramesPerSecond = fps;
+    SetTimer( 1.0f/FramesPerSecond, true );
     Timer();
 }
 
@@ -23,34 +31,36 @@ final function StopGhostCapturing()
 
 protected final function CaptureGhostFrame()
 {
-    local int nextMove;
+    local int nextFrame;
+    local Pawn p;
 
-    nextMove = MovementsData.Length;
-    MovementsData.Length = nextMove + 1;
-    if( ImitatedPlayer.Pawn == none )
+    p = Player.Pawn;
+    nextFrame = Frames.Length;
+    Frames.Length = nextFrame + 1;
+    if( p == none )
     {
-        if( nextMove == 0 )
+        if( nextFrame == 0 )
         {
-            MovementsData[nextMove].P = ImitatedPlayer.Pawn.Location;
-            MovementsData[nextMove].R = MiniRot( ImitatedPlayer.Rotation );
+            Frames[nextFrame].P = p.Location;
+            Frames[nextFrame].R = MiniRot( Player.Rotation );
         }
         // No health, invisible ghost!
-        MovementsData[nextMove].H = 0;
+        Frames[nextFrame].H = 0;
         return;
     }
 
-    MovementsData[nextMove].H = ImitatedPlayer.Pawn.Health;
-    MovementsData[nextMove].P = ImitatedPlayer.Pawn.Location;
-    MovementsData[nextMove].V = ImitatedPlayer.Pawn.Velocity;
-    MovementsData[nextMove].A = ImitatedPlayer.Pawn.Acceleration;
-    MovementsData[nextMove].R = MiniRot( ImitatedPlayer.Rotation );
+    Frames[nextFrame].H = p.Health;
+    Frames[nextFrame].P = p.Location;
+    Frames[nextFrame].V = p.Velocity;
+    Frames[nextFrame].A = p.Acceleration;
+    Frames[nextFrame].R = MiniRot( Player.Rotation );
 }
 
 // Save the current movement of ImitatedPlayer every Timer event
 event Timer()
 {
     // Clean ourself if the player is no longer valid
-    if( ImitatedPlayer == none )
+    if( Player == none )
     {
         Destroy();
         return;

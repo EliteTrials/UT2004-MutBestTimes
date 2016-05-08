@@ -49,6 +49,9 @@ final function GetCurrentMove( out Vector p, out Rotator r )
  */
 final function bool PerformNextMove( Pawn p )
 {
+    if( MO.Length == 0 )
+        CurrentMove = 0;
+
     if( CurrentMove >= MO.Length )
         return false;
 
@@ -86,22 +89,9 @@ final function Rotator TinyRotToRot( sTinyRot TR, optional bool bIgnorePitch )
     return Rot;
 }
 
-// Called by BTimes
-final function Presave( MutBestTimes BT, string playerGUID )
+final function Init()
 {
-    PLID = playerGUID;
-
-    UsedGhostFPS = BT.GhostPlaybackFPS;
     DataVersion = Version;
-}
-
-// Called by BTimes
-final function ClearGhostData()
-{
-    MO.Length = 0;
-    PLID = "";
-    UsedGhostFPS = 0;
-    RelativeStartTime = 0f;
 }
 
 final function Free()

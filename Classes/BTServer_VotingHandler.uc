@@ -152,16 +152,10 @@ Function AddMapVoteReplicationInfo( PlayerController Player )
 
 function bool IsValidVote( int mapIndex, int gameIndex )
 {
-    if( BT.bGhostIsSaving )
-    {
-        return false;
-    }
-
     if( BT.bQuickStart )
     {
         return false;
     }
-
     return super.IsValidVote( mapIndex, gameIndex );
 }
 
@@ -371,7 +365,7 @@ function string InjectMapNameData( VotingReplicationInfo VRI, int mapIndex )
     local int recordIndex;
     local string data;
 
-    if( Level.bLevelChange )
+    if( Level.bLevelChange || BT.RDat == none )
         return "";
 
     recordIndex = BT.RDat.FindRecord( MapList[mapIndex].MapName );
