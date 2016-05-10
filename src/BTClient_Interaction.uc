@@ -697,44 +697,53 @@ event Tick( float DeltaTime )
     local xPawn p;
     local LinkedReplicationInfo LRI;
 
-    // See if client is spectating someone!
-    SpectatedClient = none;
-    P = xPawn(ViewportOwner.Actor.ViewTarget);
-    if( p != none && p != ViewportOwner.Actor.Pawn )
+    // Wait for replication
+    if( ViewportOwner.Actor.PlayerReplicationInfo != none )
     {
-        if( p != none && p.PlayerReplicationInfo != none )
+        // See if client is spectating someone!
+        SpectatedClient = none;
+        P = xPawn(ViewportOwner.Actor.ViewTarget);
+        if( p != none && p != ViewportOwner.Actor.Pawn )
         {
-            for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+            if( p != none && p.PlayerReplicationInfo != none )
+            {
+                for( LRI = p.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+                {
+                    if( BTClient_ClientReplication(LRI) != none )
+                    {
+                        SpectatedClient = BTClient_ClientReplication(LRI);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Look for our ClientReplication object
+        if( MRI.CR == none )
+        {
+            for( LRI = ViewportOwner.Actor.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
             {
                 if( BTClient_ClientReplication(LRI) != none )
                 {
-                    SpectatedClient = BTClient_ClientReplication(LRI);
+                    MRI.CR = BTClient_ClientReplication(LRI);
+                    MRI.CR.MRI = MRI;
                     break;
                 }
             }
         }
-    }
 
-    // Look for our ClientReplication object
-    if( MRI.CR == none )
-    {
-        for( LRI = ViewportOwner.Actor.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+        // Not spectating anyone, assign to myself!
+        if( SpectatedClient == none )
         {
-            if( BTClient_ClientReplication(LRI) != none )
-            {
-                MRI.CR = BTClient_ClientReplication(LRI);
-                MRI.CR.MRI = MRI;
-                break;
-            }
+            SpectatedClient = MRI.CR;
+        }
+        ActiveLevel = GetCurrentLevel();
+
+        if( MRI.CR != none && MRI.CR.bAllowDodgePerk )
+        {
+            PerformDodgePerk();
         }
     }
-
-    // Not spectating anyone, assign to myself!
-    if( SpectatedClient == none )
-    {
-        SpectatedClient = MRI.CR;
-    }
-    ActiveLevel = GetCurrentLevel();
 
     if( !bMenuModified )
         ModifyMenu();
@@ -749,11 +758,6 @@ event Tick( float DeltaTime )
             ++ ElapsedTime;
             LastTickTime = MRI.Level.TimeSeconds + 1.0;
         }
-    }
-
-    if( MRI.CR != none && MRI.CR.bAllowDodgePerk )
-    {
-        PerformDodgePerk();
     }
 
     /* Anti-ShowAll */
@@ -2300,10 +2304,10 @@ function RenderHUDElements( Canvas C )
     if( Pawn(ViewportOwner.Actor.ViewTarget) != none )
     {
         drawY = C.ClipY*0.825f;
+        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Beta (Work in Progress)", s, true, 200, 1.0, class'HUD'.default.TurqColor ).Y*1.2;
         v = ViewportOwner.Actor.ViewTarget.Velocity;
         v.Z = 0;
         s = Decimal(VSize(v))@":"@Decimal(VSize(ViewportOwner.Actor.ViewTarget.Velocity*vect(0,0,1)))@"uu/s";
-        C.StrLen( s, xl, yl );
         drawY += DrawElement( C, C.ClipX*0.5, drawY, "Speed", s, true, 200, 1.0, class'HUD'.default.GoldColor ).Y*1.2;
         if( MRI.CR.bAllowDodgePerk && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
         {
