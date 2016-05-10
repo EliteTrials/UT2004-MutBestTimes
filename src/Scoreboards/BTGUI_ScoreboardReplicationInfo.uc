@@ -44,6 +44,5 @@ simulated function RepReady()
 
 defaultproperties
 {
-	bAlwaysRelevant=true
 	bOnlyRelevantToOwner=true
 }
