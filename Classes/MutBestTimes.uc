@@ -5261,7 +5261,6 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
                 BroadcastAnnouncement( AnnouncementRecordSet );
             }
 
-            BroadcastConsoleMessage( finishMsg );
             if( GroupManager != none )
                 RDat.Rec[mapIndex].TMContributors = GroupManager.MaxGroupSize;
             else if( bSoloMap )
@@ -6695,24 +6694,6 @@ final private function ScanSpeedTest()
     StopWatch( false );
     i = FindPlayerSlot( "000000000000000000000000" );
     StopWatch( True );
-}
-
-final function BroadcastConsoleMessage( coerce string Msg )
-{
-    local Controller C;
-    local BTClient_ClientReplication Rep;
-
-    for( C = Level.ControllerList; C != None; C = C.NextController )
-    {
-        if( PlayerController(C) != None && C.PlayerReplicationInfo != None && C.bIsPlayer )
-        {
-            Rep = GetRep( C );
-            if( Rep != none )
-            {
-                Rep.ClientSendConsoleMessage( Msg );
-            }
-        }
-    }
 }
 
 //==============================Data functions==================================
