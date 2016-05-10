@@ -2538,13 +2538,16 @@ final static function DrawBorder( Canvas C, float X1, float Y1, float X2, float 
 
 final function BTClient_LevelReplication GetCurrentLevel()
 {
-    local BTClient_LevelReplication curLevel;
+    if( SpectatedClient == none )
+    {
+        return MRI.MapLevel;
+    }
 
-    curLevel = SpectatedClient.PlayingLevel;
-    if( curLevel == none )
-        curLevel = MRI.MapLevel;
-
-    return curLevel;
+    if( SpectatedClient.PlayingLevel != none )
+    {
+        return SpectatedClient.PlayingLevel;
+    }
+    return MRI.MapLevel;
 }
 
 final function float GetTopTime()
