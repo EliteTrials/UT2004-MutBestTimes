@@ -9,8 +9,8 @@ class BTClient_Interaction extends Interaction;
 
 #exec obj load file="UT2003Fonts.utx"
 #exec obj load file="MenuSounds.uax"
-#exec obj load file="ClientBTimes.utx" package="ClientBTimesV6"
-#exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV6" group="CountryFlags"
+#exec obj load file="ClientBTimes.utx" package="ClientBTimesV7"
+#exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV7" group="CountryFlags"
 
 struct sTableColumn
 {
@@ -2304,7 +2304,7 @@ function RenderHUDElements( Canvas C )
     if( Pawn(ViewportOwner.Actor.ViewTarget) != none )
     {
         drawY = C.ClipY*0.825f;
-        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Beta (Work in Progress)", s, true, 200, 1.0, class'HUD'.default.TurqColor ).Y*1.2;
+        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Test Version", "Hubs!", true, 200, 1.0, class'HUD'.default.PurpleColor ).Y*1.2;
         v = ViewportOwner.Actor.ViewTarget.Velocity;
         v.Z = 0;
         s = Decimal(VSize(v))@":"@Decimal(VSize(ViewportOwner.Actor.ViewTarget.Velocity*vect(0,0,1)))@"uu/s";

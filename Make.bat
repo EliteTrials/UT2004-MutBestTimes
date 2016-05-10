@@ -1,5 +1,5 @@
 @echo off
-set project_version=V6
+set project_version=V7
 for %%* in (.) do set "project_name=%%~n*"
 set "project_build_name=%project_name%%project_version%"
 
@@ -28,6 +28,7 @@ cd..
 cd..
 cd system
 :: Add editpackage
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_build_name%
 ucc.exe MakeCommandlet
 :: Remove editpackage
