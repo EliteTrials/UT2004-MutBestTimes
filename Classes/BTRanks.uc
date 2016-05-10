@@ -251,9 +251,20 @@ final function ResetRecordCache( int mapIndex )
 	}
 }
 
+private function AppendIntArray( out array<int> newArray, out array<int> appendArray )
+{
+    local int i;
+
+    for( i = 0; i < appendArray.Length; ++ i )
+    {
+        newArray[newArray.Length] = appendArray[i];
+    }
+}
+
 final function CalcTopLists()
 {
     local int i, mapIndex;
+    local array<int> subLevels;
 
     if( !PDat.bCachedData )
     {
@@ -267,7 +278,16 @@ final function CalcTopLists()
     			continue;
 
     		BT.RDat.Rec[mapIndex].bMapIsActive = true;
+            if( BT.RDat.Rec[mapIndex].SubLevels.Length > 0 )
+            {
+                AppendIntArray( subLevels, BT.RDat.Rec[mapIndex].SubLevels );
+            }
     	}
+        // Consider all sub levels active; (sublevels are not expected to be listed in the maps list.)
+        for( i = 0; i < SubLevels.Length; ++ i )
+        {
+            BT.RDat.Rec[SubLevels[i]].bMapIsActive = true;
+        }
         if( BT.bDebugMode || RDat.StatsNeedUpdate() )
         {
         	CacheRecordPoints();
