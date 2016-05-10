@@ -5211,7 +5211,7 @@ final private function bool CheckPlayerRecord( PlayerController PC, BTClient_Cli
             }
 
             FullLog( "*** New Best Solo Speed-Record ***" );
-            if( myLevel.TopTime != -1 ) // Faster!
+            if( myLevel.TopTime != 0 ) // Faster!
             {
                 finishDiff = (myLevel.TopTime - playTime);
                 finishMsg @= "with a new record time of" @ #0xFFFF00FF$finishTime$cEnd$", +" $ cGreen$TimeToStr( finishDiff );
