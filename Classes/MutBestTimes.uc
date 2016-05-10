@@ -3497,7 +3497,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
 {
     local int recordIndex;
     local BTClient_LevelReplication recordLevel;
-    local string ghostId;
+    local string ghostId, mapName;
 
     recordIndex = RDat.FindRecordSlot( mapIndex, playerIndex + 1/*playerId*/ );
     if( recordIndex == -1 )
@@ -3516,21 +3516,22 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     if( GhostManager != none )
     {
         ghostId = PDat.Player[playerIndex].PLID;
-        if( GhostManager.GetGhostData( RDat.Rec[mapIndex].TMN, ghostId ) != none )
+        mapName = RDat.Rec[mapIndex].TMN;
+        if( GhostManager.GetGhostData( mapName, ghostId ) != none )
         {
             // If the ghost is currently being played then we should just mark it for deletion instead.
             if( recordLevel != none )
             {
-                if( GhostManager.RemoveGhost( RDat.Rec[mapIndex].TMN, ghostId ) )
+                if( GhostManager.RemoveGhost( mapName, ghostId ) )
                 {
-                    Log( "Removed(and marked for deletion) ghost on" @ RDat.Rec[mapIndex].TMN @ "belonging to" @ ghostId );
+                    Log( "Removed(and marked for deletion) ghost on" @ mapName @ "belonging to" @ ghostId );
                 }
             }
             // Not currently active, delete it immediately!
             else
             {
-                GhostManager.DeleteGhostData( RDat.Rec[mapIndex].TMN, ghostId );
-                GhostManager.SaveGhostsPackage( RDat.Rec[mapIndex].TMN ); // to re-save it without the recently deleted data object.
+                GhostManager.DeleteGhostData( mapName, ghostId );
+                GhostManager.SaveGhostsPackage( mapName ); // to re-save it without the recently deleted data object.
             }
         }
     }

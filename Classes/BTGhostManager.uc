@@ -244,8 +244,10 @@ final function bool RemoveGhost( string mapName, string ghostId )
     ghostPackageName = GhostDataPackagePrefix $ mapName;
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        if( Ghosts[i].GhostPackageName == ghostPackageName )
+        if( Ghosts[i].GhostPackageName == ghostPackageName
+            && (Ghosts[i].GhostData != none Ghosts[i].GhostData.PLID == ghostId) )
         {
+            Ghosts[i].Destroy();
             Ghosts.Remove( i, 1 );
             return true;
         }
