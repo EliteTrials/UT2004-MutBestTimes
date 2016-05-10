@@ -1948,6 +1948,13 @@ function PostRender( Canvas C )
 
     if( myHUD != none )
     {
+        for( i = 0; i < myHUD.Overlays.Length; ++ i )
+        {
+            if( myHUD.Overlays[i] == none )
+            {
+                myHUD.Overlays.Remove( i --, 1 );
+            }
+        }
         if( Options.bShowZoneActors )
             RenderZoneActors( C );
 
