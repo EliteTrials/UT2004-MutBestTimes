@@ -51,7 +51,10 @@ protected function InitializeSoloSupreme()
     local int i, mapIndex;
     local BTClient_LevelReplication myLevel;
     local string levelName;
+    local bool isSupremeMap;
 
+    // Maps with zero(placeholder) objectives or more than one are considered hubs which are maps with multiple levels.
+    isSupremeMap = Objectives.Length != 1;
     for( i = 0; i < Objectives.Length; ++ i )
     {
         myLevel = Spawn( class'BTClient_LevelReplication', Objectives[i] );
@@ -64,7 +67,10 @@ protected function InitializeSoloSupreme()
         {
             mapIndex = RDat.CreateRecord( levelName, RDat.MakeCompactDate( Level ) );
         }
-
+        if( isSupremeMap )
+        {
+            RDat.Rec[mapIndex].SubLevels[RDat.Rec[mapIndex].SubLevels.Length] = mapIndex;
+        }
         myLevel.MapIndex = mapIndex;
         if( RDat.Rec[mapIndex].PSRL.Length > 0 )
         {
@@ -74,7 +80,7 @@ protected function InitializeSoloSupreme()
         }
     }
 
-    if( Objectives.Length == 1 )
+    if( !isSupremeMap )
     {
         MRI.MapLevel = MRI.BaseLevel;
     }

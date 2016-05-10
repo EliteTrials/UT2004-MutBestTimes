@@ -103,6 +103,9 @@ struct long sBTRecordInfo
 
     /** List of players (index) whom rated this map as "dislike". */
     var array<int> Likers;
+
+    /** List of map indexes to levels that belong to this map. Used to track whether if those levels are active.  */
+    var array<int> SubLevels;
 };
 
 /** The list of all records made on this server. FIXME: Should be called Maps, as it currently stands ambiguous with solo records. */
