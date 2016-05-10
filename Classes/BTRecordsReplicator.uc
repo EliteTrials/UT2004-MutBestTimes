@@ -38,6 +38,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
 
     switch( sourceQuery )
     {
+        case "levels":
         case "map":
             myLevel = BT.GetObjectiveLevelByName( query, true );
             if( myLevel != none )
@@ -45,7 +46,14 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
                 query = myLevel.GetFullName( BT.CurrentMapName );
             }
             SourceIndex = BT.QueryMapIndex( query );
-            GotoState( 'SendMapRecords');
+            if( RecordsSource.Rec[SourceIndex].SubLevels.Length == 0 )
+            {
+                GotoState( 'SendMapRecords');
+            }
+            else
+            {
+                GotoState( 'SendMapLevels' );
+            }
             break;
 
         case "player":
@@ -66,6 +74,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
         Warn("Bad query" @ query);
         Done( true );
     }
+    Client.NetUpdateTime = Level.TimeSeconds - 1;
 }
 
 private function Done( bool hasReceivedAll )
@@ -112,6 +121,7 @@ state SendMapRecords extends SendRecords
 
         Client.RecordsQuery = RecordsSource.Rec[SourceIndex].TMN;
         Client.RecordsSourceId = SourceIndex + 1;
+        Client.RecordsSource = "Map";
 
         numItems = RecordsSource.Rec[SourceIndex].PSRL.Length;
         if( numItems == 0 )
@@ -166,6 +176,7 @@ state SendPlayerRecords extends SendRecords
 
         Client.RecordsQuery = PlayersSource.Player[SourceIndex].PLName;
         Client.RecordsSourceId = SourceIndex + 1;
+        Client.RecordsSource = "Player";
 
         numItems = PlayersSource.Player[SourceIndex].RankedRecords.Length;
         if( numItems == 0 )
@@ -206,6 +217,58 @@ state SendPlayerRecords extends SendRecords
         if( recordRank.Time == RecordsSource.Rec[mapIndex].PSRL[0].SRT )
         {
             recordRank.Flags = recordRank.Flags | 0x04/**RFLAG_STAR*/;
+        }
+        Client.ClientAddRecordRank( recordRank );
+    }
+}
+
+state SendMapLevels extends SendRecords
+{
+    protected function bool InitializeSource()
+    {
+        local int numItems;
+
+        if( SourceIndex == -1 )
+        {
+            return false;
+        }
+
+        Client.RecordsQuery = RecordsSource.Rec[SourceIndex].TMN;
+        Client.RecordsSourceId = SourceIndex + 1;
+        Client.RecordsSource = "Levels";
+
+        numItems = RecordsSource.Rec[SourceIndex].SubLevels.Length;
+        if( numItems == 0 )
+        {
+            return false;
+        }
+        NumItemsToReplicate = Min( numItems - NumItemsToSkip, MaxItemsToReplicate );
+        return true;
+    }
+
+    protected function SendRecordRank( int index )
+    {
+        local int mapIndex;
+        local BTGUI_RecordRankingsReplicationInfo.sRecordRank recordRank;
+
+        mapIndex = RecordsSource.Rec[SourceIndex].SubLevels[index];
+
+        // HACK: Use PlayerId as RankId
+        recordRank.PlayerId     = 0;
+        recordRank.RankId       = mapIndex + 1;
+        recordRank.Name         = RecordsSource.Rec[mapIndex].TMN;
+        if( RecordsSource.Rec[mapIndex].PSRL.Length > 0 )
+        {
+            // Points is realized as map difficulty (rating)
+            recordRank.Points   = RecordsSource.Rec[mapIndex].Rating;
+            // Time is realized as the average time it takes for the top players to complete this level.
+            recordRank.Time     = RecordsSource.Rec[mapIndex].AverageRecordTime;
+            // Date is realized as the registration date as oppossed to the last record date.
+            recordRank.Date     = RecordsSource.Rec[mapIndex].RegisterDate;
+        }
+        if( RecordsSource.Rec[mapIndex].bIgnoreStats )
+        {
+            recordRank.Flags = recordRank.Flags | 0x02/**RFLAG_UNRANKED*/;
         }
         Client.ClientAddRecordRank( recordRank );
     }

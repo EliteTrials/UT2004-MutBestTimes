@@ -1035,6 +1035,14 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     {
         CRI.RecordsPRI = Spawn( class'BTGUI_RecordRankingsReplicationInfo', requester );
         CRI.RecordsPRI.RecordsQuery = CurrentMapName;
+        if( RDat.Rec[UsedSlot].SubLevels.Length == 0 )
+        {
+            CRI.RecordsPRI.RecordsSource = "Map";
+        }
+        else
+        {
+            CRI.RecordsPRI.RecordsSource = "Levels";
+        }
     }
 
     if( pageIndex == -1 )

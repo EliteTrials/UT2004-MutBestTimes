@@ -392,12 +392,14 @@ final function CalcRecordPoints( int mapIndex )
 		times[i] = -100.0*((times[i] - timeMean)/timeStd);
 	}
 
-	timeMedian = (Min( times.Length, MAX_MAP_RECORDS ) - 1)/2.0;
-	timeMedian = (times[int(timeMedian)] + times[int(timeMedian + 0.5)])/2.0;
-	for( i = 0; i < times.Length; ++ i )
-	{
-		RDat.Rec[mapIndex].PSRL[i].Points = times[i] + timeMedian;
-	}
+    timeMedian = (Min( times.Length, MAX_MAP_RECORDS ) - 1)/2.0;
+    timeMedian = (times[int(timeMedian)] + times[int(timeMedian + 0.5)])/2.0;
+    for( i = 0; i < times.Length; ++ i )
+    {
+        RDat.Rec[mapIndex].PSRL[i].Points = times[i] + timeMedian;
+    }
+    RDat.Rec[mapIndex].AverageRecordTime = 0;
+    RDat.Rec[mapIndex].Rating = timeMedian;
 }
 
 final function bool IsRankedMap( int mapIndex )
