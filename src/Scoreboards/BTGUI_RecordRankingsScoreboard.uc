@@ -50,6 +50,7 @@ private function RequestReplicationChannels()
 // Wait for the ready event, before we request ranks.
 function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
 {
+    local BTClient_ClientReplication CRI;
 	local BTGUI_RecordRankingsReplicationInfo recordsPRI;
 
     recordsPRI = BTGUI_RecordRankingsReplicationInfo(repSource);
@@ -63,9 +64,10 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
     recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
 	// Note: Will trigger OnChangeRankingsCategory
-    if( Inter.MRI.CR.PlayingLevel != none )
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    if( CRI.PlayingLevel != none )
     {
-	   RankingsCombo.SetText( Inter.MRI.CR.PlayingLevel.GetFullName( string(Inter.MRI.Outer.Name) ) );
+	   RankingsCombo.SetText( "Level-"$CRI.PlayingLevel.GetFullName( string(CRI.Level.Outer.Name) ) );
     }
     else
     {
@@ -79,12 +81,20 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
 
 private function CacheLevels()
 {
+    local BTClient_ClientReplication CRI;
     local BTClient_LevelReplication myLevel;
 
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     RankingsCombo.OnChange = none;
-    for( myLevel = Inter.MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+    for( myLevel = CRI.MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
     {
-        RankingsCombo.AddItem( myLevel.GetFullName( string(Inter.MRI.Outer.Name) ),, "map" );
+        if( myLevel.GetLevelName() == "" )
+        {
+            Warn( "Tried to cache a level with an unitialized LevelName" @ myLevel );
+            return;
+        }
+
+        RankingsCombo.AddItem( myLevel.GetFullName( string(CRI.Level.Outer.Name) ),, "map" );
     }
     RankingsCombo.OnChange = InternalOnChangeQuery;
 }
