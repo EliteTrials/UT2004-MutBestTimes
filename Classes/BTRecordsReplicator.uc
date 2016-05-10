@@ -17,6 +17,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
 	local MutBestTimes BT;
     local string sourceQuery;
     local int colonIndex;
+    local BTClient_LevelReplication myLevel;
 
     BT = MutBestTimes(Owner);
     RecordsSource = BT.RDat;
@@ -38,6 +39,11 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
     switch( sourceQuery )
     {
         case "map":
+            myLevel = BT.GetObjectiveLevelByName( query, true );
+            if( myLevel != none )
+            {
+                query = myLevel.GetFullName( BT.CurrentMapName );
+            }
             SourceIndex = BT.QueryMapIndex( query );
             GotoState( 'SendMapRecords');
             break;

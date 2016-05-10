@@ -4701,7 +4701,7 @@ final function BTClient_LevelReplication GetObjectiveLevelByIndex( int mapIndex 
     return none;
 }
 
-final function BTClient_LevelReplication GetObjectiveLevelByName( string levelName )
+final function BTClient_LevelReplication GetObjectiveLevelByName( string levelName, optional bool bTryMatching )
 {
     local BTClient_LevelReplication levelRep;
 
@@ -4713,6 +4713,18 @@ final function BTClient_LevelReplication GetObjectiveLevelByName( string levelNa
         if( levelRep.GetLevelName() ~= levelName )
         {
             return levelRep;
+        }
+    }
+
+    if( bTryMatching )
+    {
+        levelName = Locs(levelName);
+        for( levelRep = MRI.BaseLevel; levelRep != none; levelRep = levelRep.NextLevel )
+        {
+            if( InStr( Locs(levelRep.GetLevelName()), levelName ) != -1 )
+            {
+                return levelRep;
+            }
         }
     }
     return none;
