@@ -40,6 +40,8 @@ final function RecordPlayer( PlayerController other )
     	if( Recorders[i] == none )
     	{
     		Recorders.Remove( i --, 1 );
+    		-- j;
+    		continue;
     	}
         if( Recorders[i].Owner == other )
         {
