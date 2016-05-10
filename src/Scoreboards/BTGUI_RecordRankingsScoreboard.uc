@@ -1,14 +1,22 @@
 class BTGUI_RecordRankingsScoreboard extends BTGUI_RankingsBase;
 
 // Player's records or records from a map.
-var automated BTGUI_ComboBox SourceCombo;
-var automated BTGUI_ComboBox RankingsCombo;
-var automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
+var private automated BTGUI_ComboBox SourceCombo;
+
+var private BTGUI_ComboBox RankingsCombo;
+var private automated BTGUI_ComboBox MapsQueryCombo;
+var private automated BTGUI_ComboBox PlayersQueryCombo;
+
+var private automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private bool bWaitingForReplication;
-var private string _LastMapQuery;
-var private string _LastPlayerQuery;
 
 delegate OnQueryPlayerRecord( coerce string mapId, coerce string playerId );
+
+event Free()
+{
+    super.Free();
+    RankingsCombo = none;
+}
 
 event InitComponent( GUIController myController, GUIComponent myOwner )
 {
@@ -16,10 +24,11 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 	RankingsListBox.MyScrollBar.PositionChanged = InternalOnScroll;
     RankingsListBox.ContextMenu.OnSelect = InternalOnContext;
     RankingsListBox.List.OnDblClick = InternalOnSelected;
-    RankingsCombo.DisableMe();
-    SourceCombo.DisableMe();
+
+    SourceCombo.OnChange = none;
     SourceCombo.AddItem( "Map" );
     SourceCombo.AddItem( "Player" );
+    SourceCombo.OnChange = InternalOnChangeSource;
 }
 
 event Opened( GUIComponent sender )
@@ -38,9 +47,23 @@ event Opened( GUIComponent sender )
     }
 }
 
+function ShowPanel(bool bShow)
+{
+    super.ShowPanel(bShow);
+
+    PlayersQueryCombo.SetVisibility( false );
+    MapsQueryCombo.SetVisibility( false );
+    if( RankingsCombo != none )
+    {
+        RankingsCombo.SetVisibility( true );
+    }
+}
+
 private function RequestReplicationChannels()
 {
     local BTClient_ClientReplication CRI;
+
+    SourceCombo.DisableMe();
 
     // bWaitingForReplication = true;
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
@@ -50,7 +73,6 @@ private function RequestReplicationChannels()
 // Wait for the ready event, before we request ranks.
 function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
 {
-    local BTClient_ClientReplication CRI;
 	local BTGUI_RecordRankingsReplicationInfo recordsPRI;
 
     recordsPRI = BTGUI_RecordRankingsReplicationInfo(repSource);
@@ -63,19 +85,11 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
 	recordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
     recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
-	// Note: Will trigger OnChangeRankingsCategory
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    if( CRI.PlayingLevel != none )
-    {
-	   RankingsCombo.SetText( "Level-"$CRI.PlayingLevel.GetFullName( string(CRI.Level.Outer.Name) ) );
-    }
-    else
-    {
-        RankingsCombo.SetText( recordsPRI.RecordsQuery );
-    }
-    RankingsCombo.OnChange( self ); // ??? wtf stopped working by itself!
+    Log( recordsPRI.RecordsQuery @ recordsPRI.RecordsSource );
+    SourceCombo.EnableMe();
+    SourceCombo.SetText( recordsPRI.RecordsSource ); // not triggering OnChange???
+    SourceCombo.OnChange( none );
     bWaitingForReplication = false;
-
     CacheLevels();
 }
 
@@ -85,18 +99,18 @@ private function CacheLevels()
     local BTClient_LevelReplication myLevel;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    RankingsCombo.OnChange = none;
+    MapsQueryCombo.OnChange = none;
     for( myLevel = CRI.MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
     {
         if( myLevel.GetLevelName() == "" )
         {
-            Warn( "Tried to cache a level with an unitialized LevelName" @ myLevel );
-            return;
+            Warn( "Tried to cache a level with an unitialized LevelName" @ myLevel.GetFullName( string(CRI.Outer.Name) ) );
+            continue;
         }
 
-        RankingsCombo.AddItem( myLevel.GetFullName( string(CRI.Level.Outer.Name) ),, "map" );
+        MapsQueryCombo.AddItem( myLevel.GetFullName( string(CRI.Level.Outer.Name) ),, "map" );
     }
-    RankingsCombo.OnChange = InternalOnChangeQuery;
+    MapsQueryCombo.OnChange = InternalOnChangeQuery;
 }
 
 private function QueryNextRecordRanks( optional bool bReset )
@@ -110,56 +124,78 @@ private function QueryNextRecordRanks( optional bool bReset )
     RankingsCombo.DisableMe();
     SourceCombo.DisableMe();
 
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     if( bReset )
     {
         RankingsListBox.List.SetIndex( 0 );
     }
 
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     CRI.RecordsPRI.RecordsQuery = RankingsCombo.GetText();
     CRI.RecordsPRI.QueryNextRecordRanks( bReset );
-	// Log("Querying next ranks" @ bIsQuerying @ bReset @ CRI.RecordsPRI.RecordsQuery );
+	Log("Querying next ranks" @ bIsQuerying @ bReset @ CRI.RecordsPRI.RecordsQuery );
 }
 
 protected function InternalOnChangeSource( GUIComponent sender )
 {
     local BTClient_ClientReplication CRI;
-    local string source, query;
+    local string source;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    if( CRI.RecordsPRI == none ) // We haven't received ReplicationReady yet!
-        return;
-
-    // Map/Player
+    if( RankingsCombo != none )
+    {
+        RankingsCombo.SetVisibility( false );
+    }
     source = SourceCombo.GetText();
-    if( source == CRI.RecordsPRI.RecordsSource )
-        return;
-
-    query = RankingsCombo.GetText();
+    // Net hack
+    if( CRI.RecordsPRI.RecordsSource == "Levels" && source == "Map" )
+    {
+        source = "Levels";
+    }
+    SwitchSourceType( source );
     CRI.RecordsPRI.RecordsSource = source;
-    switch( source )
+    RankingsCombo.SetVisibility( true );
+    if( RankingsCombo.GetText() == "" )
+    {
+        if( RankingsCombo == MapsQueryCombo )
+        {
+            RankingsCombo.SetText( CRI.RecordsPRI.RecordsQuery );
+        }
+        else if( RankingsCombo == PlayersQueryCombo )
+        {
+            RankingsCombo.SetText( string(CRI.PlayerId) );
+        }
+    }
+    RankingsCombo.OnChange( sender );
+}
+
+private function SwitchSourceType( string source )
+{
+    RankingsListBox.List.ColumnHeadings = class'BTGUI_RecordRankingsMultiColumnListBox'.default.ColumnHeadings;
+    switch( Locs(source) )
     {
         case "map":
-            _LastPlayerQuery = query;
-            RankingsCombo.SetText( Eval( _LastMapQuery == "", string(CRI.RecordsPRI.RecordsSourceId), _LastMapQuery ) );
+            RankingsCombo = MapsQueryCombo;
             RankingsListBox.List.SortColumn = 3; // Time
+            RankingsListBox.List.SortDescending = false;
             RankingsListBox.List.ColumnHeadings[2] = "Player";
             break;
 
         case "player":
-            _LastMapQuery = query;
-            RankingsCombo.SetText( Eval( _LastPlayerQuery == "", CRI.PlayerId, _LastPlayerQuery ) );
+            RankingsCombo = PlayersQueryCombo;
             RankingsListBox.List.SortColumn = 1; // Rating
+            RankingsListBox.List.SortDescending = false;
             RankingsListBox.List.ColumnHeadings[2] = "Map";
             break;
 
-        default:
-            Warn(source @ "is not a queryable source!");
+        case "levels":
+            RankingsCombo = MapsQueryCombo;
+            RankingsListBox.List.SortColumn = 0; // #MapId
+            RankingsListBox.List.SortDescending = false;
+            RankingsListBox.List.ColumnHeadings[1] = "Skill";
+            RankingsListBox.List.ColumnHeadings[2] = "Map";
+            RankingsListBox.List.ColumnHeadings[3] = "Average Time";
             break;
     }
-
-    // Can be PlayerId or PlayerName
-    RankingsCombo.OnChange( self ); // ??? wtf stopped working by itself!
 }
 
 protected function InternalOnChangeQuery( GUIComponent sender )
@@ -168,13 +204,7 @@ protected function InternalOnChangeQuery( GUIComponent sender )
 	local BTGUI_RecordRankingsMultiColumnList list;
 
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    // Log("InternalOnChangeQuery" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
-    if( RankingsCombo.GetExtra() != "" && RankingsCombo.GetExtra() != CRI.RecordsPRI.RecordsSource )
-    {
-        SourceCombo.SetText( RankingsCombo.GetExtra() );
-        return;
-    }
-
+    Log("InternalOnChangeQuery" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
     bIsQuerying = false; // renable querying
 
     // TODO:
@@ -209,25 +239,21 @@ protected function InternalOnRecordRankUpdated( int index, BTGUI_RecordRankingsR
 
 protected function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInfo source, bool bAll )
 {
-	local BTClient_ClientReplication CRI;
-
     bIsQuerying = bAll; // Don't ever query again if we have received all there is to be received!
     SourceCombo.EnableMe();
     RankingsCombo.EnableMe();
 
-    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-	// Log("Query completed!" @ CRI.RecordsPRI.RecordsQuery @ CRI.RecordsPRI.RecordsSourceId @ CRI.RecordsPRI.RecordsSource);
-    if( RankingsCombo.GetText() != CRI.RecordsPRI.RecordsQuery )
+	Log("Query completed!" @ source.RecordsQuery @ source.RecordsSourceId @ source.RecordsSource);
+    SwitchSourceType( source.RecordsSource );
+    // Cache this resolved name
+    RankingsCombo.OnChange = none;
+    // Prevent infinite recursion.
+    if( RankingsCombo.FindIndex( source.RecordsQuery ) == -1 )
     {
-        // Prevent infinite recursion.
-        RankingsCombo.OnChange = none;
-        if( RankingsCombo.FindIndex( CRI.RecordsPRI.RecordsQuery, true ) == -1 )
-        {
-            RankingsCombo.AddItem( CRI.RecordsPRI.RecordsQuery,, CRI.RecordsPRI.RecordsSource );
-        }
-		RankingsCombo.SetText( CRI.RecordsPRI.RecordsQuery );
-		RankingsCombo.OnChange = InternalOnChangeQuery;
+        RankingsCombo.AddItem( source.RecordsQuery );
     }
+    RankingsCombo.SetText( source.RecordsQuery );
+    RankingsCombo.OnChange = InternalOnChangeQuery;
 
 	if( !bIsQuerying && !RankingsListBox.MyScrollBar.bVisible )
 	{
@@ -280,9 +306,18 @@ protected function InternalOnContext( GUIContextMenu sender, int clickIndex )
 
 protected function bool InternalOnSelected( GUIComponent sender )
 {
+    local BTClient_ClientReplication CRI;
     local int itemIndex;
 
+    CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     itemIndex = RankingsListBox.List.CurrentListId();
+    // Hacky... switch query to level instead of viewing the record owners data.
+    if( CRI.RecordsPRI.RecordsSource == "Levels" )
+    {
+        RankingsCombo.SetText( string(CRI.RecordsPRI.RecordRanks[itemIndex].RankId) );
+        RankingsCombo.OnChange( sender ); // this is strange!
+        return false;
+    }
     ViewPlayerRecord( itemIndex );
     return false;
 }
@@ -350,18 +385,33 @@ defaultproperties
     End Object
     SourceCombo=oSourceCombo
 
-    Begin Object class=BTGUI_ComboBox Name=RanksComboBox
+    Begin Object class=BTGUI_ComboBox Name=oMapsComboBox
         WinWidth=0.84
         WinHeight=0.05
         WinLeft=0.16
         WinTop=0.01
         bScaleToParent=true
         bBoundToParent=true
+        bVisible=false
         FontScale=FNS_Small
         bIgnoreChangeWhenTyping=true
         OnChange=InternalOnChangeQuery
     End Object
-    RankingsCombo=RanksComboBox
+    MapsQueryCombo=oMapsComboBox
+
+    Begin Object class=BTGUI_ComboBox Name=oPlayersComboBox
+        WinWidth=0.84
+        WinHeight=0.05
+        WinLeft=0.16
+        WinTop=0.01
+        bScaleToParent=true
+        bBoundToParent=true
+        bVisible=false
+        FontScale=FNS_Small
+        bIgnoreChangeWhenTyping=true
+        OnChange=InternalOnChangeQuery
+    End Object
+    PlayersQueryCombo=oPlayersComboBox
 
     Begin Object Class=BTGUI_RecordRankingsMultiColumnListBox Name=ItemsListBox
         WinWidth=1.0

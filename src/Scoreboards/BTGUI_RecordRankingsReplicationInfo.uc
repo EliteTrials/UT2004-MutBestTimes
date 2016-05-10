@@ -31,7 +31,7 @@ var editconst string RecordsQuery;
 replication
 {
 	reliable if( Role == ROLE_Authority )
-		RecordsQuery, RecordsSourceId,
+		RecordsSource, RecordsQuery, RecordsSourceId,
 		ClientClearRecordRanks, ClientRemoveRecordRank,
 		ClientDoneRecordRanks,
 		ClientAddRecordRank,
@@ -53,8 +53,11 @@ delegate OnRecordRankUpdated( int index, BTGUI_RecordRankingsReplicationInfo sou
 delegate OnRecordRanksDone( BTGUI_RecordRankingsReplicationInfo source, bool bAll );
 delegate OnRecordRanksCleared( BTGUI_RecordRankingsReplicationInfo source );
 
-simulated function QueryRecordRanks( int pageIndex )
+simulated function QueryRecordRanks( int pageIndex, optional string querySource )
 {
+	if( querySource != "" )
+		RecordsSource = querySource;
+
 	CRI.ServerRequestRecordRanks( pageIndex, RecordsSource$":"$RecordsQuery );
 }
 
@@ -110,6 +113,6 @@ simulated function ClientClearRecordRanks()
 
 defaultproperties
 {
-	RecordsSource="map"
+	RecordsSource="Map"
 	CurrentPageIndex=-1
 }
