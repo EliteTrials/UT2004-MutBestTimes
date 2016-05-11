@@ -962,10 +962,6 @@ event Initialized()
 {
     local DefaultPhysicsVolume DPV;
 
-    // Hide the existing assault "Objective completed" message, as we have replaced this with our own record message.
-    class'Message_Awards'.default.bComplexString = false;
-    class'Message_Awards'.default.PosY = -1.0;
-
     Options = Class'BTClient_Config'.Static.FindSavedData();
     ForEach ViewportOwner.Actor.DynamicActors( Class'DefaultPhysicsVolume', DPV )
     {
@@ -1022,9 +1018,13 @@ function UpdateToggleKey()
     OldKey = Key;
 }
 
-final function ObjectsInitialized()
+final function ObjectsInitialized( BTClient_MutatorReplicationInfo mutRep )
 {
     local Pickup Key;
+
+    MRI = mutRep;
+    myHUD = ViewportOwner.Actor.myHUD;
+    HU = HUD_Assault(myHUD);
 
     if( ViewportOwner.Actor.myHUD != none && BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard) != none )
         BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard).myInter = self;
@@ -1038,6 +1038,13 @@ final function ObjectsInitialized()
                 if( Key.IsA('LCAKeyPickup') )
                     KeyPickupsList[KeyPickupsList.Length] = Key;
             }
+        }
+
+        if( MRI.bSoloMap )
+        {
+            // Hide the existing assault "Objective completed" message, as we have replaced this with our own record message.
+            class'Message_Awards'.default.bComplexString = false;
+            class'Message_Awards'.default.PosY = -1.0;
         }
     }
 }

@@ -44,7 +44,6 @@ var BTClient_ClientReplication CR;                                              
 var int RecordsCount;
 var int MaxRecords;
 var int PlayersCount, RankedPlayersCount;
-var int SoloRecords;
 var int MaxRankedPlayersCount;
 
 var float TeamTime[2];
@@ -63,7 +62,7 @@ replication
     reliable if( Role == ROLE_Authority )
         PlayersBestTimes, MapBestTime, MatchStartTime,
         RecordState, EndMsg, PointsReward, ObjectiveTotalTime,
-        SoloRecords, bCompetitiveMode, Teams;
+        bCompetitiveMode, Teams;
 
     // Only replicated once
     reliable if( bNetInitial )
@@ -97,19 +96,14 @@ final function AddLevelReplication( BTClient_LevelReplication levelRep )
     levelRep.NextLevel = other;
 }
 
-simulated event PostBeginPlay()
-{
-    super.PostBeginPlay();
-
-    // Because PostNetBeginPlay is never called on standalone games!
-    if( Level.NetMode == NM_StandAlone )
-        PostNetBeginPlay();
-}
-
 simulated event PostNetBeginPlay()
 {
     super.PostNetBeginPlay();
-    SetTimer( 1.0, true );
+    if( Level.NetMode == NM_DedicatedServer )
+    {
+        return;
+    }
+    SetTimer( 0.5, true );
 }
 
 simulated event Timer()
@@ -117,7 +111,6 @@ simulated event Timer()
     if( !bHasInitialized && Level.GetLocalPlayerController() != none )
     {
         InitializeClient();
-        SetTimer( 0, false );
     }
 }
 
@@ -131,33 +124,23 @@ simulated function InitializeClient()
     if( PC != none && PC.Player != none && PC.PlayerReplicationInfo != none )
     {
         Inter = BTClient_Interaction(PC.Player.InteractionMaster.AddInteraction( string(Class'BTClient_Interaction'), PC.Player ));
-        if( Inter != none )
-        {
-            Inter.MRI = self;
-            Inter.HU = HUD_Assault(PC.myHud);
-            Inter.myHUD = PC.myHud;
-            Inter.ObjectsInitialized();
+        Inter.ObjectsInitialized( self );
 
-            if( CR == none )
+        if( CR == none )
+        {
+            for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
             {
-                for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+                if( BTClient_ClientReplication(LRI) != none )
                 {
-                    if( BTClient_ClientReplication(LRI) != none )
-                    {
-                        CR = BTClient_ClientReplication(LRI);
-                        CR.MRI = self;
-                        break;
-                    }
+                    CR = BTClient_ClientReplication(LRI);
+                    CR.MRI = self;
+                    break;
                 }
             }
-            bHasInitialized = true;
         }
+        bHasInitialized = true;
+        SetTimer( 0, false );
     }
-}
-
-function SetBestTime( float NewTime )
-{
-    MapBestTime = NewTime;
 }
 
 function Reset()
