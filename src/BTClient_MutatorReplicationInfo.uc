@@ -97,9 +97,9 @@ final function AddLevelReplication( BTClient_LevelReplication levelRep )
     levelRep.NextLevel = other;
 }
 
-simulated Event PostBeginPlay()
+simulated event PostBeginPlay()
 {
-    Super.PostBeginPlay();
+    super.PostBeginPlay();
 
     // Because PostNetBeginPlay is never called on standalone games!
     if( Level.NetMode == NM_StandAlone )
@@ -108,13 +108,13 @@ simulated Event PostBeginPlay()
 
 simulated event PostNetBeginPlay()
 {
-    Super.PostNetBeginPlay();
-    SetTimer( 1.0, True );
+    super.PostNetBeginPlay();
+    SetTimer( 1.0, true );
 }
 
 simulated event Timer()
 {
-    if( !bHasInitialized && Level.GetLocalPlayerController() != None )
+    if( !bHasInitialized && Level.GetLocalPlayerController() != none )
     {
         InitializeClient();
         SetTimer( 0, false );
@@ -128,29 +128,29 @@ simulated function InitializeClient()
     local LinkedReplicationInfo LRI;
 
     PC = Level.GetLocalPlayerController();
-    if( PC != None && PC.Player != None )
+    if( PC != none && PC.Player != none && PC.PlayerReplicationInfo != none )
     {
         Inter = BTClient_Interaction(PC.Player.InteractionMaster.AddInteraction( string(Class'BTClient_Interaction'), PC.Player ));
-        if( Inter != None )
+        if( Inter != none )
         {
-            Inter.MRI = Self;
+            Inter.MRI = self;
             Inter.HU = HUD_Assault(PC.myHud);
             Inter.myHUD = PC.myHud;
             Inter.ObjectsInitialized();
 
             if( CR == none )
             {
-                for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
+                for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
                 {
-                    if( BTClient_ClientReplication(LRI) != None )
+                    if( BTClient_ClientReplication(LRI) != none )
                     {
                         CR = BTClient_ClientReplication(LRI);
-                        CR.MRI = Self;
+                        CR.MRI = self;
                         break;
                     }
                 }
             }
-            bHasInitialized = True;
+            bHasInitialized = true;
         }
     }
 }
