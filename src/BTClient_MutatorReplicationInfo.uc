@@ -60,15 +60,20 @@ var BTClient_LevelReplication BaseLevel, MapLevel;
 replication
 {
     reliable if( Role == ROLE_Authority )
-        PlayersBestTimes, MapBestTime, MatchStartTime,
-        RecordState, EndMsg, PointsReward, ObjectiveTotalTime,
+        MatchStartTime, ObjectiveTotalTime,
+        RecordState, EndMsg,
         bCompetitiveMode, Teams;
+
+    reliable if bNetDirty && EndMsg != "" )
+        PlayersBestTimes, MapBestTime,
+        PointsReward;
 
     // Only replicated once
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
-        RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount, RankedPlayersCount,
+        RecordsCount, MaxRecords, MaxRankedPlayersCount,
+        PlayersCount, RankedPlayersCount,
         BaseLevel, MapLevel;
 
     reliable if( bNetDirty && bCompetitiveMode )
