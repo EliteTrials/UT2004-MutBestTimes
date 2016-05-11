@@ -2234,11 +2234,16 @@ function RenderHUDElements( Canvas C )
         Options.CTable = backupColor;
     }
 
-    if( MRI.SoloRecords > 0 )
+    if( ActiveLevel != none && ActiveLevel.NumRecords > 0 )
     {
         // Draw Level and percent
         S = "Rank";
-        drawY += DrawElement( C, drawX, drawY, s, Eval( SpectatedClient.SoloRank == 0, "?", SpectatedClient.SoloRank )  $ "/" $ MRI.SoloRecords ).y*1.2;
+        drawY += DrawElement( C, drawX, drawY, s, Eval(
+                SpectatedClient.SoloRank == 0,
+                "?",
+                SpectatedClient.SoloRank
+            ) $ "/" $ ActiveLevel.NumRecords
+        ).y*1.2;
     }
 
     // Draw Level and percent
