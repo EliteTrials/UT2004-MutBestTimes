@@ -104,6 +104,18 @@ function ModePostBeginPlay()
     }
 }
 
+function ModeMatchStarting()
+{
+    super.ModeMatchStarting();
+    if( MRI.MapLevel == none )
+    {
+        DisableTeamForcing();
+        Level.Game.GameReplicationInfo.bNoTeamSkins = true;
+        Level.Game.GameReplicationInfo.bForceNoPlayerLights = true;
+        Level.Game.GameReplicationInfo.bNoTeamChanges = true;
+    }
+}
+
 function bool ClientExecuted( PlayerController sender, string command, array<string> params )
 {
     local bool bmissed;
@@ -133,6 +145,7 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
     local BTClient_ClientReplication CRI;
+    local BTClient_LevelReplication myLevel;
 
     switch( command )
     {
@@ -145,11 +158,18 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
                 return false;
 
             CRI = GetRep( sender );
-            CRI.PlayingLevel = GetObjectiveLevelByName( value );
-            CRI.NetUpdateTime = Level.TimeSeconds - 1;
-            if( sender.Pawn != none )
+            if( value == "" )
             {
-                sender.Pawn.Suicide();
+                CRI.SetActiveLevel( none );
+            }
+            else
+            {
+                myLevel = GetObjectiveLevelByName( value, true );
+                if( myLevel == none )
+                {
+                    return false;
+                }
+                CRI.SetActiveLevel( myLevel );
             }
             return true;
     }
@@ -171,8 +191,24 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
     local int i, checkPointIndex;
+    local TeamInfo attackingTeam;
 
     super.ModeModifyPlayer( other, c, CRI );
+    // Disable all collision for players that have yet to choose a level.
+    // Todo: (optimize)Apply when player changes level.
+    if( MRI.MapLevel == none && ASGameInfo(Level.Game) != none )
+    {
+        if( CRI.PlayingLevel == none )
+        {
+            other.PlayerReplicationInfo.Team = TeamGame(Level.Game).Teams[1 - ASGameInfo(Level.Game).CurrentAttackingTeam];
+        }
+        else
+        {
+            attackingTeam = TeamGame(Level.Game).Teams[ASGameInfo(Level.Game).CurrentAttackingTeam];
+            other.PlayerReplicationInfo.Team = attackingTeam;
+        }
+    }
+
     /**
      * @Todo    Instead of restart recording, delete the few last saved moves
      * @Todo    Don't let the timer keep counting, instead remove what has counted since the last dead

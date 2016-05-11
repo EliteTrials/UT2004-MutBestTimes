@@ -1052,6 +1052,15 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     replicator.Initialize( CRI.RecordsPRI, pageIndex, query );
 }
 
+final function InternalOnPlayerChangeLevel( Controller other, BTClient_LevelReplication myLevel )
+{
+    DeleteClientSpawn( other, true );
+    if( CheckPointHandler != none )
+    {
+        CheckPointHandler.RemoveSavedCheckPoint( other );
+    }
+}
+
 final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
 {
     local BTQueryDataReplicationInfo queryRI;
@@ -1363,6 +1372,7 @@ event PreBeginPlay()
     MRI.OnRequestPlayerRanks = InternalOnRequestPlayerRanks;
     MRI.OnRequestRecordRanks = InternalOnRequestRecordRanks;
     MRI.OnServerQuery = InternalOnServerQuery;
+    MRI.OnPlayerChangeLevel = InternalOnPlayerChangeLevel;
 
     // Dangerous code
     /*for( i = 0; i < Store.Items.Length; ++ i )
@@ -4033,16 +4043,16 @@ final function CreateClientSpawn( PlayerController Sender )                     
 
 //==============================================================================
 // Deletes clientspawn of PlayerController
-final function DeleteClientSpawn( PlayerController Sender, optional bool bSilent )                         // Eliot
+final function DeleteClientSpawn( Controller sender, optional bool noMessage )                         // Eliot
 {
     local int i;
 
-    i = GetClientSpawnIndex( Sender );
+    i = GetClientSpawnIndex( sender );
     if( i != -1 )
     {
-        if( !bSilent )
+        if( !noMessage && PlayerController(sender) != none )
         {
-            SendSucceedMessage( Sender, lzCS_Deleted );
+            SendSucceedMessage( PlayerController(sender), lzCS_Deleted );
         }
         if( ClientPlayerStarts[i].PStart != none )
         {
@@ -4136,8 +4146,6 @@ final function bool EnableCompetitiveMode()
 
 private function ActivateCompetitiveMode()
 {
-    local Mutator m;
-
     MRI.bCompetitiveMode = true;
     FullLog( "CompetitiveMode has started!" );
 
@@ -4152,6 +4160,14 @@ private function ActivateCompetitiveMode()
     Spawn( class'BTObjectiveHandler', self,, Objectives[0].Location, Objectives[0].Rotation ).Initialize( Objectives[0] );
     Spawn( class'BTEndRoundHandler', self );
 
+    DisableTeamForcing();
+    Revoted();
+}
+
+final function DisableTeamForcing()
+{
+    local Mutator m;
+
     foreach AllActors( class'Mutator', m )
     {
         if( m.IsA('LevelConfigActor') )
@@ -4160,8 +4176,6 @@ private function ActivateCompetitiveMode()
             break;
         }
     }
-
-    Revoted();
 }
 
 final function bool AllowCompetitiveMode()
