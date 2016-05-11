@@ -19,7 +19,6 @@ var string
 
 var float
     MapBestTime,
-    GhostPercent,
     ObjectiveTotalTime,
     MatchStartTime;
 
@@ -27,7 +26,6 @@ var bool
     bSoloMap,
     bKeyMap,
     bHasInitialized,                                                            // Client Only
-    bUpdatingGhost,                                                             // Server Only
     bCompetitiveMode;
 
 /* Server and Client */
@@ -73,10 +71,6 @@ replication
         bSoloMap, bKeyMap,
         RecordsCount, MaxRecords, MaxRankedPlayersCount, PlayersCount, RankedPlayersCount,
         BaseLevel, MapLevel;
-
-    // Only replicated when saving
-    reliable if( bNetDirty && bUpdatingGhost )
-        GhostPercent;
 
     reliable if( bNetDirty && bCompetitiveMode )
         TeamTime;

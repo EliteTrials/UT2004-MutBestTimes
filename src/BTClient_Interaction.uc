@@ -1978,9 +1978,11 @@ function PostRender( Canvas C )
     local int i, j, YLength, FLength;
     local float YP, XP;
     local float XP1;
-    local xPawn p;
 
-    if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
+    if( ViewportOwner.Actor.myHUD.bShowScoreBoard
+        || ViewportOwner.Actor.myHUD.bHideHUD
+        || MRI == None
+        || ViewportOwner.Actor.PlayerReplicationInfo == None )
         return;
 
     // C.Font = Font'UT2003Fonts.jFontSmallText800x600';
@@ -2117,12 +2119,6 @@ function PostRender( Canvas C )
         switch( MRI.RecordState )
         {
             case RS_Succeed:
-                if( MRI.GhostPercent < 100 )
-                {
-                    S = "Saving ghost " $ MRI.GhostPercent $ "%";
-                    DrawElement( C, C.ClipX*0.5, C.ClipY*0.2, S,, true,, 4.5 );
-                }
-
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.05), S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.GoldColor );
 
