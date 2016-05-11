@@ -5919,7 +5919,7 @@ final function int CreatePlayerSlot( PlayerController PC, string ClientID )
 final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional bool bUpdateScoreboard )
 {
     local LinkedReplicationInfo LRI;
-    local string S, curIp;
+    local string s;
 
     if( PC == None || PC.PlayerReplicationInfo == None || MessagingSpectator(PC) != None )
         return;
@@ -5931,26 +5931,15 @@ final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional 
     }
 
     PDat.Player[playerIndex].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
-    if( Level.NetMode != NM_Standalone )
-    {
-        s = PC.GetPlayerNetworkAddress();
-        curIp = Left( s, InStr( s, ":" ) );
-        s = "";
-        if( PDat.Player[playerIndex].LastIpAddress != curIp )
-        {
-            QueryPlayerCountry( playerIndex, curIp );
-        }
-    }
-
     // Try find the colored name
     for( LRI = PC.PlayerReplicationInfo.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
     {
         if( LRI.IsA('UTComp_PRI') )
         {
-            S = LRI.GetPropertyText( "ColoredName" );
-            if( S != "" && InStr( S, Chr( 0x1B ) ) != -1 )
+            s = LRI.GetPropertyText( "ColoredName" );
+            if( s != "" && InStr( s, Chr( 0x1B ) ) != -1 )
             {
-                PDat.Player[playerIndex].PLNAME = /*Class'HUD'.Default.GoldColor$*/S$Class'HUD'.Default.WhiteColor;
+                PDat.Player[playerIndex].PLNAME = /*Class'HUD'.Default.GoldColor$*/s$Class'HUD'.Default.WhiteColor;
                 if( bUpdateScoreboard )
                     UpdateScoreboard( PC );
 
@@ -6445,6 +6434,24 @@ final function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
             PlayerController(C).ClientPlaySound( Snd, true, 1.0, soundSlot );
 }
 
+private function UpdatePlayerCountry( PlayerController client, int playerIndex )
+{
+    local string s, curIp;
+
+    if( Level.NetMode == NM_Standalone )
+    {
+        return;
+    }
+
+    s = client.GetPlayerNetworkAddress();
+    curIp = Left( s, InStr( s, ":" ) );
+    s = "";
+    if( PDat.Player[playerIndex].LastIpAddress != curIp )
+    {
+        QueryPlayerCountry( playerIndex, curIp );
+    }
+}
+
 final function NotifyPostLogin( PlayerController client, string guid )
 {
     local int playerSlot;
@@ -6465,6 +6472,7 @@ final function NotifyPostLogin( PlayerController client, string guid )
 
     // Update names, character etc
     UpdatePlayerSlot( client, playerSlot, false );
+    UpdatePlayerCountry( client, playerSlot );
 
     PDat.Player[playerSlot]._LastLoginTime = Level.TimeSeconds;
     PDat.Player[playerSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
