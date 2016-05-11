@@ -98,19 +98,31 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
     local Controller C;
 
     // FIXME: if bDisableForceSpawn is true then features like !Wager will break.
-    if( !BT.ModeIsTrials() || BT.bDisableForceRespawn || Level.Game.bGameEnded || Killed.IsA('BTClient_Ghost') )
+    if( !BT.ModeIsTrials()
+        || BT.bDisableForceRespawn
+        || Level.Game.bGameEnded
+        || Killed.IsA('BTClient_Ghost') )
         return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
-    if( !Killed.IsA('Monster') && ((Killed != none && Killed.Controller == Killer) || (Killer == none && (Killed != none && Killed.Controller != none))) )
+    if( !Killed.IsA('Monster')
+        && (
+            (Killed != none && Killed.Controller == Killer)
+            ||
+            (Killer == none && (Killed != none && Killed.Controller != none))
+           )
+        )
     {
-        if( PlayerController(Killed.Controller) != none && Killed.PlayerReplicationInfo != none && PlayerController(Killed.Controller).CanRestartPlayer() )
+        if( PlayerController(Killed.Controller) != none
+            && Killed.PlayerReplicationInfo != none
+            && PlayerController(Killed.Controller).CanRestartPlayer() )
         {
             // Player dead was caused by leaving.
             if( PlayerController(Killed.Controller).Player == none )
                 return False;
 
-            if( (!BT.IsCompetitiveModeActive() && Killed.GetTeamNum() != MutBestTimes(Owner).AssaultGame.CurrentAttackingTeam) || Killed.Tag == 'IGNOREQUICKRESPAWN' )
-                return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
+            if( (!BT.IsCompetitiveModeActive() && class<Suicided>(damageType) == none)
+                || Killed.Tag == 'IGNOREQUICKRESPAWN' )
+                return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
             C = Killed.Controller;
             if( Killed.DrivenVehicle != none )
@@ -119,7 +131,8 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
                 Killed.DrivenVehicle = none;
             }
 
-            if( Killed.LastStartSpot != none && (Level.TimeSeconds - 2.0 > Killed.LastStartTime || class<Suicided>(damageType) == none) )
+            if( Killed.LastStartSpot != none
+                && (Level.TimeSeconds - 2.0 > Killed.LastStartTime || class<Suicided>(damageType) == none) )
             {
                 if( Killed.LastStartSpot.Class != Class'BTServer_ClientStartPoint' )   // Died without a 'ClientSpawn'
                 {
@@ -137,7 +150,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
                         Clone.Controller.PawnDied( Clone );
                         Clone.Controller = none;
                         // Give other mutators a chance to know about a players dead, but without giving the chance to overwrite the return value.
-                        Super.PreventDeath(C.Pawn,Killer,damageType,HitLocation);
+                        super.PreventDeath(C.Pawn,Killer,damageType,HitLocation);
                         return False;
                     }*/
                     // Should not be called with gibbing or message will be duplicated ;).
@@ -148,11 +161,11 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
             // Quick Respawn with no gibbing.
             RespawnPlayer( Killed );
             // Give other mutators a chance to know about a players dead, but without giving the chance to overwrite the return value.
-            Super.PreventDeath(C.Pawn,Killer,damageType,HitLocation);
+            super.PreventDeath(C.Pawn,Killer,damageType,HitLocation);
             return True;
         }
     }
-    return Super.PreventDeath(Killed,Killer,damageType,HitLocation);
+    return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 }
 
 final function RespawnPlayer( Pawn player )
