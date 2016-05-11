@@ -1052,7 +1052,7 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     replicator.Initialize( CRI.RecordsPRI, pageIndex, query );
 }
 
-final function InternalOnPlayerChangeLevel( Controller other, BTClient_LevelReplication myLevel )
+final function InternalOnPlayerChangeLevel( Controller other, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel )
 {
     DeleteClientSpawn( other, true );
     if( CheckPointHandler != none )
