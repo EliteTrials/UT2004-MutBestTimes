@@ -64,7 +64,7 @@ replication
         RecordState, EndMsg,
         bCompetitiveMode, Teams;
 
-    reliable if bNetDirty && EndMsg != "" )
+    reliable if( bNetDirty && EndMsg != "" )
         PlayersBestTimes, MapBestTime,
         PointsReward;
 
