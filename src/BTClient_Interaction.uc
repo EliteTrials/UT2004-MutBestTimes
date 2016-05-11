@@ -86,7 +86,6 @@ var float
     LastShowAllCheck;
 
 var bool bTimerPaused, bSoundTicking;
-var() bool bShowRankingTable;
 
 var const
     texture
@@ -625,38 +624,18 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
                 MRI.CR.Text.Length = 0;
                 return true;
             }
-
             return false;
         }
 
-        if( bShowRankingTable )
+        if( Key == IK_GreyPlus )
         {
-            if( Key == IK_GreyPlus )
-            {
-                Options.ScreenFontSize = Min( ++ Options.ScreenFontSize, 6 );
-                return true;
-            }
-            else if( Key == IK_GreyMinus )
-            {
-                Options.ScreenFontSize = Max( -- Options.ScreenFontSize, -5 );
-                return true;
-            }
+            Options.ScreenFontSize = Min( ++ Options.ScreenFontSize, 6 );
+            return true;
         }
-        else
+        else if( Key == IK_GreyMinus )
         {
-            if( ViewportOwner.Actor.bBehindView )
-            {
-                if( Key == IK_GreyPlus )
-                {
-                    ViewportOwner.Actor.CameraDeltaRad += 5.f;
-                    return true;
-                }
-                else if( Key == IK_GreyMinus )
-                {
-                    ViewportOwner.Actor.CameraDeltaRad -= 5.f;
-                    return true;
-                }
-            }
+            Options.ScreenFontSize = Max( -- Options.ScreenFontSize, -5 );
+            return true;
         }
     }
     return false;
@@ -701,6 +680,44 @@ event Tick( float DeltaTime )
     // Wait for replication
     if( ViewportOwner.Actor.PlayerReplicationInfo != none )
     {
+        if( Options != none && (Options.bProfesionalMode || bPromodeWasPerformed) )
+        {
+            foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
+            {
+                if( p.PlayerReplicationInfo == none )
+                {
+                    continue;
+                }
+
+                if( p == ViewportOwner.Actor.ViewTarget )
+                {
+                    if( p.bHidden )
+                    {
+                        p.SoundVolume = p.default.SoundVolume;
+                        p.bHidden = false;
+                    }
+                    continue;
+                }
+
+                if( !p.bHidden )
+                {
+                    p.SoundVolume = 0;
+                    p.bHidden = true;
+                    bPromodeWasPerformed = true;
+                }
+                else if( !Options.bProfesionalMode && bPromodeWasPerformed )
+                {
+                    p.SoundVolume = p.default.SoundVolume;
+                    p.bHidden = false;
+                }
+            }
+
+            if( bPromodeWasPerformed && !Options.bProfesionalMode )
+            {
+                bPromodeWasPerformed = false;
+            }
+        }
+
         // See if client is spectating someone!
         SpectatedClient = none;
         P = xPawn(ViewportOwner.Actor.ViewTarget);
@@ -1520,7 +1537,6 @@ function RenderGhostMarkings( Canvas C )
         return;
 
     topTime = GetTopTime();
-    C.Font = GetScreenFont( C );
     foreach ViewportOwner.Actor.DynamicActors( class'BTClient_GhostMarker', Marking )
     {
         C.GetCameraLocation( CamPos, CamRot );
@@ -1908,7 +1924,6 @@ function RenderFooter( Canvas C )
     local string s;
 
     // PRE-RENDERING
-    C.Font = GetScreenFont( C );
     C.StrLen( "T", fontXL, fontYL );
 
     tableWidth = C.ClipX;
@@ -1968,8 +1983,8 @@ function PostRender( Canvas C )
     if( ViewportOwner.Actor.myHUD.bShowScoreBoard || ViewportOwner.Actor.myHUD.bHideHUD || MRI == None || ViewportOwner.Actor.PlayerReplicationInfo == None )
         return;
 
-    C.Font = Font'UT2003Fonts.jFontSmallText800x600';
-
+    // C.Font = Font'UT2003Fonts.jFontSmallText800x600';
+    C.Font = GetScreenFont( C );
     if( myHUD != none )
     {
         for( i = 0; i < myHUD.Overlays.Length; ++ i )
@@ -1987,59 +2002,22 @@ function PostRender( Canvas C )
 
         RenderGhostMarkings( C );
     }
-    if( Options.bProfesionalMode || bPromodeWasPerformed )
-    {
-        foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
-        {
-            if( p.PlayerReplicationInfo == none )
-            {
-                continue;
-            }
 
-            if( p == ViewportOwner.Actor.ViewTarget )
-            {
-                if( p.bHidden )
-                {
-                    p.SoundVolume = p.default.SoundVolume;
-                    p.bHidden = false;
-                }
-                continue;
-            }
-
-            if( !p.bHidden )
-            {
-                p.SoundVolume = 0;
-                p.bHidden = true;
-                bPromodeWasPerformed = true;
-            }
-            else if( !Options.bProfesionalMode && bPromodeWasPerformed )
-            {
-                p.SoundVolume = p.default.SoundVolume;
-                p.bHidden = false;
-            }
-        }
-
-        if( bPromodeWasPerformed && !Options.bProfesionalMode )
-        {
-            bPromodeWasPerformed = false;
-        }
-    }
-
+    RenderTitle( C );
     if( MRI.CR == none )
         return;
 
-    RenderTitle( C );
     // COMPETITIVE HUD
     if( MRI.bCompetitiveMode )
     {
         RenderCompetitiveLayer( C );
+        C.Font = GetScreenFont( C ); // Re set our font.
     }
 
     // TextBox code
     j = MRI.CR.Text.Length;
     if( j > 0 )
     {
-        C.Font = GetScreenFont( C );
         C.StrLen( "T", xl, yl );
 
         YLength = yl*j + (j*3) + TABLE_PADDING;
@@ -2078,14 +2056,6 @@ function PostRender( Canvas C )
         C.ClipX = XP1;
 
         RenderFooter( C );
-    }
-    // Ranking table code
-    else if( bShowRankingTable )
-    {
-        if( ViewportOwner.Actor.Level.GRI != none )
-        {
-            RenderRankIcon( C );
-        }
     }
 
     if( MRI.RecordState == RS_Active )
@@ -2147,7 +2117,6 @@ function PostRender( Canvas C )
         switch( MRI.RecordState )
         {
             case RS_Succeed:
-                C.Font = GetScreenFont( C );
                 if( MRI.GhostPercent < 100 )
                 {
                     S = "Saving ghost " $ MRI.GhostPercent $ "%";
@@ -2165,13 +2134,11 @@ function PostRender( Canvas C )
                 break;
 
             case RS_Failure:
-                C.Font = GetScreenFont( C );
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*(YOffsetScale + 0.05), S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.RedColor );
                 break;
 
             case RS_QuickStart:
-                C.Font = GetScreenFont( C );
                 S = MRI.EndMsg;
                 DrawElement( C, C.ClipX*0.5, C.ClipY*0.8, S, "", true, C.ClipX*0.65, 4.5, class'HUD'.default.TurqColor );
                 break;
@@ -2376,11 +2343,9 @@ function DrawRecordWidget( Canvas C )
         drawY += 50 * myHUD.HUDScale;
     }
     drawY = COLUMN_PADDING_Y;
+    drawX -= COLUMN_PADDING_X*2;
     minWidth = 240;
     C.Style = 1;
-
-    C.Font = GetScreenFont( C );
-    drawX -= COLUMN_PADDING_X*2;
 
     if( ActiveLevel == none )
         s = RecordHubMsg;
