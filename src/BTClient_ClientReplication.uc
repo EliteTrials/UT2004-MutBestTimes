@@ -352,7 +352,7 @@ function SetActiveLevel( BTClient_LevelReplication myLevel )
     if( p != none )
         p.Destroy();
 
-    MRI.OnPlayerChangeLevel( Controller(Owner), myLevel );
+    MRI.OnPlayerChangeLevel( Controller(Owner), self, myLevel );
 }
 
 simulated function ReplicateResetGhost()
