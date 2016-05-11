@@ -1054,10 +1054,27 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
 
 final function InternalOnPlayerChangeLevel( Controller other, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel )
 {
+    local int recordIndex;
+
     DeleteClientSpawn( other, true );
     if( CheckPointHandler != none )
     {
         CheckPointHandler.RemoveSavedCheckPoint( other );
+    }
+
+    if( myLevel != none )
+    {
+        recordIndex = RDat.FindRecordSlot( myLevel.MapIndex, CRI.PlayerId );
+        if( recordIndex != -1 )
+        {
+            CRI.SoloRank = recordIndex + 1;
+            CRI.ClientSetPersonalTime( RDat.Rec[myLevel.MapIndex].PSRL[recordIndex].SRT );
+        }
+    }
+    else
+    {
+        CRI.SoloRank = 0;
+        CRI.ClientSetPersonalTime( 0 );
     }
 }
 
