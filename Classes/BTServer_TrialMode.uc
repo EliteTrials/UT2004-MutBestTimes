@@ -49,7 +49,16 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
 {
     local int i, j;
     local string newPawn;
+    local byte teamIndex;
 
+    if( player.PlayerReplicationInfo.Team != none )
+    {
+        teamIndex = player.PlayerReplicationInfo.Team.TeamIndex;
+    }
+    else
+    {
+        teamIndex = 255;
+    }
     if( ASGameInfo(Level.Game) != none )
     {
         if( !start.bEnabled )
@@ -58,28 +67,25 @@ function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
         }
 
         j = ASGameInfo(Level.Game).SpawnManagers.Length;
-        if( j > 0 )
+        for( i = 0; i < j; ++ i )
         {
-            for( i = 0; i < j; ++ i )
+            if( ASGameInfo(Level.Game).SpawnManagers[i] == none )
+                continue;
+
+            if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( start, teamIndex, player ) )
             {
-                if( ASGameInfo(Level.Game).SpawnManagers[i] == none )
-                    return false;
+                newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( player, start, teamIndex );
+                if( newPawn != "" )
+                    ASPlayerReplicationInfo(player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
 
-                if( ASGameInfo(Level.Game).SpawnManagers[i].ApprovePlayerStart( start, player.PlayerReplicationInfo.Team.TeamIndex, player ) )
-                {
-                    newPawn = ASGameInfo(Level.Game).SpawnManagers[i].PawnClassOverride( player, start, player.PlayerReplicationInfo.Team.TeamIndex );
-                    if( newPawn != "" )
-                        ASPlayerReplicationInfo(player.PlayerReplicationInfo).PawnOverrideClass = newPawn;
-
-                    return true;
-                }
+                return true;
             }
         }
-        else return true;
+        return j == 0;
     }
     else
     {
-        if( start.TeamNumber == player.PlayerReplicationInfo.Team.TeamIndex )
+        if( start.TeamNumber == teamIndex )
         {
             return true;
         }
