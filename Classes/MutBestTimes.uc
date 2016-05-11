@@ -4639,40 +4639,34 @@ function Trigger( Actor Other, Pawn EventInstigator )
         return;
     }
 
-    if( IsTrials() )
+    if( !IsTrials() )
+        return;
+
+    myLevel = GetObjectiveLevel( GameObjective(Other) );
+    if( myLevel == none )
+        myLevel = MRI.MapLevel;
+
+    // Extra protection against 'Client Spawn' players using/touching a objective
+    if( !ClientSpawnCanCompleteMap() && IsClientSpawnPlayer( EventInstigator ) )
     {
-        // Extra protection against 'Client Spawn' players using/touching a objective
-        if( !ClientSpawnCanCompleteMap() && IsClientSpawnPlayer( EventInstigator ) )
-        {
-            EventInstigator.Destroy();
+        EventInstigator.Destroy();
+        myLevel.ResetObjective();
+        return;
+    }
 
-            if( AssaultGame != none )
-            {
-                AssaultGame.LastDisabledObjective.Reset();
-                AssaultGame.LastDisabledObjective.DefenderTeamIndex = 1;
-                AssaultGame.LastDisabledObjective = None;
-            }
-            return;
-        }
+    if( EventInstigator.Controller == None || EventInstigator.Controller.PlayerReplicationInfo == None )
+    {
+        FullLog( "RoundEnd::PC or PC.PlayerReplicationInfo is none!" );
+        return;
+    }
 
-        if( EventInstigator.Controller == None || EventInstigator.Controller.PlayerReplicationInfo == None )
-        {
-            FullLog( "RoundEnd::PC or PC.PlayerReplicationInfo is none!" );
-            return;
-        }
-
-        myLevel = GetObjectiveLevel( GameObjective(Other) );
-        if( myLevel == none )
-            myLevel = MRI.BaseLevel;
-
-        if( bSoloMap )
-        {
-            ProcessSoloEnd( PlayerController(EventInstigator.Controller), myLevel );
-        }
-        else    // Team map
-        {
-            ProcessRegularEnd( PlayerController(EventInstigator.Controller), myLevel );
-        }
+    if( bSoloMap )
+    {
+        ProcessSoloEnd( PlayerController(EventInstigator.Controller), myLevel );
+    }
+    else    // Team map
+    {
+        ProcessRegularEnd( PlayerController(EventInstigator.Controller), myLevel );
     }
 }
 
@@ -4945,6 +4939,17 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
         return;
     }
 
+    if( MRI.MapLevel == none && (CR.PlayingLevel == none || CR.PlayingLevel != myLevel) )
+    {
+        // Kill?
+        if( PC.Pawn != none )
+        {
+            PC.Pawn.SetCollision( false, false, false );
+        }
+        myLevel.ResetObjective();
+        return;
+    }
+
     playTime = GetFixedTime( Level.TimeSeconds - CR.LastSpawnTime );
     if( bGroupMap )
     {
@@ -4954,7 +4959,8 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
             GroupManager.GetMembersByGroupIndex( groupindex, GroupMembers );
             for( i = 0; i < GroupMembers.Length; ++ i )
             {
-                if( GroupMembers[i].Pawn != none && GroupMembers[i].Pawn.Health >= GroupMembers[i].Pawn.HealthMax )
+                if( GroupMembers[i].Pawn != none
+                    && GroupMembers[i].Pawn.Health >= GroupMembers[i].Pawn.HealthMax )
                 {
                     ++ numFullHealths;
                 }
@@ -4966,7 +4972,8 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
             CheckPlayerRecord( PC, CR, myLevel, playTime, false, xp, hasNewRecord );
 
             // DO NOT ADD THIS ABOVE CheckPlayerRecord
-            if( Level.Title ~= "EgyptianRush-Prelude" && numFullHealths == GroupMembers.Length )
+            if( Level.Title ~= "EgyptianRush-Prelude"
+                && numFullHealths == GroupMembers.Length )
             {
                 for( i = 0; i < GroupMembers.Length; ++ i )
                 {
@@ -4985,7 +4992,9 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
                     CR = GetRep( PlayerController(GroupMembers[i]) );
                     if( CR == None )
                     {
-                        FullLog( "No ClientReplicationInfo found for player" @ PlayerController(GroupMembers[i]).GetHumanReadableName() );
+                        FullLog( "No ClientReplicationInfo found for player"
+                            @ PlayerController(GroupMembers[i]).GetHumanReadableName()
+                        );
                         continue;
                     }
 
@@ -5031,7 +5040,11 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
     }
 }
 
-final private function bool CheckPlayerRecord( PlayerController PC, BTClient_ClientReplication CR, BTClient_LevelReplication myLevel, float playTime,
+final private function bool CheckPlayerRecord(
+    PlayerController PC,
+    BTClient_ClientReplication CR,
+    BTClient_LevelReplication myLevel,
+    float playTime,
     optional bool bRecursive,
     optional int xp,
     optional out byte bNewTopRecord )
@@ -5419,7 +5432,10 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
         else
         {
             MRI.RecordState = RS_Failure;
-            UpdateEndMsg( "Failed to beat the record, over by " $ TimeToStr( playTime - myLevel.TopTime ) $ ", time " $ TimeToStr( playTime ) );
+            UpdateEndMsg( "Failed to beat the record, over by "
+                $ TimeToStr( playTime - myLevel.TopTime )
+                $ ", time " $ TimeToStr( playTime )
+            );
             if( playTime < (myLevel.TopTime+90) )
                 BroadcastAnnouncement( AnnouncementRecordAlmost );
             else BroadcastAnnouncement( AnnouncementRecordFailed );
@@ -5438,7 +5454,9 @@ final function NotifyNewRecord( int playerSlot, int mapIndex, float playTime )
 
         bRecentRecordsUpdated = True;
     }
-    LastRecords[MaxRecentRecords - 1] = RDat.Rec[mapIndex].TMN @ cDarkGray$TimeToStr( playTime )$cWhite @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
+    LastRecords[MaxRecentRecords - 1] = RDat.Rec[mapIndex].TMN
+        @ cDarkGray$TimeToStr( playTime )$cWhite
+        @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
     if( bGenerateBTWebsite )
     {
         bUpdateWebOnNextMap = True;
@@ -5717,7 +5735,8 @@ function NotifyLogout( Controller Exiting )                                     
     local int i;
 
     super.NotifyLogout( exiting );
-    if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange && Exiting.bIsPlayer && !Exiting.PlayerReplicationInfo.bBot )
+    if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange
+        && Exiting.bIsPlayer && !Exiting.PlayerReplicationInfo.bBot )
     {
         ProcessPlayerLogout( Exiting );
         // Because GameInfo does not broadcast a left game message for spectators.
