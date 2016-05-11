@@ -29,16 +29,16 @@ replication
 simulated event PostNetBeginPlay()
 {
 	super.PostNetBeginPlay();
-
 	if( Level.NetMode == NM_Standalone )
 	{
 		MyObjective = GameObjective(Owner);
 	}
 
-	if( Level.NetMode != NM_DedicatedServer && MyObjective != none )
+	if( MyObjective != none )
 	{
-		MyObjective.SetActive( false );
-		// MyObjective.bDisabled = true;
+		// To hide it from the x* count
+		MyObjective.bOptionalObjective = true;
+		HideObjective();
 	}
 }
 
@@ -99,6 +99,21 @@ final function ResetObjective()
 {
     MyObjective.Reset();
     MyObjective.DefenderTeamIndex = 1;
+}
+
+final simulated function ShowObjective()
+{
+	MyObjective.bUsePriorityOnHUD = true;
+}
+
+final simulated function HideObjective()
+{
+	MyObjective.bUsePriorityOnHUD = false;
+}
+
+final simulated function GameObjective GetObjective()
+{
+	return MyObjective;
 }
 
 final static function string GetMapTag( string mapName )
@@ -167,4 +182,5 @@ final function bool Represents( GameObjective obj )
 
 defaultproperties
 {
+	NetUpdateFrequency=2
 }
