@@ -18,10 +18,7 @@ simulated function bool Accept( actor incoming, Actor source )
 			rep = class'BTClient_ClientReplication'.static.GetRep( PlayerController(other.Controller) );
 			if( rep != none ) // not a bt player
 			{
-				// Switch level and kill player.
-				rep.PlayingLevel = BTClient_LevelReplication(Owner);
-				rep.NetUpdateTime = Level.TimeSeconds - 1;
-				other.Suicide();
+				rep.SetActiveLevel( BTClient_LevelReplication(Owner) );
 			}
 		}
 		return true;

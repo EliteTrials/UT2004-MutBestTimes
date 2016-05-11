@@ -86,6 +86,7 @@ replication
 delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 delegate OnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName );
 delegate OnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query );
+delegate OnPlayerChangeLevel( Controller other, BTClient_LevelReplication myLevel );
 
 final function AddLevelReplication( BTClient_LevelReplication levelRep )
 {
@@ -182,7 +183,5 @@ final simulated function Color GetFadingColor( Color FadingColor )
 defaultproperties
 {
     RecordState=RS_Active
-
-    NetUpdateFrequency=1.0
-    NetPriority=1.0
+    NetUpdateFrequency=2
 }

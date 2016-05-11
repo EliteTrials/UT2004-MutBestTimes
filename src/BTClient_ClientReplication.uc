@@ -339,6 +339,22 @@ simulated function InitializeClient( optional BTClient_Interaction myInter )
     ServerSetPreferedColor( Options.PreferedColor );
 }
 
+function SetActiveLevel( BTClient_LevelReplication myLevel )
+{
+    local Pawn p;
+
+    PlayingLevel = myLevel;
+    NetUpdateTime = Level.TimeSeconds - 1;
+
+    p = Controller(Owner).Pawn;
+    Level.Game.RestartPlayer( Controller(Owner) );
+    Controller(Owner).PawnDied( p );
+    if( p != none )
+        p.Destroy();
+
+    MRI.OnPlayerChangeLevel( Controller(Owner), myLevel );
+}
+
 simulated function ReplicateResetGhost()
 {
     ServerSetClientFlags( CFRESETGHOST, class'BTClient_Config'.static.FindSavedData().bResetGhostOnDead );
@@ -373,7 +389,6 @@ function SetClientFlags( int newFlags, bool bAdd )
         ClientFlags = ClientFlags & ~newFlags;
     }
 }
-
 
 simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass, string message,
     optional byte switch,

@@ -696,6 +696,7 @@ event Tick( float DeltaTime )
     local DefaultPhysicsVolume DPV;
     local xPawn p;
     local LinkedReplicationInfo LRI;
+    local BTClient_LevelReplication lastActiveLevel;
 
     // Wait for replication
     if( ViewportOwner.Actor.PlayerReplicationInfo != none )
@@ -737,7 +738,26 @@ event Tick( float DeltaTime )
         {
             SpectatedClient = MRI.CR;
         }
+        lastActiveLevel = ActiveLevel;
         ActiveLevel = GetCurrentLevel();
+        if( ActiveLevel != lastActiveLevel )
+        {
+            if( lastActiveLevel != none )
+            {
+                lastActiveLevel.HideObjective();
+            }
+
+            if( ActiveLevel != none )
+            {
+                ActiveLevel.ShowObjective();
+                HUD_Assault(myHUD).CurrentObjective = ActiveLevel.GetObjective();
+            }
+        }
+
+        if( ActiveLevel == none )
+        {
+            HUD_Assault(myHUD).CurrentObjective = none;
+        }
 
         if( MRI.CR != none && MRI.CR.bAllowDodgePerk )
         {
