@@ -46,7 +46,7 @@ simulated function Abandon()
 
 defaultproperties
 {
-	bAlwaysRelevant=true
+	bAlwaysRelevant=false
 	bOnlyRelevantToOwner=true
 	// bTearOff=true
 	// bNetTemporary=true
