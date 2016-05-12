@@ -19,40 +19,33 @@ var int MapIndex; // Index to RecordsData.Rec array.
 replication
 {
 	reliable if( bNetInitial )
-		NextLevel, MyObjective, LevelName;
+		NextLevel, MyObjective;
 
 	reliable if( bNetDirty )
 		TopRanks, TopTime, NumRecords,
 		PrimaryGhostNumMoves;
 }
 
-simulated event PostNetBeginPlay()
+event PostBeginPlay()
 {
-	super.PostNetBeginPlay();
-	if( Level.NetMode == NM_Standalone )
-	{
-		MyObjective = GameObjective(Owner);
-	}
-
-	if( MyObjective != none )
-	{
-		// To hide it from the x* count
-		MyObjective.bOptionalObjective = true;
-		HideObjective();
-	}
+	MyObjective = GameObjective(Owner);
 }
 
-function InitializeLevel( GameObjective obj )
+simulated event PostNetBeginPlay()
 {
-	local NavigationPoint np;
 	local name levelTag;
 	local string fullTag;
 
-	if( obj == none )
+	if( MyObjective == none )
+	{
 		return;
+	}
 
-	MyObjective = obj;
-	levelTag = obj.Tag;
+	// To hide it from the x* count
+	MyObjective.bOptionalObjective = true;
+	HideObjective();
+
+	levelTag = MyObjective.Tag;
 	fullTag = string(levelTag);
 	if( Left( fullTag, 4 ) ~= "map-" )
 	{
@@ -75,24 +68,38 @@ function InitializeLevel( GameObjective obj )
 		_BoundByLevel = false;
 		return;
 	}
-
 	_IsSupremeLevel = true;
+}
+
+function InitializeLevel( GameObjective obj )
+{
+	local NavigationPoint np;
+
+	if( obj == none || LevelName == "" )
+		return;
+
 	for( np = Level.NavigationPointList; np != none; np = np.NextNavigationPoint )
 	{
-		if( PlayerStart(np) != none && np.Tag == levelTag )
+		if( PlayerStart(np) != none && np.Tag == obj.Tag )
 		{
 			MyPlayerStart = PlayerStart(np);
 			break;
 		}
 	}
-
 	if( MyPlayerStart == none )
 	{
-		Warn( "Found no playerspawn for objective with tag" @ fullTag );
+		Warn( "Found no playerspawn for objective with tag" @ obj.Tag );
 		return;
 	}
-
 	MyTeleporter = Spawn( class'BTLevelTeleporter', self, MyPlayerStart.Tag, MyPlayerStart.Location, MyPlayerStart.Rotation );
+}
+
+// Server only
+final function bool IsValidPlayerStart( Controller player, PlayerStart start )
+{
+	return start == MyPlayerStart;
+	// Inc "Map-"
+	// return LevelName ~= string(start.Tag);
 }
 
 final function ResetObjective()
@@ -127,14 +134,14 @@ final static function string GetMapTag( string mapName )
     return "AS";
 }
 
-// Server only
-final function bool IsSupremeLevel()
+// Client and Server
+final simulated function bool IsSupremeLevel()
 {
 	return _IsSupremeLevel;
 }
 
 // Client and Server
-final function string GetLevelName()
+final simulated function string GetLevelName()
 {
 	if( LevelName != "" )
 	{
@@ -146,16 +153,8 @@ final function string GetLevelName()
 	return Level.Title;
 }
 
-// Server only
-final function bool IsValidPlayerStart( Controller player, PlayerStart start )
-{
-	return start == MyPlayerStart;
-	// Inc "Map-"
-	// return LevelName ~= string(start.Tag);
-}
-
 // Client and Server
-final function string GetFullName( string mapName )
+final simulated function string GetFullName( string mapName )
 {
 	if( LevelName != "" )
 	{
@@ -175,12 +174,13 @@ final function string GetFullName( string mapName )
 }
 
 // Client and Server
-final function bool Represents( GameObjective obj )
+final simulated function bool Represents( GameObjective obj )
 {
 	return MyObjective == obj;
 }
 
 defaultproperties
 {
-	NetUpdateFrequency=2
+	NetUpdateFrequency=1
+	bReplicateMovement=false
 }
