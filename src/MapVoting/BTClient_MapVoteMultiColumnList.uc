@@ -93,6 +93,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
     local string mapTxt, timeTxt, recordsCountTxt, mapRatingTxt, holderTxt;
+    local eMenuState oldState;
 
 	if( VRI == none )
 		return;
@@ -116,6 +117,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     // Draw the selection border
     DrawStyle = Style;
 
+    oldState = MenuState;
     if( !VRI.MapList[MapVoteData[SortData[i].SortItem]].bEnabled )
         MenuState = MSAT_Disabled;
     else
@@ -158,6 +160,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
         string(VRI.MapList[MapVoteData[SortData[i].SortItem]].Sequence), FontScale );
 
     DrawStyle.FontColors[0] = DrawStyle.default.FontColors[0];
+    MenuState = oldState;
 }
 
 function Color GetColumnColor( int column )
