@@ -202,6 +202,13 @@ event Destroyed()
     }
     ClearMarkers();
     OnGhostEndPlay = none;
+
+    PausePlay();
+    if( GhostData != none )
+    {
+        GhostData.Free();
+        GhostData = none;
+    }
 }
 
 defaultproperties

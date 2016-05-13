@@ -58,10 +58,11 @@ final function bool SaveRelevantGhosts( string mapName )
     local string ghostPackageName;
     local bool skipNext;
 
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
     Log("Saving relevant ghosts for map" @ mapName);
     for( i = 0; i < DirtyPackageNames.Length; ++ i )
     {
-        if( DirtyPackageNames[i] == mapName )
+        if( DirtyPackageNames[i] == ghostPackageName )
         {
             DirtyPackageNames.Remove( i, 1 );
             skipNext = true;
@@ -71,9 +72,11 @@ final function bool SaveRelevantGhosts( string mapName )
 
     // This package doesn't need saving!
     if( !skipNext )
+    {
+        Log("Map has no dirty ghosts" @ mapName);
         return false;
+    }
 
-    ghostPackageName = GhostDataPackagePrefix $ mapName;
     foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
     {
         ghostData = BTGhostData(data);
@@ -98,8 +101,14 @@ final function bool SaveRelevantGhosts( string mapName )
     }
     for( i = 0; i < dataNames.Length; ++ i )
     {
+        Log("Deleting ghost data" @ ghostPackageName @ "object" @ dataNames[i]);
         DeleteGhostData( mapName, dataNames[i] );
     }
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        Log( Ghosts[i].GhostData.PLID @ Ghosts[i].GhostPackageName );
+    }
+    Log("Saving ghosts package" @ ghostPackageName);
     return SaveGhostsPackage( mapName );
 }
 
@@ -190,11 +199,24 @@ private function AddDirtyPackage( string packageName )
 
 final function BTGhostData GetGhostData( string mapName, string ghostId )
 {
+    local int i;
     local BTGhostData data;
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
     data = Level.Game.LoadDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+    if( data != none )
+    {
+        for( i = 0; i < Ghosts.Length; ++ i )
+        {
+            if( Ghosts[i].GhostPackageName == ghostPackageName
+                && Ghosts[i].GhostData != none
+                && Ghosts[i].GhostData.PLID == ghostId )
+            {
+                return Ghosts[i].GhostData;
+            }
+        }
+    }
     return data;
 }
 
@@ -257,6 +279,7 @@ final function bool RemoveGhost( string mapName, string ghostId )
         if( Ghosts[i].GhostPackageName == ghostPackageName
             && (Ghosts[i].GhostData != none && Ghosts[i].GhostData.PLID == ghostId) )
         {
+            AddDirtyPackage( ghostPackageName );
             Ghosts[i].Destroy();
             Ghosts.Remove( i, 1 );
             return true;
@@ -303,7 +326,6 @@ final function ClearGhostsData( string mapName, optional bool bCurrentMap )
             {
                 continue;
             }
-
             Ghosts[i].Destroy();
             Ghosts.Remove( i --, 1 );
         }

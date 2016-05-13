@@ -4308,11 +4308,6 @@ function ServerTraveling( string URL, bool bItems )
         }
     }
 
-    if( GhostManager != none )
-    {
-    	GhostManager.Destroy();
-    }
-
     // Map is switching, save everything!
     SaveAll();
     Free();

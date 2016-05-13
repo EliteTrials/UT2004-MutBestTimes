@@ -224,7 +224,7 @@ event Tick( float deltaTime )
 		{
 			recorder.Destroy();
 		}
-		SaveQueue.Remove( 0, 1 );
+		SaveQueue.Remove( qIdx, 1 );
 		if( SaveQueue.Length == 0 && Level.Game.VotingHandler != none )
 		{
 			Level.Game.VotingHandler.SetTimer( 1.00, true );
