@@ -104,11 +104,6 @@ function bool IsInPain()
     return false;
 }
 
-function bool TouchingWaterVolume()
-{
-    return false;
-}
-
 event Landed(vector v)
 {
     SetPhysics( PHYS_Walking );
@@ -187,12 +182,20 @@ defaultproperties
     TransientSoundVolume=0.0
     RagImpactVolume=0.0
     AmbientGlow=60
+    bAmbientCreature=true
 
-    bAlwaysRelevant=true
+    bAlwaysRelevant=false
     bAcceptsProjectors=false
     bProjTarget=false
     bBlockZeroExtentTraces=false
     bCanTeleport=false
+    bCanPickupInventory=false
     bIgnoreTerminalVelocity=true
     bIgnoreForces=true
+    bIgnoreOutOfWorld=true
+    bSimulateGravity=true
+    bNoVelocityUpdate=true
+    bCanWalkOffLedges=true
+    bSimGravityDisabled=true
+    bServerMoveSetPawnRot=false
 }
