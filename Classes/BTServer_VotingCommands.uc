@@ -61,21 +61,36 @@ final static function VoteMap( PlayerController sender, string mapName )
         j = H.MapCount;
         for( i = 0; i < j; ++ i )
         {
+            if( H.MapList[i].MapName ~= mapName )
+            {
+                if( H.MapList[i].bEnabled || sender.PlayerReplicationInfo.bAdmin )
+                {
+                    H.SubmitMapVote( i, H.CurrentGameConfig, sender );
+                }
+                else
+                {
+                    sender.ClientMessage( "Sorry" @ H.MapList[i].MapName @ "is currently disabled!" );
+                }
+                return;
+            }
+        }
+
+        for( i = 0; i < j; ++ i )
+        {
             if( InStr( Caps( H.MapList[i].MapName ), mapName ) != -1 )
             {
                 if( H.MapList[i].bEnabled || sender.PlayerReplicationInfo.bAdmin )
                 {
                     H.SubmitMapVote( i, H.CurrentGameConfig, sender );
-                    return;
                 }
                 else
                 {
-                    sender.ClientMessage( "Sorry this map is not enabled" );
-                    return;
+                    sender.ClientMessage( "Sorry" @ H.MapList[i].MapName @ "is currently disabled!" );
                 }
+                return;
             }
         }
-        sender.ClientMessage( "Sorry this map is not found in the map list..." );
+        sender.ClientMessage( "Sorry this map was not found in the map list..." );
     }
     else
     {

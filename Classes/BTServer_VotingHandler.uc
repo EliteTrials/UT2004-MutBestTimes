@@ -152,11 +152,7 @@ Function AddMapVoteReplicationInfo( PlayerController Player )
 
 function bool IsValidVote( int mapIndex, int gameIndex )
 {
-    if( BT.bQuickStart )
-    {
-        return false;
-    }
-    return super.IsValidVote( mapIndex, gameIndex );
+    return !BT.bQuickStart && super.IsValidVote( mapIndex, gameIndex );
 }
 
 function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
@@ -169,10 +165,16 @@ function SubmitMapVote(int MapIndex, int GameIndex, Actor Voter)
         return;
     }
 
+    if( BT.bQuickStart )
+    {
+        PlayerController(Voter).ClientMessage( "Voting is currently disabled, please try again in a moment!" );
+        return;
+    }
+
     // check for invalid vote from unpatch players
     if( !IsValidVote(MapIndex, GameIndex) )
     {
-        PlayerController(Voter).ClientMessage( "Invalid vote!" );
+        PlayerController(Voter).ClientMessage( "Map" @ MapList[MapIndex].MapName @ "doesn't match the current game(" @ GameConfig[GameIndex].GameName @ ") filter!" );
         return;
     }
 
