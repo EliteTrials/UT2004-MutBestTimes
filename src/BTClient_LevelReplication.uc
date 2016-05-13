@@ -123,6 +123,16 @@ final simulated function GameObjective GetObjective()
 	return MyObjective;
 }
 
+final function vector GetSpawnLocation()
+{
+	return MyPlayerStart.Location;
+}
+
+final function rotator GetSpawnRotation()
+{
+	return MyPlayerStart.Rotation;
+}
+
 final static function string GetMapTag( string mapName )
 {
 	if( Left( Mid( mapName, 3/**AS-*/ ), 5 ) ~= "solo-" )
