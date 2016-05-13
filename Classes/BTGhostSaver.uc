@@ -9,9 +9,11 @@ var private array<struct sGhostInfo{
 	// Index to PDat.Player
 	var int PlayerIndex;
 
+	// Package's main name i.e. usually the map's name, e.g. BTGhost_<PackageId>.uvx
 	var string PackageId;
 
-	// Player's GUID
+	// Player's GUID, used to set the ghost data's object name
+	// e.g. (package) BTGhost_<PackageId>.uvx -> (object) BTGhost_<GhostId>
 	var string GhostId;
 }> SaveQueue;
 
@@ -159,6 +161,7 @@ event Tick( float deltaTime )
 		{
 			data.Init(); // new version
 			data.MO.Length = 0;
+			Manager.DirtyGhostPackage( SaveQueue[qIdx].PackageId );
 		}
 
 		data.UsedGhostFPS = recorder.FramesPerSecond;
@@ -195,7 +198,6 @@ event Tick( float deltaTime )
 		// 	@ "Existing:" @ SaveQueue[qIdx].ExistingData
 		// );
 
-		// TODO: Save the package on server travel!
 		if( SaveQueue[qIdx].ExistingData )
 		{
 			for( i = 0; i < Manager.Ghosts.Length; ++ i )

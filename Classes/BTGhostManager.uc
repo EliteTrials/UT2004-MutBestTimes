@@ -14,7 +14,7 @@ var const class<BTGhostPlayback> GhostPlaybackClass;
 var array<BTGhostPlayback> Ghosts;
 var BTGhostSaver Saver;
 // Pending packages that have became dirty and need to be saved.
-var private array<string> PendingPackageNames;
+var private array<string> DirtyPackageNames;
 var private MutBestTimes BT;
 
 event PreBeginPlay()
@@ -42,9 +42,9 @@ final function SqueezeGhosts( optional bool byRank )
 
         }
 
-        BT.FullLog( "Deleted old ghost data from map" @ Ghosts[i].GhostMapName @ "belonging to" @ Ghosts[i].GhostData.PLID );
+        BT.FullLog( "Removed old ghost data from map" @ Ghosts[i].GhostMapName @ "belonging to" @ Ghosts[i].GhostData.PLID );
         Ghosts[i].Destroy();
-        Ghosts.Remove( i --, 1 );
+        Ghosts.Remove( i --, 1 ); // This ghost's data will be deleted on the next saving event.
     }
 }
 
@@ -58,11 +58,12 @@ final function bool SaveRelevantGhosts( string mapName )
     local string ghostPackageName;
     local bool skipNext;
 
-    for( i = 0; i < PendingPackageNames.Length; ++ i )
+    Log("Saving relevant ghosts for map" @ mapName);
+    for( i = 0; i < DirtyPackageNames.Length; ++ i )
     {
-        if( PendingPackageNames[i] == mapName )
+        if( DirtyPackageNames[i] == mapName )
         {
-            PendingPackageNames.Remove( i, 1 );
+            DirtyPackageNames.Remove( i, 1 );
             skipNext = true;
             break;
         }
@@ -84,6 +85,7 @@ final function bool SaveRelevantGhosts( string mapName )
         {
             if( Ghosts[i].GhostData == ghostData )
             {
+                // Don't delete this ghost's data.
                 skipNext = true;
                 break;
             }
@@ -174,16 +176,16 @@ final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string map
     return playback;
 }
 
-private function AddPendingPackage( string packageName )
+private function AddDirtyPackage( string packageName )
 {
     local int i;
 
-    for( i = 0; i < PendingPackageNames.Length; ++ i )
+    for( i = 0; i < DirtyPackageNames.Length; ++ i )
     {
-        if( PendingPackageNames[i] == packageName )
+        if( DirtyPackageNames[i] == packageName )
             return;
     }
-    PendingPackageNames[PendingPackageNames.Length] = packageName;
+    DirtyPackageNames[DirtyPackageNames.Length] = packageName;
 }
 
 final function BTGhostData GetGhostData( string mapName, string ghostId )
@@ -206,9 +208,17 @@ final function BTGhostData CreateGhostData( string mapName, string ghostId )
     if( data != none )
     {
         data.Init();
-        AddPendingPackage( ghostPackageName );
+        AddDirtyPackage( ghostPackageName );
     }
     return data;
+}
+
+final function DirtyGhostPackage( string mapName )
+{
+    local string ghostPackageName;
+
+    ghostPackageName = GhostDataPackagePrefix $ mapName;
+    AddDirtyPackage( ghostPackageName );
 }
 
 final function bool DeleteGhostData( string mapName, string ghostId )
@@ -216,7 +226,7 @@ final function bool DeleteGhostData( string mapName, string ghostId )
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
-    AddPendingPackage( ghostPackageName );
+    AddDirtyPackage( ghostPackageName );
     return Level.Game.DeleteDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
 }
 
