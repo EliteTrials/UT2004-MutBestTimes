@@ -88,7 +88,6 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
     Log( recordsPRI.RecordsQuery @ recordsPRI.RecordsSource );
     SourceCombo.EnableMe();
     SourceCombo.SetText( recordsPRI.RecordsSource ); // not triggering OnChange???
-    SourceCombo.OnChange( none );
     bWaitingForReplication = false;
     CacheLevels();
 }
@@ -140,6 +139,7 @@ protected function InternalOnChangeSource( GUIComponent sender )
     local BTClient_ClientReplication CRI;
     local string source;
 
+    Log("Source changed by" @ sender);
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     if( RankingsCombo != none )
     {
@@ -203,6 +203,7 @@ protected function InternalOnChangeQuery( GUIComponent sender )
 	local BTClient_ClientReplication CRI;
 	local BTGUI_RecordRankingsMultiColumnList list;
 
+    Log("Query changed by" @ sender);
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
     Log("InternalOnChangeQuery" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
     bIsQuerying = false; // renable querying
