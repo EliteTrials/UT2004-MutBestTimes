@@ -21,7 +21,13 @@ simulated function string GetMapNameString(int Index)
 
 simulated function OpenWindow()
 {
-    GetController().OpenMenu( string(MapVotingPageClass) );
+    local GUIController controller;
+
+    controller = GetController();
+    if( controller.FindMenuByClass( MapVotingPageClass ) != none )
+        return;
+
+    controller.OpenMenu( string(MapVotingPageClass) );
 }
 
 // Hooked by BTServer_VotingHandler.
