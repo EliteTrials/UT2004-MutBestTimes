@@ -36,10 +36,20 @@ var string PLID;
 var float RelativeStartTime;
 
 var transient int CurrentMove;
+var transient vector RelativeSpawnOffset;
+var transient rotator RelativeSpawnDir;
+
+final function vector GetStartLocation()
+{
+    if( MO.Length == 0 )
+        return vect(0, 0, 0);
+
+    return MO[0].P;
+}
 
 final function GetCurrentMove( out Vector p, out Rotator r )
 {
-    p = MO[CurrentMove].P;
+    p = MO[CurrentMove].P + RelativeSpawnOffset;
     r = TinyRotToRot( MO[CurrentMove].R );
 }
 
@@ -64,7 +74,7 @@ final function bool PerformNextMove( Pawn p )
         }
 
         // Pawns don't use pitch!
-        p.SetLocation( MO[CurrentMove].P );
+        p.SetLocation( MO[CurrentMove].P + RelativeSpawnOffset );
         p.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
         p.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
         p.Velocity = MO[CurrentMove].V;

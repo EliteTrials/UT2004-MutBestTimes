@@ -107,6 +107,11 @@ private function CreateGhostController()
     {
 	    // TODO: add client LRI and replicate @PlayingLevel
 	    MyLevel = BT.GetObjectiveLevelByFullName( GhostMapName );
+        if( MyLevel != none && BT.MRI.MapLevel == none ) // Only necessary on multiple instanced maps.
+        {
+            GhostData.RelativeSpawnOffset = MyLevel.GetSpawnLocation() - GhostData.GetStartLocation();
+            // GhostData.RelativeSpawnDir = MyLevel.GetSpawnRotation() - GhostData.GetStartRotation();
+        }
     }
 }
 
