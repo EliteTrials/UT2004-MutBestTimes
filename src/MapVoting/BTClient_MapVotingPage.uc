@@ -185,6 +185,37 @@ function bool AlignBK(Canvas C)
     return false;
 }
 
+// Fix co_Gametype -> ComboGameType
+function SendVote(GUIComponent Sender)
+{
+    local int MapIndex,GameConfigIndex;
+
+    if( Sender == lb_VoteCountListBox.List )
+    {
+        MapIndex = MapVoteCountMultiColumnList(lb_VoteCountListBox.List).GetSelectedMapIndex();
+        if( MapIndex > -1)
+        {
+            GameConfigIndex = MapVoteCountMultiColumnList(lb_VoteCountListBox.List).GetSelectedGameConfigIndex();
+            if(MVRI.MapList[MapIndex].bEnabled || PlayerOwner().PlayerReplicationInfo.bAdmin)
+                MVRI.SendMapVote(MapIndex,GameConfigIndex);
+            else
+                PlayerOwner().ClientMessage(lmsgMapDisabled);
+        }
+    }
+    else
+    {
+        MapIndex = MapVoteMultiColumnList(lb_MapListBox.List).GetSelectedMapIndex();
+        if( MapIndex > -1)
+        {
+            GameConfigIndex = int(ComboGameType.GetExtra());
+            if(MVRI.MapList[MapIndex].bEnabled || PlayerOwner().PlayerReplicationInfo.bAdmin)
+                MVRI.SendMapVote(MapIndex,GameConfigIndex);
+            else
+                PlayerOwner().ClientMessage(lmsgMapDisabled);
+        }
+    }
+}
+
 defaultproperties
 {
     WinLeft=0.05
