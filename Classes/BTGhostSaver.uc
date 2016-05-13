@@ -146,8 +146,14 @@ event Tick( float deltaTime )
 		data = Manager.GetGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId );
 		if( data == none )
 		{
-			// TODO: What to do if this fails, e.g. hd access error?
 			data = Manager.CreateGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId );
+			if( data == none )
+			{
+				Warn( "Couldn't create a new ghost data object for" @ SaveQueue[qIdx].PackageId @ SaveQueue[qIdx].GhostId );
+				// Abort saving.
+				SaveQueue.Remove( qIdx, 1 );
+				return;
+			}
 		}
 		else
 		{
