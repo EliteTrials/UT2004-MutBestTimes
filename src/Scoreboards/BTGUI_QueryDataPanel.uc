@@ -32,12 +32,12 @@ function CreateDataRows()
     }
 }
 
-function bool InternalOnPreDraw( Canvas C )
+function bool InternalOnDraw( Canvas C )
 {
     C.SetPos( ActualLeft(), ActualTop() );
     C.DrawColor = class'BTClient_Config'.default.CTable;
     C.DrawTile( Texture'BTScoreBoardBG', ActualWidth(), ActualHeight(), 0, 0, 256, 256 );
-    return true;
+    return false;
 }
 
 function float InternalGetRowHeight( Canvas C )
@@ -92,7 +92,7 @@ function ApplyData( BTQueryDataReplicationInfo queryRI );
 
 defaultproperties
 {
-	OnPreDraw=InternalOnPreDraw
+	OnDraw=InternalOnDraw
 
     Begin Object Class=GUIMultiColumnListBox Name=oRowsListBox
         WinTop=0.01

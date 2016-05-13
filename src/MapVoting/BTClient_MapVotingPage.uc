@@ -41,7 +41,7 @@ function bool InternalOnBackgroundDraw( Canvas C )
 {
     C.DrawColor = class'BTClient_Config'.default.CTable;
     C.DrawTile( i_FrameBG.Image, i_FrameBG.ActualWidth(), i_FrameBG.ActualHeight(), 0, 0, 256, 256 );
-    return true;
+    return false;
 }
 
 // Ugly ugly ugly...
@@ -50,7 +50,7 @@ function bool InternalOnPanelBackgroundDraw( Canvas C )
     C.SetPos( MapPanel.ActualLeft(), MapPanel.ActualTop() );
     C.DrawColor = class'BTClient_Config'.default.CTable;
     C.DrawTile( Texture'BTScoreBoardBG', MapPanel.ActualWidth(), MapPanel.ActualHeight(), 0, 0, 256, 256 );
-    return true;
+    return false;
 }
 
 function InternalOnReceiveMapInfo( VotingHandler.MapVoteMapList mapInfo )
@@ -91,7 +91,7 @@ function InternalOnOpen()
     // i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
     i_FrameBG.Image = Texture'BTScoreBoardBG';
     i_FrameBG.OnDraw = InternalOnBackgroundDraw;
-    MapPanel.OnPreDraw = InternalOnPanelBackgroundDraw;
+    MapPanel.OnDraw = InternalOnPanelBackgroundDraw;
     BTClient_VRI(MVRI).OnReceiveMapInfo = InternalOnReceiveMapInfo;
 
     for( i=0; i<MVRI.GameConfig.Length; i++ )
