@@ -301,9 +301,9 @@ private function bool MatchesFilter( string test, string filter, optional bool b
     //  prefix: STR-*01
     f = filter;
     t = test;
-    if( f == "*" && Left(t, 1) == f )
+    if( f == "*" )
     {
-        return true;
+        return Left(t, 1) == f;
     }
 
     i = InStr(f, "##");
