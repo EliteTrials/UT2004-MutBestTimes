@@ -1,11 +1,21 @@
 class BTClient_LevelReplication extends ReplicationInfo;
 
 var BTClient_LevelReplication NextLevel;
+
 var private PlayerStart MyPlayerStart;
 var private BTLevelTeleporter MyTeleporter;
 var private GameObjective MyObjective;
+
+/** The level's id without (map- or level-). */
 var private string LevelName;
 var private bool _IsSupremeLevel, _BoundByMap, _BoundByLevel;
+
+/** (Server) The level id(inc map- or level-) of the level that this level locks and unlocks. */
+var string LevelId, LockedLevelName;
+var BTClient_LevelReplication LockedLevel; // set by level with levelid as LockedLevelName
+
+/** (Server) Whether this level is access restricted. */
+var bool bRestrictAccess;
 
 // Record state
 var string TopRanks;
@@ -34,7 +44,6 @@ event PostBeginPlay()
 simulated event PostNetBeginPlay()
 {
 	local name levelTag;
-	local string fullTag;
 
 	if( MyObjective == none )
 	{
@@ -46,15 +55,15 @@ simulated event PostNetBeginPlay()
 	HideObjective();
 
 	levelTag = MyObjective.Tag;
-	fullTag = string(levelTag);
-	if( Left( fullTag, 4 ) ~= "map-" )
+	LevelId = string(levelTag);
+	if( Left( LevelId, 4 ) ~= "map-" )
 	{
-		LevelName = Mid( fullTag, 4 );
+		LevelName = Mid( LevelId, 4 );
 		_BoundByMap = true;
 	}
-	else if( Left( fullTag, 6 ) ~= "level-" )
+	else if( Left( LevelId, 6 ) ~= "level-" )
 	{
-		LevelName = Mid( fullTag, 6 );
+		LevelName = Mid( LevelId, 6 );
 		_BoundByLevel = true;
 	}
 
@@ -62,25 +71,53 @@ simulated event PostNetBeginPlay()
 	{
 		if( _BoundByMap || _BoundByLevel )
 		{
-			Warn( "Detected a level objective with an invalid tag" @ fullTag );
+			Warn( "Detected a level objective with an invalid tag" @ LevelId );
 		}
 		_BoundByMap = false;
 		_BoundByLevel = false;
 		return;
 	}
 	_IsSupremeLevel = true;
+	LockedLevelName = ParseMapId( MyObjective.Event );
 }
 
-function InitializeLevel( GameObjective obj )
+private static function string ParseMapId( coerce string s )
+{
+	if( Left( s, 4 ) ~= "map-" )
+	{
+		return Mid( s, 4 );
+	}
+	else if( Left( s, 6 ) ~= "level-" )
+	{
+		return Mid( s, 6 );
+	}
+	return "";
+}
+
+function InitializeLevel( BTClient_MutatorReplicationInfo MRI )
 {
 	local NavigationPoint np;
+	local BTClient_LevelReplication myLevel;
 
-	if( obj == none || LevelName == "" )
+	if( !IsSupremeLevel() )
 		return;
+
+    for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+	{
+		if( myLevel == self )
+			continue;
+
+		if( myLevel.LockedLevelName ~= LevelName )
+		{
+			myLevel.LockedLevel = self;
+			bRestrictAccess = true;
+			break;
+		}
+	}
 
 	for( np = Level.NavigationPointList; np != none; np = np.NextNavigationPoint )
 	{
-		if( PlayerStart(np) != none && np.Tag == obj.Tag )
+		if( PlayerStart(np) != none && np.Tag == MyObjective.Tag )
 		{
 			MyPlayerStart = PlayerStart(np);
 			break;
@@ -88,7 +125,7 @@ function InitializeLevel( GameObjective obj )
 	}
 	if( MyPlayerStart == none )
 	{
-		Warn( "Found no playerspawn for objective with tag" @ obj.Tag );
+		Warn( "Found no playerspawn for objective with tag" @ MyObjective.Tag );
 		return;
 	}
 	MyTeleporter = Spawn( class'BTLevelTeleporter', self, MyPlayerStart.Tag, MyPlayerStart.Location, MyPlayerStart.Rotation );

@@ -339,9 +339,12 @@ simulated function InitializeClient( optional BTClient_Interaction myInter )
     ServerSetPreferedColor( Options.PreferedColor );
 }
 
-function SetActiveLevel( BTClient_LevelReplication myLevel )
+function bool SetActiveLevel( BTClient_LevelReplication myLevel )
 {
     local Pawn p;
+
+    if( !MRI.OnPlayerChangeLevel( Controller(Owner), self, myLevel ) )
+        return false;
 
     PlayingLevel = myLevel;
     NetUpdateTime = Level.TimeSeconds - 1;
@@ -352,7 +355,7 @@ function SetActiveLevel( BTClient_LevelReplication myLevel )
     if( p != none )
         p.Destroy();
 
-    MRI.OnPlayerChangeLevel( Controller(Owner), self, myLevel );
+    return true;
 }
 
 simulated function ReplicateResetGhost()

@@ -84,7 +84,7 @@ replication
 delegate OnRequestPlayerRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, byte ranksId );
 delegate OnRequestRecordRanks( PlayerController requester, BTClient_ClientReplication CRI, int pageIndex, string mapName );
 delegate OnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query );
-delegate OnPlayerChangeLevel( Controller other, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel );
+delegate bool OnPlayerChangeLevel( Controller other, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel );
 
 final function AddLevelReplication( BTClient_LevelReplication levelRep )
 {
