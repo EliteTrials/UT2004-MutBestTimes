@@ -26,7 +26,6 @@ protected function InitializeMode()
 
     myLevel = Spawn( class'BTClient_LevelReplication', none );
     MRI.AddLevelReplication( myLevel );
-    myLevel.InitializeLevel( none );
 
     mapIndex = UsedSlot;
     myLevel.MapIndex = mapIndex;
@@ -37,6 +36,10 @@ protected function InitializeMode()
         myLevel.TopRanks = GetRecordTopHolders( mapIndex );
     }
     MRI.MapLevel = MRI.BaseLevel;
+    for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+    {
+        myLevel.InitializeLevel( MRI );
+    }
 }
 
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )

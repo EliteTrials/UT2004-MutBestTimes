@@ -26,7 +26,6 @@ protected function InitializeMode()
     Tag = 'BT_SOLORECORD';
     for( i = 0; i < Objectives.Length; ++ i )
     {
-        Objectives[i].Event = 'BT_SOLORECORD';
         // Remove objective sounds, we got our own!
         Objectives[i].Announcer_DisabledObjective = none;
         Objectives[i].Announcer_ObjectiveInfo = none;
@@ -64,7 +63,6 @@ protected function InitializeSoloSupreme()
     {
         myLevel = Spawn( class'BTClient_LevelReplication', Objectives[i] );
         MRI.AddLevelReplication( myLevel );
-        myLevel.InitializeLevel( Objectives[i] );
 
         levelName = myLevel.GetFullName( CurrentMapName );
         mapIndex = RDat.FindRecord( levelName );
@@ -88,10 +86,17 @@ protected function InitializeSoloSupreme()
             myLevel.TopRanks = GetRecordTopHolders( mapIndex );
         }
     }
-
     if( !isSupremeMap )
     {
         MRI.MapLevel = MRI.BaseLevel;
+    }
+    for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+    {
+        myLevel.InitializeLevel( MRI );
+        if( myLevel.GetObjective() != none )
+        {
+            myLevel.GetObjective().Event = 'BT_SOLORECORD';
+        }
     }
 }
 

@@ -1052,9 +1052,39 @@ final function InternalOnRequestRecordRanks( PlayerController requester, BTClien
     replicator.Initialize( CRI.RecordsPRI, pageIndex, query );
 }
 
-final function InternalOnPlayerChangeLevel( Controller other, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel )
+final function bool InternalOnPlayerChangeLevel( Controller other,
+    BTClient_ClientReplication CRI,
+    BTClient_LevelReplication newLevel )
 {
     local int recordIndex;
+    local BTClient_LevelReplication myLevel;
+    local bool isRestricted;
+
+    if( newLevel != none && newLevel.bRestrictAccess )
+    {
+        isRestricted = true;
+        for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
+        {
+            if( myLevel == newLevel )
+                continue;
+
+            if( myLevel.LockedLevel == newLevel
+                && RDat.FindRecordSlot( myLevel.MapIndex, CRI.PlayerId ) != -1 )
+            {
+                isRestricted = false;
+                break;
+            }
+        }
+    }
+
+    if( isRestricted )
+    {
+        PlayerController(other).ClientMessage( "You cannot access"
+            @ newLevel.GetLevelName()
+            @ "until you have beaten the necessary levels!"
+        );
+        return false;
+    }
 
     DeleteClientSpawn( other, true );
     if( CheckPointHandler != none )
@@ -1062,20 +1092,23 @@ final function InternalOnPlayerChangeLevel( Controller other, BTClient_ClientRep
         CheckPointHandler.RemoveSavedCheckPoint( other );
     }
 
-    if( myLevel != none )
+    if( newLevel != none )
     {
-        recordIndex = RDat.FindRecordSlot( myLevel.MapIndex, CRI.PlayerId );
+        recordIndex = RDat.FindRecordSlot( newLevel.MapIndex, CRI.PlayerId );
         if( recordIndex != -1 )
         {
             CRI.SoloRank = recordIndex + 1;
-            CRI.ClientSetPersonalTime( RDat.Rec[myLevel.MapIndex].PSRL[recordIndex].SRT );
+            CRI.ClientSetPersonalTime( RDat.Rec[newLevel.MapIndex].PSRL[recordIndex].SRT );
         }
+        // Send a meessage "You are Attacck... err playing Level 1!"
+        PlayerController(other).ClientMessage( "You are playing" @ newLevel.GetLevelName()$"!" );
     }
     else
     {
         CRI.SoloRank = 0;
         CRI.ClientSetPersonalTime( 0 );
     }
+    return true;
 }
 
 final function InternalOnServerQuery( PlayerController requester, BTClient_ClientReplication CRI, string query )
@@ -3060,6 +3093,10 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
         case "debuglevelmsg":
             BroadcastFinishMessage( sender, params[1], byte(params[0]) );
+            break;
+
+        case "debugunlockmsg":
+            Level.Game.BroadcastLocalized( sender, class'BTLevelUnlockedMessage', 0, none, sender.PlayerReplicationInfo, MRI.BaseLevel );
             break;
 
         case "debugrecord":
@@ -5075,7 +5112,7 @@ final private function bool CheckPlayerRecord(
     optional int xp,
     optional out byte bNewTopRecord )
 {
-    local bool b, wasHijacked, hasImprovised;
+    local bool b, wasHijacked, isFirstTime, hasImprovised;
     local string finishMsg, finishTime;
     local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
     local float score, finishDiff;
@@ -5190,6 +5227,7 @@ final private function bool CheckPlayerRecord(
         CR.ClientSetPersonalTime( playTime );
         PDat.AddExperience( PLs-1, EXP_FirstRecord + numObjectives );
         b = true;
+        isFirstTime = true;
 
         // Update the total set of solo records here because ClientForcePacketUpdate() is only called for visible records.
         myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
@@ -5343,11 +5381,23 @@ final private function bool CheckPlayerRecord(
                 MRI.RecordState = RS_Succeed;
                 MRI.PointsReward = string(score);
                 UpdateEndMsg( Repl( finishMsg, "%PLAYER% completed", "Completed" ) );
+                // Announce level unlock
+                if( isFirstTime && myLevel.LockedLevel != none )
+                {
+
+                    Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
+                }
                 return true;
             }
             else
             {
                 BroadcastFinishMessage( PC, finishMsg, 1 );
+                // Announce level unlock
+                if( isFirstTime && myLevel.LockedLevel != none )
+                {
+
+                    Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
+                }
             }
             //======================================================
         }
@@ -5363,6 +5413,12 @@ final private function bool CheckPlayerRecord(
                 finishMsg @= "in" @ #0xFFFF00FF$finishTime$cEnd$", achieving best" @ #0xFFFF00FF$(PLi+1)$cEnd @ "out of" @ #0xFFFF00FF$RDat.Rec[mapIndex].PSRL.Length;
             }
             BroadcastFinishMessage( PC, finishMsg, 1 );
+            // Announce level unlock
+            if( isFirstTime && myLevel.LockedLevel != none )
+            {
+
+                Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
+            }
 
             if( CR.BTWage > 0 )
             {
