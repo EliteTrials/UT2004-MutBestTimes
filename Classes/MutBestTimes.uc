@@ -6065,11 +6065,6 @@ final function CreateWebBTimes()                                                
         // Print the map records.
         for( i = 0; i < j; ++ i )
         {
-            if( RDat.Rec[i].TMN == "" || RDat.Rec[i].bIgnoreStats )
-            {
-                continue;
-            }
-
             // Write the MapName!
             SS.Length = Pos+1;
             SS[Pos] = "<tr><td><p>"$RDat.Rec[i].TMN$"</p></td>";
@@ -6109,21 +6104,15 @@ final function CreateWebBTimes()                                                
     SS.Length = Pos;
     SS[Pos] =
     "<div id="$T$"d_Players"$T$" class="$T$"hidden"$T$" align="$T$"center"$T$"> <table id="$T$"t_Players"$T$" class="$T$"sortable"$T$"> <tr>"
-    $"<th width="$T$"5%"$T$"><b>Rank</b></th> <th width="$T$"35%"$T$"><b>Player</b></th> <th width="$T$"20%"$T$"><b>Points</b></th> <th width="$T$"17.5%"$T$"><b>Objectives</b></th> <th width="$T$"17.5%"$T$"><b>Records</b></th> <th width="$T$"5%"$T$"><b>ID</b></th>  </tr>";
+    $"<th width="$T$"5%"$T$"><b>Rank</b></th> <th width="$T$"35%"$T$"><b>Player</b></th> <th width="$T$"20%"$T$"><b>ELO</b></th> <th width="$T$"17.5%"$T$"><b>Objectives</b></th> <th width="$T$"17.5%"$T$"><b>Stars</b></th> <th width="$T$"5%"$T$"><b>ID</b></th>  </tr>";
 
     // Write table content...
     ++ Pos;
     j = Ranks.OverallTopList.Items.Length;
     for( i = 0; i < j; ++ i )
     {
-        if( Len( PDat.Player[Ranks.OverallTopList.Items[i]].PLName ) == 0 )
-            continue;
-
-        if( PDat.Player[Ranks.OverallTopList.Items[i]].PLPoints[0] == 0 )
-            break;
-
         SS.Length = Pos+1;
-        SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[Ranks.OverallTopList.Items[i]].PLName$"</p></td><td><p>"$int( PDat.Player[Ranks.OverallTopList.Items[i]].PLPoints[0] )$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLObjectives$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLPersonalRecords[0]$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLID$"</p></td></tr>";
+        SS[Pos] = "<tr><td>"$i+1$"</td><td><p>"$%PDat.Player[Ranks.OverallTopList.Items[i]].PLName$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLPoints[0]$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLObjectives$"</p></td><td><p>"$PDat.Player[Ranks.OverallTopList.Items[i]].PLTopRecords[0]$"</p></td><td><p>"$Ranks.OverallTopList.Items[i]+1$"</p></td></tr>";
         ++ Pos;
     }
     SS.Length = Pos+1;
@@ -6143,8 +6132,8 @@ final function CreateWebBTimes()                                                
     $"<tr><th><b>Name</b></th><th><b>Description</b></th></tr>"
     $"<tr><td><p>Version</p></td><td><p>"$BTVersion$"</p></td><tr>"
     $"<tr><td><p>Authors</p></td><td><p>"$CREDITS$"</p></td><tr>"
-    $"<tr><td><p>Records</p></td><td><p>"$MRI.RecordsCount$"</p></td><tr>"
-    $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>";
+    $"<tr><td><p>Registered Maps</p></td><td><p>"$RDat.Rec.Length$"</p></td><tr>"
+    $"<tr><td><p>Registered Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>";
 
     // Write Recent Records
     ++ Pos;
