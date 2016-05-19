@@ -1056,7 +1056,6 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
     BTClient_ClientReplication CRI,
     BTClient_LevelReplication newLevel )
 {
-    local int recordIndex;
     local BTClient_LevelReplication myLevel;
     local bool isRestricted;
 
@@ -1092,26 +1091,11 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
         CheckPointHandler.RemoveSavedCheckPoint( other );
     }
 
+    ReplicateLevelState( CRI, newLevel );
     if( newLevel != none )
     {
-        recordIndex = RDat.FindRecordSlot( newLevel.MapIndex, CRI.PlayerId );
-        if( recordIndex != -1 )
-        {
-            CRI.SoloRank = recordIndex + 1;
-            CRI.ClientSetPersonalTime( RDat.Rec[newLevel.MapIndex].PSRL[recordIndex].SRT );
-        }
-        else
-        {
-            CRI.SoloRank = 0;
-            CRI.ClientSetPersonalTime( 0 );
-        }
         // Send a meessage "You are Attacck... err playing Level 1!"
         PlayerController(other).ClientMessage( "You are playing" @ newLevel.GetLevelName()$"!" );
-    }
-    else
-    {
-        CRI.SoloRank = 0;
-        CRI.ClientSetPersonalTime( 0 );
     }
     return true;
 }
@@ -6563,25 +6547,48 @@ final function BroadcastLocalMessage( Controller instigator, class<BTClient_Loca
     }
 }
 
+private function bool ReplicateLevelState( BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel )
+{
+    local int recordIndex;
+
+    if( myLevel == none )
+    {
+        goto noRecord;
+    }
+
+    recordIndex = RDat.FindRecordSlot( myLevel.MapIndex, CRI.PlayerId );
+    if( recordIndex != -1 )
+    {
+        CRI.SoloRank = recordIndex + 1;
+        CRI.ClientSetPersonalTime( RDat.Rec[myLevel.MapIndex].PSRL[recordIndex].SRT );
+        return true;
+    }
+
+    noRecord:
+    CRI.SoloRank = 0;
+    CRI.ClientSetPersonalTime( 0.00 );
+    return false;
+}
+
 //==============================================================================
 // Initialize the replication for this player
-final function CreateReplication( PlayerController PC, string SS, int playerIndex )
+private function CreateReplication( PlayerController PC, string SS, int playerIndex )
 {
-    local BTClient_ClientReplication CR;
+    local BTClient_ClientReplication CRI;
 
-    CR = GetRep( PC );
-    if( CR == None )
+    CRI = GetRep( PC );
+    if( CRI == None )
     {
-        Warn( "Found no CR for login" @ PC.GetHumanReadableName() );
+        Warn( "Found no CRI for login" @ PC.GetHumanReadableName() );
         return;
     }
 
-    CR.myPlayerSlot = playerIndex;
-    CR.PlayerId = playerIndex + 1;
+    CRI.myPlayerSlot = playerIndex;
+    CRI.PlayerId = playerIndex + 1;
     PDat.Player[playerIndex].Controller = PC; // not saved
     if( !bSoloMap )
     {
-        CR.ClientMatchStarting( Level.TimeSeconds );
+        CRI.ClientMatchStarting( Level.TimeSeconds );
     }
 
     // Server love
@@ -6594,34 +6601,39 @@ final function CreateReplication( PlayerController PC, string SS, int playerInde
         }
     }
 
-    CR.Title = PDat.Player[playerIndex].Title;
-    CR.BTLevel = PDat.GetLevel( playerIndex, CR.BTExperience );
+    CRI.Title = PDat.Player[playerIndex].Title;
+    CRI.BTLevel = PDat.GetLevel( playerIndex, CRI.BTExperience );
     // Currency
-    CR.BTPoints = PDat.Player[playerIndex].LevelData.BTPoints;
+    CRI.BTPoints = PDat.Player[playerIndex].LevelData.BTPoints;
     // Achievement points
-    CR.APoints = PDat.Player[playerIndex].PLAchiev;
+    CRI.APoints = PDat.Player[playerIndex].PLAchiev;
     // Overalltop rank
-    CR.Rank = PDat.Player[playerIndex].PLARank;
-    CR.bIsPremiumMember = PDat.Player[playerIndex].bHasPremium;
-    if( CR.bIsPremiumMember && Level.NetMode != NM_Standalone )
+    CRI.Rank = PDat.Player[playerIndex].PLARank;
+    CRI.bIsPremiumMember = PDat.Player[playerIndex].bHasPremium;
+    if( CRI.bIsPremiumMember && Level.NetMode != NM_Standalone )
     {
         BroadcastLocalMessage( PC, class'BTClient_PremLocalMessage', "Premium player %PLAYER% has entered the game" );
+    }
+
+    if( MRI.MapLevel != none )
+    {
+        ReplicateLevelState( CRI, MRI.MapLevel );
     }
 
     if( Store != none )
     {
         if( ModeIsTrials() && PDat.Player[playerIndex].bPendingTeamReward )
         {
-            Store.RewardTeamPlayer( CR );
+            Store.RewardTeamPlayer( CRI );
             PDat.Player[playerIndex].bPendingTeamReward = false;
             PDat.Player[playerIndex].TeamPointsContribution = 0;
         }
-        Store.ModifyPlayer( PC, PDat, CR );
+        Store.ModifyPlayer( PC, PDat, CRI );
     }
-    WelcomePlayer( PC, CR );
+    WelcomePlayer( PC, CRI );
 }
 
-final function WelcomePlayer( PlayerController PC, BTClient_ClientReplication CR )
+private function WelcomePlayer( PlayerController PC, BTClient_ClientReplication CR )
 {
     local bool suppressMotd;
     local int i, playerSlot;
@@ -6705,7 +6717,7 @@ final function WelcomePlayer( PlayerController PC, BTClient_ClientReplication CR
     }
 }
 
-private final function BuildEventDescription( out array<string> messages )
+private function BuildEventDescription( out array<string> messages )
 {
     local string mapname;
     local int i, j, l;
@@ -6733,7 +6745,7 @@ private final function BuildEventDescription( out array<string> messages )
     }
 }
 
-private final function SendEventDescription( BTClient_ClientReplication CR )
+private function SendEventDescription( BTClient_ClientReplication CR )
 {
     local int i;
 
