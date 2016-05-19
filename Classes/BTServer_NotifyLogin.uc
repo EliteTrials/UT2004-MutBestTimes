@@ -3,12 +3,14 @@
 //=============================================================================
 class BTServer_NotifyLogin extends Info;
 
-const NotifyDelay = 2.0;
-
-var int Timers;
+var private int Timers;
 var PlayerController Player;
 
-event PreBeginPlay();
+event PreBeginPlay()
+{
+    SetTimer( 0.2, false );
+}
+
 event PostBeginPlay();
 
 event Timer()
@@ -22,7 +24,7 @@ event Timer()
         {
             ++ Timers;
             // Slow delay because we don't want to replicate CustomReplicationInfo too late i.e. after bNetInitial
-            SetTimer( 0.5, false );
+            SetTimer( 0.1, false );
             return;
         }
         MutBestTimes(Owner).NotifyPostLogin( Player, playerHash );

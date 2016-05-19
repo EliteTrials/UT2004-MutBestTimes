@@ -1226,6 +1226,12 @@ function ModifyPlayer( Pawn other )
         return;
     }
 
+    // Sometimes a player may have spawned before being fully initialized(i.e. CRI myPlayerSlot).
+    if( CRI.myPlayerSlot == -1 )
+    {
+        CRI.myPlayerSlot = FindPlayerSlot( PlayerController(other.Controller).GetPlayerIDHash() );
+    }
+
     CRI.myPawn = other;
     CRI.NetUpdateTime = Level.TimeSeconds - 1;
     CurMode.ModeModifyPlayer( other, other.Controller, CRI );
@@ -5596,11 +5602,7 @@ function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
             return true;
 
         NL = Spawn( Class'BTServer_NotifyLogin', self );
-        if( NL != none )
-        {
-            NL.Player = PlayerController(Other);
-            NL.SetTimer( NL.NotifyDelay, false );
-        }
+        NL.Player = PlayerController(Other);
         return true;
     }
     else if( UTServerAdminSpectator(Other) != none )

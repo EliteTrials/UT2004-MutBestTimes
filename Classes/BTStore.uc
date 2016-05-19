@@ -606,9 +606,6 @@ final function ModifyVehicle( Pawn other, Vehicle v, BTServer_PlayersData data, 
 
 final function ModifyPlayer( PlayerController other, BTServer_PlayersData data, BTClient_ClientReplication CRI )
 {
-    if( BTGhostController(other) != none )
-        return;
-
     ApplyOwnedItems( other, data, CRI, ETarget.T_Player );
 }
 
@@ -621,7 +618,7 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
 
     // data.BT.FullLog( "ApplyOwnedItems(" @ other @ CRI @ target @ ")" );
     playerSlot = CRI.myPlayerSlot;
-    if( playerSlot == -1 )
+    if( playerSlot == -1 ) // Replication not yet ready!
         return;
 
     j = data.Player[playerSlot].Inventory.BoughtItems.Length;
