@@ -621,6 +621,9 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
 
     // data.BT.FullLog( "ApplyOwnedItems(" @ other @ CRI @ target @ ")" );
     playerSlot = CRI.myPlayerSlot;
+    if( playerSlot == -1 )
+        return;
+
     j = data.Player[playerSlot].Inventory.BoughtItems.Length;
     for( i = 0; i < j; ++ i )
     {
