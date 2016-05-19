@@ -30,24 +30,11 @@ const BTAuthor                          = "2e216ede3cf7a275764b04b5ccdd005d";   
 const EXP_ImprovedRecord                = 25;
 const EXP_FirstRecord                   = 40;
 const EXP_TiedRecord                    = 30;
-const EXP_FailRecord                    = 3;
 const EXP_Objective                     = 4;
 
 const groupNum = 2;
 const soloNum = 1;
 const regularNum = 0;
-
-struct sPointsList
-{
-    var const int
-        PPlayer[3];
-};
-
-struct sSharedPoints
-{
-    var const sPointsList
-        PlayerPoints[3];
-};
 
 struct KeepScoreSE                                                              // structure to hold data of a leaving player, removed when a new round or map starts.
 {                                                                               // usefull for people who disconnect and end up losing their stats.
@@ -102,9 +89,7 @@ var array<Triggers>                                 Triggers;                   
 var BTRanks                                         Ranks;
 var private array<KeepScoreSE>                      KeepScoreTable;             // Backed up score from leaving players.
 
-var array<float>                                    ObjCompT;                   // Temporary Objective Complete Times, moves to saved BMTL.ObjCompT when new rec.
 var array<sClientSpawn>                             ClientPlayerStarts;         // Current playerstarts in the current map, cleaned when user performs 'DeleteClientSpawn' or when server travels or on QuickStart
-var const float                                     RPScale[10];                // List of points scaling values
 var private const array<sCmdInfo>                   Commands;
 var const array<int>                                ObjectiveLevels;
 var const array<class<BTServer_Mode> >              TrialModes;
@@ -141,7 +126,6 @@ var() globalconfig int GhostPlaybackFPS;
 
 var BTServer_RecordsData                            RDat;                       // Holds all the Records
 var BTServer_PlayersData                            PDat;                       // Holds all the Players
-var sSharedPoints                                   PPoints;                    // Structure containing the points players will be rewarded with
 
 // External
 var GroupManager                                    GroupManager;
@@ -172,27 +156,14 @@ var enum ERecordTeam
     RT_Blue
 } RecordByTeam;
 
-var int
-    // CurrentMapSlot of BMTL/RDat.Rec
-    UsedSlot;
-
-var float
-    StartLevelTimer,                                                            // Level.TimeSeconds when MatchStarting() (!bSolo)
-    SecondsTest;                                                                // Obsolete?, Purpose sync Timer() Seconds to MilliSeconds Timer() test
-
-var string
-    CurrentMapName,                                                             // Holds current map name
-    RankPrefix[4];
+var string CurrentMapName;
+var int UsedSlot;
 
 var const noexport string RecordsDataFileName;
 var const noexport string PlayersDataFileName;
 
-var private int
-    CurCountdown;
-
-// The rank the player has to be to receive besttimes rewards such as trailers!
-var int MaxRewardedPlayers;
-var string Holiday;
+// QuickStart variable holding the current count down.
+var private int CurCountdown;
 
 var private config bool bUpdateWebOnNextMap;
 
@@ -212,7 +183,6 @@ var globalconfig int MaxItemsToReplicatePerTick;
 // Options
 var() globalconfig
     bool
-    bAggressiveMonsters,
     bGenerateBTWebsite,
     bEnhancedTime,
     bShowRankings,
@@ -220,11 +190,8 @@ var() globalconfig
     bDisableForceRespawn,
     bDebugMode,
     bShowDebugLogToWebAdmin,
-    bNotifyRecordDeletingHistory,
-    bMapSkillAdminControlled,
     bTriggersKillClientSpawnPlayers,
     bClientSpawnPlayersCanCompleteMap,
-    bSavePreviousGhost,
     bAddGhostTimerPaths,
     bAllowCompetitiveMode,
     bDontEndGameOnRecord,
@@ -2237,10 +2204,6 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                         }
                     }
                 }
-            }
-            else
-            {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you have to be either a admin or have" @ Objectives_GhostFollow @ "objectives!" );
             }
             break;
 
@@ -4539,17 +4502,7 @@ final function SetClientMatchStartingTime()
     }
 }
 
-//==============================================================================
-// Return rank string based on rank value i.e 1st, 2nd, 3rd, 4th
-final function string GetRankPrefix( int i )
-{
-    if( i > 3 )
-        return RankPrefix[3];
-
-    return RankPrefix[i];
-}
-
-final function SetSoloRecordTime( PlayerController player, int mapIndex, int recordIndex, float newTime )
+private function SetSoloRecordTime( PlayerController player, int mapIndex, int recordIndex, float newTime )
 {
     RDat.Rec[mapIndex].LastRecordedDate = RDat.MakeCompactDate( Level );
     RDat.Rec[mapIndex].PSRL[recordIndex].SRT = newTime;
@@ -5536,22 +5489,6 @@ final function NotifyNewRecord( int playerSlot, int mapIndex, float playTime )
 }
 
 //==============================================================================
-// Check if the new record is valid
-protected final function bool ValidRecord()                                                     // .:..:, Eliot
-{
-    // return false if map ended not legal.
-    if
-    (
-        ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner == ERW_PracticeRoundEnded
-    )
-    {
-        FullLog( "Invalid Record - Reason:"$ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner );
-        return False;
-    }
-    return True;
-}
-
-//==============================================================================
 // Team-Trial Method
 // Get the best players of the current game
 final function array<BTStructs.sPlayerReference> GetBestPlayers()                      // .:..:, Eliot
@@ -5854,7 +5791,7 @@ function ModifyLogin(out string Portal, out string Options)                     
 
 //==============================================================================
 // RetriveScore
-final function RetrieveScore( PlayerController Other, string ClientID )       // .:..:, Eliot
+private function RetrieveScore( PlayerController Other, string ClientID )       // .:..:, Eliot
 {
     local int i, j;
 
@@ -6045,48 +5982,6 @@ final function UpdateScoreboard( PlayerController PC )
     {
         GhostManager.UpdateGhostsName( myCR.myPlayerSlot, PDat.Player[myCR.myPlayerSlot].PLName );
     }
-
-// FIXME: Reimplement solo packets updating.
-    // if( myCR.SoloRank-1 >= 0 && myCR.SoloRank <= MaxRankedPlayers )
-    // {
-    //     NewTPacket.Points       = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Points;
-    //     NewTPacket.Name         = PDat.Player[myCR.myPlayerSlot].PLName;
-    //     NewTPacket.Time         = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRT;
-    //     NewTPacket.Date         = class'BTClient_Interaction'.static.FixDate( RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].SRD );
-    //     NewTPacket.Flags        = RDat.Rec[UsedSlot].PSRL[myCR.SoloRank-1].Flags;
-    // }
-
-    // if( NewTPacket.Name == "" )
-    //     return;
-
-    // // Update the packet of myCR for every other CR
-    // for( C = Level.ControllerList; C != None; C = C.NextController )
-    // {
-    //     if( PlayerController(C) == None || C.PlayerReplicationInfo == None )
-    //         continue;
-
-    //     CR = GetRep( PlayerController(C) );
-    //     if( CR != none && CR.bReceivedRankings )
-    //     {
-    //         if( NewTPacket.Name != "" )
-    //             CR.ClientUpdateSoloTop( NewTPacket, myCR.SoloRank-1 );
-
-    //         break;
-    //     }
-    // }
-}
-
-//==============================================================================
-// Broadcast Msg to everyone but the WebAdmin(reduces spam)
-final function BroadcastNotWebA( string Msg, optional name Type )                       // .:..:
-{
-    local Controller C;
-
-    for( C=Level.ControllerList; C!=None; C=C.NextController )
-    {
-        if( PlayerController(C) != none && C != WebAdminActor )
-            PlayerController(C).ClientMessage(Msg,Type);
-    }
 }
 
 //==============================================================================
@@ -6249,10 +6144,7 @@ final function CreateWebBTimes()                                                
     $"<tr><td><p>Version</p></td><td><p>"$BTVersion$"</p></td><tr>"
     $"<tr><td><p>Authors</p></td><td><p>"$CREDITS$"</p></td><tr>"
     $"<tr><td><p>Records</p></td><td><p>"$MRI.RecordsCount$"</p></td><tr>"
-    $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>"
-    $"<tr><td><p>Points Rewarded for 1P Record</p></td><td><p>P1("$PPoints.PlayerPoints[0].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>"
-    $"<tr><td><p>Points Rewarded for 2P Record</p></td><td><p>P1("$PPoints.PlayerPoints[1].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective), P2("$PPoints.PlayerPoints[1].PPlayer[1]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>"
-    $"<tr><td><p>Points Rewarded for 3P Record</p></td><td><p>P1("$PPoints.PlayerPoints[2].PPlayer[0]$" + "$PointsPerObjective$" point for each Objective), P2("$PPoints.PlayerPoints[2].PPlayer[1]$" + "$PointsPerObjective$" point for each Objective), P3("$PPoints.PlayerPoints[2].PPlayer[2]$" + "$PointsPerObjective$" point for each Objective)</p></td><tr>";
+    $"<tr><td><p>Players</p></td><td><p>"$PDat.Player.Length$"</p></td><tr>";
 
     // Write Recent Records
     ++ Pos;
@@ -7342,27 +7234,7 @@ defaultproperties
     cGreen=(R=0,G=255,B=0,A=255)
     cEnd="«"
 
-    MaxRewardedPlayers=3
-
-    RankPrefix(0)="st"
-    RankPrefix(1)="nd"
-    RankPrefix(2)="rd"
-    RankPrefix(3)="th"
-
-    RPScale(0)=0.200
-    RPScale(1)=0.400
-    RPScale(2)=0.600
-    RPScale(3)=0.800
-    RPScale(4)=1.000
-    RPScale(5)=1.500
-    RPScale(6)=2.000
-    RPScale(7)=2.500
-    RPScale(8)=3.000
-    RPScale(9)=3.500
-
     PointsPerObjective=0.25
-    PPoints=(PlayerPoints[0]=(PPlayer[0]=5),PlayerPoints[1]=(PPlayer[0]=3,PPlayer[1]=3),PlayerPoints[2]=(PPlayer[0]=1,PPlayer[1]=1,PPlayer[2]=1))
-
     PointsPerLevel=1
     MaxLevel=100
     ObjectivesEXPDelay=10
@@ -7397,8 +7269,6 @@ defaultproperties
     TimeScaling=1.0
     bGenerateBTWebsite=True
     MaxItemsToReplicatePerTick=1
-
-    //bSavePreviousGhost=True
 
     LastRecords(0)="N/A"
     LastRecords(1)="N/A"
