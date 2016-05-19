@@ -8,6 +8,7 @@ var private automated BTGUI_ComboBox MapsQueryCombo;
 var private automated BTGUI_ComboBox PlayersQueryCombo;
 
 var private automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
+var private automated BTGUI_Footer Footer;
 var private bool bWaitingForReplication;
 
 delegate OnQueryPlayerRecord( coerce string mapId, coerce string playerId );
@@ -132,6 +133,7 @@ private function QueryNextRecordRanks( optional bool bReset )
     CRI.RecordsPRI.RecordsQuery = RankingsCombo.GetText();
     CRI.RecordsPRI.QueryNextRecordRanks( bReset );
 	Log("Querying next ranks" @ bIsQuerying @ bReset @ CRI.RecordsPRI.RecordsQuery );
+    Footer.SetText( "Querying..." );
 }
 
 protected function InternalOnChangeSource( GUIComponent sender )
@@ -264,6 +266,15 @@ protected function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInf
     {
         // If our end user is sorting by other means than Rank, then we should make sure the newly added data gets sorted straight away!
         RankingsListBox.List.NeedsSorting = true;
+    }
+
+    if( bAll && source.RecordRanks.Length == 0 )
+    {
+        Footer.SetText( "No items found for this query!" );
+    }
+    else
+    {
+        Footer.SetText( "Query completed!" );
     }
 }
 
@@ -416,7 +427,7 @@ defaultproperties
 
     Begin Object Class=BTGUI_RecordRankingsMultiColumnListBox Name=ItemsListBox
         WinWidth=1.0
-        WinHeight=0.915
+        WinHeight=0.855
         WinLeft=0.0
         WinTop=0.07
         bVisibleWhenEmpty=true
@@ -425,4 +436,14 @@ defaultproperties
         FontScale=FNS_Small
     End Object
     RankingsListBox=ItemsListBox
+
+    Begin Object Class=BTGUI_Footer Name=oFooter
+        WinWidth=1.0
+        WinHeight=0.05
+        WinLeft=0.0
+        WinTop=0.935
+        bScaleToParent=True
+        bBoundToParent=True
+    End Object
+    Footer=oFooter
 }
