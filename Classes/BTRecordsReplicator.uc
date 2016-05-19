@@ -46,7 +46,7 @@ final function Initialize( BTGUI_RecordRankingsReplicationInfo recordsPRI, int q
                 query = myLevel.GetFullName( BT.CurrentMapName );
             }
             SourceIndex = BT.QueryMapIndex( query );
-            if( RecordsSource.Rec[SourceIndex].SubLevels.Length == 0 )
+            if( SourceIndex != -1 && RecordsSource.Rec[SourceIndex].SubLevels.Length == 0 )
             {
                 GotoState( 'SendMapRecords');
             }
