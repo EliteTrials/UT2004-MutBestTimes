@@ -1100,6 +1100,11 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
             CRI.SoloRank = recordIndex + 1;
             CRI.ClientSetPersonalTime( RDat.Rec[newLevel.MapIndex].PSRL[recordIndex].SRT );
         }
+        else
+        {
+            CRI.SoloRank = 0;
+            CRI.ClientSetPersonalTime( 0 );
+        }
         // Send a meessage "You are Attacck... err playing Level 1!"
         PlayerController(other).ClientMessage( "You are playing" @ newLevel.GetLevelName()$"!" );
     }
