@@ -75,10 +75,11 @@ function RepReady( BTGUI_ScoreboardReplicationInfo source )
     if( ranksRep == none ) // Not meant for this instance
         return;
 
-	// Start receiving updates.
-	ranksRep.OnPlayerRankReceived = InternalOnPlayerRankReceived;
-	ranksRep.OnPlayerRanksDone = InternalOnPlayerRanksDone;
-	RankingsListBox.SwitchRankings( ranksRep.RanksId, ranksRep );
+    Log("Rep ready" @ ranksRep.RanksId);
+    // Start receiving updates.
+    ranksRep.OnPlayerRankReceived = InternalOnPlayerRankReceived;
+    ranksRep.OnPlayerRanksDone = InternalOnPlayerRanksDone;
+    RankingsListBox.SwitchRankings( ranksRep.RanksId, ranksRep );
     QueryNextPlayerRanks();
     bWaitingForReplication = false;
 }
@@ -89,9 +90,10 @@ function InternalOnChangeRankingsCategory( GUIComponent sender )
 	local BTClient_ClientReplication CRI;
 	local byte ranksId;
 
-	bIsQuerying = false; // renable querying
-	ranksId = GetCurrentRanksId();
+    bIsQuerying = false; // renable querying
+    ranksId = GetCurrentRanksId();
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
+    Log("Changing rankings category to" @ ranksId @ "channel:" @ CRI.Rankings[ranksId]);
 	if( CRI.Rankings[ranksId] == none )
 	{
 		// PlayerOwner().ClientMessage("Requesting new rankings channel" @ ranksId);

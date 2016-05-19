@@ -86,9 +86,17 @@ function RepReady( BTGUI_ScoreboardReplicationInfo repSource )
 	recordsPRI.OnRecordRanksDone = InternalOnRecordRanksDone;
     recordsPRI.OnRecordRanksCleared = InternalOnRecordRanksCleared;
 
-    Log( recordsPRI.RecordsQuery @ recordsPRI.RecordsSource );
+    Log( "rep ready with"
+        @ "server query:" @ recordsPRI.RecordsQuery
+        @ "source:" @ recordsPRI.RecordsSource
+    );
     SourceCombo.EnableMe();
     SourceCombo.SetText( recordsPRI.RecordsSource ); // not triggering OnChange???
+    // HACK: OnChange is not triggered by SetText because "Levels" is not added as an item.
+    if( recordsPRI.RecordsSource ~= "Levels" )
+    {
+        SourceCombo.OnChange( SourceCombo );
+    }
     bWaitingForReplication = false;
     CacheLevels();
 }
@@ -132,7 +140,11 @@ private function QueryNextRecordRanks( optional bool bReset )
 
     CRI.RecordsPRI.RecordsQuery = RankingsCombo.GetText();
     CRI.RecordsPRI.QueryNextRecordRanks( bReset );
-	Log("Querying next ranks" @ bIsQuerying @ bReset @ CRI.RecordsPRI.RecordsQuery );
+	Log("Querying next ranks"
+        @ "is querying:" @ bIsQuerying
+        @ "is reset:" @ bReset
+        @ "server query:" @ CRI.RecordsPRI.RecordsQuery
+    );
     Footer.SetText( "Querying..." );
 }
 
@@ -207,7 +219,11 @@ protected function InternalOnChangeQuery( GUIComponent sender )
 
     Log("Query changed by" @ sender);
     CRI = GetCRI( PlayerOwner().PlayerReplicationInfo );
-    Log("InternalOnChangeQuery" @ bIsQuerying @ CRI.RecordsPRI.RecordsQuery @ RankingsCombo.GetText() );
+    Log("InternalOnChangeQuery"
+        @ "is querying:" @ bIsQuerying
+        @ "server query:" @ CRI.RecordsPRI.RecordsQuery
+        @ "combo query:" @ RankingsCombo.GetText()
+    );
     bIsQuerying = false; // renable querying
 
     // TODO:
@@ -246,7 +262,11 @@ protected function InternalOnRecordRanksDone( BTGUI_RecordRankingsReplicationInf
     SourceCombo.EnableMe();
     RankingsCombo.EnableMe();
 
-	Log("Query completed!" @ source.RecordsQuery @ source.RecordsSourceId @ source.RecordsSource);
+	Log("Query completed!"
+        @ "server query:" @ source.RecordsQuery
+        @ "source id:" @ source.RecordsSourceId
+        @ "source:" @ source.RecordsSource
+    );
     SwitchSourceType( source.RecordsSource );
     // Cache this resolved name
     RankingsCombo.OnChange = none;
@@ -282,8 +302,9 @@ protected function InternalOnRecordRanksCleared( BTGUI_RecordRankingsReplication
 {
 	local BTGUI_RecordRankingsMultiColumnList list;
 
-	list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
-	list.Clear();
+    list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
+    list.Clear();
+    Log("Currently queried records cleared!");
     QueryNextRecordRanks( true );
 }
 
