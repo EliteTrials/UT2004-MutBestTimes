@@ -31,7 +31,10 @@ final function InstallMarkers( optional bool replaceOld )
         return;
 
     ghostLevel = BT.GetObjectiveLevelByFullName( GhostMapName );
-    ghostLevel.PrimaryGhostNumMoves = GhostData.MO.Length;
+    if( ghostLevel != none )
+    {
+        ghostLevel.PrimaryGhostNumMoves = GhostData.MO.Length;
+    }
 
     if( replaceOld )
     {
@@ -45,23 +48,27 @@ final function InstallMarkers( optional bool replaceOld )
             }
         }
     }
-    AddMarkers();
+    AddMarkers( ghostLevel );
 }
 
-private function AddMarkers()
+private function AddMarkers( BTClient_LevelReplication ghostLevel )
 {
     local int i;
     local BTClient_GhostMarker marker;
 
     // Log( "Adding frame markers for ghost" @ GhostName @ GhostMapName );
-    if( GhostData.MO.Length > 10 && GhostData.MO.Length < 2000 )
+    if( GhostData.MO.Length > 10 && GhostData.MO.Length < 4000 )
     {
+        if( ghostLevel != none && BT.MRI.MapLevel == none )
+        {
+            GhostData.RelativeSpawnOffset = ghostLevel.GetSpawnLocation() - GhostData.GetStartLocation();
+        }
         for( i = 0; i < GhostData.MO.Length; ++ i )
         {
             if( (marker == none && VSize( GhostData.MO[0].P - GhostData.MO[i].P ) > 512)
-                || (marker != none && VSize( marker.Location - GhostData.MO[i].P ) > 512) )
+                || (marker != none && VSize( marker.Location - GhostData.RelativeSpawnOffset - GhostData.MO[i].P ) > 512) )
             {
-                marker = Spawn( GhostMarkerClass, self,, GhostData.MO[i].P );
+                marker = Spawn( GhostMarkerClass, self,, GhostData.MO[i].P + GhostData.RelativeSpawnOffset );
                 marker.MoveIndex = i;
             }
         }
