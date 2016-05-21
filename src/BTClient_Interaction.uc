@@ -2637,7 +2637,7 @@ static final function string Strl( float Value )
 
 /** Formats the given time in seconds.deci_centi.
     Outputs:[-][00:00:]00.00 */
-static final function string FormatTime( float value )                          // Based upon epic's Time Format code
+static final function string FormatTime( float value, optional bool forceFull )                          // Based upon epic's Time Format code
 {
     local string hourString, minuteString, secondString, output;
     local int minutes, hours;
@@ -2653,7 +2653,7 @@ static final function string FormatTime( float value )                          
     if( minutes < 10 ) minuteString = "0" $ minutes; else minuteString = string(minutes);
     if( hours < 10 ) hourString = "0" $ hours; else hourString = string(hours);
 
-    if( Class'BTClient_Config'.static.FindSavedData().bDisplayFullTime )
+    if( forceFull || Class'BTClient_Config'.static.FindSavedData().bDisplayFullTime )
     {
         if( value < 0 )
             return "-" $ hourString $ ":" $ minuteString $ ":" $ secondString;

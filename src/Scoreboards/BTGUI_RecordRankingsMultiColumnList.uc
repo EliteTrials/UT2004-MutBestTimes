@@ -255,7 +255,7 @@ function string GetSortString( int i )
             return CRI.RecordsPRI.RecordRanks[i].Name;
 
         case 3:
-            return class'BTClient_Interaction'.static.FormatTime( CRI.RecordsPRI.RecordRanks[i].Time );
+            return class'BTClient_Interaction'.static.FormatTime( CRI.RecordsPRI.RecordRanks[i].Time, true );
 
         case 4:
             return MyPadLeft( CRI.RecordsPRI.RecordRanks[i].Date, 8, "0" );
