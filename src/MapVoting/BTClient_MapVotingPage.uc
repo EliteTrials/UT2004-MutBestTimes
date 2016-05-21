@@ -51,11 +51,11 @@ function AddSystemMenu()
 
     // Do not want OnClick() called from MousePressed()
     b_ExitButton.bRepeatClick = False;
-    BackgroundColor = class'BTClient_Config'.default.CTable;
 }
 
 function bool SystemMenuPreDraw(canvas Canvas)
 {
+    BackgroundColor = class'BTClient_Config'.static.FindSavedData().CTable;
     b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + t_WindowTitle.ActualWidth() - b_ExitButton.ActualWidth(), t_WindowTitle.ActualTop(), t_WindowTitle.ActualHeight(), t_WindowTitle.ActualHeight(), true);
     return true;
 }
@@ -64,7 +64,7 @@ function bool SystemMenuPreDraw(canvas Canvas)
 function bool InternalOnPanelBackgroundDraw( Canvas C )
 {
     C.SetPos( MapPanel.ActualLeft(), MapPanel.ActualTop() );
-    C.DrawColor = class'BTClient_Config'.default.CTable;
+    C.DrawColor = class'BTClient_Config'.static.FindSavedData().CTable;
     C.DrawTile( Texture'BTScoreBoardBG', MapPanel.ActualWidth(), MapPanel.ActualHeight(), 0, 0, 256, 256 );
     return false;
 }
@@ -266,9 +266,9 @@ defaultproperties
     MapPanel=oMapInfo
 
     Begin Object Class=BTClient_MapVoteCountMultiColumnListBox Name=VoteCountListBox
-        WinWidth=0.41
+        WinWidth=0.425000
         WinHeight=0.260500
-        WinLeft=0.58
+        WinLeft=0.570000
         WinTop=0.73
         bVisibleWhenEmpty=true
         bScaleToParent=True

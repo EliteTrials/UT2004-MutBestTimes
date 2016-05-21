@@ -6,6 +6,9 @@ class BTClient_Config extends Object
     perobjectconfig;
 
 const CONFIG_NAME = "BTConfig";
+const CONFIG_VERSION = 1.0;
+
+var globalconfig float SavedWithVersion;
 
 var() globalconfig
     int
@@ -69,8 +72,23 @@ final static function BTClient_Config FindSavedData()
     if( cfg == none )
         cfg = new (none, CONFIG_NAME) default.Class;
 
+    if( cfg.SavedWithVersion < CONFIG_VERSION )
+    {
+        PatchSavedData( cfg );
+        cfg.SavedWithVersion = CONFIG_VERSION;
+        cfg.SaveConfig();
+    }
+
     default._ConfigInstance = cfg;
     return cfg;
+}
+
+private static function PatchSavedData( BTClient_Config cfg )
+{
+    if( cfg.SavedWithVersion < 1 )
+    {
+        cfg.CTable = default.CTable;
+    }
 }
 
 // Thanks to Gugi(ClanManager), used with permission.
@@ -118,6 +136,8 @@ final function ResetSavedData()
     bResetGhostOnDead               = default.bResetGhostOnDead;
     bProfesionalMode                = default.bProfesionalMode;
     bAutoBehindView                 = default.bAutoBehindView;
+    CTable                          = default.CTable;
+    CGoldText                       = default.CGoldText;
     SaveConfig();
 }
 
@@ -152,7 +172,7 @@ DefaultProperties
     bBaseTimeLeftOnPersonal=False
     bResetGhostOnDead=True
 
-    CTable=(B=20,G=10,R=10,A=200)
+    CTable=(B=18,G=12,R=12,A=200)
     CGoldText=(R=255,G=255,B=0,A=255)
     PreferedColor=(R=255,G=255,B=255,A=255)
 }

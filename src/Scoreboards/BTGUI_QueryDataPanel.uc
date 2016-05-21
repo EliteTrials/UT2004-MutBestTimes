@@ -35,7 +35,7 @@ function CreateDataRows()
 function bool InternalOnDraw( Canvas C )
 {
     C.SetPos( ActualLeft(), ActualTop() );
-    C.DrawColor = class'BTClient_Config'.default.CTable;
+    C.DrawColor = class'BTClient_Config'.static.FindSavedData().CTable;
     C.DrawTile( Texture'BTScoreBoardBG', ActualWidth(), ActualHeight(), 0, 0, 256, 256 );
     return false;
 }

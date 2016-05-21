@@ -34,11 +34,11 @@ function AddSystemMenu()
 
 	// Do not want OnClick() called from MousePressed()
 	b_ExitButton.bRepeatClick = False;
-	BackgroundColor = class'BTClient_Config'.default.CTable;
 }
 
 function bool SystemMenuPreDraw(canvas Canvas)
 {
+    BackgroundColor = class'BTClient_Config'.static.FindSavedData().CTable;
 	b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + t_WindowTitle.ActualWidth() - b_ExitButton.ActualWidth(), t_WindowTitle.ActualTop(), t_WindowTitle.ActualHeight(), t_WindowTitle.ActualHeight(), true);
 	return true;
 }
