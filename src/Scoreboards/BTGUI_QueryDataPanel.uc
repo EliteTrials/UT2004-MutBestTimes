@@ -1,8 +1,19 @@
 class BTGUI_QueryDataPanel extends GUIPanel;
 
+enum EFormating
+{
+    F_Default,
+    F_Numeric,
+    F_Date,
+    F_Time,
+    F_Hours
+};
+
 var() editconstarray array<struct sMetaDataRow{
     var() localized string Caption;
-    var() transient string Value;
+    var() name Bind;
+    var() EFormating Format;
+    var transient string Value;
 }> DataRows;
 
 var automated GUIMultiColumnListBox RowsListBox;
@@ -91,7 +102,46 @@ function InternalOnDrawRow( Canvas C, int i, float X, float Y, float W, float H,
     );
 }
 
-function ApplyData( BTQueryDataReplicationInfo queryRI );
+final function string Formatize( coerce string value, EFormating format )
+{
+    switch( format )
+    {
+        case F_Default:
+            if( value == "" )
+                return "N/A";
+            return value;
+
+        case F_Numeric:
+            if( value == "" || float(value) == 0.00 )
+                return "N/A";
+            return value;
+
+        case F_Date:
+            if( int(value) == 0 )
+                return "N/A";
+            return class'BTClient_Interaction'.static.CompactDateToString( int(value) );
+
+        case F_Time:
+            return class'BTClient_Interaction'.static.FormatTimeCompact( float(value) );
+
+        case F_Hours:
+            return int(value)$"h";
+    }
+    return value;
+}
+
+function ApplyData( BTQueryDataReplicationInfo queryRI )
+{
+    local int i;
+
+    for( i = 0; i < DataRows.Length; ++ i )
+    {
+        if( DataRows[i].Bind != '' )
+        {
+            DataRows[i].Value = Formatize( queryRI.GetPropertyText( string(DataRows[i].Bind) ), DataRows[i].Format );
+        }
+    }
+}
 
 defaultproperties
 {
