@@ -12,6 +12,30 @@ var automated BTClient_MapPanel MapPanel;
 var automated GUILabel GameTypeFilter;
 var automated BTGUI_ComboBox ComboGameType;
 
+// Removed i_FrameBG access
+function InitComponent( GUIController MyController, GUIComponent MyOwner )
+{
+    super(PopupPageBase).InitComponent( MyController, MyOwner );
+    t_WindowTitle.SetCaption(WindowName);
+    if ( bMoveAllowed )
+    {
+        t_WindowTitle.bAcceptsInput = true;
+        t_WindowTitle.MouseCursorIndex = HeaderMouseCursorIndex;
+    }
+    AddSystemMenu();
+
+    MVRI = VotingReplicationInfo(PlayerOwner().VoteReplicationInfo);
+    // Turn pause off if currently paused (stops replication)
+    if(PlayerOwner() != None && PlayerOwner().Level.Pauser != None)
+        PlayerOwner().SetPause(false);
+}
+
+// Removed i_FrameBG access
+function bool AlignFrame(Canvas C)
+{
+    return bInit;
+}
+
 function AddSystemMenu()
 {
     b_ExitButton = GUIButton(t_WindowTitle.AddComponent( "XInterface.GUIButton" ));
@@ -34,14 +58,6 @@ function bool SystemMenuPreDraw(canvas Canvas)
 {
     b_ExitButton.SetPosition( t_WindowTitle.ActualLeft() + t_WindowTitle.ActualWidth() - b_ExitButton.ActualWidth(), t_WindowTitle.ActualTop(), t_WindowTitle.ActualHeight(), t_WindowTitle.ActualHeight(), true);
     return true;
-}
-
-// Ugly ugly ugly...
-function bool InternalOnBackgroundDraw( Canvas C )
-{
-    C.DrawColor = class'BTClient_Config'.default.CTable;
-    C.DrawTile( i_FrameBG.Image, i_FrameBG.ActualWidth(), i_FrameBG.ActualHeight(), 0, 0, 256, 256 );
-    return false;
 }
 
 // Ugly ugly ugly...
@@ -87,10 +103,6 @@ function InternalOnOpen()
         return;
     }
 
-    BackgroundRStyle = MSTY_None;
-    // i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
-    i_FrameBG.Image = Texture'BTScoreBoardBG';
-    i_FrameBG.OnDraw = InternalOnBackgroundDraw;
     MapPanel.OnDraw = InternalOnPanelBackgroundDraw;
     BTClient_VRI(MVRI).OnReceiveMapInfo = InternalOnReceiveMapInfo;
 
@@ -218,15 +230,19 @@ function SendVote(GUIComponent Sender)
 
 defaultproperties
 {
-    WinLeft=0.05
-    WinTop=0.05
-    WinWidth=0.9
-    WinHeight=0.9
+    i_FrameBG=none
+    Background=Texture'BTScoreBoardBG'
+    BackgroundRStyle=MSTY_Normal
+
+    WinLeft=0.1
+    WinTop=0.1
+    WinWidth=0.8
+    WinHeight=0.8
 
     Begin Object Class=BTClient_MapVoteMultiColumnListBox Name=MapListBox
-        WinWidth=0.980000
+        WinWidth=0.99000
         WinHeight=0.624000
-        WinLeft=0.010000
+        WinLeft=0.0050000
         WinTop=0.060000
         bVisibleWhenEmpty=true
         bScaleToParent=True
@@ -241,8 +257,8 @@ defaultproperties
 
     begin object class=BTClient_MapPanel name=oMapInfo
         WinWidth=0.560000
-        WinHeight=0.240000
-        WinLeft=0.010000
+        WinHeight=0.260500
+        WinLeft=0.005000
         WinTop=0.730000
         bScaleToParent=True
         bBoundToParent=True
@@ -251,7 +267,7 @@ defaultproperties
 
     Begin Object Class=BTClient_MapVoteCountMultiColumnListBox Name=VoteCountListBox
         WinWidth=0.41
-        WinHeight=0.24
+        WinHeight=0.260500
         WinLeft=0.58
         WinTop=0.73
         bVisibleWhenEmpty=true
@@ -272,7 +288,7 @@ defaultproperties
         WinTop=0.69
         WinHeight=0.035000
         WinWidth=0.07
-        WinLeft=0.01
+        WinLeft=0.005
         bScaleToParent=True
         bBoundToParent=True
         Caption="Search"
@@ -288,7 +304,7 @@ defaultproperties
         WinTop=0.69
         WinHeight=0.035000
         WinWidth=0.485
-        WinLeft=0.085
+        WinLeft=0.080
         bScaleToParent=True
         bBoundToParent=True
         OnChange=InternalOnFilterChange
@@ -297,9 +313,9 @@ defaultproperties
     MapNameFilter=oMapNameFilter
 
     begin object class=GUILabel name=oGameTypeFilter
-        WinWidth=0.065
+        WinWidth=0.075
         WinHeight=0.035000
-        WinLeft=0.58
+        WinLeft=0.57
         WinTop=0.69
         bScaleToParent=True
         bBoundToParent=True
@@ -313,7 +329,7 @@ defaultproperties
     GameTypeFilter=oGameTypeFilter
 
     Begin Object class=BTGUI_ComboBox Name=GameTypeCombo
-        WinWidth=0.235000
+        WinWidth=0.245000
         WinHeight=0.035000
         WinLeft=0.650000
         WinTop=0.690000
@@ -326,9 +342,9 @@ defaultproperties
     co_Gametype=none
 
     Begin Object class=GUIButton Name=oRandomButton
-        WinWidth=0.100000
+        WinWidth=0.095000
         WinHeight=0.035000
-        WinLeft=0.890000
+        WinLeft=0.90000
         WinTop=0.690000
         Caption="Random"
         bScaleToParent=True
@@ -353,13 +369,15 @@ defaultproperties
     i_MapListBackground=none
 
     Begin Object Class=GUIHeader Name=TitleBar
-        WinWidth=0.980000
-        WinHeight=0.034286
-        WinLeft=0.010000
-        WinTop=0.010000
+        WinLeft=0.0
+        WinWidth=1.0
+        WinTop=0.0
+        WinHeight=0.04
         RenderWeight=0.1
-        FontScale=FNS_Small
-        bUseTextHeight=True
+        FontScale=FNS_Large
+        Justification=TXTA_Left
+        TextIndent=4
+        bUseTextHeight=false
         bAcceptsInput=True
         bNeverFocus=False
         bBoundToParent=true

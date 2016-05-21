@@ -354,11 +354,11 @@ defaultproperties
     SelectedStyleName="BTListSelection"
     SelectedBKColor=(R=255,G=255,B=255,A=255)
 
-    InitColumnPerc(0)=0.06
-    InitColumnPerc(1)=0.36
-    InitColumnPerc(2)=0.08
-    InitColumnPerc(3)=0.11
-    InitColumnPerc(4)=0.21
+    InitColumnPerc(0)=0.065
+    InitColumnPerc(1)=0.375
+    InitColumnPerc(2)=0.085
+    InitColumnPerc(3)=0.115
+    InitColumnPerc(4)=0.18
     InitColumnPerc(5)=0.08
     InitColumnPerc(6)=0.10
 
