@@ -1075,7 +1075,8 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
     local array<string> variable;
     local string playerId, mapId;
 
-    Split(Locs(query), " ", params);
+    Log( "server received a query with" @ query );
+    Split(query, " ", params);
     if( params.Length == 0 )
     {
         // TODO: Send bad query
@@ -1088,7 +1089,7 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
         if( variable.Length < 2 )
             continue;
 
-        switch( variable[0] )
+        switch( Locs( variable[0] ) )
         {
             case "map":
                 mapId = variable[1];
@@ -1102,7 +1103,12 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
 
     if( mapId != "" && playerId != "" )
     {
-        queryRI = BuildRecordData( Spawn( class'BTRecordReplicationInfo', requester ), mapId, playerId );
+        queryRI = Spawn( class'BTRecordReplicationInfo', requester );
+        if( BuildRecordData( BTRecordReplicationInfo(queryRI), mapId, playerId ) == none )
+        {
+            queryRI.Destroy();
+            queryRI = none;
+        }
     }
     else if( mapId != "" )
     {
@@ -1121,12 +1127,12 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
 }
 
 // Expects params to consist of: "record:mapIndex:playerIndex"
-final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, string playerId, string mapId )
+final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, string mapId, string playerId )
 {
     local int mapIndex, playerIndex, recordIndex;
 
-    playerIndex = QueryPlayerIndex( playerId );
     mapIndex = QueryMapIndex( mapId );
+    playerIndex = QueryPlayerIndex( playerId );
     if( playerIndex == -1 || mapIndex == -1 )
         return none;
 
@@ -1134,7 +1140,13 @@ final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo 
     if( recordIndex == -1 )
         return none;
 
+    recordData.PlayerId = playerId;
+    recordData.MapId = mapId;
+    // recordData.GhostId = recordIndex + 1;
     recordData.Completed = RDat.Rec[mapIndex].PSRL[recordIndex].ObjectivesCount;
+    recordData.AverageDodgeTiming = 0.00;
+    recordData.BestDodgeTiming = 0.00;
+    recordData.WorstDodgeTiming = 0.00;
     return recordData;
 }
 
