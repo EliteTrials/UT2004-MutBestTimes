@@ -138,7 +138,10 @@ private function QueryNextRecordRanks( optional bool bReset )
         RankingsListBox.List.SetIndex( 0 );
     }
 
-    CRI.RecordsPRI.RecordsQuery = RankingsCombo.GetText();
+    if( bReset )
+    {
+        CRI.RecordsPRI.RecordsQuery = RankingsCombo.GetText();
+    }
     CRI.RecordsPRI.QueryNextRecordRanks( bReset );
 	Log("Querying next ranks"
         @ "is querying:" @ bIsQuerying

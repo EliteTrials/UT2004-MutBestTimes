@@ -5,16 +5,12 @@ var automated BTGUI_QueryPanel QueryPanel;
 var private BTGUI_PlayerRankingsScoreboard PlayersScoreboard;
 var private BTGUI_RecordRankingsScoreboard RecordsScoreboard;
 
-event Free()
-{
-    super.Free();
-    PlayersScoreboard = none;
-    RecordsScoreboard = none;
-}
-
 event bool NotifyLevelChange()
 {
     bPersistent = false;
+    // Don't clear on Free() (bug: called on closing)
+    PlayersScoreboard = none;
+    RecordsScoreboard = none;
     return super.NotifyLevelChange();
 }
 
