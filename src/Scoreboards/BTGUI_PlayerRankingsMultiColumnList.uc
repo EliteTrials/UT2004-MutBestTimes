@@ -97,9 +97,6 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
 
     if( Rankings.PlayerRanks[sortItem].CountryCode != "" )
     {
-        DrawStyle.DrawText( C, MenuState, CellLeft + 32, Y, CellWidth - 32, H, TXTA_Left,
-            Rankings.PlayerRanks[sortItem].Name, FontScale );
-
         DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
         yl = yl*0.8 - 2.0;
         xl = 10f/8f*yl;
@@ -123,12 +120,11 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
             DrawStyle.DrawText( C, MenuState, CellLeft, Y, 32, H, TXTA_Left,
                 Rankings.PlayerRanks[sortItem].CountryCode, FontScale );
         }
+        CellLeft += xl + 8;
+        CellWidth -= xl + 8;
     }
-    else
-    {
-        DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
-            Rankings.PlayerRanks[sortItem].Name, FontScale );
-    }
+    DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
+        Rankings.PlayerRanks[sortItem].Name, FontScale );
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 4 );
