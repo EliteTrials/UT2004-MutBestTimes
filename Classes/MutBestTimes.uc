@@ -5280,7 +5280,7 @@ final private function bool CheckPlayerRecord(
                     tmpSlot = RDat.Rec[mapIndex].PSRL[1].PLs-1;
                     PDat.Player[tmpSlot].RecentLostRecords[PDat.Player[tmpSlot].RecentLostRecords.Length] =
                         $cGold$TimeToStr( finishDiff )$cWhite
-                        @ myLevel.GetFullName( CurrentMapName ) @ "by" @ PDat.Player[PLs-1].PLNAME;
+                        @ myLevel.GetFullName( CurrentMapName ) @ "by" @ myLevel.TopRanks;
 
                     RDat.Rec[mapIndex].TMFailures = 0;
                     ++ RDat.Rec[mapIndex].TMHijacks;    // Amount of times this record has been hijacked.
@@ -5486,7 +5486,7 @@ final function NotifyNewRecord( int playerSlot, int mapIndex, float playTime )
     }
     LastRecords[MaxRecentRecords - 1] = RDat.Rec[mapIndex].TMN
         @ cDarkGray$TimeToStr( playTime )$cWhite
-        @ "by" @ Class'HUD'.Default.GoldColor $ %MRI.PlayersBestTimes;
+        @ "by" @ Class'HUD'.Default.GoldColor $ GetRecordTopHolders( mapIndex );
     if( bGenerateBTWebsite )
     {
         bUpdateWebOnNextMap = True;
@@ -7068,7 +7068,6 @@ final function AddRecentSetRecordToPlayer( int PlayerSlot, string Text )
     local int j;
 
     j = PDat.Player[PlayerSlot - 1].RecentSetRecords.Length;
-
     if( j >= MaxPlayerRecentRecords )
     {
         PDat.Player[PlayerSlot - 1].RecentSetRecords.Remove( 0, 1 );
