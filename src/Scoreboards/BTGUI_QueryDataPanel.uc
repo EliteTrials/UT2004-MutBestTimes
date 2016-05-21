@@ -7,10 +7,13 @@ var() editconstarray array<struct sMetaDataRow{
 
 var automated GUIMultiColumnListBox RowsListBox;
 
+delegate OnQueryRequest( string newQuery );
+
 event Free()
 {
     super.Free();
     RowsListBox.List.Clear();
+    OnQueryRequest = none;
 }
 
 event InitComponent( GUIController myController, GUIComponent myOwner )

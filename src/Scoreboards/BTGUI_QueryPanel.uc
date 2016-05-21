@@ -8,6 +8,12 @@ var automated BTGUI_QueryDataPanel DataPanel;
 
 delegate OnQueryReceived( BTQueryDataReplicationInfo queryRI );
 
+event Free()
+{
+	super.Free();
+	OnQueryReceived = none;
+}
+
 function InternalOnQueryChange( GUIComponent sender )
 {
 	DoQuery( GetQuery() );
@@ -32,6 +38,11 @@ function InternalOnQueryReceived( BTQueryDataReplicationInfo queryRI )
 	SwitchDataPanel( queryRI );
 }
 
+function InternalOnQueryRequest( string newQuery )
+{
+	SetQuery( newQuery );
+}
+
 final function SwitchDataPanel( BTQueryDataReplicationInfo queryRI )
 {
 	local BTGUI_QueryDataPanel newDataPanel;
@@ -43,6 +54,7 @@ final function SwitchDataPanel( BTQueryDataReplicationInfo queryRI )
 	newDataPanel.WinLeft = DataPanel.WinLeft;
 	newDataPanel.bScaleToParent = DataPanel.bScaleToParent;
 	newDataPanel.bBoundToParent = DataPanel.bBoundToParent;
+	newDataPanel.OnQueryRequest = InternalOnQueryRequest;
 	DataPanel.Free();
 	RemoveComponent( DataPanel );
 	DataPanel = newDataPanel;
