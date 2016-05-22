@@ -147,6 +147,33 @@ final function Init( MutBestTimes mut )
     BT = mut;
 }
 
+final function InvalidateCache()
+{
+    local int i;
+
+    for( i = 0; i < Player.Length; ++ i )
+    {
+        Player[i].bIsActive = false;
+        Player[i].PLARank = 0;
+        Player[i].PLQRank = 0;
+        Player[i].PLDRank = 0;
+        Player[i].PLPoints[0] = 0;
+        Player[i].PLPoints[1] = 0;
+        Player[i].PLPoints[2] = 0;
+        Player[i].PLPersonalRecords[0] = 0;
+        Player[i].PLPersonalRecords[1] = 0;
+        Player[i].PLPersonalRecords[2] = 0;
+        Player[i].PLTopRecords[0] = 0;
+        Player[i].PLTopRecords[1] = 0;
+        Player[i].PLTopRecords[2] = 0;
+        Player[i].PLRankedRecords[0] = 0;
+        Player[i].PLRankedRecords[1] = 0;
+        Player[i].PLRankedRecords[2] = 0;
+        Player[i].Records.Length = 0;
+        Player[i].RankedRecords.Length = 0;
+    }
+}
+
 final function bool HasTrophy( int playerSlot, string trophyID )
 {
     local int i, j;

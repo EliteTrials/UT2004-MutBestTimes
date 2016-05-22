@@ -2,13 +2,11 @@ class BTRanksList extends BTList;
 
 var() int RanksTable;
 
-function Sort()
+function Sort( MutBestTimes BT )
 {
 	local int i, z, y, tmp;
-	local MutBestTimes BT;
 	local BTServer_PlayersData PDat;
 
-	BT = MutBestTimes(Outer);
 	PDat = BT.PDat;
     for( i = 0; i < Items.Length - 1; ++ i )
     {

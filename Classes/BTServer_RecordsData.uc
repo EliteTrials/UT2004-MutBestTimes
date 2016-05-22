@@ -113,6 +113,7 @@ var array<sBTRecordInfo> Rec;
 var int DataVersion;
 var int SavedPointsVersion;
 var transient MutBestTimes BT;
+var transient bool bCachVerified;
 
 final function Free()
 {

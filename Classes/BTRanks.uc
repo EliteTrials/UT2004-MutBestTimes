@@ -66,7 +66,7 @@ final function CacheRecords()
 
 final function CacheRecord( int mapIndex )
 {
-    local int recordIndex, playerSlot, j;
+    local int recordReference, recordIndex, playerSlot, j;
     local bool isRanked;
     // local float time1;
 
@@ -85,13 +85,14 @@ final function CacheRecord( int mapIndex )
             continue;
 
         -- playerSlot;
-        PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
+        recordReference = (mapIndex << 16) | (recordIndex & 0x0000FFFF);
+        PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length] = recordReference;
 
         if( isRanked )
         {
         	InsertRankedRecord(
         		PDat.Player[playerSlot].RankedRecords,
-        		PDat.Player[playerSlot].Records[PDat.Player[playerSlot].Records.Length-1],
+        		recordReference,
         		RDat.Rec[mapIndex].PSRL[recordIndex].Points
     		);
         }
@@ -266,7 +267,7 @@ final function CalcTopLists()
     local int i, mapIndex;
     local array<int> subLevels;
 
-    if( !PDat.bCachedData )
+    if( !RDat.bCachVerified )
     {
         // Cache the points for all maps to reduce the time spent calculating stats.
         // DebugLog("Caching record stats");
@@ -288,18 +289,24 @@ final function CalcTopLists()
         {
             BT.RDat.Rec[SubLevels[i]].bMapIsActive = true;
         }
-        if( BT.bDebugMode || RDat.StatsNeedUpdate() )
-        {
-        	CacheRecordPoints();
-        }
-        CacheRecords();
-
-        // DebugLog("Caching player stats");
-        CachePlayers();
+        RDat.bCachVerified = true;
     }
+
+    if( PDat.bCachedData )
+    {
+        PDat.InvalidateCache();
+        PDat.bCachedData = false;
+    }
+
+    if( BT.bDebugMode || RDat.StatsNeedUpdate() )
+    {
+    	CacheRecordPoints();
+    }
+    CacheRecords();
+    CachePlayers();
     PDat.bCachedData = true;
 
-    OverallTopList = new (BT) class'BTRanksList';
+    OverallTopList = new class'BTRanksList';
     OverallTopList.RanksTable = 0;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
@@ -309,10 +316,10 @@ final function CalcTopLists()
         OverallTopList.Items[OverallTopList.Items.Length] = i;
     }
     // DebugLog( "Sorting ranks" );
-    OverallTopList.Sort();
+    OverallTopList.Sort( BT );
     BT.MRI.RankedPlayersCount = OverallTopList.Items.Length;
 
-    QuarterlyTopList = new (BT) class'BTRanksList';
+    QuarterlyTopList = new class'BTRanksList';
     QuarterlyTopList.RanksTable = 1;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
@@ -321,9 +328,9 @@ final function CalcTopLists()
 
         QuarterlyTopList.Items[QuarterlyTopList.Items.Length] = i;
     }
-    QuarterlyTopList.Sort();
+    QuarterlyTopList.Sort( BT );
 
-    DailyTopList = new (BT) class'BTRanksList';
+    DailyTopList = new class'BTRanksList';
     DailyTopList.RanksTable = 2;
     for( i = 0; i < PDat.Player.Length; ++ i )
     {
@@ -332,7 +339,7 @@ final function CalcTopLists()
 
         DailyTopList.Items[DailyTopList.Items.Length] = i;
     }
-    DailyTopList.Sort();
+    DailyTopList.Sort( BT );
 }
 
 final function LogTimes( int mapIndex, out array<float> times )
