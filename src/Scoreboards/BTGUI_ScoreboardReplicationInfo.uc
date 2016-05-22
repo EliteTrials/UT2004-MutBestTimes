@@ -1,4 +1,4 @@
-class BTGUI_ScoreboardReplicationInfo extends ReplicationInfo;
+class BTGUI_ScoreboardReplicationInfo extends Info;
 
 var BTClient_ClientReplication CRI;
 
@@ -20,6 +20,12 @@ simulated event PostNetBeginPlay()
 	super.PostNetBeginPlay();
 	if( CRI != none && Level.NetMode != NM_DedicatedServer )
 	{
+		if( !bNetOwner && Level.NetMode == NM_Client )
+		{
+			Log("Destroying duplicated rep socket"@self);
+			Destroy();
+			return;
+		}
 		// Need a minor delay so that we can initialize after specific variables have been set(offline only).
 		SetTimer( 0.05, false );
 	}
@@ -46,4 +52,7 @@ defaultproperties
 {
 	bAlwaysRelevant=false
 	bOnlyRelevantToOwner=true
+	RemoteRole=ROLE_SimulatedProxy
+    bStatic=false
+    bNoDelete=false
 }

@@ -27,13 +27,13 @@ replication
 		ClientUpdatePlayerRank;
 }
 
-simulated event PostBeginPlay()
+simulated event PostNetBeginPlay()
 {
-	super.PostBeginPlay();
-	if( CRI != none )
+	if( CRI != none && (bNetOwner || Role == ROLE_Authority) )
 	{
 		CRI.Rankings[RanksId] = self;
 	}
+	super.PostNetBeginPlay();
 }
 
 // UI hooks

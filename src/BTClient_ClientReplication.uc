@@ -731,7 +731,7 @@ event Tick( float deltaTime )
     }
 }
 
-event Destroyed()
+simulated event Destroyed()
 {
     local int i;
 
