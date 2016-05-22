@@ -6714,14 +6714,22 @@ final function ClientForcePacketUpdate( int mapIndex, optional int recordRank )
     {
         myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
     }
-    for( C = Level.ControllerList; C != None; C = C.NextController )
+    for( C = Level.ControllerList; C != none; C = C.NextController )
     {
-        if( PlayerController(C) == None || C.PlayerReplicationInfo == None )
+        if( PlayerController(C) == none || C.PlayerReplicationInfo == none )
             continue;
 
         rep = GetRep( PlayerController(C) );
         if( rep == none || rep.RecordsPRI == none )
             continue;
+
+        // Ranks may have shifted, get the latest rank for the relevant level.
+        if( myLevel != none
+            && (rep.PlayingLevel == myLevel || MRI.MapLevel != none)
+            && rep.SoloRank > 0 )
+        {
+            rep.SoloRank = RDat.GetPlayerRank( mapIndex, rep.PlayerId );
+        }
 
         // Only update the records for clients who may have outdated records info.
         if( rep.RecordsPRI.RecordsQuery != RDat.Rec[mapIndex].TMN )
