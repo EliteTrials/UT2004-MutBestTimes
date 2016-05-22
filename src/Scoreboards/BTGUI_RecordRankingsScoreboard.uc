@@ -10,6 +10,7 @@ var private automated BTGUI_ComboBox PlayersQueryCombo;
 var private automated BTGUI_RecordRankingsMultiColumnListBox RankingsListBox;
 var private automated BTGUI_Footer Footer;
 var private bool bWaitingForReplication;
+var private string LastSourceType;
 
 delegate OnQueryPlayerRecord( coerce string mapId, coerce string playerId );
 
@@ -169,6 +170,7 @@ protected function InternalOnChangeSource( GUIComponent sender )
         source = "Levels";
     }
     SwitchSourceType( source );
+    LastSourceType = CRI.RecordsPRI.RecordsSource;
     CRI.RecordsPRI.RecordsSource = source;
     RankingsCombo.SetVisibility( true );
     if( RankingsCombo.GetText() == "" )
@@ -192,6 +194,8 @@ private function SwitchSourceType( string source )
     {
         case "map":
             RankingsCombo = MapsQueryCombo;
+            if( LastSourceType ~= source ) // don't add to top, need to at least change the RankingsCombo reference.
+                return;
             RankingsListBox.List.SortColumn = 3; // Time
             RankingsListBox.List.SortDescending = false;
             RankingsListBox.List.ColumnHeadings[2] = "Player";
@@ -199,6 +203,8 @@ private function SwitchSourceType( string source )
 
         case "player":
             RankingsCombo = PlayersQueryCombo;
+            if( LastSourceType ~= source )
+                return;
             RankingsListBox.List.SortColumn = 1; // Rating
             RankingsListBox.List.SortDescending = false;
             RankingsListBox.List.ColumnHeadings[2] = "Map";
@@ -206,6 +212,8 @@ private function SwitchSourceType( string source )
 
         case "levels":
             RankingsCombo = MapsQueryCombo;
+            if( LastSourceType ~= source )
+                return;
             RankingsListBox.List.SortColumn = 0; // #MapId
             RankingsListBox.List.SortDescending = false;
             RankingsListBox.List.ColumnHeadings[1] = "Skill";
@@ -308,6 +316,7 @@ protected function InternalOnRecordRanksCleared( BTGUI_RecordRankingsReplication
     list = BTGUI_RecordRankingsMultiColumnList(RankingsListBox.List);
     list.Clear();
     Log("Currently queried records cleared!");
+    bIsQuerying = false;
     QueryNextRecordRanks( true );
 }
 
