@@ -1116,7 +1116,12 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
     }
     else if( playerId != "" )
     {
-
+        queryRI = Spawn( class'BTPlayerProfileReplicationInfo', requester );
+        if( BuildPlayerProfileData( BTPlayerProfileReplicationInfo(queryRI), playerId ) == none )
+        {
+            queryRI.Destroy();
+            queryRI = none;
+        }
     }
 
     if( queryRI == none )
@@ -1148,6 +1153,32 @@ final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo 
     recordData.BestDodgeTiming = 0.00;
     recordData.WorstDodgeTiming = 0.00;
     return recordData;
+}
+
+// Expects params to consist of: "record:mapIndex:playerIndex"
+final function BTPlayerProfileReplicationInfo BuildPlayerProfileData( BTPlayerProfileReplicationInfo profileData, string playerId )
+{
+    local int playerIndex;
+
+    playerIndex = QueryPlayerIndex( playerId );
+    if( playerIndex == -1 )
+        return none;
+
+    profileData.PlayerId = playerId;
+    profileData.CountryCode = PDat.Player[playerIndex].IpCountry;
+    profileData.RegisterDate = PDat.Player[playerIndex].RegisterDate;
+    profileData.LastPlayedDate = PDat.Player[playerIndex].LastPlayedDate;
+    profileData.RankedELORating = PDat.Player[playerIndex].PLPoints[0];
+    profileData.NumStars = PDat.Player[playerIndex].PLTopRecords[0];
+    profileData.NumRankedRecords = PDat.Player[playerIndex].RankedRecords.Length;
+    profileData.NumRecords = PDat.Player[playerIndex].Records.Length;
+    profileData.NumObjectives = PDat.Player[playerIndex].PLObjectives;
+    profileData.NumRounds = PDat.Player[playerIndex].Played;
+    profileData.NumHijacks = PDat.Player[playerIndex].PLHijacks;
+    profileData.NumFinishes = PDat.Player[playerIndex].PLSF;
+    profileData.AchievementPoints = PDat.Player[playerIndex].PLAchiev;
+    profileData.PlayTime = PDat.Player[playerIndex].PlayHours;
+    return profileData;
 }
 
 final function int GetRecordIndexByPlayer( int mapIndex, int playerIndex )
