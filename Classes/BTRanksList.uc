@@ -23,15 +23,15 @@ function Sort( MutBestTimes BT )
         switch( RanksTable )
         {
         	case 0:
-        		PDat.Player[Items[i]].PLARank = i+1;
+        		PDat.Player[tmp].PLARank = i+1;
         		break;
 
         	case 1:
-        		PDat.Player[Items[i]].PLQRank = i+1;
+        		PDat.Player[tmp].PLQRank = i+1;
         		break;
 
         	case 2:
-        		PDat.Player[Items[i]].PLDRank = i+1;
+        		PDat.Player[tmp].PLDRank = i+1;
         		break;
         }
     }

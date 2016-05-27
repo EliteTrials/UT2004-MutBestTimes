@@ -2,6 +2,7 @@ class BTRanks extends Info;
 
 const MIN_MAP_RECORDS = 5;
 const MAX_MAP_RECORDS = 15;
+const MAX_RANKED_RECORDS = 15;
 const MIN_PLAYER_RECORDS = 10;
 
 var BTRanksList
@@ -164,13 +165,18 @@ final function CachePlayers()
 
 final function CachePlayer( int playerSlot, out array<int> records, out array<int> rankedRecords )
 {
-	local int mapIndex, recordIndex, mapIndex2, recordIndex2;
-    local int i, ref;
-    local float p;
+	local int mapIndex, recordIndex;
+    local int i;
 
     PDat.Player[playerSlot].PLPoints[0] = 0;
     PDat.Player[playerSlot].PLPoints[1] = 0;
     PDat.Player[playerSlot].PLPoints[2] = 0;
+    PDat.Player[playerSlot].PLRankedRecords[0] = 0;
+    PDat.Player[playerSlot].PLRankedRecords[1] = 0;
+    PDat.Player[playerSlot].PLRankedRecords[2] = 0;
+    PDat.Player[playerSlot].PLTopRecords[0] = 0;
+    PDat.Player[playerSlot].PLTopRecords[1] = 0;
+    PDat.Player[playerSlot].PLTopRecords[2] = 0;
 
     for( i = 0; i < rankedRecords.Length; ++ i )
     {
@@ -178,41 +184,31 @@ final function CachePlayer( int playerSlot, out array<int> records, out array<in
         recordIndex = rankedRecords[i] & 0x0000FFFF;
 
         // All time
-        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, i < MAX_MAP_RECORDS );
-        if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
-        	&& Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1] ) // Monthly
+        CachePlayerRecord( playerSlot, mapIndex, recordIndex, 0, i < MAX_RANKED_RECORDS );
+        if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2] ) // Yearly
         {
-            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1, true );
+            CachePlayerRecord( playerSlot, mapIndex, recordIndex, 1, PDat.Player[playerSlot].PLRankedRecords[1] < MAX_RANKED_RECORDS );
             if( Level.Year == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[2]
-                && Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1]
-                && Level.Day == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[0] )
+                && Level.Month == RDat.Rec[mapIndex].PSRL[recordIndex].SRD[1] )
             {
-            	CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2, true );
+            	CachePlayerRecord( playerSlot, mapIndex, recordIndex, 2, PDat.Player[playerSlot].PLRankedRecords[2] < MAX_RANKED_RECORDS );
             }
         }
     }
 
+    if( PDat.Player[playerSlot].RankedRecords.Length == 0 )
+        return;
+
     for( i = 0; i < 3; ++ i )
     {
-        if( PDat.Player[playerSlot].RankedRecords.Length == 0
-            || (i == 0 && PDat.Player[playerSlot].PLRankedRecords[i] < MIN_PLAYER_RECORDS)
+        if( (i == 0 && PDat.Player[playerSlot].PLRankedRecords[i] < MIN_PLAYER_RECORDS)
             || (i > 0 && PDat.Player[playerSlot].PLRankedRecords[i] < 1) )
         {
             PDat.Player[playerSlot].PLPoints[i] = 0;
             continue;
         }
 
-    	p = (Min( PDat.Player[playerSlot].PLRankedRecords[i], MAX_MAP_RECORDS ) - 1)/2.0;
-
-        ref = PDat.Player[playerSlot].RankedRecords[int(p)];
-       	mapIndex = ref >> 16;
-        recordIndex = ref & 0x0000FFFF;
-
-        ref = PDat.Player[playerSlot].RankedRecords[int(p + 0.5)];
-        mapIndex2 = ref >> 16;
-        recordIndex2 = ref & 0x0000FFFF;
-
-		PDat.Player[playerSlot].PLPoints[i] = (RDat.Rec[mapIndex].PSRL[recordIndex].Points + RDat.Rec[mapIndex2].PSRL[recordIndex2].Points)/2.0;
+		PDat.Player[playerSlot].PLPoints[i] = PDat.Player[playerSlot].PLPoints[i]/10000.00*650.00;
     }
 }
 
@@ -393,7 +389,7 @@ final function CalcRecordPoints( int mapIndex )
 
 	LogTimes( mapIndex, times );
 	timeMean = Mean( times );
-	timeStd = Std( times, timeMean );
+	timeStd = FMax( Std( times, timeMean ), 0.000001 );
 	for( i = 0; i < times.Length; ++ i )
 	{
 		times[i] = -100.0*((times[i] - timeMean)/timeStd);
@@ -405,8 +401,8 @@ final function CalcRecordPoints( int mapIndex )
     {
         RDat.Rec[mapIndex].PSRL[i].Points = times[i] + timeMedian;
     }
-    RDat.Rec[mapIndex].AverageRecordTime = 0;
-    RDat.Rec[mapIndex].Rating = timeMedian;
+    RDat.Rec[mapIndex].AverageRecordTime = Exp( Exp( timeMean ) );
+    RDat.Rec[mapIndex].Rating = timeStd*1000.00;
 }
 
 final function bool IsRankedMap( int mapIndex )
