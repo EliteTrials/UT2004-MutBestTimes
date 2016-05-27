@@ -16,6 +16,7 @@ var string              GhostPackageName, GhostMapName;
 var private MutBestTimes BT;
 var private BTClient_LevelReplication MyLevel;
 var private int NextFrameIndex;
+var private bool bOwnsMarkers;
 
 delegate OnGhostEndPlay( BTGhostPlayback playback );
 
@@ -76,11 +77,17 @@ private function AddMarkers( BTClient_LevelReplication ghostLevel )
             }
         }
     }
+    bOwnsMarkers = true;
 }
 
 private function ClearMarkers()
 {
     local BTClient_GhostMarker marker;
+
+    if( !bOwnsMarkers )
+    {
+        return;
+    }
 
     if( MyLevel != none )
     {
@@ -94,6 +101,7 @@ private function ClearMarkers()
 
         marker.Destroy();
     }
+    bOwnsMarkers = false;
 }
 
 private function CreateGhostController()
