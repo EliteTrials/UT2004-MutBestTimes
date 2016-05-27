@@ -188,8 +188,8 @@ private function ViewPlayer( int itemIndex )
 defaultproperties
 {
     RankingCategories(0)="Ranks - All Time"
-    RankingCategories(1)="Ranks - This Month"
-    RankingCategories(2)="Ranks - Today"
+    RankingCategories(1)="Ranks - This Year"
+    RankingCategories(2)="Ranks - This Month"
 
     Begin Object class=BTGUI_ComboBox Name=RanksComboBox
         WinWidth=0.38
