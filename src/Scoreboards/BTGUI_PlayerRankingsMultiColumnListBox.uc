@@ -41,11 +41,11 @@ defaultproperties
 {
     DefaultListClass="" // Manually initialized in InitComponent.
     ColumnHeadings(0)="#"
-    ColumnHeadings(1)="AP"
+    ColumnHeadings(1)="Player"
     ColumnHeadings(2)="ELO"
-    ColumnHeadings(3)="Player"
-    ColumnHeadings(4)="Records"
-    ColumnHeadings(5)="Stars"
+    ColumnHeadings(3)="Recs"
+    ColumnHeadings(4)="Stars"
+    ColumnHeadings(5)="AP"
     bDisplayHeader=true
 
     Begin Object Class=BTClient_MultiColumnListHeader Name=MyHeader
@@ -53,8 +53,8 @@ defaultproperties
         HeadingIcons(1)=none
         HeadingIcons(2)=none
         HeadingIcons(3)=none
-        HeadingIcons(4)=none
-        HeadingIcons(5)=ColorModifier'Star'
+        HeadingIcons(4)=ColorModifier'Star'
+        HeadingIcons(5)=none
     End Object
     Header=MyHeader
 
