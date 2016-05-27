@@ -35,7 +35,6 @@ var string PLID;
 /** The amount of time after the start of the game that this ghost began to record. */
 var float RelativeStartTime;
 
-var transient int CurrentMove;
 var transient vector RelativeSpawnOffset;
 var transient rotator RelativeSpawnDir;
 
@@ -47,41 +46,41 @@ final function vector GetStartLocation()
     return MO[0].P;
 }
 
-final function GetCurrentMove( out Vector p, out Rotator r )
+final function GetFrame( int frameIndex, out Vector p, out Rotator r )
 {
-    p = MO[CurrentMove].P + RelativeSpawnOffset;
-    r = TinyRotToRot( MO[CurrentMove].R );
+    p = MO[frameIndex].P + RelativeSpawnOffset;
+    r = TinyRotToRot( MO[frameIndex].R );
 }
 
 /**
  * Plays the next movement for Ghost.
  * Returns true if more moves are available.
  */
-final function bool PerformNextMove( Pawn p )
+final function bool PerformNextMove( out int nextMove, Pawn p )
 {
     if( MO.Length == 0 )
-        CurrentMove = 0;
+        nextMove = 0;
 
-    if( CurrentMove >= MO.Length )
+    if( nextMove >= MO.Length )
         return false;
 
     if( p != none )
     {
-        if( p.Health != MO[CurrentMove].H )
+        if( p.Health != MO[nextMove].H )
         {
-            p.Health = MO[CurrentMove].H;
+            p.Health = MO[nextMove].H;
             p.bHidden = p.Health <= 0;
         }
 
         // Pawns don't use pitch!
-        p.SetLocation( MO[CurrentMove].P + RelativeSpawnOffset );
-        p.SetRotation( TinyRotToRot( MO[CurrentMove].R, true ) );
-        p.SetViewRotation( TinyRotToRot( MO[CurrentMove].R ) );
-        p.Velocity = MO[CurrentMove].V;
-        p.Acceleration = MO[CurrentMove].A;
+        p.SetLocation( MO[nextMove].P + RelativeSpawnOffset );
+        p.SetRotation( TinyRotToRot( MO[nextMove].R, true ) );
+        p.SetViewRotation( TinyRotToRot( MO[nextMove].R ) );
+        p.Velocity = MO[nextMove].V;
+        p.Acceleration = MO[nextMove].A;
         p.NetUpdateTime = p.Level.TimeSeconds - 1;
     }
-    return !(++ CurrentMove >= MO.Length);
+    return !(++ nextMove >= MO.Length);
 }
 
 // Get the real rotation from the TinyRot

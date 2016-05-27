@@ -109,20 +109,10 @@ var BTClient_MutatorReplicationInfo                 MRI;                        
 var ASGameInfo                                      AssaultGame;                // reference to ASGameInfo
 var UTServerAdminSpectator                          WebAdminActor;              // For Logging, messaging
 
-//===============<GHOST VARS>=====================================
-// Rewards related.
-const Objectives_GhostFollow            = 15000;
-const GhostFollowPrice                  = 25;
-
 var BTGhostManager                                  GhostManager;               // Currently used ghost data loader.
-var PlayerController                                LeadingGhost;               // PlayerController the ghost should reset CurrentMove for
-// "GhostFollow <PlayerName>" was used on a player by an Admin.
-var bool                                            bGhostWasAdminAwarded;
-
-var() globalconfig float GhostSaveSpeed;
-var() globalconfig bool bSpawnGhost;
-var() globalconfig int GhostPlaybackFPS;
-//===============</GHOST VARS>====================================
+var() globalconfig float                            GhostSaveSpeed;
+var() globalconfig bool                             bSpawnGhost;
+var() globalconfig int                              GhostPlaybackFPS;
 
 var BTServer_RecordsData                            RDat;                       // Holds all the Records
 var BTServer_PlayersData                            PDat;                       // Holds all the Players
@@ -1057,6 +1047,10 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
     {
         CheckPointHandler.RemoveSavedCheckPoint( other );
     }
+    if( GhostManager != none )
+    {
+        GhostManager.KillGhostFor( other );
+    }
 
     ReplicateLevelState( CRI, newLevel );
     if( newLevel != none )
@@ -1861,9 +1855,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
     local BTClient_ClientReplication Rep;
     local string S;
     local Controller C;
-    local bool bCondition;
     local array<string> output;
-    local bool b2;
     local byte byteOne, byteTwo;
     local int playerSlot;
 
@@ -2061,29 +2053,12 @@ final private function bool ClientExecuted( PlayerController sender, string comm
         case "toggleghost":
             if( !IsAdmin( sender.PlayerReplicationInfo ) )
             {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry 'ToggleGhost' is only available for admins!" );
+                sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry 'ToggleGhost' is only available to admins!" );
             }
             else if( GhostManager != none )
             {
-                // Either if Sender is the owner of the ghost or an admin/offline
-                /*if( sender.GetPlayerIdHash() == GhostData.PLID || IsAdmin( sender.PlayerReplicationInfo ) )
-                {                                                                                          */
-                    RDat.Rec[UsedSlot].TMGhostDisabled = !RDat.Rec[UsedSlot].TMGhostDisabled;
-                    SaveRecords();
-                    sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost Enabled?:" $ !RDat.Rec[UsedSlot].TMGhostDisabled );
-                    if( RDat.Rec[UsedSlot].TMGhostDisabled )
-                    {
-                        GhostManager.GhostsKill();
-                    }
-                    else
-                    {
-                        GhostManager.GhostsSpawn();
-                    }
-                /*}
-                else
-                {
-                    sender.ClientMessage( Class'HUD'.default.RedColor $ "You are not allowed to toggle the ghost from this map because this is not your ghost!" );
-                }*/
+                RDat.Rec[UsedSlot].TMGhostDisabled = !RDat.Rec[UsedSlot].TMGhostDisabled;
+                sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost Enabled?:" $ !RDat.Rec[UsedSlot].TMGhostDisabled );
             }
             else
             {
@@ -2160,162 +2135,8 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             }
             break;
 
-        case "ghostfollow":
-            Rep = GetRep( sender );
-            if( Rep != none )
-            {
-                bCondition = IsAdmin( sender.PlayerReplicationInfo ) || sender.GetPlayerIDHash() == BTAuthor;
-                if( !bCondition )
-                {
-                    if( PDat.HasCurrencyPoints( Rep.myPlayerSlot, GhostFollowPrice ) )
-                    {
-                        b2 = true;
-                    }
-                    else
-                    {
-                        SendErrorMessage( sender, "Sorry you cannot hire the ghost because you do not have enough money!" );
-                        break;
-                    }
-                }
-
-                if( bGhostWasAdminAwarded && !bCondition )
-                {
-                    sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you cannot overwrite the ghost's target if it is was set by an admin!" );
-                    break;
-                }
-
-                if( !bCondition )
-                {
-                    bGhostWasAdminAwarded = true;
-                }
-
-                if( params.Length != 1 )
-                {
-                    sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify a playername!" );
-                    break;
-                }
-
-                S = Caps( params[0] );
-                if( S == "" || S ~= "exec:None" )
-                {
-                    if( LeadingGhost == none )
-                    {
-                        sender.ClientMessage( class'HUD'.default.GoldColor $ "The ghost is not following anyone!" );
-                        break;
-                    }
-
-                    if( LeadingGhost != none && LeadingGhost != sender && bCondition )
-                    {
-                        LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost no longer follows you!" );
-                    }
-
-                    if( !bCondition && LeadingGhost != sender )
-                    {
-                        SendErrorMessage( sender, "Sorry you cannot remove the ghost from following someone other than yourself!" );
-                        break;
-                    }
-
-                    sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost is now following nobody!" );
-                    LeadingGhost = None;
-                    bGhostWasAdminAwarded = false;
-                    break;
-                }
-
-                for( C = Level.ControllerList; C != None; C = C.NextController )
-                {
-                    if( PlayerController(C) != None && C.PlayerReplicationInfo != None )
-                    {
-                        if( InStr( Caps( C.PlayerReplicationInfo.PlayerName ), S )  != -1 )
-                        {
-                            if( LeadingGhost == PlayerController(C) )
-                            {
-                                SendErrorMessage( sender, "The ghost is already following the specified target!" );
-                                break;
-                            }
-
-                            if( LeadingGhost != none && LeadingGhost != sender )
-                            {
-                                LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost no longer follows you!" );
-                            }
-                            LeadingGhost = PlayerController(C);
-                            sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost is now following" @ LeadingGhost.GetHumanReadableName() $ "!" );
-
-                            if( LeadingGhost != sender )
-                            {
-                                LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost is now following you!" );
-                            }
-
-                            if( b2 )
-                            {
-                                PDat.SpendCurrencyPoints( Rep.myPlayerSlot, GhostFollowPrice );
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            break;
-
-        case "ghostfollowid":
-            Rep = GetRep( sender );
-            bCondition = PDat.Player[Rep.myPlayerSlot].PLObjectives >= Objectives_GhostFollow;
-            if( IsAdmin( sender.PlayerReplicationInfo ) || bCondition || sender.GetPlayerIDHash() == BTAuthor )
-            {
-                if( bGhostWasAdminAwarded && bCondition )
-                {
-                    sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you cannot overwrite the ghost's target if it is was set by an admin!" );
-                    break;
-                }
-
-                if( !bCondition )
-                {
-                    bGhostWasAdminAwarded = true;
-                }
-
-                if( params.Length != 1 )
-                {
-                    sender.ClientMessage( Class'HUD'.default.RedColor $ "Please specify a playerid!" );
-                    break;
-                }
-                i = int(params[0]);
-                if( i == -1 )
-                {
-                    if( LeadingGhost != none && LeadingGhost != sender )
-                    {
-                        LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost no longer follows you!" );
-                    }
-                    sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost is now following nobody!" );
-                    LeadingGhost = None;
-                    bGhostWasAdminAwarded = false;
-                    break;
-                }
-
-                for( C = Level.ControllerList; C != None; C = C.NextController )
-                {
-                    if( PlayerController(C) != None && C.PlayerReplicationInfo != None )
-                    {
-                        if( C.PlayerReplicationInfo.PlayerID == i )
-                        {
-                            if( LeadingGhost != none && LeadingGhost != sender )
-                            {
-                                LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost no longer follows you!" );
-                            }
-                            LeadingGhost = PlayerController(C);
-                            sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost is now following" @ LeadingGhost.GetHumanReadableName() $ "!" );
-
-                            if( LeadingGhost != sender )
-                            {
-                                LeadingGhost.ClientMessage( Class'HUD'.default.GoldColor $ "The ghost is now following you!" );
-                            }
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you have to be either a admin or have" @ Objectives_GhostFollow @ "objectives!" );
-            }
+        case "ghostfollow": case "ghostfollowid":
+            sender.ClientMessage( class'HUD'.default.RedColor $ "GhostFollow is deprecated, please instead use !ghost <rank>" );
             break;
 
         case "votemapseq":
@@ -5779,6 +5600,11 @@ final function ProcessPlayerLogout( Controller player )
             PDat.SilentRemoveItem( playerSlot, "drop_bonus_1" );
         }
     }
+
+    if( GhostManager != none )
+    {
+        GhostManager.KillGhostFor( player );
+    }
 }
 
 //==============================================================================
@@ -6309,29 +6135,6 @@ final function KillGhostRecorders()
 // Remove ghost from players list
 function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 {
-    local int i, j, indexGhost;
-
-    j = ServerState.PlayerInfo.Length;
-    if( j == 0 )
-        return;
-
-    if( bSpawnGhost && GhostManager != None )
-    {
-        for( i = 0; i < j; ++ i )
-        {
-            for( indexGhost = 0; indexGhost < GhostManager.Ghosts.Length; ++ indexGhost )
-            {
-                if( ServerState.PlayerInfo[i].PlayerName == GhostManager.Ghosts[indexGhost].GhostName )
-                {
-                    ServerState.PlayerInfo.Remove( i, 1 );
-                    -- i;
-                    -- j;
-                    break;
-                }
-            }
-        }
-    }
-
     ServerState.CurrentPlayers = Level.Game.NumPlayers+Level.Game.NumSpectators;
     ServerState.MaxPlayers = Level.Game.MaxPlayers+Level.Game.NumSpectators;
 }

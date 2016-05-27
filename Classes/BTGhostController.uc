@@ -24,7 +24,7 @@ function InitPlayerReplicationInfo()
     PlayerReplicationInfo.bReadyToPlay = true;
 }
 
-function Pawn CreateGhostPawn( BTGhostData data )
+function Pawn CreateGhostPawn( BTGhostData data, optional int frameIndex )
 {
     local Vector initialLocation;
     local Rotator initialRotation;
@@ -35,7 +35,7 @@ function Pawn CreateGhostPawn( BTGhostData data )
         Warn( "Tried to create a new pawn for ghost, but this Controller already posseses a pawn!" );
         return Pawn;
     }
-    data.GetCurrentMove( initialLocation, initialRotation );
+    data.GetFrame( frameIndex, initialLocation, initialRotation );
     Pawn = Spawn( default.PawnClass,,, initialLocation, initialRotation );
     if( Pawn == none )
     {

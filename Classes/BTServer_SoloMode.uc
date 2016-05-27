@@ -177,8 +177,73 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
                 CRI.SetActiveLevel( myLevel );
             }
             return true;
+
+        case "ghost":
+            return CmdGhost( sender, value );
     }
     return super.ChatCommandExecuted( sender, command, value );
+}
+
+private function bool CmdGhost( PlayerController sender, string value )
+{
+    local BTClient_ClientReplication CRI;
+    local BTClient_LevelReplication myLevel;
+    local int ghostIndex;
+    local string mapName;
+
+    if( GhostManager == none )
+        return false;
+
+    if( RDat.Rec[UsedSlot].TMGhostDisabled )
+    {
+        SendErrorMessage( sender, "Sorry! Ghosts are disabled for this map!, try again at another time." );
+        return true;
+    }
+
+    if( sender.PlayerReplicationInfo.bIsSpectator || sender.PlayerReplicationInfo.bOnlySpectator )
+    {
+        SendErrorMessage( sender, "Sorry! Spectators are allowed to summon ghosts!" );
+        return true;
+    }
+
+    if( value == "" )
+    {
+        if( GhostManager.KillGhostFor( sender ) )
+        {
+            SendSucceedMessage( sender, "Your ghost has been deactivated!" );
+            return true;
+        }
+    }
+
+    CRI = GetRep( sender );
+    if( CRI.PlayingLevel != none )
+        myLevel = CRI.PlayingLevel;
+    else if( MRI.MapLevel != none )
+        myLevel = MRI.MapLevel;
+
+    if( myLevel == none )
+    {
+        SendErrorMessage( sender, "Please select a level using \"!level <name>\" and try again." );
+        return true;
+    }
+
+    if( int(value) <= 0 )
+    {
+        SendErrorMessage( sender, "Please specify a rank starting at 1, e.g. !ghost 1" );
+        return true;
+    }
+
+    mapName = myLevel.GetFullName( CurrentMapName );
+    ghostIndex = GhostManager.FindGhostByRank( mapName, int(value) );
+    if( ghostIndex == -1 )
+    {
+        SendErrorMessage( sender, "Couldn't find a ghost with the rank that you are looking for! Try another rank!" );
+        return true;
+    }
+    GhostManager.KillGhostFor( sender ); // kill any previously owned ghosts.
+    GhostManager.SpawnGhostFor( ghostIndex, sender );
+    SendSucceedMessage( sender, "Your ghost is now ready and will activate when you respawn! You can use !ghost at any time to deactivate your ghost." );
+    return true;
 }
 
 function bool ModeValidatePlayerStart( Controller player, PlayerStart start )
@@ -235,10 +300,9 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
             RestartGhostRecording( PlayerController(c) );
 
             // Reset ghost, if wanted
-            if( !RDat.Rec[UsedSlot].TMGhostDisabled && CRI.HasClientFlags( 0x00000001/**CFRESETGHOST*/ )
-                && (c == LeadingGhost || Level.Game.NumPlayers <= 1) )
+            if( !RDat.Rec[UsedSlot].TMGhostDisabled )
             {
-                GhostManager.GhostsRespawn();
+                GhostManager.RestartGhostFor( C );
             }
         }
 

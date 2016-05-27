@@ -3,6 +3,8 @@ class BTGhostPlayback extends Info;
 var const class<BTClient_GhostMarker> GhostMarkerClass;
 var const class<BTGhostController> GhostControllerClass;
 
+/** The active player that controls this ghost's playback (GhostFollow). */
+var Controller          CustomController;
 var BTGhostController   Controller;
 var string              GhostName;
 var string              GhostChar;
@@ -13,6 +15,7 @@ var string              GhostPackageName, GhostMapName;
 
 var private MutBestTimes BT;
 var private BTClient_LevelReplication MyLevel;
+var private int NextFrameIndex;
 
 delegate OnGhostEndPlay( BTGhostPlayback playback );
 
@@ -143,23 +146,38 @@ final function PausePlay()
 
 final function RestartPlay()
 {
-	if( GhostData != none )
-		GhostData.CurrentMove = 0;
-
+    NextFrameIndex = 0;
     GhostDisabled = false;
     StartPlay();
+}
+
+private function bool IsDisabled()
+{
+    return GhostData == none || GhostDisabled || BT.RDat.Rec[BT.UsedSlot].TMGhostDisabled;
 }
 
 private function PlayNextFrame()
 {
     local Pawn p;
 
-    if( GhostData == none || GhostDisabled )
+    if( IsDisabled() )
     	return;
 
     // Don't play until we have elapsed the same time as when the ghost' began recording.
     if( Level.TimeSeconds - BT.MRI.MatchStartTime < GhostData.RelativeStartTime )
     	return;
+
+    // Kill our ghost when our owner has became a spectator, nor play at all!
+    if( CustomController != none
+        && (CustomController.PlayerReplicationInfo.bIsSpectator || CustomController.PlayerReplicationInfo.bOnlySpectator) )
+    {
+        if( Controller.Pawn != none )
+        {
+            Controller.Pawn.Destroy();
+        }
+        PausePlay();
+        return;
+    }
 
     p = Controller.Pawn;
     if( p == none )
@@ -172,12 +190,19 @@ private function PlayNextFrame()
                 return;
         }
 
-        p = Controller.CreateGhostPawn( GhostData );
+        p = Controller.CreateGhostPawn( GhostData, NextFrameIndex );
         if( p == none )
         {
             // Perhaps we tried to spawn the ghost in an invalid location.
-            ++ GhostData.CurrentMove;
+            ++ NextFrameIndex;
             return;
+        }
+        else if( CustomController != none )
+        {
+            p.bOnlyRelevantToOwner = true;
+            p.SetOwner( CustomController );
+            // Blocks the ghost from being spectated.
+            Controller.PlayerReplicationInfo.bOnlySpectator = true;
         }
     }
 
@@ -187,7 +212,7 @@ private function PlayNextFrame()
         p.SetCollision( false, false, false );
     }
 
-    if( !GhostData.PerformNextMove( p ) )
+    if( !GhostData.PerformNextMove( NextFrameIndex, p ) )
     {
         p.Velocity = vect( 0, 0, 0 );
         GhostDisabled = true;

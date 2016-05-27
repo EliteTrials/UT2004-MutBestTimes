@@ -11,7 +11,7 @@ var const class<BTGhostData> GhostDataClass;
 var const class<BTGhostPlayback> GhostPlaybackClass;
 
 // The ghosts that we are currently playing, if a ghost is missing from this array, then it will be deleted from the package on the next save.
-var array<BTGhostPlayback> Ghosts;
+var array<BTGhostPlayback> Ghosts, CustomGhosts;
 var BTGhostSaver Saver;
 // Pending packages that have became dirty and need to be saved.
 var private array<string> DirtyPackageNames;
@@ -142,35 +142,39 @@ final function LoadGhosts( string mapName )
         if( ghostData == none )
             continue;
 
-        CreateGhostPlayback( ghostData, mapName );
+        Ghosts[Ghosts.Length] = CreateGhostPlayback( ghostData, mapName );
     }
 }
 
-final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay )
+final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay, optional bool isCustom )
 {
-    local int j;
+    local int playerSlot;
     local string ghostPackageName;
     local int ghostRank;
     local BTGhostPlayback playback;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
+    playerSlot = BT.FindPlayerSlot( data.PLID );
     playback = Spawn( GhostPlaybackClass, Owner );
-    j = Ghosts.Length;
-    Ghosts.Length = j + 1;
-    Ghosts[j] = playback;
     playback.GhostMapName = mapName;
     playback.GhostPackageName = ghostPackageName;
     playback.GhostData = data;
-    playback.GhostSlot = BT.FindPlayerSlot( playback.GhostData.PLID );
+    playback.GhostSlot = playerSlot;
     if( playback.GhostSlot != -1 )
     {
-        playback.GhostName = BT.PDat.Player[playback.GhostSlot-1].PLName $ GhostTag @ "in" @ mapName;
-        playback.GhostChar = BT.PDat.Player[playback.GhostSlot-1].PLChar;
+        playback.GhostName = BT.PDat.Player[playerSlot-1].PLName $ GhostTag @ "in" @ mapName;
+        playback.GhostChar = BT.PDat.Player[playerSlot-1].PLChar;
     }
     else
     {
         playback.GhostName = "Unknown" $ GhostTag;
     }
+
+    if( isCustom )
+    {
+        return playback;
+    }
+
     BT.FullLog( "Loaded ghost" @ playback.GhostData.PLID @ "for" @ mapName @ "with" @ data.MO.Length @ "frames" );
     ghostRank = GetGhostRank( playback );
     if( ghostRank == 1 )
@@ -288,6 +292,7 @@ final function bool RemoveGhost( string mapName, string ghostId )
     return false;
 }
 
+// Note: CustomGhosts array doesn't require updates because such ghosts are not spectable!
 final function UpdateGhostsName( int playerSlot, string newName )
 {
     local int i;
@@ -386,6 +391,78 @@ final function GhostsRespawn()
     {
         Ghosts[i].RestartPlay();
     }
+}
+
+final function int FindGhostByRank( string mapName, int ghostRank )
+{
+    local int i;
+
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        if( Ghosts[i].GhostMapName == mapName
+            && GetGhostRank( Ghosts[i] ) == ghostRank )
+        {
+            return i;
+        }
+    }
+    return -1;
+}
+
+final function bool SpawnGhostFor( int ghostIndex, Controller c )
+{
+    local int i;
+    local BTGhostData data;
+    local string mapName;
+    local BTGhostPlayback playback;
+
+    for( i = 0; i < CustomGhosts.Length; ++ i )
+    {
+        if( CustomGhosts[i].CustomController == c )
+        {
+            return false;
+        }
+    }
+
+    data = Ghosts[ghostIndex].GhostData;
+    mapName = Ghosts[ghostIndex].GhostMapName;
+    playback = CreateGhostPlayback( data, mapName, false, true );
+    if( playback == none )
+        return false;
+
+    playback.CustomController = c;
+    playback.RestartPlay();
+    CustomGhosts[CustomGhosts.Length] = playback;
+    return true;
+}
+
+final function RestartGhostFor( Controller c )
+{
+    local int i;
+
+    for( i = 0; i < CustomGhosts.Length; ++ i )
+    {
+        if( CustomGhosts[i].CustomController == c )
+        {
+            CustomGhosts[i].RestartPlay();
+            break;
+        }
+    }
+}
+
+final function bool KillGhostFor( Controller c )
+{
+    local int i;
+
+    for( i = 0; i < CustomGhosts.Length; ++ i )
+    {
+        if( CustomGhosts[i].CustomController == c )
+        {
+            CustomGhosts[i].Destroy();
+            CustomGhosts.Remove( i, 1 );
+            return true;
+        }
+    }
+    return false;
 }
 
 final function GhostsSpawn()
