@@ -98,7 +98,7 @@ defaultproperties
     MinPageWidth=0.8
 
     Begin Object class=GUITabControl name=oRankPages
-        WinWidth=0.59
+        WinWidth=0.64
         WinLeft=0.005
         WinTop=0.065
         WinHeight=0.925
@@ -120,10 +120,10 @@ defaultproperties
     RecordsScoreboard=oRecordsPanel
 
     Begin Object class=BTGUI_QueryPanel name=oQueryPanel
-        WinWidth=0.395
+        WinWidth=0.345
         WinHeight=0.925
         WinTop=0.065
-        WinLeft=0.6
+        WinLeft=0.65
     End Object
     QueryPanel=oQueryPanel
 }
