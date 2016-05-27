@@ -160,7 +160,6 @@ var float BTExperienceDiff;
 
 var float ClientMatchStartTime;
 
-const CFRESETGHOST      = 0x00000001;
 const CFCHECKPOINT      = 0x00000004;
 
 var private int ClientFlags;
@@ -335,7 +334,6 @@ simulated function InitializeClient( optional BTClient_Interaction myInter )
         Log( "BTClient_Config not found!", Name );
     }
 
-    ReplicateResetGhost();
     ServerSetPreferedColor( Options.PreferedColor );
 }
 
@@ -356,11 +354,6 @@ function bool SetActiveLevel( BTClient_LevelReplication myLevel )
         p.Destroy();
 
     return true;
-}
-
-simulated function ReplicateResetGhost()
-{
-    ServerSetClientFlags( CFRESETGHOST, class'BTClient_Config'.static.FindSavedData().bResetGhostOnDead );
 }
 
 // Can be called by client. It is private to avoid abuse.

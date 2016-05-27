@@ -15,7 +15,6 @@ var automated moCheckBox
     cb_PT,
     cb_PTS,
     cb_DFT,
-    cb_RGOD,
     cb_PM,
     cb_ABV,
     cb_DodgeDelay,
@@ -68,7 +67,6 @@ function CopyOptions()
     cb_PT.Checked( Options.bBaseTimeLeftOnPersonal );
     cb_PTS.Checked( Options.bPlayTickSounds );
     cb_DFT.Checked( Options.bDisplayFullTime );
-    cb_RGOD.Checked( Options.bResetGhostOnDead );
     cb_PM.Checked( Options.bProfesionalMode );
     cb_ABV.Checked( Options.bAutoBehindView );
     cb_DodgeDelay.Checked( Options.bShowDodgeDelay );
@@ -120,7 +118,6 @@ function SaveData()
     Options.bBaseTimeLeftOnPersonal = cb_PT.IsChecked();
     Options.bPlayTickSounds = cb_PTS.IsChecked();
     Options.bDisplayFullTime = cb_DFT.IsChecked();
-    Options.bResetGhostOnDead = cb_RGOD.IsChecked();
     Options.bProfesionalMode = cb_PM.IsChecked();
     Options.bAutoBehindView = cb_ABV.IsChecked();
     Options.bShowDodgeDelay = cb_DodgeDelay.IsChecked();
@@ -135,7 +132,6 @@ function SaveData()
 
     Options.SaveConfig();
 
-    MyMenu.MyInteraction.MRI.CR.ReplicateResetGhost();
     MyMenu.MyInteraction.UpdateToggleKey();
 }
 
@@ -289,18 +285,6 @@ defaultproperties
         OnChange=InternalOnChange
     End Object
     cb_DFT=DFT
-
-    Begin Object class=moCheckBox name=RGOD
-        WinTop=0.244000
-        WinLeft=0.530000
-        WinWidth=0.425000
-        WinHeight=0.048125
-        Caption="Reset Ghost"
-        Hint="If Checked: Ghost will restart to the start whenever you respawn(Solo only and if alone)"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_RGOD=RGOD
 
     Begin Object class=GUIEditBox name=ToggleKey
         bScaleToParent=True

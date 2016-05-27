@@ -28,7 +28,6 @@ var() globalconfig
     bBaseTimeLeftOnPersonal,
     bPlayTickSounds,
     bDisplayFullTime,
-    bResetGhostOnDead,
     bProfesionalMode,
     bAutoBehindView,
     bNoTrailers,
@@ -133,7 +132,6 @@ final function ResetSavedData()
     NewSound                        = default.NewSound;
     bBaseTimeLeftOnPersonal         = default.bBaseTimeLeftOnpersonal;
     bDisplayFullTime                = default.bDisplayFullTime;
-    bResetGhostOnDead               = default.bResetGhostOnDead;
     bProfesionalMode                = default.bProfesionalMode;
     bAutoBehindView                 = default.bAutoBehindView;
     CTable                          = default.CTable;
@@ -170,7 +168,6 @@ DefaultProperties
     TrophySound=Sound'GameSounds.UT2K3Fanfare08'
 
     bBaseTimeLeftOnPersonal=False
-    bResetGhostOnDead=True
 
     CTable=(B=18,G=12,R=12,A=200)
     CGoldText=(R=255,G=255,B=0,A=255)

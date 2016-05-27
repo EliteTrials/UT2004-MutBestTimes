@@ -305,10 +305,6 @@ exec function BTCommands()
         SendConsoleMessage( "SetClientSpawn" );
         SendConsoleMessage( "DeleteClientSpawn" );
         SendConsoleMessage( "..." );
-        SendConsoleMessage( "ToggleGhost (Only your Ghost!)" );
-        SendConsoleMessage( "GhostFollow <PlayerName> (Costs money!)" );
-        SendConsoleMessage( "GhostFollowID <PlayerID> (Only for admins, BTimes author and people with a ObjectivesLevel greater than 0)" );
-        SendConsoleMessage( "..." );
         SendConsoleMessage( "TrailerMenu" );
         SendConsoleMessage( "SetTrailerColor 255 255 255 128 128 128 (Only if Ranked!)" );
         SendConsoleMessage( "SetTrailerTexture <Package.Group.Name> (Only if Ranked!)" );
@@ -541,21 +537,6 @@ exec function RevoteMap()
 exec function VoteMap( string PartInMapName )
 {
     BT( "VoteMap" @ PartInMapName );
-}
-
-exec function ToggleGhost()
-{
-    BT( "ToggleGhost" );
-}
-
-exec function GhostFollow( string playerName )
-{
-    BT( "GhostFollow" @ playerName );
-}
-
-exec function GhostFollowID( int playerID )
-{
-    BT( "GhostFollowID" @ playerID );
 }
 
 exec function Race( string playerName )
