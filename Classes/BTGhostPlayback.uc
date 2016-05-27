@@ -30,6 +30,7 @@ final function InstallMarkers( optional bool replaceOld )
     local BTGhostPlayback playback;
     local BTClient_LevelReplication ghostLevel;
     local BTClient_GhostMarker marker;
+    local float fps;
 
     if( !BT.bAddGhostTimerPaths || !BT.bSoloMap )
         return;
@@ -37,7 +38,8 @@ final function InstallMarkers( optional bool replaceOld )
     ghostLevel = BT.GetObjectiveLevelByFullName( GhostMapName );
     if( ghostLevel != none )
     {
-        ghostLevel.PrimaryGhostNumMoves = GhostData.MO.Length;
+        fps = PlayFPS();
+        ghostLevel.PrimaryGhostNumMoves = float(GhostData.MO.Length) + (ghostLevel.TopTime - fps*float(GhostData.MO.Length))/fps;
     }
 
     if( replaceOld )
