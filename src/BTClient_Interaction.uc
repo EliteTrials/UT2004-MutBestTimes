@@ -1535,7 +1535,7 @@ function RenderGhostMarkings( Canvas C )
         Dir /= Dist;
         if( (Dir dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
         {
-            T = topTime * (float(Marking.MoveIndex)/float(ActiveLevel.PrimaryGhostNumMoves));
+            T = topTime * (float(Marking.MoveIndex)/ActiveLevel.PrimaryGhostNumMoves);
             YT = T - (topTime - GetTimeLeft());
             if( YT >= 0 )
             {

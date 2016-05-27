@@ -21,7 +21,7 @@ var bool bRestrictAccess;
 var string TopRanks;
 var float TopTime;
 var int NumRecords;
-var int PrimaryGhostNumMoves;
+var float PrimaryGhostNumMoves;
 
 // Serverside only
 var int MapIndex; // Index to RecordsData.Rec array.
