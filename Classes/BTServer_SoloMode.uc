@@ -202,7 +202,7 @@ private function bool CmdGhost( PlayerController sender, string value )
 
     if( sender.PlayerReplicationInfo.bIsSpectator || sender.PlayerReplicationInfo.bOnlySpectator )
     {
-        SendErrorMessage( sender, "Sorry! Spectators are allowed to summon ghosts!" );
+        SendErrorMessage( sender, "Sorry! Spectators are not allowed to summon ghosts!" );
         return true;
     }
 
