@@ -135,6 +135,12 @@ private function CreateGhostController()
     }
 }
 
+/* FIXME:
+    initializing replication for: Swaghettis
+    BTGhostPlayback RTR-Trials-Of-Korriban-V2E.BTGhostPlayback (Function ServerBTimes.BTGhostPlayback.PlayFPS:0000) Infinite script recursion (250 calls) detected
+    Executing UObject::StaticShutdownAfterError
+    BTGhostPlayback RTR-Trials-Of-Korriban-V2E.BTGhostPlayback (Function ServerBTimes.BTGhostPlayback.PlayFPS:0000) Infinite script recursion (250 calls) detected
+*/
 private function float PlayFPS()
 {
     return 1f/GhostData.UsedGhostFPS;
@@ -163,7 +169,7 @@ final function RestartPlay()
 
 private function bool IsDisabled()
 {
-    return GhostData == none || GhostDisabled || BT.RDat.Rec[BT.UsedSlot].TMGhostDisabled;
+    return GhostData == none || GhostDisabled || (BT.RDat != none && BT.RDat.Rec[BT.UsedSlot].TMGhostDisabled);
 }
 
 private function PlayNextFrame()
@@ -209,8 +215,8 @@ private function PlayNextFrame()
         }
         else if( CustomController != none )
         {
-            p.bOnlyRelevantToOwner = true;
-            p.SetOwner( CustomController );
+            // p.bOnlyRelevantToOwner = true;
+            // p.SetOwner( CustomController );
             // Blocks the ghost from being spectated.
             Controller.PlayerReplicationInfo.bOnlySpectator = true;
         }

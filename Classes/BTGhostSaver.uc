@@ -45,7 +45,7 @@ final function RecordPlayer( PlayerController other )
     		-- j;
     		continue;
     	}
-        if( Recorders[i].Owner == other )
+        if( Recorders[i].Owner == other && BT.bSoloMap )
         {
         	// Restart
             Recorders[i].StartGhostCapturing( BT.GhostPlaybackFPS );
@@ -136,6 +136,13 @@ event Tick( float deltaTime )
 
 	if( SaveQueue.Length == 0 )
 	{
+		// Restart map voting.
+		if( xVotingHandler(Level.Game.VotingHandler) != none
+			&& xVotingHandler(Level.Game.VotingHandler).ScoreBoardTime > 0 )
+		{
+			// FIXME: causes voting menu to open.
+			Level.Game.VotingHandler.SetTimer( 1.00, true );
+		}
 		Disable( 'Tick' );
 		return;
 	}
@@ -145,10 +152,10 @@ event Tick( float deltaTime )
 	data = SaveQueue[qIdx].Data;
 	if( data == none )
 	{
-		data = Manager.GetGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId );
+		data = Manager.GetGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId, true );
 		if( data == none )
 		{
-			data = Manager.CreateGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId );
+			data = Manager.CreateGhostData( SaveQueue[qIdx].PackageId, "BTGhost_"$SaveQueue[qIdx].GhostId );
 			if( data == none )
 			{
 				Warn( "Couldn't create a new ghost data object for" @ SaveQueue[qIdx].PackageId @ SaveQueue[qIdx].GhostId );
@@ -216,8 +223,7 @@ event Tick( float deltaTime )
 		}
 		else
 		{
-			Manager.CreateGhostPlayback( data, SaveQueue[qIdx].PackageId, true );
-			Manager.SqueezeGhosts( BT.bSoloMap && !BT.bGroupMap );
+			Manager.AddGhost( Manager.CreateGhostPlayback( data, SaveQueue[qIdx].PackageId, true ) );
 		}
 
 		if( recorder != none )
@@ -225,10 +231,6 @@ event Tick( float deltaTime )
 			recorder.Destroy();
 		}
 		SaveQueue.Remove( qIdx, 1 );
-		if( SaveQueue.Length == 0 && Level.Game.VotingHandler != none )
-		{
-			Level.Game.VotingHandler.SetTimer( 1.00, true );
-		}
 
 		// FIXME: Force view #1 ghost on the correct map
 		// if( !BT.bDontEndGameOnRecord )

@@ -3384,6 +3384,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     local int recordIndex;
     local BTClient_LevelReplication recordLevel;
     local string ghostId, mapName;
+    local BTGhostData data;
 
     recordIndex = RDat.FindRecordSlot( mapIndex, playerIndex + 1/*playerId*/ );
     if( recordIndex == -1 )
@@ -3403,20 +3404,26 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     {
         ghostId = PDat.Player[playerIndex].PLID;
         mapName = RDat.Rec[mapIndex].TMN;
-        if( GhostManager.GetGhostData( mapName, ghostId ) != none )
+        data = GhostManager.GetGhostData( mapName, ghostId );
+        if( data != none )
         {
             // If the ghost is currently being played then we should just mark it for deletion instead.
             if( recordLevel != none )
             {
-                if( GhostManager.RemoveGhost( mapName, ghostId ) )
+                if( GhostManager.RemoveGhost( data ) )
                 {
                     Log( "Removed(and marked for deletion) ghost on" @ mapName @ "belonging to" @ ghostId );
+                }
+                else
+                {
+                    Warn( "Found a ghost object for this record, but couldn't be removed?" );
                 }
             }
             // Not currently active, delete it immediately!
             else
             {
-                GhostManager.DeleteGhostData( mapName, ghostId );
+                // Pass data.name for backwards compatibility, older ghosts were saved as BTGhost_<MapName>.
+                GhostManager.DeleteGhostData( mapName, string(data.Name) );
                 GhostManager.SaveGhostsPackage( mapName ); // to re-save it without the recently deleted data object.
             }
         }
@@ -4881,6 +4888,8 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
             {
                 if( GhostManager != none && playTime <= 1800 )
                 {
+                    // Delete all existing ghosts first!
+                    GhostManager.SqueezeGhosts( false );
                     for( i = 0; i < GroupMembers.Length; ++ i )
                     {
                         GhostManager.Saver.QueueGhost(
@@ -4906,6 +4915,8 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
             if( GhostManager == none || CR.SoloRank > 3 || playTime > 1800 )
                 return;
 
+            // Erase all ghosts from deranked players (rank > MaxGhosts)
+            GhostManager.SqueezeGhosts( true );
             GhostManager.Saver.QueueGhost(
                 PC, // PC.GetPlayerIdHash(), // RETURNS a random GUID but the real guid other times WTF?
                 CR.myPlayerSlot,
@@ -5316,11 +5327,16 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
 
             if( GhostManager != none && playTime <= 1800 )
             {
-                GhostManager.Saver.QueueGhost(
-                    contributors[i].player,
-                    contributors[i].playerSlot-1,
-                    myLevel.GetFullName( CurrentMapName )
-                );
+                // Delete all existing ghosts first!
+                GhostManager.SqueezeGhosts( false );
+                for( i = 0; i < contributors.Length; ++ i )
+                {
+                    GhostManager.Saver.QueueGhost(
+                        contributors[i].player,
+                        contributors[i].playerSlot-1,
+                        myLevel.GetFullName( CurrentMapName )
+                    );
+                }
             }
         }
         else
@@ -6624,7 +6640,10 @@ final function SaveGhosts()
     for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
     {
         // Saves new, but deletes old unneeded ghosts!
-        GhostManager.SaveRelevantGhosts( myLevel.GetFullName( CurrentMapName ) );
+        if( GhostManager.SaveRelevantGhosts( myLevel.GetFullName( CurrentMapName ) ) )
+        {
+            Log( "Successfully saved ghosts for level" @ myLevel.GetFullName( CurrentMapName ) );
+        }
     }
 }
 

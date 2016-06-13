@@ -3,12 +3,11 @@
 //=============================================================================
 class BTGhostManager extends Info;
 
-var const int MaxGhosts;
-var const string GhostTag;
-
-var const noexport string GhostDataPackagePrefix;
-var const class<BTGhostData> GhostDataClass;
-var const class<BTGhostPlayback> GhostPlaybackClass;
+var() const int MaxGhosts;
+var() const string GhostTag;
+var() const string GhostDataPackagePrefix;
+var() const class<BTGhostData> GhostDataClass;
+var() const class<BTGhostPlayback> GhostPlaybackClass;
 
 // The ghosts that we are currently playing, if a ghost is missing from this array, then it will be deleted from the package on the next save.
 var array<BTGhostPlayback> Ghosts, CustomGhosts;
@@ -35,11 +34,10 @@ final function SqueezeGhosts( optional bool byRank )
         if( byRank )
         {
             ghostRank = GetGhostRank( Ghosts[i] );
-            if( ghostRank != 0 && ghostRank <= 3 )
+            if( ghostRank != 0 && ghostRank <= MaxGhosts )
             {
                 continue;
             }
-
         }
 
         BT.FullLog( "Removed old ghost data from map" @ Ghosts[i].GhostMapName @ "belonging to" @ Ghosts[i].GhostData.PLID );
@@ -77,6 +75,9 @@ final function bool SaveRelevantGhosts( string mapName )
         return false;
     }
 
+    // HACK: Bypass assertion crash by registering ghostPackageName.
+    Level.Game.CreateDataObject( class'Object', "SavingGhosts", ghostPackageName );
+    Level.Game.DeleteDataObject( class'Object', "SavingGhosts", ghostPackageName );
     foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
     {
         ghostData = BTGhostData(data);
@@ -97,16 +98,24 @@ final function bool SaveRelevantGhosts( string mapName )
         if( skipNext )
             continue;
 
-        dataNames[dataNames.Length] = ghostData.PLID;
+        dataNames[dataNames.Length] = string(data.Name);
     }
     for( i = 0; i < dataNames.Length; ++ i )
     {
         Log("Deleting ghost data" @ ghostPackageName @ "object" @ dataNames[i]);
-        DeleteGhostData( mapName, dataNames[i] );
+        // Pass it without BTGhost_ for backwards compatibility.
+        if( DeleteGhostData( mapName, dataNames[i] ) )
+        {
+            Log("... deleted!");
+        }
+        else
+        {
+            Warn("Couldn't delete object!");
+        }
     }
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        Log( Ghosts[i].GhostData.PLID @ Ghosts[i].GhostPackageName );
+        Log( "Playback id:" @ Ghosts[i].GhostData.PLID @ "package:" @ Ghosts[i].GhostPackageName );
     }
     Log("Saving ghosts package" @ ghostPackageName);
     return SaveGhostsPackage( mapName );
@@ -136,14 +145,29 @@ final function LoadGhosts( string mapName )
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
+    // Dirty hack to prevent the engine from crashing in case the package is nonexistent!
+    Level.Game.CreateDataObject( class'Object', "LoadGhosts", ghostPackageName );
+    Level.Game.DeleteDataObject( class'Object', "LoadGhosts", ghostPackageName );
     foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
     {
         ghostData = BTGhostData(data);
-        if( ghostData == none )
+        if( ghostData == none || ghostData.MO.Length == 0 || ghostData.PLID == "" )
             continue;
 
-        Ghosts[Ghosts.Length] = CreateGhostPlayback( ghostData, mapName );
+        AddGhost( CreateGhostPlayback( ghostData, mapName ) );
     }
+
+    // Prevents further crashes when the next object for this package is being tried.
+    // - so ensure that we have at least an empty package to bypass a false assertion.
+    if( data == none )
+    {
+        Level.Game.SavePackage( ghostPackageName );
+    }
+}
+
+final function AddGhost( BTGhostPlayback playback )
+{
+    Ghosts[Ghosts.Length] = playback;
 }
 
 final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay, optional bool isCustom )
@@ -201,36 +225,57 @@ private function AddDirtyPackage( string packageName )
     DirtyPackageNames[DirtyPackageNames.Length] = packageName;
 }
 
-final function BTGhostData GetGhostData( string mapName, string ghostId )
+/** Scans an entire .uvx file for a matching data object. Works regardless of map instance. */
+final function BTGhostData GetGhostData( string mapName, string ghostId, optional bool safeGet )
 {
     local int i;
-    local BTGhostData data;
+    local Object data;
+    local BTGhostData ghostData;
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
-    data = Level.Game.LoadDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
-    if( data != none )
+    for( i = 0; i < Ghosts.Length; ++ i )
     {
-        for( i = 0; i < Ghosts.Length; ++ i )
+        if( Ghosts[i].GhostPackageName == ghostPackageName
+            && Ghosts[i].GhostData != none
+            && Ghosts[i].GhostData.PLID == ghostId )
         {
-            if( Ghosts[i].GhostPackageName == ghostPackageName
-                && Ghosts[i].GhostData != none
-                && Ghosts[i].GhostData.PLID == ghostId )
-            {
-                return Ghosts[i].GhostData;
-            }
+            return Ghosts[i].GhostData;
         }
     }
-    return data;
+
+    if( safeGet )
+    {
+        return none;
+    }
+
+    // HACK: Prevents a crash in case we don't alrdy have a .uvx file with this name! Must be saved :()
+    Level.Game.CreateDataObject( class'Object', "TmpObj", ghostPackageName );
+    Level.Game.DeleteDataObject( class'Object', "TmpObj", ghostPackageName );
+    Level.Game.SavePackage( ghostPackageName );
+    foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
+    {
+        ghostData = BTGhostData(data);
+        if( ghostData == none || ghostData.PLID != ghostId )
+            continue;
+
+        return ghostData;
+    }
+    // It was an empty package, let's delete the crash workaround file.
+    if( data == none )
+    {
+        Level.Game.DeletePackage( ghostPackageName );
+    }
+    return none;
 }
 
-final function BTGhostData CreateGhostData( string mapName, string ghostId )
+final function BTGhostData CreateGhostData( string mapName, string dataName )
 {
     local BTGhostData data;
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
-    data = Level.Game.CreateDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+    data = Level.Game.CreateDataObject( GhostDataClass, dataName, ghostPackageName );
     if( data != none )
     {
         data.Init();
@@ -247,13 +292,13 @@ final function DirtyGhostPackage( string mapName )
     AddDirtyPackage( ghostPackageName );
 }
 
-final function bool DeleteGhostData( string mapName, string ghostId )
+final function bool DeleteGhostData( string mapName, string dataName )
 {
     local string ghostPackageName;
 
     ghostPackageName = GhostDataPackagePrefix $ mapName;
     AddDirtyPackage( ghostPackageName );
-    return Level.Game.DeleteDataObject( GhostDataClass, "BTGhost_"$ghostId, ghostPackageName );
+    return Level.Game.DeleteDataObject( GhostDataClass, dataName, ghostPackageName );
 }
 
 final function bool SaveGhostsPackage( string mapName )
@@ -272,18 +317,15 @@ final function bool DeleteGhostsPackage( string mapName )
     return Level.Game.DeletePackage( ghostPackageName );
 }
 
-final function bool RemoveGhost( string mapName, string ghostId )
+final function bool RemoveGhost( BTGhostData data )
 {
     local int i;
-    local string ghostPackageName;
 
-    ghostPackageName = GhostDataPackagePrefix $ mapName;
     for( i = 0; i < Ghosts.Length; ++ i )
     {
-        if( Ghosts[i].GhostPackageName == ghostPackageName
-            && (Ghosts[i].GhostData != none && Ghosts[i].GhostData.PLID == ghostId) )
+        if( Ghosts[i].GhostData == data )
         {
-            AddDirtyPackage( ghostPackageName );
+            AddDirtyPackage( Ghosts[i].GhostPackageName );
             Ghosts[i].Destroy();
             Ghosts.Remove( i, 1 );
             return true;
@@ -338,6 +380,8 @@ final function ClearGhostsData( string mapName, optional bool bCurrentMap )
 
     BT.FullLog( "Deleted all ghost data files for" @ mapName );
     // Ensure that all objects are deleted from the package and memory, otherwise the next SavePackage may re-save the ghosts.
+    Level.Game.CreateDataObject( class'Object', "TmpObj", ghostPackageName ); // To prevent us from crashing.
+    Level.Game.DeleteDataObject( class'Object', "TmpObj", ghostPackageName );
     foreach Level.Game.AllDataObjects( GhostDataClass, data, ghostPackageName )
     {
         dataNames[dataNames.Length] = data.Name;
@@ -550,7 +594,7 @@ event Destroyed()
 
 defaultproperties
 {
-    MaxGhosts=8
+    MaxGhosts=3
     GhostTag="' ghost"
     GhostDataPackagePrefix="BTGhost_"
     GhostDataClass=class'BTGhostData'
