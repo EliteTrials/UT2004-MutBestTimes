@@ -2,9 +2,9 @@
 
 # Pre-Requisites
 The following packages are necessary to run BTimes:
-* TrialGroup.u (https://github.com/EliotVU/UT2004-TrialGroup)
+* TrialGroup.u (https://github.com/EliotVU/UT2004-TrialGroup) (http://eliotvu.com/files/TrialGroup/latest/TrialGroup.rar)
 * TextureBTimes (optional, store skins) (Currently not available for download)
-* MakeCommandletUtils.u (Required to compile the project) (https://gist.github.com/EliotVU/4111885)
+* MakeCommandletUtils.u (Required to compile the project. Download: http://eliotvu.com/files/MakeCommandletUtils.u (save as))
 
 # Installing
 To install you have to clone two branches, Client-develop and Server-develop.
