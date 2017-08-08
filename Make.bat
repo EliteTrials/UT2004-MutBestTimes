@@ -1,30 +1,39 @@
 @echo off
+set project_version=V6
+for %%* in (.) do set "project_name=%%~n*"
+set "project_build_name=%project_name%%project_version%"
 
-for %%* in (.) do set project_name=%%~n*
-
-title %project_name%
+title %project_build_name%
 color 0F
 
 cd..
 cd system
-del %project_name%.u
-del %project_name%.ucl
-del %project_name%.int
+del %project_build_name%.u
+del %project_build_name%.ucl
+del %project_build_name%.int
 
 cd..
 cd %project_name%
-xcopy Preprocessed Classes /Y /Q  
 
-cd Preprocessed
-for %%F in (*.uc) do (
-    ..\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
+xcopy content "..\%project_build_name%\content" /i /y /q
+copy /y "ClientBTimes.utx" "..\%project_build_name%\ClientBTimes.utx"
+
+cd src
+for /r %%i in (*.uc) do (
+	copy /y "%%~fi" "..\..\%project_build_name%\Classes\%%~nxi"
 )
 
 cd..
 cd..
 cd system
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_name%
+:: Add editpackage
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_build_name%
 ucc.exe MakeCommandlet
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %project_name%
+:: Remove editpackage
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %project_build_name%
+:: Work around the stripper, so that it cannot embed the current .ini settings.
+ren ClientBTimes.ini ClientBTimes_bak.ini
+ucc.exe Editor.StripSourceCommandlet %project_build_name%.u
+ren ClientBTimes_bak.ini ClientBTimes.ini
 pause
 goto compile
