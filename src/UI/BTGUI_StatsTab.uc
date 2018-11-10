@@ -12,8 +12,6 @@ const IconSize = 64;
 
 var editconst protected int CurPos;
 
-#exec texture import name=regionBackground file=content/Background.tga group="icons" mips=off DXT=5 alpha=1
-
 var() texture RegionImage;
 
 event Free()
@@ -54,7 +52,7 @@ function bool InternalOnDraw( Canvas C )
 
 defaultproperties
 {
-    RegionImage=Material'InterfaceContent.Menu.EditBox' // Texture'regionBackground'
+    RegionImage=Material'InterfaceContent.Menu.EditBox'
 
     Begin Object Class=GUIScrollTextBox Name=oSummary
         bBoundToParent=False
