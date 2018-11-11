@@ -185,7 +185,8 @@ var() globalconfig
     bAddGhostTimerPaths,
     bAllowCompetitiveMode,
     bDontEndGameOnRecord,
-    bEnableInstigatorEmpathy;
+    bEnableInstigatorEmpathy,
+    bCountSpectatorsAsPlayers;
 
 var() globalconfig
     int
@@ -6151,8 +6152,11 @@ final function KillGhostRecorders()
 // Remove ghost from players list
 function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 {
-    ServerState.CurrentPlayers = Level.Game.NumPlayers+Level.Game.NumSpectators;
-    ServerState.MaxPlayers = Level.Game.MaxPlayers+Level.Game.NumSpectators;
+    if( bCountSpectatorsAsPlayers )
+    {
+        ServerState.CurrentPlayers = Level.Game.NumPlayers+Level.Game.NumSpectators;
+        ServerState.MaxPlayers = Level.Game.MaxPlayers+Level.Game.NumSpectators;
+    }
 }
 
 //==============================================================================
@@ -7211,4 +7215,5 @@ defaultproperties
     ConfigurableProperties(22)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
     bEnableInstigatorEmpathy=true
     ConfigurableProperties(23)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
+    ConfigurableProperties(24)=(Property=BoolProperty'bCountSpectatorsAsPlayers',Description="Count Spectators",AccessLevel=0,Weight=1,Hint="If checked: Spectators will be counted as players for the total players.")
 }
