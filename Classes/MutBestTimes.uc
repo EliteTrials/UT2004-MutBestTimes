@@ -6438,11 +6438,11 @@ private function WelcomePlayer( PlayerController PC, BTClient_ClientReplication 
         {
             if( diff > 0 )
             {
-                CR.ClientSendText( "Your rank score has increased by" @ "+"$cGreen$diff @ cWhite$"since your last login!");
+                CR.ClientSendText( "Your rank ELO has increased by" @ "+"$cGreen$diff @ cWhite$"since your last login!");
             }
             else
             {
-                CR.ClientSendText( "Your rank score has decreased by" @ "-"$cRed$Abs(diff) @ cWhite$"since your last login!");
+                CR.ClientSendText( "Your rank ELO has decreased by" @ "-"$cRed$Abs(diff) @ cWhite$"since your last login!");
             }
             suppressMotd = true;
         }
