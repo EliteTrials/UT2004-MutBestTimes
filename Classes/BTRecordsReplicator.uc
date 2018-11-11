@@ -146,7 +146,7 @@ state SendMapRecords extends SendRecords
         recordRank.Name         = PlayersSource.Player[playerIndex].PLName;
 
         if( HighestAcquiredPoints == 0 ) recordRank.Points = -MaxInt;
-        else recordRank.Points = RecordsSource.Rec[SourceIndex].PSRL[rankIndex].Points/HighestAcquiredPoints*10.00;
+        else recordRank.Points = RecordsSource.Rec[SourceIndex].PSRL[rankIndex].Points;///HighestAcquiredPoints*10.00;
 
         recordRank.Time         = RecordsSource.Rec[SourceIndex].PSRL[rankIndex].SRT;
         recordRank.Date         = RecordsSource.DateToCompactDate(
@@ -202,7 +202,7 @@ state SendPlayerRecords extends SendRecords
         recordRank.PlayerId     = playerIndex + 1;
         recordRank.RankId       = recordIndex + 1;
         recordRank.Name         = RecordsSource.Rec[mapIndex].TMN;
-        recordRank.Points       = RecordsSource.Rec[mapIndex].PSRL[recordIndex].Points/RecordsSource.Rec[mapIndex].PSRL[0].Points*10.00;
+        recordRank.Points       = RecordsSource.Rec[mapIndex].PSRL[recordIndex].Points;///RecordsSource.Rec[mapIndex].PSRL[0].Points*10.00;
         recordRank.Time         = RecordsSource.Rec[mapIndex].PSRL[recordIndex].SRT;
         recordRank.Date         = RecordsSource.DateToCompactDate(
             RecordsSource.Rec[mapIndex].PSRL[recordIndex].SRD[2],

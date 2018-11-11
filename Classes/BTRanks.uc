@@ -167,6 +167,7 @@ final function CachePlayer( int playerSlot, out array<int> records, out array<in
 {
 	local int mapIndex, recordIndex;
     local int i;
+    local float meanRating;
 
     PDat.Player[playerSlot].PLPoints[0] = 0;
     PDat.Player[playerSlot].PLPoints[1] = 0;
@@ -208,7 +209,8 @@ final function CachePlayer( int playerSlot, out array<int> records, out array<in
             continue;
         }
 
-		PDat.Player[playerSlot].PLPoints[i] = PDat.Player[playerSlot].PLPoints[i]/10000.00*650.00;
+        meanRating = (PDat.Player[playerSlot].PLPoints[i] / Min( PDat.Player[playerSlot].PLRankedRecords[i], MIN_PLAYER_RECORDS ));
+		PDat.Player[playerSlot].PLPoints[i] = meanRating;
     }
 }
 
@@ -399,10 +401,10 @@ final function CalcRecordPoints( int mapIndex )
     timeMedian = (times[int(timeMedian)] + times[int(timeMedian + 0.5)])/2.0;
     for( i = 0; i < times.Length; ++ i )
     {
-        RDat.Rec[mapIndex].PSRL[i].Points = times[i] + timeMedian;
+        RDat.Rec[mapIndex].PSRL[i].Points = 1000.00 + FMax( times[i] + timeMedian, -1000.0);
     }
     RDat.Rec[mapIndex].AverageRecordTime = Exp( Exp( timeMean ) );
-    RDat.Rec[mapIndex].Rating = timeStd*1000.00;
+    RDat.Rec[mapIndex].Rating = 1000.00 + timeStd;
 }
 
 final function bool IsRankedMap( int mapIndex )
