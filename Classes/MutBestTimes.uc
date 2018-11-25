@@ -1550,7 +1550,6 @@ event PostBeginPlay()
 
         MRI.PlayersCount = PDat.TotalActivePlayersCount;
         MRI.MaxRecords = RDat.Rec.Length;
-        MRI.MaxRankedPlayersCount = MaxRankedPlayers;
     }
 
     ModeRules = Spawn( Class'BTGameRules', self );
