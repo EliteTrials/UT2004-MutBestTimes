@@ -110,7 +110,6 @@ var ASGameInfo                                      AssaultGame;                
 var UTServerAdminSpectator                          WebAdminActor;              // For Logging, messaging
 
 var BTGhostManager                                  GhostManager;               // Currently used ghost data loader.
-var() globalconfig float                            GhostSaveSpeed;
 var() globalconfig bool                             bSpawnGhost;
 var() globalconfig int                              GhostPlaybackFPS;
 
@@ -7122,7 +7121,6 @@ defaultproperties
     MaxRankedPlayers=15
     bSpawnGhost=true
     GhostPlaybackFPS=10
-    GhostSaveSpeed=0.025000
     MinExchangeableTrophies=25
     MaxExchangeableTrophies=45
     DaysCountToConsiderPlayerInactive=30
@@ -7199,21 +7197,20 @@ defaultproperties
     ConfigurableProperties(6)=(Property=BoolProperty'bClientSpawnPlayersCanCompleteMap',Description="Allow ClientSpawn to Complete Map",AccessLevel=255,Weight=1,Hint="If Checked: Players with a ClientSpawn will be able to complete solo maps.")
     ConfigurableProperties(7)=(Property=BoolProperty'bAddGhostTimerPaths',Description="Generate Ghost Time Paths",Weight=1,Hint="Whether to spawn ghost markers.")
     ConfigurableProperties(8)=(Property=IntProperty'GhostPlaybackFPS',Description="Ghost Recording Framerate",AccessLevel=255,Weight=1,Rules="2;1:25",Hint="Amount of frames recorded every second (DON'T SET THIS HIGH).")
-    ConfigurableProperties(9)=(Property=FloatProperty'GhostSaveSpeed',Description="Ghost Saving Interval",AccessLevel=255,Weight=1,Hint="Amount of saving delay between every 10 Movements.")
-    ConfigurableProperties(10)=(Property=IntProperty'MaxRankedPlayers',Description="Maximum Rankable Players",Weight=1,Rules="2;5:30",Hint="Amount of players to show in the ranking table and top records list.")
-    ConfigurableProperties(11)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
-    ConfigurableProperties(12)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
-    ConfigurableProperties(13)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
-    ConfigurableProperties(14)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
-    ConfigurableProperties(15)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(16)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(17)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(18)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(19)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
-    ConfigurableProperties(20)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
-    ConfigurableProperties(21)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
-    ConfigurableProperties(22)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
+    ConfigurableProperties(9)=(Property=IntProperty'MaxRankedPlayers',Description="Maximum Rankable Players",Weight=1,Rules="2;5:30",Hint="Amount of players to show in the ranking table and top records list.")
+    ConfigurableProperties(10)=(Property=FloatProperty'TimeScaling',Description="Dynamic RoundTime Limit Scaler",Weight=1,Hint="RoundTimeLimit percent scaling.")
+    ConfigurableProperties(11)=(Property=FloatProperty'CompetitiveTimeLimit',Description="RoundTime Limit for Competitive Mode",Weight=1,Hint="The time limit for the Competitive Mode.")
+    ConfigurableProperties(12)=(Property=BoolProperty'bAllowCompetitiveMode',Description="Allow Competitive Mode",Weight=1)
+    ConfigurableProperties(13)=(Property=IntProperty'MaxLevel',Description="Maximum Level a Player Can Become",AccessLevel=0,Weight=1,Rules="10:1000",Hint="")
+    ConfigurableProperties(14)=(Property=IntProperty'PointsPerLevel',Description="Currency Bonus per Level when Leveling Up",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(15)=(Property=IntProperty'ObjectivesEXPDelay',Description="Objective Experience Reward Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(16)=(Property=IntProperty'DropChanceCooldown',Description="Objective Item Drop Chance Cooldown",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(17)=(Property=IntProperty'MinExchangeableTrophies',Description="Minimum Amount of Trophies Required",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(18)=(Property=IntProperty'MaxExchangeableTrophies',Description="Maximum Amount of Exchangeable Trophies",AccessLevel=0,Weight=1,Hint="")
+    ConfigurableProperties(19)=(Property=IntProperty'DaysCountToConsiderPlayerInactive',Description="Amount of Days to Consider a Player Inactive",AccessLevel=0,Weight=1,Hint="If a player remains inactive for the specified amount of days then the player will be hidden from rankings.")
+    ConfigurableProperties(20)=(Property=BoolProperty'bNoRandomSpawnLocation',Description="Enable Fixed Player Spawns",Weight=1,Hint="If Checked: BTimes will force every player's spawn point to one fixed spawn point.")
+    ConfigurableProperties(21)=(Property=StrProperty'EventDescription',Description="MOTD",AccessLevel=255,Weight=1,Rules="1024",Hint="Message of the day.")
     bEnableInstigatorEmpathy=true
-    ConfigurableProperties(23)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
-    ConfigurableProperties(24)=(Property=BoolProperty'bCountSpectatorsAsPlayers',Description="Count Spectators",AccessLevel=0,Weight=1,Hint="If checked: Spectators will be counted as players for the total players.")
+    ConfigurableProperties(22)=(Property=BoolProperty'bEnableInstigatorEmpathy',Description="Reflect All Taken Damage from Players",AccessLevel=0,Weight=1,Hint="If checked: enemies cannot kill the enemy through means of weapons.")
+    ConfigurableProperties(23)=(Property=BoolProperty'bCountSpectatorsAsPlayers',Description="Count Spectators",AccessLevel=0,Weight=1,Hint="If checked: Spectators will be counted as players for the total players.")
 }
