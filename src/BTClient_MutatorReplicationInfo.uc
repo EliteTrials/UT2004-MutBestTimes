@@ -44,7 +44,6 @@ var BTClient_ClientReplication CR;                                              
 var int RecordsCount;
 var int MaxRecords;
 var int PlayersCount, RankedPlayersCount;
-var int MaxRankedPlayersCount;
 
 var float TeamTime[2];
 
@@ -72,7 +71,7 @@ replication
     reliable if( bNetInitial )
         Credits, RankingPage,
         bSoloMap, bKeyMap,
-        RecordsCount, MaxRecords, MaxRankedPlayersCount,
+        RecordsCount, MaxRecords,
         PlayersCount, RankedPlayersCount,
         BaseLevel, MapLevel;
 
