@@ -198,7 +198,7 @@ function ScoreKill(Controller Killer, Controller Killed)
                     playerSlot = BT.FastFindPlayerSlot( PlayerController(C) )-1;
                     if( playerSlot != -1 )
                     {
-                        BT.PDat.AddExperience( playerSlot, expReward );
+                        BT.PDat.AddExperience( BT, playerSlot, expReward );
                     }
                 }
             }
@@ -208,7 +208,7 @@ function ScoreKill(Controller Killer, Controller Killed)
             playerSlot = BT.FastFindPlayerSlot( PlayerController(Killer) )-1;
             if( playerSlot != -1 )
             {
-                BT.PDat.AddExperience( playerSlot, expReward );
+                BT.PDat.AddExperience( BT, playerSlot, expReward );
             }
         }
     }

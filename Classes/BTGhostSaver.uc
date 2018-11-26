@@ -119,7 +119,7 @@ final function QueueGhost( PlayerController player, int playerIndex, string pack
 	SaveQueue[j].GhostId = recorder.ghostId;
 
 	// First ghost reward!
-	BT.PDat.ProgressAchievementByID( playerIndex, 'ghost_0' );
+	BT.PDatManager.ProgressAchievementByID( playerIndex, 'ghost_0' );
 	// Disable map traveling if possible.
 	if( Level.Game.VotingHandler != none )
 	{

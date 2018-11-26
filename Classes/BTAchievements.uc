@@ -129,6 +129,17 @@ final function int FindAchievementsByType( name type, out array<int> collection 
     return collection.Length;
 }
 
+final function int GetCountForAchievement( name id )
+{
+    local int achIndex;
+
+    achIndex = FindAchievementByID( id );
+    if( achIndex == -1 )
+        return 0;
+
+    return Achievements[achIndex].Count;
+}
+
 final function bool TestMap( string title, float recordTime, out name target )
 {
     local int i, asterik;

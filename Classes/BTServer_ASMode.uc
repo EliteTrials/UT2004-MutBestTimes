@@ -110,11 +110,11 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
     super.PlayerCompletedMap( player, playerSlot, playSeconds );
     if( InStr( Locs(Level.Author), "haydon" ) != -1 || InStr( Locs(Level.Author), "eliot" ) != -1 )
     {
-        PDat.ProgressAchievementByType( playerSlot, 'FinishQuality', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, 'FinishQuality', 1 );
     }
 
     // Complete any map 200 times
-    PDat.ProgressAchievementByType( playerSlot, 'Finish', 1 );
+    PDatManager.ProgressAchievementByType( playerSlot, 'Finish', 1 );
     if( ChallengesManager.IsTodaysChallenge( CurrentMapName ) )
     {
         chall = ChallengesManager.DailyChallenge;

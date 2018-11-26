@@ -43,8 +43,6 @@ struct sBTPlayerInfo
     /** How many hours this player has played. */
     var float PlayHours;
 
-    // Temporary reference to this players controller, if currently ingame.
-    var transient PlayerController Controller;
     var transient float _LastLoginTime;
     var transient bool bIsActive;
 
@@ -59,13 +57,14 @@ struct sBTPlayerInfo
     var transient array<int> Records;
     var transient array<int> RankedRecords;
 
+    // a.k.a AchievementStatus
     struct sAchievementProgress
     {
         /** ID of this achievement that this player is working on. */
         var name ID;
 
         /** Progress of <type> this player has reached so far! */
-        var int Progress;   // -1 indicates the achievement is earned if it is not a progress achievement.
+        var int Progress;   // -1 indicates the achievement is earned if it is not a progressable achievement.
     };
 
     /** All achievements that this player is working on */
@@ -126,25 +125,14 @@ var int TotalCurrencySpent;
 var int TotalItemsBought;
 var int DayTest;
 var transient int TotalActivePlayersCount;
-var transient MutBestTimes BT;
 var transient bool bCachedData;
 
 final function Free()
 {
-    local int i;
-
-    BT = none;
-
-    // Ensure we don't withhold any references.
-    for( i = 0; i < Player.Length; ++ i )
-    {
-        Player[i].Controller = none;
-    }
 }
 
 final function Init( MutBestTimes mut )
 {
-    BT = mut;
 }
 
 final function InvalidateCache()
@@ -204,7 +192,7 @@ final function AddTrophy( int playerSlot, string trophyID )
     Player[playerSlot].Trophies[j].ID = trophyID;
 }
 
-final function bool UseItem( int playerSlot, string id )
+final function bool IsUsingItemById( int playerSlot, string itemId )
 {
     local int i, j;
 
@@ -214,7 +202,7 @@ final function bool UseItem( int playerSlot, string id )
     j = Player[playerSlot].Inventory.BoughtItems.Length;
     for( i = 0; i < j; ++ i )
     {
-        if( Player[playerSlot].Inventory.BoughtItems[i].ID ~= id )
+        if( Player[playerSlot].Inventory.BoughtItems[i].ID ~= itemId )
         {
             return Player[playerSlot].Inventory.BoughtItems[i].bEnabled;
         }
@@ -222,7 +210,7 @@ final function bool UseItem( int playerSlot, string id )
     return false;
 }
 
-final function bool HasItem( int playerSlot, string id, optional out int itemSlot )
+final function bool HasItem( int playerSlot, string itemId, optional out int itemSlot )
 {
     local int i, j;
 
@@ -233,7 +221,7 @@ final function bool HasItem( int playerSlot, string id, optional out int itemSlo
     j = Player[playerSlot].Inventory.BoughtItems.Length;
     for( i = 0; i < j; ++ i )
     {
-        if( Player[playerSlot].Inventory.BoughtItems[i].ID ~= id )
+        if( Player[playerSlot].Inventory.BoughtItems[i].ID ~= itemId )
         {
             itemSlot = i;
             return true;
@@ -242,54 +230,21 @@ final function bool HasItem( int playerSlot, string id, optional out int itemSlo
     return false;
 }
 
-final function GiveItem( BTClient_ClientReplication CRI, string id )
-{
-    local int invIndex, playerSlot;
-
-    playerSlot = CRI.myPlayerSlot;
-    if( playerSlot == -1 )
-        return;
-
-    // TODO: Support stackable items.
-    invIndex = Player[playerSlot].Inventory.BoughtItems.Length;
-    Player[playerSlot].Inventory.BoughtItems.Length = invIndex + 1;
-    Player[playerSlot].Inventory.BoughtItems[invIndex].ID = id;
-    // For team items.
-    OnItemGiven( CRI, invIndex );
-}
-
-// Notify our player that an item has been added to his inventory, to give UIs a change to reflect changes.
-// FIXME: Bad code and relatively expensive!
-final function OnItemGiven( BTClient_ClientReplication CRI, int invIndex )
-{
-    local BTClient_ClientReplication.sPlayerItemClient item;
-    local int itemIndex;
-
-    ++ TotalItemsBought;
-    item.Id = Player[CRI.myPlayerSlot].Inventory.BoughtItems[invIndex].ID;
-    BT.Store.OnItemAcquired( CRI, item.Id );
-    itemIndex = BT.Store.FindItemByID( item.Id );
-    item.Name = BT.Store.Items[itemIndex].Name;
-    item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
-    item.Rarity = BT.Store.Items[itemIndex].Rarity;
-    CRI.ClientSendPlayerItem( item );
-}
-
-final function SilentRemoveItem( int playerSlot, string id )
+final function SilentRemoveItem( MutBestTimes BT, int playerSlot, string itemId )
 {
     local int i;
 
     if( playerSlot == -1 )
         return;
 
-    if( HasItem( playerSlot, id, i ) )
+    if( HasItem( playerSlot, itemId, i ) )
     {
-        BT.Store.ItemRemoved( playerSlot, id );
+        BT.Store.ItemRemoved( playerSlot, itemId );
         Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
     }
 }
 
-final function RemoveItem( BTClient_ClientReplication CRI, string id )
+final function RemoveItem( MutBestTimes BT, BTClient_ClientReplication CRI, string itemId )
 {
     local int i, playerSlot;
 
@@ -297,20 +252,20 @@ final function RemoveItem( BTClient_ClientReplication CRI, string id )
     if( playerSlot == -1 )
         return;
 
-    if( HasItem( playerSlot, id, i ) )
+    if( HasItem( playerSlot, itemId, i ) )
     {
-        BT.Store.ItemRemoved( playerSlot, id );
+        BT.Store.ItemRemoved( playerSlot, itemId );
         Player[playerSlot].Inventory.BoughtItems.Remove( i, 1 );
-        CRI.ClientNotifyItemRemoved( id );
+        CRI.ClientNotifyItemRemoved( itemId );
     }
 }
 
-final function ToggleItem( int playerSlot, string id )
+final function ToggleItem( MutBestTimes BT, int playerSlot, string itemId )
 {
     local int i, itemSlot, storeSlot;
-    local string Type;
+    local string type;
 
-    if( id ~= "all" )
+    if( itemId ~= "all" )
     {
         for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
         {
@@ -320,7 +275,7 @@ final function ToggleItem( int playerSlot, string id )
         return;
     }
 
-    if( HasItem( playerSlot, id, itemSlot ) )
+    if( HasItem( playerSlot, itemId, itemSlot ) )
     {
         Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled = !Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled;
         BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[itemSlot].ID, Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled );
@@ -328,7 +283,7 @@ final function ToggleItem( int playerSlot, string id )
         // Disable all other items of the same Type!
         if( Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled )
         {
-            storeSlot = BT.Store.FindItemByID( ID );
+            storeSlot = BT.Store.FindItemByID( itemId );
             if( storeSlot == -1 )
                 return;
 
@@ -355,22 +310,11 @@ final function ToggleItem( int playerSlot, string id )
     }
 }
 
-final function bool ItemEnabled( int playerSlot, string id )
+final function GetItemState( int playerSlot, string itemId, out byte bBought, out byte bEnabled )
 {
     local int i;
 
-    if( HasItem( playerSlot, id, i ) )
-    {
-        return Player[playerSlot].Inventory.BoughtItems[i].bEnabled;
-    }
-    return false;
-}
-
-final function GetItemState( int playerSlot, string id, out byte bBought, out byte bEnabled )
-{
-    local int i;
-
-    if( HasItem( playerSlot, id, i ) )
+    if( HasItem( playerSlot, itemId, i ) )
     {
         bBought = 1;
         bEnabled = byte(Player[playerSlot].Inventory.BoughtItems[i].bEnabled);
@@ -382,7 +326,7 @@ final function bool HasCurrencyPoints( int playerSlot, int amount )
     return Player[playerSlot].LevelData.BTPoints >= amount;
 }
 
-final function SpendCurrencyPoints( int playerSlot, int amount )
+final function SpendCurrencyPoints( MutBestTimes BT, int playerSlot, int amount )
 {
     if( amount == 0 )
         return;
@@ -393,7 +337,7 @@ final function SpendCurrencyPoints( int playerSlot, int amount )
     TotalCurrencySpent += amount;
 }
 
-final function GiveCurrencyPoints( int playerSlot, int amount, optional bool shouldIgnoreBonuses )
+final function GiveCurrencyPoints( MutBestTimes BT, int playerSlot, int amount, optional bool shouldIgnoreBonuses )
 {
     if( amount == 0 )
         return;
@@ -406,14 +350,14 @@ final function GiveCurrencyPoints( int playerSlot, int amount, optional bool sho
     BT.NotifyGiveCurrency( playerSlot, amount );
 }
 
-final function GiveAchievementPoints( int playerSlot, int amount )
+final function GiveAchievementPoints( MutBestTimes BT, int playerSlot, int amount )
 {
     Player[playerSlot].PLAchiev += amount;
     BT.NotifyAchievementPointsEarned( playerSlot, amount );
 }
 
 /** Make sure the playerSlot's are incremented by 1 when calling. */
-final function AddExperienceList( array<BTStructs.sPlayerReference> playerSlots, int experience )
+final function AddExperienceList( MutBestTimes BT, array<BTStructs.sPlayerReference> playerSlots, int experience )
 {
     local int i;
 
@@ -421,12 +365,12 @@ final function AddExperienceList( array<BTStructs.sPlayerReference> playerSlots,
     {
         if( playerSlots[i].PlayerSlot > 0 )
         {
-            AddExperience( playerSlots[i].PlayerSlot-1, experience );
+            AddExperience( BT, playerSlots[i].PlayerSlot-1, experience );
         }
     }
 }
 
-final function AddExperience( int playerSlot, int experience )
+final function AddExperience( MutBestTimes BT, int playerSlot, int experience )
 {
     local int preLevel, postLevel;
     local int expPoints;
@@ -463,7 +407,7 @@ final function AddExperience( int playerSlot, int experience )
     }
 }
 
-final function RemoveExperience( int playerSlot, int experience )
+final function RemoveExperience( MutBestTimes BT, int playerSlot, int experience )
 {
     local int preLevel, postLevel;
 
@@ -503,7 +447,7 @@ final function int GetLevel( int playerSlot, optional out float levelPercent )
     return levelNum;
 }
 
-final function int FindAchievementByIDSTRING( int playerSlot, string id )
+final function int FindAchievementStatusByIDSTRING( int playerSlot, string id )
 {
     local int i;
 
@@ -520,8 +464,7 @@ final function int FindAchievementByIDSTRING( int playerSlot, string id )
     return -1;
 }
 
-// WARN: Relatively expensive; 1231,46 usec.
-final function int FindAchievementByID( int playerSlot, name id )
+final function int FindAchievementStatusByID( int playerSlot, name id )
 {
     local int i;
 
@@ -538,22 +481,18 @@ final function int FindAchievementByID( int playerSlot, name id )
     return -1;
 }
 
-final private function int CreateAchievementSlot( BTAchievements manager, int playerSlot, name id )
+final function int CreateAchievementStatus( int playerSlot, name achievementId )
 {
     if( playerSlot == -1 )
         return -1;
 
     // Make sure that this is actually an achieveable achievement!
-    if( manager.FindAchievementByID( id ) != -1 )
-    {
-        Player[playerSlot].Achievements.Insert( 0, 1 );
-        Player[playerSlot].Achievements[0].ID = id;
-        return 0;
-    }
-    return -1;  // Was not achieveable!
+    Player[playerSlot].Achievements.Insert( 0, 1 );
+    Player[playerSlot].Achievements[0].ID = achievementId;
+    return 0;
 }
 
-final function DeleteAchievements( int playerSlot )
+final function DeleteAchievementsStatus( int playerSlot )
 {
     if( playerSlot == -1 )
         return;
@@ -561,132 +500,35 @@ final function DeleteAchievements( int playerSlot )
     Player[playerSlot].Achievements.Length = 0;
 }
 
-final function ProgressAchievementByID( int playerSlot, name id, optional int count )
+final function bool HasCompletedAchievement( MutBestTimes BT, int playerSlot, int achievementIndex )
 {
-    local int achSlot;//, oldProgress, req;
+    local name achievementId;
+    local int achievementStatusIdx;
 
-    if( playerSlot == -1 )
-        return;
-
-    achSlot = FindAchievementByID( playerSlot, id );
-    if( achSlot == -1 )
+    achievementId = BT.AchievementsManager.Achievements[achievementIndex].ID;
+    achievementStatusIdx = FindAchievementStatusByID( playerSlot, achievementId );
+    if( achievementStatusIdx == -1 )
     {
-        achSlot = CreateAchievementSlot( BT.AchievementsManager, playerSlot, id );
+        return false;
     }
 
-    ProgressAchievementBySlot( playerSlot, achSlot, count );
+    return Player[playerSlot].Achievements[achievementStatusIdx].Progress == -1
+                || Player[playerSlot].Achievements[achievementStatusIdx].Progress >= BT.AchievementsManager.Achievements[achievementIndex].Count;
 }
 
-final function ProgressAchievementByType( int playerSlot, name type, optional int count )
-{
-    local int i, slot;
-
-    if( playerSlot == -1 )
-        return;
-
-    // Make sure that this player has an slot for all those possible achievement types!
-    for( i = 0; i < BT.AchievementsManager.Achievements.Length; ++ i )
-    {
-        if( BT.AchievementsManager.Achievements[i].Type == type )
-        {
-            slot = FindAchievementByID( playerSlot, BT.AchievementsManager.Achievements[i].ID );
-            if( slot != -1 )
-                continue;
-
-            CreateAchievementSlot( BT.AchievementsManager, playerSlot, BT.AchievementsManager.Achievements[i].ID );
-        }
-    }
-
-    for( i = 0; i < Player[playerSlot].Achievements.Length; ++ i )
-    {
-        slot = BT.AchievementsManager.FindAchievementByID( Player[playerSlot].Achievements[i].ID );
-        if( slot == -1 ) // Retired?
-            continue; // This is an achievement track for a no-longer-existing achievement.
-
-        if( BT.AchievementsManager.Achievements[slot].Type == type )
-        {
-            ProgressAchievementBySlot( playerSlot, i, count );
-        }
-    }
-}
-
-final function bool HasEarnedAchievement( int playerSlot, int achievementIndex )
-{
-    local int i;
-
-    for( i = 0; i < Player[playerSlot].Achievements.Length; ++ i )
-    {
-        if( Player[playerSlot].Achievements[i].ID == BT.AchievementsManager.Achievements[achievementIndex].ID )
-        {
-            if( Player[playerSlot].Achievements[i].Progress == -1 || Player[playerSlot].Achievements[i].Progress >= BT.AchievementsManager.Achievements[achievementIndex].Count )
-            {
-                return true;
-            }
-            break;
-        }
-    }
-    return false;
-}
-
-final function int CountEarnedAchievements( int playerSlot )
+final function int CountCompletedAchievements( MutBestTimes BT, int playerSlot )
 {
     local int i, numAchievements;
 
     for( i = 0; i < Player[playerSlot].Achievements.Length; ++ i )
     {
         if( Player[playerSlot].Achievements[i].Progress == -1
-            || Player[playerSlot].Achievements[i].Progress >= GetCountForAchievement( Player[playerSlot].Achievements[i].ID ) )
+            || Player[playerSlot].Achievements[i].Progress >= BT.AchievementsManager.GetCountForAchievement( Player[playerSlot].Achievements[i].ID ) )
         {
             ++ numAchievements;
         }
     }
     return numAchievements;
-}
-
-final private function int GetCountForAchievement( name id )
-{
-    local int achIndex;
-
-    achIndex = BT.AchievementsManager.FindAchievementByID( id );
-    if( achIndex == -1 )
-        return 0;
-
-    return BT.AchievementsManager.Achievements[achIndex].Count;
-}
-
-final private function ProgressAchievementBySlot( int playerSlot, int achSlot, optional int count )
-{
-    local int req;
-    local int preProgress, postProgress;
-
-    if( playerSlot == -1 || achSlot == -1 )
-        return;
-
-    req = BT.AchievementsManager.Achievements[BT.AchievementsManager.FindAchievementByID( Player[playerSlot].Achievements[achSlot].ID )].Count;
-    if( req == 0 )
-    {
-        if( Player[playerSlot].Achievements[achSlot].Progress != -1 )
-        {
-            Player[playerSlot].Achievements[achSlot].Progress = -1;
-            BT.AchievementEarned( playerSlot, Player[playerSlot].Achievements[achSlot].ID );
-        }
-        return;
-    }
-
-    preProgress = Player[playerSlot].Achievements[achSlot].Progress;
-    Player[playerSlot].Achievements[achSlot].Progress += count;
-    postProgress = Player[playerSlot].Achievements[achSlot].Progress;
-
-
-    /// Notify BT about this achievement completion, so that it can broadcast the achievement!
-    if( postProgress >= req && preProgress < req ) // Make sure that it wasn't previously earned!
-    {
-        BT.AchievementEarned( playerSlot, Player[playerSlot].Achievements[achSlot].ID );
-    }
-    else if( postProgress < req )
-    {
-        BT.AchievementProgressed( playerSlot, Player[playerSlot].Achievements[achSlot].ID );
-    }
 }
 
 /** Strips all color tags from A. */

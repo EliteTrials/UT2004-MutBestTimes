@@ -59,12 +59,12 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
     super.PlayerCompletedMap( player, playerSlot, playSeconds );
 
     // Completed a regular map.
-    PDat.ProgressAchievementByID( playerSlot, 'mode_2' );
+    PDatManager.ProgressAchievementByID( playerSlot, 'mode_2' );
     // Has 10 or more regular records.
-    if( PDat.FindAchievementByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( regularNum, playerSlot ) >= 10 )
+    if( PDat.FindAchievementStatusByID( playerSlot, 'records_4' ) == -1 && CountRecordsNum( regularNum, playerSlot ) >= 10 )
     {
         // Regular gamer.
-        PDat.ProgressAchievementByID( playerSlot, 'records_4' );
+        PDatManager.ProgressAchievementByID( playerSlot, 'records_4' );
     }
 }
 

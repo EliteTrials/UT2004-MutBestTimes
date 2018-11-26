@@ -102,19 +102,22 @@ struct sTrailerInfo
     var int P;
 };
 
-var array<sTrailerInfo>                             Trailers;
+var private array<sTrailerInfo>                     Trailers;
 
 //var private editconst BTServer_SecondsTest            TimerTest;              // For Testing time sync purpose between second and milliseconds.
 var BTClient_MutatorReplicationInfo                 MRI;                        // Contains all the data clients might want to use.
 var ASGameInfo                                      AssaultGame;                // reference to ASGameInfo
-var UTServerAdminSpectator                          WebAdminActor;              // For Logging, messaging
+var private UTServerAdminSpectator                  WebAdminActor;              // For Logging, messaging
 
 var BTGhostManager                                  GhostManager;               // Currently used ghost data loader.
 var() globalconfig bool                             bSpawnGhost;
 var() globalconfig int                              GhostPlaybackFPS;
 
-var BTServer_RecordsData                            RDat;                       // Holds all the Records
-var BTServer_PlayersData                            PDat;                       // Holds all the Players
+var BTServer_RecordsData                            RDat;
+var BTRecordsDataManager                            RDatManager;
+
+var BTServer_PlayersData                            PDat;
+var BTPlayersDataManager                            PDatManager;
 
 // External
 var GroupManager                                    GroupManager;
@@ -149,7 +152,6 @@ var string CurrentMapName;
 var int UsedSlot;
 
 var const noexport string RecordsDataFileName;
-var const noexport string PlayersDataFileName;
 
 // QuickStart variable holding the current count down.
 var private int CurCountdown;
@@ -403,7 +405,7 @@ final function NotifyObjectiveAccomplished( PlayerController PC, float score )
         if( PDat.Player[playerSlot].PLObjectives >= 10000 )
         {
             // Objectives farmer
-            PDat.ProgressAchievementByID( playerSlot, 'obj_0' );
+            PDatManager.ProgressAchievementByID( playerSlot, 'obj_0' );
         }
 
         if( (Level.TimeSeconds - CRI.LastObjectiveCompletedTime) >= ObjectivesEXPDelay )
@@ -413,16 +415,16 @@ final function NotifyObjectiveAccomplished( PlayerController PC, float score )
                 if( bKeyMap || bGroupMap )
                 {
                     // Accelerate xp
-                    PDat.AddExperience( playerSlot, EXP_Objective + GetPlayerObjectives( PC ) );
+                    PDat.AddExperience( self, playerSlot, EXP_Objective + GetPlayerObjectives( PC ) );
                 }
                 else
                 {
-                    PDat.AddExperience( playerSlot, EXP_Objective );
+                    PDat.AddExperience( self, playerSlot, EXP_Objective );
                 }
             }
             else
             {
-                PDat.AddExperience( playerSlot, EXP_Objective + 5 + GetPlayerObjectives( PC ) );
+                PDat.AddExperience( self, playerSlot, EXP_Objective + 5 + GetPlayerObjectives( PC ) );
             }
 
             CRI.LastObjectiveCompletedTime = Level.TimeSeconds;
@@ -510,12 +512,12 @@ final function NotifyGiveCurrency( int playerSlot, int currencyReceived )
 final function NotifyItemBought( int playerSlot )
 {
     // Buy your first item
-    PDat.ProgressAchievementByID( playerSlot, 'store_0' );
+    PDatManager.ProgressAchievementByID( playerSlot, 'store_0' );
 
     if( PDat.Player[playerSlot].Inventory.BoughtItems.Length >= 10 )
     {
         // Shopping like a girl
-        PDat.ProgressAchievementByID( playerSlot, 'store_2' );
+        PDatManager.ProgressAchievementByID( playerSlot, 'store_2' );
     }
 }
 
@@ -532,7 +534,7 @@ final function NotifyExperienceAdded( int playerSlot, int experienceAdded )
 
     if( experienceAdded >= 64 )
     {
-        PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'experience_0' );
+        PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, 'experience_0' );
     }
 
     CRI.BTLevel = PDat.GetLevel( playerSlot, CRI.BTExperience );
@@ -567,16 +569,16 @@ final function NotifyLevelUp( int playerSlot, int BTLevel )
         return;
     }
 
-    PDat.ProgressAchievementByType( CRI.myPlayerSlot, 'LevelUp', 1 );
+    PDatManager.ProgressAchievementByType( CRI.myPlayerSlot, 'LevelUp', 1 );
 
     if( BTLevel >= 50 )
     {
         // Dedicated noob
-        PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'level_4' );
+        PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, 'level_4' );
         if( BTLevel >= 100 )
         {
             // Dedicated gamer
-            PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'level_5' );
+            PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, 'level_5' );
         }
     }
 
@@ -614,7 +616,7 @@ final function NotifyLevelDown( int playerSlot, int BTLevel )
 
 final function NotifyCheckPointChange( Controller C )
 {
-    PDat.ProgressAchievementByType( GetRep( C ).myPlayerSlot, 'CheckpointUses', 1 );
+    PDatManager.ProgressAchievementByType( GetRep( C ).myPlayerSlot, 'CheckpointUses', 1 );
 }
 
 final function NotifyAchievementPointsEarned( int playerSlot, int amount )
@@ -638,7 +640,7 @@ final function OnMapAchievementTrigger( name eventId, Pawn instigator )
     {
         if( AchievementsManager.MapTests[i].Event == eventId )
         {
-            PDat.ProgressAchievementByID( CRI.myPlayerSlot, AchievementsManager.MapTests[i].Target );
+            PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, AchievementsManager.MapTests[i].Target );
         }
     }
 }
@@ -651,26 +653,26 @@ final function AchievementEarned( int playerSlot, name id )
     local int earntAchievements, i;
     local array<string> rewards;
 
-    earntAchievements = PDat.CountEarnedAchievements( playerSlot );
+    earntAchievements = PDat.CountCompletedAchievements( self, playerSlot );
     // Above PC == none because currency should always be given even for offline players!.
     ach = AchievementsManager.GetAchievementByID( id );
-    PDat.GiveAchievementPoints( playerSlot, ach.Points );
+    PDat.GiveAchievementPoints( self, playerSlot, ach.Points );
 
-    if( PDat.FindAchievementByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
+    if( PDat.FindAchievementStatusByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
     {
-        PDat.ProgressAchievementByID( playerSlot, 'ach_0' );
+        PDatManager.ProgressAchievementByID( playerSlot, 'ach_0' );
     }
 
     // Trials master achievement
-    if( PDat.FindAchievementByID( playerSlot, 'ach_1' ) == -1
-        && PDat.FindAchievementByID( playerSlot, 'level_5' ) != -1
+    if( PDat.FindAchievementStatusByID( playerSlot, 'ach_1' ) == -1
+        && PDat.FindAchievementStatusByID( playerSlot, 'level_5' ) != -1
      )
     {
-        if( PDat.FindAchievementByID( playerSlot, 'records_3' ) != -1
-        && PDat.FindAchievementByID( playerSlot, 'records_4' ) != -1
-        && PDat.FindAchievementByID( playerSlot, 'records_5' ) != -1 )
+        if( PDat.FindAchievementStatusByID( playerSlot, 'records_3' ) != -1
+        && PDat.FindAchievementStatusByID( playerSlot, 'records_4' ) != -1
+        && PDat.FindAchievementStatusByID( playerSlot, 'records_5' ) != -1 )
         {
-            PDat.ProgressAchievementByID( playerSlot, 'ach_1' );
+            PDatManager.ProgressAchievementByID( playerSlot, 'ach_1' );
         }
     }
 
@@ -692,14 +694,14 @@ final function AchievementEarned( int playerSlot, name id )
         Split( ach.ItemRewardId, ";", rewards );
         for( i = 0; i < rewards.Length; ++ i )
         {
-            PDat.GiveItem( rep, rewards[i] );
+            PDatManager.GiveItem( rep, rewards[i] );
         }
     }
 
     // Progress the Geometry Absolution collection if the achievement is related.
     if( ach.CatID == string('cat_col_gemab') )
     {
-        PDat.ProgressAchievementByType( playerSlot, 'ColGem', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, 'ColGem', 1 );
     }
 }
 
@@ -724,11 +726,11 @@ final function PlayerEarnedTrophy( int playerSlot, BTChallenges.sChallenge chall
      PC.GetHumanReadableName() @ "has earned the trophy" @ $0x60CB45 $ challenge.Title,
       "You earned the trophy" @ $0x60CB45 $ challenge.Title );
 
-    PDat.GiveCurrencyPoints( playerSlot, challenge.Points );
+    PDat.GiveCurrencyPoints( self, playerSlot, challenge.Points );
 
     if( Left( challenge.ID, 3 ) ~= "MAP" )
     {
-        PDat.ProgressAchievementByType( playerSlot, 'FinishDailyChallenge', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, 'FinishDailyChallenge', 1 );
     }
 }
 
@@ -746,28 +748,28 @@ final function AchievementProgressed( int playerSlot, name id )
 
     ach = AchievementsManager.GetAchievementByID( id );
 
-    rep.ClientAchievementProgressed( ach.Title, ach.Icon, PDat.Player[rep.myPlayerSlot].Achievements[PDat.FindAchievementByID( rep.myPlayerSlot, ach.ID )].Progress, ach.Count );
+    rep.ClientAchievementProgressed( ach.Title, ach.Icon, PDat.Player[rep.myPlayerSlot].Achievements[PDat.FindAchievementStatusByID( rep.myPlayerSlot, ach.ID )].Progress, ach.Count );
 }
 
 final function ProcessJaniAchievement( PlayerReplicationInfo PRI )
 {
-    PDat.ProgressAchievementByID( GetRep( Controller(PRI.Owner) ).myPlayerSlot, 'jani_1' );
+    PDatManager.ProgressAchievementByID( GetRep( Controller(PRI.Owner) ).myPlayerSlot, 'jani_1' );
 }
 
 final function ProcessEliotAchievement( PlayerReplicationInfo PRI )
 {
-    PDat.ProgressAchievementByID( GetRep( Controller(PRI.Owner) ).myPlayerSlot, 'eliot_0' );
+    PDatManager.ProgressAchievementByID( GetRep( Controller(PRI.Owner) ).myPlayerSlot, 'eliot_0' );
 }
 
 
 final function ProcessClientSpawnAchievement( PlayerController PC )
 {
-    PDat.ProgressAchievementByID( GetRep( PC ).myPlayerSlot, 'clientspawn_1' );
+    PDatManager.ProgressAchievementByID( GetRep( PC ).myPlayerSlot, 'clientspawn_1' );
 }
 
 final function ProcessMap2Achievement( int playerSlot )
 {
-    PDat.ProgressAchievementByID( playerSlot, 'map_2' );
+    PDatManager.ProgressAchievementByID( playerSlot, 'map_2' );
 }
 
 function InternalOnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI )
@@ -842,7 +844,7 @@ function InternalOnRequestAchievementsByCategory( PlayerController requester, BT
         if( AchievementsManager.Achievements[i].CatID != catID )
             continue;
 
-        achSlot = PDat.FindAchievementByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+        achSlot = PDat.FindAchievementStatusByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
         if( achSlot != -1 )
         {
             achSlot = PDat.Player[CRI.myPlayerSlot].Achievements[achSlot].Progress;
@@ -937,7 +939,7 @@ final function SendStoreItems( PlayerController requester, string filter )
     );
 
     // Store discovery
-    // PDat.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
+    // PDatManager.ProgressAchievementByID( Rep.myPlayerSlot, 'store_1' );
 }
 
 final function InternalOnRequestPlayerItems( PlayerController requester, BTClient_ClientReplication CRI, string filter )
@@ -1199,7 +1201,7 @@ final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
     {
         if( Store.LockedMaps[i].MapName ~= CurrentMapName )
         {
-            if( PDat.UseItem( CRI.myPlayerSlot, Store.LockedMaps[i].ItemID ) )
+            if( PDat.IsUsingItemById( CRI.myPlayerSlot, Store.LockedMaps[i].ItemID ) )
             {
                 return true;
             }
@@ -1282,7 +1284,7 @@ function ModifyPlayer( Pawn other )
         }
 
         Store.ModifyPawn( other, PDat, CRI );
-        if( PDat.UseItem( CRI.myPlayerSlot, "Trailer" ) )
+        if( PDat.IsUsingItemById( CRI.myPlayerSlot, "Trailer" ) )
         {
             for( i = 0; i < Trailers.Length; ++ i )
             {
@@ -1591,7 +1593,7 @@ final function ProcessSirDickyAchievement( Pawn instigator )
         return;
 
     // SirDicky
-    PDat.ProgressAchievementByID( CRI.myPlayerSlot, 'sirdicky' );
+    PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, 'sirdicky' );
 }
 
 final function ResetCheckPoint( PlayerController PC )
@@ -2217,7 +2219,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     break;
                 }
 
-                if( !PDat.HasEarnedAchievement( Rep.myPlayerSlot, i ) )
+                if( !PDat.HasCompletedAchievement( self, Rep.myPlayerSlot, i ) )
                 {
                     SendErrorMessage( sender, "Sorry you cannot use an achievement title that you have not earned yet!" );
                     break;
@@ -2329,7 +2331,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             if( PDat.Player[Rep.myPlayerSlot].Inventory.TrailerSettings.TrailerTexture != params[0] )
             {
                 PDat.Player[Rep.myPlayerSlot].Inventory.TrailerSettings.TrailerTexture = params[0];
-                PDat.SpendCurrencyPoints( Rep.myPlayerSlot, 1 );
+                PDat.SpendCurrencyPoints( self, Rep.myPlayerSlot, 1 );
 
                 for( i = 0; i < Trailers.Length; ++ i )
                 {
@@ -2397,7 +2399,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                             PDat.Player[Rep.myPlayerSlot].Inventory.TrailerSettings.TrailerColor[1] = class'HUD'.default.WhiteColor;
                         }
 
-                        PDat.GiveItem( Rep, s );
+                        PDatManager.GiveItem( Rep, s );
                         SendSucceedMessage( sender, "Gave item" @ Store.Items[i].Name @ "to" @ C.PlayerReplicationInfo.PlayerName );
                         SendSucceedMessage( PlayerController(C), "You received item" @ Store.Items[i].Name @ "from" @ sender.PlayerReplicationInfo.PlayerName );
                         break;
@@ -2446,7 +2448,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
 
                         if( PDat.HasItem( Rep.myPlayerSlot, s ) )
                         {
-                            PDat.RemoveItem( Rep, s );
+                            PDatManager.RemoveItem( Rep, s );
                             SendSucceedMessage( sender, "Removed item" @ Store.Items[i].Name @ "from" @ C.PlayerReplicationInfo.PlayerName );
                             SendSucceedMessage( PlayerController(C), sender.PlayerReplicationInfo.PlayerName @ "removed your item" @ Store.Items[i].Name );
                         }
@@ -2494,7 +2496,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 }
 
                 NotifyItemBought( Rep.myPlayerSlot );
-                PDat.GiveItem( Rep, Store.Items[i].ID );
+                PDatManager.GiveItem( Rep, Store.Items[i].ID );
                 if( Store.Items[i].Access >= Free || Store.Items[i].Cost <= 0 )
                 {
                     break;
@@ -2503,7 +2505,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                 // Don't use IsAdmin here, we want the currency system working offline as well!
                 if( !sender.PlayerReplicationInfo.bAdmin )
                 {
-                    PDat.SpendCurrencyPoints( Rep.myPlayerSlot, Store.Items[i].Cost );
+                    PDat.SpendCurrencyPoints( self, Rep.myPlayerSlot, Store.Items[i].Cost );
 
                     NotifyPlayers( sender,
                               sender.GetHumanReadableName() @ Class'HUD'.default.GoldColor $ "has bought" @ Store.Items[i].Name @ "for" @ Store.Items[i].Cost $ "$",
@@ -2541,10 +2543,10 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                         break;
                     }
 
-                    PDat.RemoveItem( Rep, s );
+                    PDatManager.RemoveItem( Rep, s );
                     if( Store.Items[i].Access == Buy && Store.Items[i].Cost > 0 )
                     {
-                        PDat.GiveCurrencyPoints( Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
+                        PDat.GiveCurrencyPoints( self, Rep.myPlayerSlot, Store.GetResalePrice( i ), true );
                     }
                 }
                 else
@@ -2582,7 +2584,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     break;
                 }
             }
-            PDat.RemoveItem( Rep, s );
+            PDatManager.RemoveItem( Rep, s );
             break;
 
         case "toggleitem":
@@ -2593,14 +2595,14 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             s = Locs( params[0] );
             if( s ~= "all" )
             {
-                PDat.ToggleItem( Rep.myPlayerSlot, "all" );
+                PDatManager.ToggleItem( Rep.myPlayerSlot, "all" );
                 break;
             }
 
             i = Store.FindItemByID( s );
             if( i != -1 )
             {
-                PDat.ToggleItem( Rep.myPlayerSlot, Store.Items[i].ID );
+                PDatManager.ToggleItem( Rep.myPlayerSlot, Store.Items[i].ID );
 
                 // bBought, bEnabled
                 PDat.GetItemState( Rep.myPlayerSlot, Store.Items[i].ID, byteOne, byteTwo );
@@ -2651,7 +2653,7 @@ final private function bool ClientExecuted( PlayerController sender, string comm
             }
 
             j = 5 ** (float(int(params[0]))/(float(MinExchangeableTrophies)/2f));
-            PDat.GiveCurrencyPoints( Rep.myPlayerSlot, j, true );
+            PDat.GiveCurrencyPoints( self, Rep.myPlayerSlot, j, true );
             PDat.Player[Rep.myPlayerSlot].Trophies.Remove( 0, int(params[0]) );
 
             NotifyPlayers( sender,
@@ -2695,10 +2697,10 @@ final private function bool ClientExecuted( PlayerController sender, string comm
                     {
                         sender.ClientMessage( class'HUD'.default.GoldColor $ "20% of your donation has been taken away as fee!" );
 
-                        PDat.SpendCurrencyPoints( Rep.myPlayerSlot, int(params[1]) );
+                        PDat.SpendCurrencyPoints( self, Rep.myPlayerSlot, int(params[1]) );
                         sender.ClientMessage( class'HUD'.default.GoldColor $ "You gave" @ PlayerController(C).GetHumanReadableName() @ int(params[1])*0.80 @ "of your money!" );
 
-                        PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80, true );
+                        PDat.GiveCurrencyPoints( self, GetRep( PlayerController(C) ).myPlayerSlot, int(params[1])*0.80, true );
                         if( PlayerController(C) != sender )
                         {
                             PlayerController(C).ClientMessage( class'HUD'.default.GoldColor $ sender.GetHumanReadableName() @ "gave you" @ int(params[1])*0.80 @ "of his/her money!" );
@@ -2868,17 +2870,17 @@ private final function ConsumeKey( BTActivateKey handler )
                 SendErrorMessage( handler.Requester, "Cannot use this key because you already own the reward!" );
                 break;
             }
-            PDat.GiveItem( Rep, handler.Serial.Code );
+            PDatManager.GiveItem( Rep, handler.Serial.Code );
             SendSucceedMessage( handler.Requester, "You were given the following item" @ Store.items[itemStoreSlot].Name );
             break;
 
         case "curr":
-            PDat.GiveCurrencyPoints( Rep.myPlayerSlot, int(handler.Serial.Code), true );
+            PDat.GiveCurrencyPoints( self, Rep.myPlayerSlot, int(handler.Serial.Code), true );
             SendSucceedMessage( handler.Requester, "You were given money!" );
             break;
 
         case "exp":
-            PDat.AddExperience( Rep.myPlayerSlot, int(handler.Serial.Code) );
+            PDat.AddExperience( self, Rep.myPlayerSlot, int(handler.Serial.Code) );
             SendSucceedMessage( handler.Requester, "You were given Experience!" );
             break;
 
@@ -2940,16 +2942,6 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
         case "updatewebbtimes":
             CreateWebBTimes();
-            break;
-
-        case "bt_backupdata":
-            CreateBackupData();
-            sender.ClientMessage( Class'HUD'.default.GoldColor $ "Backup created!, check saves folder!" );
-            break;
-
-        case "bt_restoredata":
-            RestoreBackupData();
-            sender.ClientMessage( Class'HUD'.default.GoldColor $ "Backup restored!" );
             break;
 
         case "bt_mergerecordsdata":
@@ -3031,7 +3023,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                 PDat.Player[i].PLAchiev = 0;
                 for( j = 0; j < AchievementsManager.Achievements.Length; ++ j )
                 {
-                    PDat.Player[i].PLAchiev += AchievementsManager.Achievements[j].Points*float(PDat.HasEarnedAchievement( i, j ));
+                    PDat.Player[i].PLAchiev += AchievementsManager.Achievements[j].Points*float(PDat.HasCompletedAchievement( self, i, j ));
                 }
             }
             Sender.ClientMessage( Class'HUD'.default.GoldColor $ "All players' Achievement Points have been re-calculated. Restart map to apply." );
@@ -3173,11 +3165,11 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
                         if( int(params[1]) > 0 )
                         {
-                            PDat.AddExperience( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]) );
+                            PDat.AddExperience( self, GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]) );
                         }
                         else if( int(params[1]) < 0 )
                         {
-                            PDat.RemoveExperience( GetRep( PlayerController(C) ).myPlayerSlot, -int(params[1]) );
+                            PDat.RemoveExperience( self, GetRep( PlayerController(C) ).myPlayerSlot, -int(params[1]) );
                         }
 
                         if( PlayerController(C) != sender )
@@ -3216,11 +3208,11 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 
                         if( int(params[1]) > 0 )
                         {
-                            PDat.GiveCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]), true );
+                            PDat.GiveCurrencyPoints( self, GetRep( PlayerController(C) ).myPlayerSlot, int(params[1]), true );
                         }
                         else if( int(params[1]) < 0 )
                         {
-                            PDat.SpendCurrencyPoints( GetRep( PlayerController(C) ).myPlayerSlot, -int(params[1]) );
+                            PDat.SpendCurrencyPoints( self, GetRep( PlayerController(C) ).myPlayerSlot, -int(params[1]) );
                         }
 
                         if( PlayerController(C) != sender )
@@ -3243,7 +3235,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                     {
                         if( string(AchievementsManager.Achievements[i].ID) ~= params[0] )
                         {
-                            PDat.ProgressAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
+                            PDatManager.ProgressAchievementByID( Rep.myPlayerSlot, AchievementsManager.Achievements[i].ID );
                         }
                     }
                 }
@@ -3264,9 +3256,9 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                 {
                     for( i = 0; i < PDat.Player.Length; ++ i )
                     {
-                        if( PDat.FindAchievementByIDSTRING( i, params[0] ) != -1 )
+                        if( PDat.FindAchievementStatusByIDSTRING( i, params[0] ) != -1 )
                         {
-                            PDat.Player[i].Achievements.Remove( PDat.FindAchievementByIDSTRING( i, params[0] ), 1 );
+                            PDat.Player[i].Achievements.Remove( PDat.FindAchievementStatusByIDSTRING( i, params[0] ), 1 );
                         }
                     }
                 }
@@ -3277,7 +3269,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                 Rep = GetRep( sender );
                 if( Rep != None )
                 {
-                    PDat.DeleteAchievements( Rep.myPlayerSlot );
+                    PDat.DeleteAchievementsStatus( Rep.myPlayerSlot );
                     Rep.ClientCleanText();
                     Rep.ClientSendText( "Your achievements have been reset!" );
                 }
@@ -4390,7 +4382,7 @@ private function SetSoloRecordTime( PlayerController player, int mapIndex, int r
     }
 
     // This increments all the RecordCount kind of Achievements progress!
-    PDat.ProgressAchievementByType( RDat.Rec[mapIndex].PSRL[recordIndex].PLs - 1, 'RecordsCount', 1 );
+    PDatManager.ProgressAchievementByType( RDat.Rec[mapIndex].PSRL[recordIndex].PLs - 1, 'RecordsCount', 1 );
 
     // Notify the current gamemode that a player has set a record. A mode may perform a dropchance for that player.
     CurMode.PlayerMadeRecord( player, recordIndex, 0 );
@@ -4437,8 +4429,8 @@ function RewardPlayersOfTeam( int teamIndex, int rewardPoints )
             continue;
         }
 
-        PDat.AddExperience( playerSlot-1, rewardPoints * PDat.GetLevel( playerSlot-1 ) );
-        PDat.GiveCurrencyPoints( playerSlot-1, 5 );
+        PDat.AddExperience( self, playerSlot-1, rewardPoints * PDat.GetLevel( playerSlot-1 ) );
+        PDat.GiveCurrencyPoints( self, playerSlot-1, 5 );
     }
 }
 
@@ -4675,7 +4667,7 @@ final function ClientSendRecordMessage( Controller receiver, string message, int
 
 final function ProcessGroupFinishAchievement( int playerSlot )
 {
-    PDat.ProgressAchievementByID( playerSlot, 'mode_1' );
+    PDatManager.ProgressAchievementByID( playerSlot, 'mode_1' );
 }
 
 final function bool HasRegularRecordOn( int recordSlot, int playerSlot )
@@ -4861,7 +4853,7 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
                     CR = GetRep( PlayerController(GroupMembers[i]) );
                     if( CR != none )
                     {
-                        PDat.ProgressAchievementByID( CR.myPlayerSlot, 'prelude_1' );
+                        PDatManager.ProgressAchievementByID( CR.myPlayerSlot, 'prelude_1' );
                     }
                 }
             }
@@ -4991,7 +4983,7 @@ final private function bool CheckPlayerRecord(
             SetSoloRecordTime( PC, mapIndex, PLi, playTime );
             CR.ClientSetPersonalTime( playTime );
             // Broadcast success, on next if( b ).
-            PDat.AddExperience( PLs-1, EXP_ImprovedRecord + numObjectives );
+            PDat.AddExperience( self, PLs-1, EXP_ImprovedRecord + numObjectives );
             b = true;
         }
         // Player has failed to improve his/her record time
@@ -5006,8 +4998,8 @@ final private function bool CheckPlayerRecord(
                 finishMsg @= "with a tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
-                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
-                PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
+                PDat.AddExperience( self, PLs-1, EXP_TiedRecord + numObjectives );
+                PDatManager.ProgressAchievementByType( PLs-1, 'Tied', 1 );
             }
             // Tied the best record
             else if( GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ) == playTime )
@@ -5015,8 +5007,8 @@ final private function bool CheckPlayerRecord(
                 finishMsg @= "with a record tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
-                PDat.AddExperience( PLs-1, EXP_TiedRecord + numObjectives );
-                PDat.ProgressAchievementByType( PLs-1, 'Tied', 1 );
+                PDat.AddExperience( self, PLs-1, EXP_TiedRecord + numObjectives );
+                PDatManager.ProgressAchievementByType( PLs-1, 'Tied', 1 );
             }
             // Failed record
             else
@@ -5047,7 +5039,7 @@ final private function bool CheckPlayerRecord(
         }
         SetSoloRecordTime( PC, mapIndex, PLi, playTime );
         CR.ClientSetPersonalTime( playTime );
-        PDat.AddExperience( PLs-1, EXP_FirstRecord + numObjectives );
+        PDat.AddExperience( self, PLs-1, EXP_FirstRecord + numObjectives );
         b = true;
         isFirstTime = true;
 
@@ -5089,9 +5081,9 @@ final private function bool CheckPlayerRecord(
             l = Store.FindPlayerTeam( CR );
             if( l != -1 )
             {
-                Store.AddPointsForTeam( CR, l, 1*(numObjectives*PointsPerObjective) );
+                Store.AddPointsForTeam( self, CR, l, 1*(numObjectives*PointsPerObjective) );
                 Level.Game.Broadcast( self, PC.GetHumanReadableName() @ "scored" @ 1*(numObjectives*PointsPerObjective) @ "points for team" @ Store.Teams[l].Name );
-                PDat.GiveCurrencyPoints( CR.myPlayerSlot, 2 );
+                PDat.GiveCurrencyPoints( self, CR.myPlayerSlot, 2 );
             }
             else
             {
@@ -5102,7 +5094,7 @@ final private function bool CheckPlayerRecord(
         // Earn 20 points from one record.
         if( score >= 20 )
         {
-            PDat.ProgressAchievementByID( PLs-1, 'points_0' );
+            PDatManager.ProgressAchievementByID( PLs-1, 'points_0' );
         }
 
         AddRecentSetRecordToPlayer( PLs, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$finishTime );
@@ -5149,7 +5141,7 @@ final private function bool CheckPlayerRecord(
                     BroadcastAnnouncement( AnnouncementRecordHijacked );
 
                     // Robin Hood
-                    PDat.ProgressAchievementByType( PLs-1, 'StealRecord', 1 );
+                    PDatManager.ProgressAchievementByType( PLs-1, 'StealRecord', 1 );
 
                     tmpSlot = RDat.Rec[mapIndex].PSRL[1].PLs-1;
                     PDat.Player[tmpSlot].RecentLostRecords[PDat.Player[tmpSlot].RecentLostRecords.Length] =
@@ -5171,7 +5163,7 @@ final private function bool CheckPlayerRecord(
                 if( RDat.Rec[mapIndex].TMFailures >= 50 )
                 {
                     // Failure immunity
-                    PDat.ProgressAchievementByID( PLs-1, 'records_2' );
+                    PDatManager.ProgressAchievementByID( PLs-1, 'records_2' );
                 }
             }
             else    // 1st time record
@@ -5301,7 +5293,7 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
         {
             for( i = 0; i < contributors.Length; ++ i )
             {
-                PDat.ProgressAchievementByID( contributors[i].PlayerSlot-1, achievementID );
+                PDatManager.ProgressAchievementByID( contributors[i].PlayerSlot-1, achievementID );
             }
         }
 
@@ -5585,7 +5577,7 @@ final function ProcessPlayerLogout( Controller player )
         PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
         if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 4.00f )
         {
-            PDat.SilentRemoveItem( playerSlot, "exp_bonus_1" );
+            PDatManager.SilentRemoveItem( playerSlot, "exp_bonus_1" );
         }
     }
 
@@ -5594,7 +5586,7 @@ final function ProcessPlayerLogout( Controller player )
         PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
         if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
         {
-            PDat.SilentRemoveItem( playerSlot, "exp_bonus_2" );
+            PDatManager.SilentRemoveItem( playerSlot, "exp_bonus_2" );
         }
     }
 
@@ -5603,7 +5595,7 @@ final function ProcessPlayerLogout( Controller player )
         PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
         if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
         {
-            PDat.SilentRemoveItem( playerSlot, "cur_bonus_1" );
+            PDatManager.SilentRemoveItem( playerSlot, "cur_bonus_1" );
         }
     }
 
@@ -5612,7 +5604,7 @@ final function ProcessPlayerLogout( Controller player )
         PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData = string(float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) + timeSpent);
         if( float(PDat.Player[playerSlot].Inventory.BoughtItems[i].RawData) >= 24.00f )
         {
-            PDat.SilentRemoveItem( playerSlot, "drop_bonus_1" );
+            PDatManager.SilentRemoveItem( playerSlot, "drop_bonus_1" );
         }
     }
 
@@ -6332,7 +6324,6 @@ private function CreateReplication( PlayerController PC, string SS, int playerIn
 
     CRI.myPlayerSlot = playerIndex;
     CRI.PlayerId = playerIndex + 1;
-    PDat.Player[playerIndex].Controller = PC; // not saved
     if( !bSoloMap )
     {
         CRI.ClientMatchStarting( Level.TimeSeconds );
@@ -6341,10 +6332,10 @@ private function CreateReplication( PlayerController PC, string SS, int playerIn
     // Server love
     if( PDat.Player[playerIndex].PlayHours >= 10 )
     {
-        PDat.ProgressAchievementByID( playerIndex, 'playtime_0' );
+        PDatManager.ProgressAchievementByID( playerIndex, 'playtime_0' );
         if( PDat.Player[playerIndex].PlayHours >= 1000 )
         {
-            PDat.ProgressAchievementByID( playerIndex, 'playtime_1' );
+            PDatManager.ProgressAchievementByID( playerIndex, 'playtime_1' );
         }
     }
 
@@ -6371,7 +6362,7 @@ private function CreateReplication( PlayerController PC, string SS, int playerIn
     {
         if( ModeIsTrials() && PDat.Player[playerIndex].bPendingTeamReward )
         {
-            Store.RewardTeamPlayer( CRI );
+            Store.RewardTeamPlayer( self, CRI );
             PDat.Player[playerIndex].bPendingTeamReward = false;
             PDat.Player[playerIndex].TeamPointsContribution = 0;
         }
@@ -6413,7 +6404,7 @@ private function WelcomePlayer( PlayerController PC, BTClient_ClientReplication 
         if( packetNum >= 5 )
         {
             // Timeout
-            PDat.ProgressAchievementByID( playerSlot, 'records_1' );
+            PDatManager.ProgressAchievementByID( playerSlot, 'records_1' );
         }
 
         CR.ClientSendText( "You lost"@packetNum@"top record(s) since your last login!" );
@@ -6601,35 +6592,21 @@ final private function ScanSpeedTest()
 //==============================Data functions==================================
 final function LoadData()
 {
-    PDat = Level.Game.LoadDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
-    if( PDat == none )
-    {
-        PDat = Level.Game.CreateDataObject( class'BTServer_PlayersData', PlayersDataFileName, PlayersDataFileName );
-    }
-    PDat.Init( self );
+    PDatManager = Spawn( class'BTPlayersDataManager', self );
+    PDat = PDatManager.Init();
 
-    RDat = Level.Game.LoadDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-    if( RDat == none )
-    {
-        RDat = Level.Game.CreateDataObject( class'BTServer_RecordsData', RecordsDataFileName, RecordsDataFileName );
-    }
-    RDat.Init( self );
+    RDatManager = Spawn( class'BTRecordsDataManager', self );
+    RDat = RDatManager.Init();
 }
 
 final function SaveRecords()
 {
-    if( RDat != None )
-    {
-        Level.Game.SavePackage( RecordsDataFileName );
-    }
+    RDatManager.Save();
 }
 
 final function SavePlayers()
 {
-    if( PDat != None )
-    {
-        Level.Game.SavePackage( PlayersDataFileName );
-    }
+    PDatManager.Save();
 }
 
 final function SaveGhosts()
@@ -6654,46 +6631,6 @@ final function SaveAll()
     SaveRecords();
     SavePlayers();
     SaveGhosts();
-}
-
-//==============================================================================
-// Creates a data file from the current loaded ini/package.
-final function CreateBackupData()
-{
-    local BTServer_RecordsData tempRDat;
-    local BTServer_PlayersData tempPDat;
-
-    // Records Data!
-    tempRDat = Level.Game.CreateDataObject( Class'BTServer_RecordsData', RecordsDataFileName$"_backup", RecordsDataFileName$"_backup" );
-    tempRDat.Rec = RDat.Rec;
-    tempRDat.BT = self;
-    Level.Game.SavePackage( RecordsDataFileName$"_backup" );
-
-    // Players Data!
-    tempPDat = Level.Game.CreateDataObject( Class'BTServer_PlayersData', PlayersDataFileName$"_backup", PlayersDataFileName$"_backup" );
-    tempPDat.Player = PDat.Player;
-    tempPDat.BT = self;
-    Level.Game.SavePackage( PlayersDataFileName$"_backup" );
-}
-
-//==============================================================================
-// Converts Backup data to current data file
-final function RestoreBackupData()
-{
-    local BTServer_RecordsData tempRDat;
-    local BTServer_PlayersData tempPDat;
-
-    // Records Data!
-    tempRDat = Level.Game.LoadDataObject( Class'BTServer_RecordsData', RecordsDataFileName$"_backup", RecordsDataFileName$"_backup" );
-    RDat.Rec = tempRDat.Rec;
-    RDat.BT = self;
-
-    // Players Data!
-    tempPDat = Level.Game.LoadDataObject( Class'BTServer_PlayersData', PlayersDataFileName$"_backup", PlayersDataFileName$"_backup" );
-    PDat.Player = tempPDat.Player;
-    PDat.BT = self;
-
-    SaveAll();
 }
 
 final function bool MergeRecordsData( string uvxFileName )
@@ -6722,25 +6659,14 @@ final function bool MergeRecordsData( string uvxFileName )
 final function bool ExportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
-    local int CurMap, MaxMap;
-    local int CurSlot;
+    local int mapIdx;
 
     // Find 'Rec' slot...
-    MaxMap = RDat.Rec.Length;
-    CurSlot = -1;
-    for( CurMap = 0; CurMap < MaxMap; ++ CurMap )
-    {
-        if( RDat.Rec[CurMap].TMN ~= MapName )
-        {
-            CurSlot = CurMap;
-            break;
-        }
-    }
-
-    if( CurSlot == -1 )
+    mapIdx = RDat.FindRecord( MapName );
+    if( mapIdx == -1 )
     {
         FullLog( MapName@"was not found!" );
-        return False;
+        return false;
     }
 
     tempRecObj = Level.Game.LoadDataObject( Class'BTServer_RecordObject', "BestTimes_RecordObject_"@MapName, "BestTimes_RecordObject_"@MapName );
@@ -6749,11 +6675,11 @@ final function bool ExportRecordData( string MapName )
 
     if( tempRecObj != None )
     {
-        tempRecObj.Record = RDat.Rec[CurSlot];
+        tempRecObj.Record = RDat.Rec[mapIdx];
         Level.Game.SavePackage( "BestTimes_RecordObject_"@MapName );
-        return True;
+        return true;
     }
-    return False;
+    return false;
 }
 
 //==============================================================================
@@ -6761,8 +6687,7 @@ final function bool ExportRecordData( string MapName )
 final function bool ImportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
-    local int CurMap, MaxMap;
-    local int CurSlot;
+    local int mapIdx;
 
     tempRecObj = Level.Game.LoadDataObject( Class'BTServer_RecordObject', "BestTimes_RecordObject_"@MapName, "BestTimes_RecordObject_"@MapName );
     if( tempRecObj == None )
@@ -6772,32 +6697,22 @@ final function bool ImportRecordData( string MapName )
     }
 
     // Find 'Rec' slot...
-    MaxMap = RDat.Rec.Length;
-    CurSlot = -1;
-    for( CurMap = 0; CurMap < MaxMap; ++ CurMap )
-    {
-        if( RDat.Rec[CurMap].TMN ~= MapName )
-        {
-            CurSlot = CurMap;
-            break;
-        }
-    }
-
-    if( CurSlot != -1 )
+    mapIdx = RDat.FindRecord( MapName );
+    if( mapIdx != -1 )
     {
         // Update 'Rec' slot
-        RDat.Rec[CurSlot] = tempRecObj.Record;
+        RDat.Rec[mapIdx] = tempRecObj.Record;
         Level.Game.DeletePackage( "BestTimes_RecordObject_"@MapName );
-        return True;
+        return true;
     }
     else
     {
-        // Create new 'Rec' slot
-        RDat.Rec.Length = MaxMap + 1;
-        RDat.Rec[MaxMap] = tempRecObj.Record;
-        return True;
+        mapIdx = RDat.Rec.Length - 1;
+        RDat.Rec.Insert( mapIdx, 1 );
+        RDat.Rec[mapIdx] = tempRecObj.Record;
+        return true;
     }
-    return False;
+    return false;
 }
 //==============================Data functions==================================
 
@@ -7089,7 +7004,6 @@ defaultproperties
     lzClientSpawn="Client Spawn"
 
     RecordsDataFileName="BestTimes_RecordsData"
-    PlayersDataFileName="BestTimes_PlayersData"
 
     cDarkGray=(R=60,G=60,B=60,A=255)
     cLight=(R=204,G=204,B=204,A=255)

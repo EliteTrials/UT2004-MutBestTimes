@@ -168,13 +168,13 @@ function PerformItemDrop( PlayerController player, float bonus )
         if( PDat.HasItem( LRI.myPlayerSlot, Store.Items[itemIndex].ID ) )
         {
             resalcePrice = Store.GetResalePrice( itemIndex );
-            PDat.GiveCurrencyPoints( LRI.myPlayerSlot, resalcePrice );
+            PDat.GiveCurrencyPoints( Outer, LRI.myPlayerSlot, resalcePrice );
             SendSucceedMessage( player, "You found" @ resalcePrice$"$" );
             s = "%PLAYER% found" @ resalcePrice$"$";
         }
         else
         {
-            PDat.GiveItem( LRI, Store.Items[itemIndex].ID );
+            PDatManager.GiveItem( LRI, Store.Items[itemIndex].ID );
             SendSucceedMessage( player, "You found an item" @ Store.Items[itemIndex].Name$"!" );
             s = "%PLAYER% has found an item" @ itemName$"!";
         }

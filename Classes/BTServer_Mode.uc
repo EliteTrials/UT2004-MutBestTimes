@@ -84,7 +84,7 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 
     if( AchievementsManager.TestMap( Level.Title, playSeconds, achievementID ) )
     {
-        PDat.ProgressAchievementByID( playerSlot, achievementID );
+        PDatManager.ProgressAchievementByID( playerSlot, achievementID );
     }
 }
 

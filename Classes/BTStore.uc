@@ -122,7 +122,7 @@ final function int FindPlayerTeam( BTClient_ClientReplication CRI )
 
     for( i = 0; i < Teams.Length; ++ i )
     {
-        if( PDat.UseItem( CRI.myPlayerSlot, Teams[i].ItemID ) )
+        if( PDat.IsUsingItemById( CRI.myPlayerSlot, Teams[i].ItemID ) )
         {
             return i;
         }
@@ -130,7 +130,7 @@ final function int FindPlayerTeam( BTClient_ClientReplication CRI )
     return -1;
 }
 
-final function bool AddPointsForTeam( BTClient_ClientReplication CRI, int teamIndex, float points )
+final function bool AddPointsForTeam( MutBestTimes BT, BTClient_ClientReplication CRI, int teamIndex, float points )
 {
     Teams[teamIndex].Points += points;
     MRI.Teams[teamIndex].Points = Teams[teamIndex].Points;
@@ -139,12 +139,12 @@ final function bool AddPointsForTeam( BTClient_ClientReplication CRI, int teamIn
     PDat.Player[CRI.myPlayerSlot].TeamPointsContribution += points;
     if( Teams[teamIndex].Points >= TeamPointsGoal )
     {
-        TeamWon( teamIndex );
+        TeamWon( BT, teamIndex );
     }
     return true;
 }
 
-final function TeamWon( int teamIndex )
+final function TeamWon( MutBestTimes BT, int teamIndex )
 {
     local int i;
     local Controller C;
@@ -159,7 +159,7 @@ final function TeamWon( int teamIndex )
             continue;
         }
 
-        PDat.SilentRemoveItem( i, Teams[teamIndex].ItemID );
+        PDat.SilentRemoveItem( BT, i, Teams[teamIndex].ItemID );
         PDat.Player[i].bPendingTeamReward = PDat.Player[i].TeamPointsContribution > 0;
     }
     SaveAll();
@@ -191,21 +191,21 @@ final function TeamWon( int teamIndex )
             continue;
 
         CRI.EventTeamIndex = -1;
-        RewardTeamPlayer( CRI );
+        RewardTeamPlayer( BT, CRI );
         PDat.Player[CRI.myPlayerSlot].bPendingTeamReward = false;
         PDat.Player[CRI.myPlayerSlot].TeamPointsContribution = 0;
     }
 }
 
-final function RewardTeamPlayer( BTClient_ClientReplication CRI )
+final function RewardTeamPlayer( MutBestTimes BT, BTClient_ClientReplication CRI )
 {
     local int playerSlot;
     local float rewardScaling;
 
     playerSlot = CRI.myPlayerSlot;
     rewardScaling = PDat.Player[playerSlot].TeamPointsContribution / 10F;
-    PDat.GiveCurrencyPoints( playerSlot, 100*rewardScaling, true );
-    PDat.AddExperience( playerSlot, 200*rewardScaling );
+    PDat.GiveCurrencyPoints( BT, playerSlot, 100*rewardScaling, true );
+    PDat.AddExperience( BT, playerSlot, 200*rewardScaling );
     BTServer_TrialMode(CurMode).PerformItemDrop( PlayerController(CRI.Owner), FMin( 15.00*rewardScaling, 99.00 ) );
 }
 
@@ -516,7 +516,7 @@ final function ItemToggled( int playerSlot, string itemID, bool status )
                 // Give existing supporters their banner reward!
                 if( status && PDat.HasItem( playerSlot, Teams[outTeamIndex].ItemID ) && !PDat.HasItem( playerSlot, Teams[outTeamIndex].BannerItemID ) )
                 {
-                    PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
+                    PDatManager.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
                 }
             }
             break;
@@ -550,7 +550,7 @@ final function OnItemAcquired( BTClient_ClientReplication CRI, string itemID )
     if( IsTeamItem( itemID, outTeamIndex ) )
     {
         AddVoteForTeam( outTeamIndex );
-        PDat.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
+        PDatManager.GiveItem( CRI, Teams[outTeamIndex].BannerItemID );
     }
 }
 

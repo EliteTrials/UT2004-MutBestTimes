@@ -361,7 +361,7 @@ function ModePlayerKilled( Controller player )
 function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 {
     SendErrorMessage( PlayerController(wager.Owner), "You failed your wage!" );
-    PDat.GiveCurrencyPoints( wager.myPlayerSlot, -wagedPoints, true );
+    PDat.GiveCurrencyPoints( Outer, wager.myPlayerSlot, -wagedPoints, true );
     if( wager.BTPoints < wagedPoints )
     {
         ActivateWager( PlayerController(wager.Owner), 0 );
@@ -371,7 +371,7 @@ function WageFailed( BTClient_ClientReplication wager, int wagedPoints )
 function WageSuccess( BTClient_ClientReplication wager, int wagedPoints )
 {
     SendSucceedMessage( PlayerController(wager.Owner), "You succeeded your wage!" );
-    PDat.GiveCurrencyPoints( wager.myPlayerSlot, wagedPoints*3, true );
+    PDat.GiveCurrencyPoints( Outer, wager.myPlayerSlot, wagedPoints*3, true );
     wager.BTWage = 0;
     wager.AmountToWage = 0;
     wager.bWantsToWage = false;
@@ -441,10 +441,10 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
     {
         // Complete a Group map
         ProcessGroupFinishAchievement( playerSlot );
-        if( PDat.FindAchievementByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( groupNum, playerSlot ) >= 4 )
+        if( PDat.FindAchievementStatusByID( playerSlot, 'records_5' ) == -1 && CountRecordsNum( groupNum, playerSlot ) >= 4 )
         {
             // Group gamer
-            PDat.ProgressAchievementByID( playerSlot, 'records_5' );
+            PDatManager.ProgressAchievementByID( playerSlot, 'records_5' );
         }
         return;
     }
@@ -456,26 +456,26 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 
     if( Left( Level.Title, 13 ) == "TechChallenge" )
     {
-        PDat.ProgressAchievementByType( playerSlot, 'FinishTech', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, 'FinishTech', 1 );
     }
     else if( Left( Level.Title, 9 ) == "EgyptRuin" )
     {
-        PDat.ProgressAchievementByType( playerSlot, 'FinishRuin', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, 'FinishRuin', 1 );
     }
 
     // Complete a Solo map
-    PDat.ProgressAchievementByType( playerSlot, 'FinishSolo', 1 );
+    PDatManager.ProgressAchievementByType( playerSlot, 'FinishSolo', 1 );
 
     if( Level.Hour >= 0 && Level.Hour <= 6 )
     {
-        PDat.ProgressAchievementByID( playerSlot, 'mode_3_night' );
+        PDatManager.ProgressAchievementByID( playerSlot, 'mode_3_night' );
     }
 
     // Has 50 or more records.
-    if( PDat.FindAchievementByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( soloNum, playerSlot ) >= 50 )
+    if( PDat.FindAchievementStatusByID( playerSlot, 'records_3' ) == -1 && CountRecordsNum( soloNum, playerSlot ) >= 50 )
     {
         // Solo gamer
-        PDat.ProgressAchievementByID( playerSlot, 'records_3' );
+        PDatManager.ProgressAchievementByID( playerSlot, 'records_3' );
     }
 }
 
