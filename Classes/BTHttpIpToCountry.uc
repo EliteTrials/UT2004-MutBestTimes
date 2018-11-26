@@ -2,6 +2,7 @@ class BTHttpIpToCountry extends Info
 	config(MutBestTimes);
 
 var() const config string Host;
+var() config string AccessToken;
 
 var int PlayerIndex;
 var string PlayerIp;
@@ -16,7 +17,7 @@ final function GetCountryFromIp( int pIndex, string pIp )
 
 	PlayerIndex = pIndex;
 	PlayerIp = pIp;
-	query = Repl( Host, "%IP%", PlayerIp );
+	query = Repl( Repl( Host, "%IP%", PlayerIp ), "%ACCESSTOKEN%", AccessToken );
 
 	if( MutBestTimes(Owner).bDebugIpToCountry )
 	{
@@ -64,5 +65,5 @@ event Destroyed()
 
 defaultproperties
 {
-	Host="http://ipinfo.io/%IP%/country"
+	Host="http://ipinfo.io/%IP%/country?token=%ACCESSTOKEN%"
 }
