@@ -139,7 +139,8 @@ var bool
     bSoloMap,                                                                   // Map is solo i.e One objective only
     bGroupMap,                                                                  // Map supports group aka team working.
     bRegularMap,
-    bAlwaysKillClientSpawnPlayersNearTriggers;
+    bAlwaysKillClientSpawnPlayersNearTriggers,
+    bDebugIpToCountry;
 
 var enum ERecordTeam
 {
@@ -2928,6 +2929,21 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             Trigger( AssaultGame.CurrentObjective, sender.Pawn );
             break;
 
+        case "debugiptocountry":
+            Rep = GetRep( sender );
+            if (params.Length > 0)
+            {
+                s = params[0];
+            }
+            else
+            {
+                s = sender.GetPlayerNetworkAddress();
+            }
+            s = class'BTUtils'.static.ParseIp( s );
+            bDebugIpToCountry = true;
+            QueryPlayerCountry( Rep.myPlayerSlot, s );
+            break;
+
         case "btcommands":
             sender.ClientMessage( Class'HUD'.Default.RedColor $ "List of all admin commands of" @ Name );
             for( i = 0; i < Commands.Length; ++ i )
@@ -3692,26 +3708,7 @@ function Mutate( string MutateString, PlayerController Sender )
     // Admin Commands!
     if( IsAdmin( Sender.PlayerReplicationInfo ) )
     {
-        if( MutateString ~= "BT_TestEndGame" && bDebugMode )
-        {
-            GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
-            return;
-        }
-        else if( MutateString ~= "BT_TestRecord" && bDebugMode )
-        {
-            GameEnd( ERER_AttackersWin, Sender.Pawn, "Attackers Win!" );
-            if( bSoloMap )
-            {
-                Trigger( Sender, Sender.Pawn );
-            }
-            return;
-        }
-        else if( MutateString ~= "BT_TestRandomDrop" && bDebugMode )
-        {
-            BTServer_TrialMode(CurMode).PerformItemDrop( Sender, 50 );
-            return;
-        }
-        else if( Left(MutateString,8)~="AddStart" )                             // .:..:
+        if( Left(MutateString,8)~="AddStart" )                             // .:..:
         {
             if( Mid(MutateString,9)=="1" )
             {
@@ -5828,7 +5825,12 @@ function InternalOnCountryCodeReceived( BTHttpIpToCountry sender, string country
     playerIndex = sender.PlayerIndex;
     PDat.Player[playerIndex].LastIpAddress = sender.PlayerIp;
     PDat.Player[playerIndex].IpCountry = countryCode;
-    // Log( "received IpToCountry data" @ PDat.Player[playerIndex].LastIpAddress @ PDat.Player[playerIndex].IpCountry);
+
+    if( bDebugIpToCountry )
+    {
+        bDebugIpToCountry = false;
+        Log( "received IpToCountry data" @ PDat.Player[playerIndex].LastIpAddress @ PDat.Player[playerIndex].IpCountry );
+    }
 }
 
 // =============================================================================
@@ -6215,19 +6217,17 @@ final function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
 
 private function UpdatePlayerCountry( PlayerController client, int playerIndex )
 {
-    local string s, curIp;
+    local string ipStr;
 
     if( Level.NetMode == NM_Standalone )
     {
         return;
     }
 
-    s = client.GetPlayerNetworkAddress();
-    curIp = Left( s, InStr( s, ":" ) );
-    s = "";
-    if( PDat.Player[playerIndex].LastIpAddress != curIp )
+    ipStr = class'BTUtils'.static.ParseIp( client.GetPlayerNetworkAddress() );
+    if( PDat.Player[playerIndex].LastIpAddress != ipStr )
     {
-        QueryPlayerCountry( playerIndex, curIp );
+        QueryPlayerCountry( playerIndex, ipStr );
     }
 }
 

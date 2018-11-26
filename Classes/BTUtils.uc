@@ -75,10 +75,17 @@ final static function MutBestTimes GetBT( LevelInfo world )
     return none;
 }
 
+final static function string ParseIp( string rawIp )
+{
+    local int colonIdx;
 
-
-
-
+    colonIdx = InStr( rawIp, ":" );
+    if( colonIdx == -1 )
+    {
+        return rawIp;
+    }
+    else return Left( rawIp, colonIdx );
+}
 
 
 

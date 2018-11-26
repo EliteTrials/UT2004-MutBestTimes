@@ -17,7 +17,11 @@ final function GetCountryFromIp( int pIndex, string pIp )
 	PlayerIndex = pIndex;
 	PlayerIp = pIp;
 	query = Repl( Host, "%IP%", PlayerIp );
-	// Log("Fetching country for ip" @ PlayerIp @ "at" @ query);
+
+	if( MutBestTimes(Owner).bDebugIpToCountry )
+	{
+		Log("Fetching country for ip" @ PlayerIp @ "at" @ query);
+	}
 
 	Sock = Spawn( class'HttpSock', self );
     Sock.OnComplete = InternalOnComplete;
@@ -30,6 +34,10 @@ function InternalOnComplete( HttpSock sender )
 	local string result;
 
 	result = class'BTActivateKey'.static.FixReturnData( sender );
+	if( MutBestTimes(Owner).bDebugIpToCountry )
+	{
+		Log( "Result:" @ result );
+	}
 	if( result == "Please provide a valid IP address" || result == "undefined" )
 	{
 		InternalOnError( sender, result );
