@@ -10,7 +10,10 @@ var int NumItems;
 final function Initialize( BTClient_ClientReplication client, string selector )
 {
     if( client == none )
+    {
+        Destroy();
         return;
+    }
 
     BT = MutBestTimes(Owner);
     CR = client;
@@ -35,6 +38,11 @@ final private function SendRepData( int index )
     item.bEnabled = BT.PDat.Player[CR.myPlayerSlot].Inventory.BoughtItems[index].bEnabled;
 
     itemIndex = BT.Store.FindItemByID( item.Id );
+    if (itemIndex == -1) // Can happen if a player has an item that is longer available in the store.
+    {
+        return;
+    }
+
     item.Name = BT.Store.Items[itemIndex].Name;
     item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
     item.Rarity = BT.Store.Items[itemIndex].Rarity;
