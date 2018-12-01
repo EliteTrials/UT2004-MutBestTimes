@@ -80,11 +80,11 @@ function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
 
 function PlayerCompletedMap( PlayerController player, int playerSlot, float playSeconds )
 {
-    local name achievementID;
+    local name outTargetAchievementId;
 
-    if( AchievementsManager.TestMap( Level.Title, playSeconds, achievementID ) )
+    if( AchievementsManager.TestMapTrigger( outTargetAchievementId, Level.Title, playSeconds ) )
     {
-        PDatManager.ProgressAchievementByID( playerSlot, achievementID );
+        PDatManager.ProgressAchievementByID( playerSlot, outTargetAchievementId );
     }
 }
 

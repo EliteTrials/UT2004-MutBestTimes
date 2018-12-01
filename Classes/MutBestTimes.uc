@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2016 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2018 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class MutBestTimes extends Mutator
     config(MutBestTimes)
@@ -19,7 +19,7 @@ class MutBestTimes extends Mutator
 //  Minor Version  // minor new features
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
-const BTVersion                         = "4.0.1.0";
+const BTVersion                         = "4.1.0.0";
 const CREDITS                           = "Copyright 2005-2016 Eliot van Uytfanghe and .:..:";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
@@ -629,7 +629,8 @@ final function NotifyAchievementPointsEarned( int playerSlot, int amount )
 final function OnMapAchievementTrigger( name eventId, Pawn instigator )
 {
     local BTClient_ClientReplication CRI;
-    local int i;
+    local name outTargetAchievementId;
+    local float playTime;
 
     CRI = GetRep( instigator.Controller );
     if( CRI == none )
@@ -637,12 +638,10 @@ final function OnMapAchievementTrigger( name eventId, Pawn instigator )
         return;
     }
 
-    for( i = 0; i < AchievementsManager.MapTests.Length; ++ i )
+    playTime = GetFixedTime( Level.TimeSeconds - CRI.LastSpawnTime );
+    if( AchievementsManager.TestMapTrigger( outTargetAchievementId, Level.Title, playTime, eventId ) )
     {
-        if( AchievementsManager.MapTests[i].Event == eventId )
-        {
-            PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, AchievementsManager.MapTests[i].Target );
-        }
+        PDatManager.ProgressAchievementByID( CRI.myPlayerSlot, outTargetAchievementId );
     }
 }
 
@@ -659,6 +658,7 @@ final function AchievementEarned( int playerSlot, name id )
     ach = AchievementsManager.GetAchievementByID( id );
     PDat.GiveAchievementPoints( self, playerSlot, ach.Points );
 
+    // "High Achiever"
     if( PDat.FindAchievementStatusByID( playerSlot, 'ach_0' ) == -1 && earntAchievements >= 30 )
     {
         PDatManager.ProgressAchievementByID( playerSlot, 'ach_0' );
@@ -699,10 +699,10 @@ final function AchievementEarned( int playerSlot, name id )
         }
     }
 
-    // Progress the Geometry Absolution collection if the achievement is related.
-    if( ach.CatID == string('cat_col_gemab') )
+    // Useful for achievements that have a collectable achievement.
+    if( ach.CompletionType != '' )
     {
-        PDatManager.ProgressAchievementByType( playerSlot, 'ColGem', 1 );
+        PDatManager.ProgressAchievementByType( playerSlot, ach.CompletionType, 1 );
     }
 }
 
@@ -784,12 +784,7 @@ function InternalOnRequestAchievementCategories( PlayerController requester, BTC
 
     for( i = 0; i < AchievementsManager.Categories.Length; ++ i )
     {
-        if( AchievementsManager.Categories[i].ID == "cat_challenges"
-            && (ChallengesManager == none || ChallengesManager.Challenges.Length == 0) )
-        {
-            continue;
-        }
-        else if( AchievementsManager.Categories[i].ID == "cat_trophies"
+        if( AchievementsManager.Categories[i].ID == "cat_trophies"
             && (ChallengesManager == none || ChallengesManager.TodayChallenges.Length == 0) )
         {
             continue;
@@ -828,7 +823,7 @@ function InternalOnRequestAchievementsByCategory( PlayerController requester, BT
             CRI.ClientSendAchievementState( ach.Title, ach.Description, ach.Icon, progress, 0, ach.Points, ach.EffectColor );
         }
     }
-    else if( catID == "cat_challenges" )
+    else if( catID == "cat_map" )
     {
         for( i = 0; i < ChallengesManager.Challenges.Length; ++ i )
         {
@@ -845,6 +840,7 @@ function InternalOnRequestAchievementsByCategory( PlayerController requester, BT
         if( AchievementsManager.Achievements[i].CatID != catID )
             continue;
 
+        Log("Sending ach" @ catId @ AchievementsManager.Achievements[i].Title);
         achSlot = PDat.FindAchievementStatusByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
         if( achSlot != -1 )
         {
@@ -852,7 +848,15 @@ function InternalOnRequestAchievementsByCategory( PlayerController requester, BT
         }
         else achSlot = 0;
 
-        CRI.ClientSendAchievementState( AchievementsManager.Achievements[i].Title, AchievementsManager.Achievements[i].Description, AchievementsManager.Achievements[i].Icon, Min( achSlot, AchievementsManager.Achievements[i].Count ), AchievementsManager.Achievements[i].Count, AchievementsManager.Achievements[i].Points, AchievementsManager.Achievements[i].EffectColor );
+        CRI.ClientSendAchievementState(
+            AchievementsManager.Achievements[i].Title,
+            AchievementsManager.Achievements[i].Description,
+            AchievementsManager.Achievements[i].Icon,
+            Min( achSlot, AchievementsManager.Achievements[i].Count ),
+            AchievementsManager.Achievements[i].Count,
+            AchievementsManager.Achievements[i].Points,
+            AchievementsManager.Achievements[i].EffectColor
+        );
     }
 }
 
@@ -5276,7 +5280,7 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
 {
     local int i;
     local array<BTStructs.sPlayerReference> contributors;
-    local name achievementID;
+    local name outTargetAchievementId;
     local BTClient_ClientReplication CR;
     local byte hasNewRecord;
     local float playTime;
@@ -5284,20 +5288,12 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
     playTime = GetFixedTime( Level.TimeSeconds - MRI.MatchStartTime );
     if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner != ERW_None ) // The game ended!.
     {
-        // Calculate and return the best players.
-        contributors = GetBestPlayers();
-        if( AchievementsManager.TestMap( Level.Title, playTime, achievementID ) )
-        {
-            for( i = 0; i < contributors.Length; ++ i )
-            {
-                PDatManager.ProgressAchievementByID( contributors[i].PlayerSlot-1, achievementID );
-            }
-        }
-
         // FullLog( "Processing instigator's record:" @ PC.GetHumanReadableName() );
         CR = GetRep( PC );
         CheckPlayerRecord( PC, CR, myLevel, playTime,,, hasNewRecord );
 
+        // Calculate and return the best players.
+        contributors = GetBestPlayers();
         // FullLog( "Contributors:" @ contributors.Length );
         for( i = 0; i < contributors.Length; ++ i )
         {
