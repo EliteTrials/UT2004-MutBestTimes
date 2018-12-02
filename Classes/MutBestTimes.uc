@@ -840,7 +840,7 @@ function InternalOnRequestAchievementsByCategory( PlayerController requester, BT
         if( AchievementsManager.Achievements[i].CatID != catID )
             continue;
 
-        Log("Sending ach" @ catId @ AchievementsManager.Achievements[i].Title);
+        // Log("Sending ach" @ catId @ AchievementsManager.Achievements[i].Title);
         achSlot = PDat.FindAchievementStatusByID( CRI.myPlayerSlot, AchievementsManager.Achievements[i].ID );
         if( achSlot != -1 )
         {
@@ -6221,7 +6221,7 @@ private function UpdatePlayerCountry( PlayerController client, int playerIndex )
     }
 
     ipStr = class'BTUtils'.static.ParseIp( client.GetPlayerNetworkAddress() );
-    if( PDat.Player[playerIndex].LastIpAddress != ipStr )
+    if( PDat.Player[playerIndex].LastIpAddress != ipStr || PDat.Player[playerIndex].IpCountry == "" )
     {
         QueryPlayerCountry( playerIndex, ipStr );
     }
