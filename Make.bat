@@ -1,5 +1,5 @@
 @echo off
-set project_version=V7
+set project_version=V7b
 for %%* in (.) do set "project_name=%%~n*"
 set "project_build_name=%project_name%%project_version%"
 

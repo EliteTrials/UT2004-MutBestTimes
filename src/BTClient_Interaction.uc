@@ -9,8 +9,8 @@ class BTClient_Interaction extends Interaction;
 
 #exec obj load file="UT2003Fonts.utx"
 #exec obj load file="MenuSounds.uax"
-#exec obj load file="ClientBTimes.utx" package="ClientBTimesV7"
-#exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV7" group="CountryFlags"
+#exec obj load file="ClientBTimes.utx" package="ClientBTimesV7b"
+#exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV7b" group="CountryFlags"
 
 struct sTableColumn
 {
