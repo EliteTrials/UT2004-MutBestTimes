@@ -179,6 +179,10 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
             Mutate( "showmapinfo" @ value, sender );
             break;
 
+        case "flex":
+            PlayerActivateMedalItem(sender);
+            break;
+
         case "exec":
             if( value == "" )
             {
@@ -280,6 +284,34 @@ final static function BTServer_Mode NewInstance( MutBestTimes M )
 function bool CanSetClientSpawn( optional PlayerController player )
 {
     return ConfigClass.default.bAllowClientSpawn;
+}
+
+// Activates a medal item if equipped.
+function PlayerActivateMedalItem( PlayerController player )
+{
+    local BTClient_ClientReplication Rep;
+    local int outItemIndex;
+
+    if (player.Pawn == none)
+    {
+        return;
+    }
+
+    Rep = GetRep(player);
+    if (Rep == none || (Level.NetMode != NM_Standalone && Level.TimeSeconds - Rep.LastFlexTime < 30.0))
+    {
+        return;
+    }
+
+    if (PDat.HasEquippedItemOfType(Outer, Rep.myPlayerSlot, "Medal", outItemIndex))
+    {
+        Rep.LastFlexTime = Level.TimeSeconds;
+        Store.ActivateItem(player.Pawn, outItemIndex);
+    }
+    else
+    {
+        SendErrorMessage(player, "You need to have a medal equipped to do that!");
+    }
 }
 
 defaultproperties

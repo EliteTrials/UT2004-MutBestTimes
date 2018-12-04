@@ -8,7 +8,8 @@ enum ETarget
 {
     T_Pawn,
     T_Vehicle,
-    T_Player
+    T_Player,
+    T_Manual
 };
 
 struct sItem
@@ -651,7 +652,7 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
                 addedTypes[addedTypes.Length] = Items[itemSlot].Type;
             }
 
-            if( ActivateItem( other, itemSlot, playerSlot ) )
+            if( ActivateItem( other, itemSlot ) )
             {
                 ItemActivated( other, CRI, Items[itemSlot].ID );
             }
@@ -659,23 +660,22 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
     }
 }
 
-private final function bool ActivateItem( Actor other, int itemSlot, int playerSlot )
+public final function bool ActivateItem( Actor other, int index )
 {
     local class<Actor> itemClass;
     local Actor itemObject;
 
-    // Log( "ActivateItem(" $ other $ "," $ itemSlot $ "," $ playerSlot $")" );
-    if( Items[itemSlot].ItemClass != "" )
+    if( Items[index].ItemClass != "" )
     {
-        if( Items[itemSlot].CachedClass == none )
+        if( Items[index].CachedClass == none )
         {
-            Items[itemSlot].CachedClass = class<Actor>(DynamicLoadObject( Items[itemSlot].ItemClass, class'Class', true ));
+            Items[index].CachedClass = class<Actor>(DynamicLoadObject( Items[index].ItemClass, class'Class', true ));
         }
 
-        itemClass = Items[itemSlot].CachedClass;
+        itemClass = Items[index].CachedClass;
         if( itemClass == none )
         {
-            Log( "Failed to load ItemClass" @ Items[itemSlot].ItemClass @ "for" @ Items[itemSlot].ID );
+            Log( "Failed to load ItemClass" @ Items[index].ItemClass @ "for" @ Items[index].ID );
             return false;
         }
 
@@ -693,7 +693,7 @@ private final function bool ActivateItem( Actor other, int itemSlot, int playerS
                 return false;
             }
         }
-        ApplyVariablesOn( itemObject, Items[itemSlot].Vars );
+        ApplyVariablesOn( itemObject, Items[index].Vars );
     }
     return true;
 }
@@ -719,18 +719,18 @@ private final function ApplyVariablesOn( Actor other, array<string> variables )
     }
 }
 
-final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplication CRI, int itemSlot, out string msg )
+final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplication CRI, int index, out string msg )
 {
     local int playerSlot;
 
     playerSlot = CRI.myPlayerSlot;
-    if( PDat.HasItem( playerSlot, Items[itemSlot].Id ) )
+    if( PDat.HasItem( playerSlot, Items[index].Id ) )
     {
-        msg = "You do already own" @ Items[itemSlot].Name;
+        msg = "You do already own" @ Items[index].Name;
         return false;
     }
 
-    if( IsTeamItem( Items[itemSlot].Id ) && HasATeamItem( CRI ) )
+    if( IsTeamItem( Items[index].Id ) && HasATeamItem( CRI ) )
     {
         msg = "You have already voten for a team!";
         return false;
@@ -739,12 +739,12 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
     if( buyer.PlayerReplicationInfo.bAdmin || buyer.Level.NetMode == NM_Standalone )
         return true;
 
-    switch( Items[itemSlot].Access )
+    switch( Items[index].Access )
     {
         case Buy:
-            if( !PDat.HasCurrencyPoints( playerSlot, Items[itemSlot].Cost ) )
+            if( !PDat.HasCurrencyPoints( playerSlot, Items[index].Cost ) )
             {
-                msg = "You do not have enough currency points to buy" @ Items[itemSlot].Name;
+                msg = "You do not have enough currency points to buy" @ Items[index].Name;
                 return false;
             }
             break;
@@ -753,25 +753,25 @@ final function bool CanBuyItem( PlayerController buyer, BTClient_ClientReplicati
             break;
 
         case Admin:
-            msg = "Sorry" @ Items[itemSlot].Name @ "can only be given by admins!";
+            msg = "Sorry" @ Items[index].Name @ "can only be given by admins!";
             return false;
             break;
 
         case Premium:
             if( !PDat.Player[playerSlot].bHasPremium )
             {
-                msg = "Sorry" @ Items[itemSlot].Name @ "is only for admins and premium players!";
+                msg = "Sorry" @ Items[index].Name @ "is only for admins and premium players!";
                 return false;
             }
             break;
 
         case Private:
-            msg = "Sorry" @ Items[itemSlot].Name @ "is an exclusive item!";
+            msg = "Sorry" @ Items[index].Name @ "is an exclusive item!";
             return false;
             break;
 
         case Drop:
-            msg = "Sorry" @ Items[itemSlot].Name @ "is drop only item!";
+            msg = "Sorry" @ Items[index].Name @ "is drop only item!";
             return false;
             break;
     }
@@ -807,14 +807,14 @@ defaultproperties
     Categories(6)=(Name="Perks",Types=("Perk_*"))
 
     // Upgrades
-    Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
-    Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
+    Items(0)=(Name="Trailer",ID="Trailer",Access=Premium,Rarity=Ascended,Type="FeetTrailer",Desc="Customizable(Colors,Texture) trailer")
+    Items(1)=(Name="MNAF Plus",ID="MNAFAccess",Type="UP_MNAF",Access=Premium,Rarity=Exotic,Desc="Gives you access to MNAF member options",ApplyOn=T_Player)
 
     // Upgrades - Bonuses
     Items(2)=(Name="+100% EXP Bonus",ID="exp_bonus_1",Type="UP_EXPBonus",Rarity=Uncommon,Cost=1000,Desc="Get +100% EXP bonus for the next 4 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE",DropChance=0.3,ApplyOn=T_Player)
     Items(3)=(Name="+200% EXP Bonus",ID="exp_bonus_2",Type="UP_EXPBonus",Rarity=Uncommon,Cost=3000,Desc="Get +200% EXP bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.EXPBOOST_IMAGE2",ApplyOn=T_Player)
     Items(4)=(Name="+200% Currency Bonus",ID="cur_bonus_1",Type="UP_CURBonus",Rarity=Uncommon,Access=Premium,Desc="Get +200% Currency bonus for the next 24 play hours!",bPassive=true,IMG="TextureBTimes.StoreIcons.CURBOOST_IMAGE",ApplyOn=T_Player)
-    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Rarity=Uncommon,Access=Drop,Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
+    Items(5)=(Name="+5% Dropchance Bonus",ID="drop_bonus_1",Type="UP_DROPBonus",Rarity=Rare,Access=Drop,Desc="Get +5% Dropchance bonus for the next 24 play hours!",bPassive=true,Dropchance=1.0,Cost=50,ApplyOn=T_Player)
 
     // Player Skins
     Items(6)=(Name="Grade F Skin",Id="skin_grade_f",Type="Skin",Rarity=Fine,ItemClass="Engine.Pawn",Cost=2000,Access=Drop,Desc="Official Wire Skin F",IMG="TextureBTimes.GradeF_FB",Vars=("OverlayMat:TextureBTimes.GradeF_FB"))
@@ -829,11 +829,11 @@ defaultproperties
     Items(11)=(Name="Golden Vehicle",Id="vskin_gold",Type="VehicleSkin",Rarity=Rare,ItemClass="Engine.Vehicle",Access=Premium,Desc="Drive around with a golden vehicle!",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
     // Map medals
-    Items(12)=(Name="The Eldora Passages Medal",ID="md_eldor",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of The Eldora Passages",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
-    Items(13)=(Name="Geometry Basics",ID="md_gemb",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometry Basics",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
-    Items(14)=(Name="Mothership Kran",ID="md_mok",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Mothership Kran",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
-    Items(15)=(Name="Geometric Absolution",ID="md_gemab",Type="Medal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometric Absolute",bPassive=true,IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final")
+    Items(12)=(Name="Captain Leg",ID="mod_rfoot",Type="Mod",Access=Drop,Rarity=Exotic,ItemClass="BTItem_ChoppedLeg",Desc="Chop your right leg!")
+    // Items(13)=(Name="Mutant",ID="mod_mutant",Type="Mod",Access=Drop,Rarity=Exotic,ItemClass="BTItem_Mutant",Desc="Reveal your true self!")
 
-    // Items(12)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
-    // Items(13)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
+    // test items
+    // Items(13)=(Name="Geometric Absolution",ID="md_gemab",Type="Medal",ItemClass="xEffects.Spiral",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometric Absolute",IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final",ApplyOn=T_Manual)
+    // Items(14)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
+    // Items(15)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
 }
