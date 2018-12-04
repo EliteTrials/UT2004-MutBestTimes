@@ -171,7 +171,12 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
 final function RespawnPlayer( Pawn player )
 {
     Level.Game.RestartPlayer( player.Controller );
-    player.Controller.PawnDied( player );
+    if( !player.Controller.IsInState('Dead') )
+    {
+        // idk if this is causing any issues, disabled for now.
+        // player.GotoState('Dying');
+        player.Controller.PawnDied( player );
+    }
     if( player != none )
         player.Destroy();
 }

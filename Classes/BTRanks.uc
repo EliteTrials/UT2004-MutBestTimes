@@ -22,29 +22,6 @@ event PostBeginPlay()
 	RDat = BT.RDat;
 }
 
-final function DebugLog( coerce string str )
-{
-	Log( str );
-}
-
-/** Strips all color tags from A. */
-static final preoperator string %( string A )
-{
-    local int i;
-
-    while( true )
-    {
-        i = InStr( A, Chr( 0x1B ) );
-        if( i != -1 )
-        {
-            A = Left( A, i ) $ Mid( A, i + 4 );
-            continue;
-        }
-        break;
-    }
-    return A;
-}
-
 /** Caches the awarded points for every map's times. */
 final function CacheRecords()
 {

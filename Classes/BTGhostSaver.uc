@@ -91,7 +91,7 @@ final function QueueGhost( PlayerController player, int playerIndex, string pack
 	local int i, j;
 	local BTGhostRecorder recorder;
 
-	// Remove the existing recorder, because we don't want this recorder to get restarted if the owner respawns!
+	// Remove the existing recorder, because we don't want this recorder to get restarted when the owner respawns!
 	for( i = 0; i < Recorders.Length; ++ i )
 	{
 		if( Recorders[i].Owner == player )
