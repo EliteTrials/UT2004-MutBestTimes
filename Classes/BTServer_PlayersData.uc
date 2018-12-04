@@ -5,7 +5,7 @@ class BTServer_PlayersData extends Object
     dependson(BTStructs)
     hidedropdown;
 
-#exec obj load file="ClientBTimesV7.u"
+#exec obj load file="ClientBTimesV7b.u"
 
 struct sBTPlayerInfo
 {
@@ -224,6 +224,32 @@ final function bool HasItem( int playerSlot, string itemId, optional out int ite
         if( Player[playerSlot].Inventory.BoughtItems[i].ID ~= itemId )
         {
             itemSlot = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+final function bool HasEquippedItemOfType( MutBestTimes BT, int playerSlot, string itemType, optional out int outItemIndex )
+{
+    local int i, j;
+    local int itemIndex;
+
+    if( playerSlot == -1 )
+        return false;
+
+    outItemIndex = -1;
+    j = Player[playerSlot].Inventory.BoughtItems.Length;
+    for( i = 0; i < j; ++ i )
+    {
+        if (!Player[playerSlot].Inventory.BoughtItems[i].bEnabled) {
+            continue;
+        }
+
+        itemIndex = BT.Store.FindItemById(Player[playerSlot].Inventory.BoughtItems[i].ID);
+        if (BT.Store.Items[itemIndex].Type ~= itemType)
+        {
+            outItemIndex = itemIndex;
             return true;
         }
     }
