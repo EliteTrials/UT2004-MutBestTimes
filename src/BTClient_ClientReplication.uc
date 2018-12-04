@@ -187,6 +187,7 @@ var bool bAutoPress;
 var bool bPermitBoosting;
 var bool bWantsToWage;
 var int AmountToWage;
+var transient float LastFlexTime;
 
 // SIMULATED, only relevant to owner and server
 var BTClient_MutatorReplicationInfo MRI;
