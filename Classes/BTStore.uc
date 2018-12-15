@@ -829,11 +829,11 @@ defaultproperties
     Items(11)=(Name="Golden Vehicle",Id="vskin_gold",Type="VehicleSkin",Rarity=Rare,ItemClass="Engine.Vehicle",Access=Premium,Desc="Drive around with a golden vehicle!",IMG="XGameShaders.PlayerShaders.PlayerShieldSh",Vars=("OverlayMat:XGameShaders.PlayerShaders.PlayerShieldSh"),ApplyOn=T_Vehicle)
 
     // Map medals
-    Items(12)=(Name="Captain Leg",ID="mod_rfoot",Type="Mod",Access=Drop,Rarity=Exotic,ItemClass="BTItem_ChoppedLeg",Desc="Chop your right leg!")
+    Items(12)=(Name="Captain Leg",ID="mod_rfoot",Type="Mod",Access=Drop,Rarity=Exotic,ItemClass="ClientBTimesV7b.BTItem_ChoppedLeg",Desc="Chop your right leg!")
     // Items(13)=(Name="Mutant",ID="mod_mutant",Type="Mod",Access=Drop,Rarity=Exotic,ItemClass="BTItem_Mutant",Desc="Reveal your true self!")
 
     // test items
-    // Items(13)=(Name="Geometric Absolution",ID="md_gemab",Type="Medal",ItemClass="xEffects.Spiral",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometric Absolute",IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final",ApplyOn=T_Manual)
+    // Items(13)=(Name="Geometric Absolution",ID="md_gemab",Type="Medal",ItemClass="ClientBTimesV7b.BTItem_TestMedal",Rarity=Rare,Access=Private,Desc="A medal to showcase your completion of Geometric Absolute",IMG="AS_FX_TX.Icons.ScoreBoard_Objective_Final",ApplyOn=T_Manual)
     // Items(14)=(Name="Vote for team Netliot",Id="team_netliot",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team Netliot",IMG="BT_PremiumSkins.BT_TeamBanners.TeamNetnetBanner",ApplyOn=T_Player)
     // Items(15)=(Name="Vote for team BigBad",Id="team_bigbad",Type="Team",Cost=100,bPassive=true,Desc="Buy this item to support team BigBad",IMG="BT_PremiumSkins.BT_TeamBanners.TeamBigBadShader",ApplyOn=T_Player)
 }
