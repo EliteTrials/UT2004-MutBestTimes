@@ -84,7 +84,6 @@ struct sBTPlayerInfo
     struct sInventory
     {
         var() BTClient_TrailerInfo.sRankData TrailerSettings;
-        //var transient BTClient_TrailerInfo CurTrailerInfo;
 
         struct sBoughtItem
         {
@@ -247,6 +246,10 @@ final function bool HasEquippedItemOfType( MutBestTimes BT, int playerSlot, stri
         }
 
         itemIndex = BT.Store.FindItemById(Player[playerSlot].Inventory.BoughtItems[i].ID);
+        if (itemIndex == -1) { // no longer in store?
+            continue;
+        }
+
         if (BT.Store.Items[itemIndex].Type ~= itemType)
         {
             outItemIndex = itemIndex;
@@ -288,8 +291,9 @@ final function RemoveItem( MutBestTimes BT, BTClient_ClientReplication CRI, stri
 
 final function ToggleItem( MutBestTimes BT, int playerSlot, string itemId )
 {
-    local int i, itemSlot, storeSlot;
+    local int i, playerItemIndex, storeItemIndex;
     local string type;
+    local bool isEnabled;
 
     if( itemId ~= "all" )
     {
@@ -301,32 +305,33 @@ final function ToggleItem( MutBestTimes BT, int playerSlot, string itemId )
         return;
     }
 
-    if( HasItem( playerSlot, itemId, itemSlot ) )
+    if( HasItem( playerSlot, itemId, playerItemIndex ) )
     {
-        Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled = !Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled;
-        BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[itemSlot].ID, Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled );
+        isEnabled = !Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled;
+        Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled = isEnabled;
+        BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[playerItemIndex].ID, isEnabled );
 
         // Disable all other items of the same Type!
-        if( Player[playerSlot].Inventory.BoughtItems[itemSlot].bEnabled )
+        if( isEnabled )
         {
-            storeSlot = BT.Store.FindItemByID( itemId );
-            if( storeSlot == -1 )
+            storeItemIndex = BT.Store.FindItemByID( itemId );
+            if( storeItemIndex == -1 )
                 return;
 
-            type = BT.Store.Items[storeSlot].Type;
+            type = BT.Store.Items[storeItemIndex].Type;
             if( type == "" )
                 return;
 
             for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
             {
-                if( i == itemSlot )
+                if( i == playerItemIndex )
                     continue;
 
-                storeSlot = BT.Store.FindItemByID( Player[playerSlot].Inventory.BoughtItems[i].ID );
-                if( storeSlot == -1 )
+                storeItemIndex = BT.Store.FindItemByID( Player[playerSlot].Inventory.BoughtItems[i].ID );
+                if( storeItemIndex == -1 )
                     continue;
 
-                if( BT.Store.Items[storeSlot].Type ~= type )
+                if( BT.Store.Items[storeItemIndex].Type ~= type )
                 {
                     Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
                     BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
