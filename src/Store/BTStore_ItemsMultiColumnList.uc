@@ -1,13 +1,22 @@
-/**
- * A list of items the user can buy.
- *
- * Copyright 2011 Eliot Van Uytfanghe. All Rights Reserved.
- */
+//=============================================================================
+// Copyright 2011-2018 Eliot Van Uytfanghe. All Rights Reserved.
+//=============================================================================
 class BTStore_ItemsMultiColumnList extends GUIMultiColumnList;
 
 var Texture PositiveIcon;
 
 var editconst noexport BTClient_ClientReplication CRI;
+
+final static preoperator Color #( int rgbInt )
+{
+    local Color c;
+
+    c.R = rgbInt >> 24;
+    c.G = rgbInt >> 16;
+    c.B = rgbInt >> 8;
+    c.A = (rgbInt & 255);
+    return c;
+}
 
 function UpdateList()
 {
@@ -32,6 +41,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
     local string price;
+    local Color priceColor;
 
     if( CRI == none )
         return;
@@ -46,45 +56,50 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
         DrawStyle = SelectedStyle;
     }
     else DrawStyle = Style;
-    
+
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     Canvas.Style = 3;
     switch( CRI.Items[SortData[i].SortItem].Access )
     {
         case 0:
-            price = class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost) $ "$";
+            price = "$" $ class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost);
             break;
-            
+
         case 1:
-            price = "ÄFree";
+            price = "Free";
+            priceColor = #0xEEFFEEFF;
             Canvas.SetDrawColor( 30, 45, 30, 40 );
             Canvas.SetPos( CellLeft+2, Y+2 );
             Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-        
+
         case 2:
-            price = "ÄAdmin";
+            price = "Admin";
+            priceColor = #0xFF0000FF;
             Canvas.SetDrawColor( 45, 30, 30, 40 );
             Canvas.SetPos( CellLeft+2, Y+2 );
             Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-            
+
         case 3:
-            price = "ÄÄPremium";
+            price = "Premium";
+            priceColor = #0x00FFFFFF;
             Canvas.SetDrawColor( 30, 45, 45, 40 );
             Canvas.SetPos( CellLeft+2, Y+2 );
             Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-            
+
         case 4:
-            price = "ÄÄÄPrivate";
+            price = "Private";
+            priceColor = #0x444455FF;
             Canvas.SetDrawColor( 30, 30, 45, 40 );
             Canvas.SetPos( CellLeft+2, Y+2 );
             Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
-            break;      
+            break;
 
         case 5:
-            price = "ÅˇDrop";
+            price = "Drop";
+            priceColor = #0x330088FF;
             Canvas.SetDrawColor( 64, 0, 128, 40 );
             Canvas.SetPos( CellLeft+2, Y+2 );
             Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
@@ -93,8 +108,9 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.Items[SortData[i].SortItem].Name, FontScale );
-        
+
     GetCellLeftWidth( 1, CellLeft, CellWidth );
+    Canvas.DrawColor = priceColor;
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, price, FontScale );
 
     Canvas.SetPos( X, Y );
