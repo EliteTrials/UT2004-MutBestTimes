@@ -43,12 +43,13 @@ final function GiveItem( BTClient_ClientReplication CRI, string itemId )
 
     BT.Store.OnItemAcquired( CRI, itemId );
 
-    // Notify our player that an item has been added to his inventory, to give UIs a change to reflect changes.
+    // Notify our player that an item has been added to his inventory, to give UIs a chance to reflect changes.
     itemIndex = BT.Store.FindItemByID( itemId );
     item.Id = itemId;
     item.Name = BT.Store.Items[itemIndex].Name;
     item.IconTexture = BT.Store.Items[itemIndex].CachedIMG;
     item.Rarity = BT.Store.Items[itemIndex].Rarity;
+    item.ItemClass = BT.Store.Items[itemIndex].ItemClass;
     CRI.ClientSendPlayerItem( item );
 }
 
