@@ -292,7 +292,7 @@ function PlayerActivateMedalItem( PlayerController player )
     local BTClient_ClientReplication Rep;
     local int outItemIndex;
 
-    if (player.Pawn == none)
+    if (player.Pawn == none || player.Pawn.Physics != PHYS_Walking)
     {
         return;
     }
