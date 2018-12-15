@@ -16,9 +16,7 @@ var automated moCheckBox
     cb_PTS,
     cb_DFT,
     cb_PM,
-    cb_ABV,
-    cb_DodgeDelay,
-    cb_DodgeReady;
+    cb_ABV;
 
 var automated GUIEditBox
     eb_TickSound,
@@ -69,8 +67,6 @@ function CopyOptions()
     cb_DFT.Checked( Options.bDisplayFullTime );
     cb_PM.Checked( Options.bProfesionalMode );
     cb_ABV.Checked( Options.bAutoBehindView );
-    cb_DodgeDelay.Checked( Options.bShowDodgeDelay );
-    cb_DodgeReady.Checked( Options.bShowDodgeReady );
 
     eb_TickSound.SetText( string(Options.TickSound) );
     eb_LastTickSound.SetText( string(Options.LastTickSound) );
@@ -120,8 +116,6 @@ function SaveData()
     Options.bDisplayFullTime = cb_DFT.IsChecked();
     Options.bProfesionalMode = cb_PM.IsChecked();
     Options.bAutoBehindView = cb_ABV.IsChecked();
-    Options.bShowDodgeDelay = cb_DodgeDelay.IsChecked();
-    Options.bShowDodgeReady = cb_DodgeReady.IsChecked();
 
     Options.TickSound = Sound(DynamicLoadObject( eb_TickSound.GetText(), Class'Sound', True ));
     Options.LastTickSound = Sound(DynamicLoadObject( eb_LastTickSound.GetText(), Class'Sound', True ));
@@ -357,36 +351,6 @@ defaultproperties
         OnChange=InternalOnChange
     End Object
     eb_LastTickSound=LastTickSound
-
-    Begin Object class=moCheckBox name=oDodgeReady
-        bScaleToParent=True
-        bBoundToParent=True
-        WinTop=0.728
-        WinLeft=0.530000
-        WinWidth=0.195000
-        WinHeight=0.050000
-        Caption="Dodge Ready"
-        Hint="(Dodge Perk)Shows when you are able to dodge to again!"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_DodgeReady=oDodgeReady
-
-    Begin Object class=moCheckBox name=oDodgeDelay
-        bScaleToParent=True
-        bBoundToParent=True
-        WinTop=0.728
-        WinLeft=0.760000
-        WinWidth=0.195000
-        WinHeight=0.050000
-        Caption="Dodge Delay"
-        Hint="(Dodge Perk)Helps you research your dodge timing!"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_DodgeDelay=oDodgeDelay
-
-    // bottom
 
     Begin Object class=GUIButton name=ResetButton
         Caption="Reset"

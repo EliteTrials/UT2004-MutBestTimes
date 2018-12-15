@@ -849,7 +849,7 @@ function PerformDodgePerk()
     }
 
     phy = p.Physics;
-    if( Options != none && Options.bShowDodgeReady )
+    if( MRI.CR.bAllowDodgePerk )
     {
         bDodgePossible = ((phy == PHYS_Falling && p.bCanWallDodge) || phy == PHYS_Walking) && !p.bIsCrouched && !p.bWantsToCrouch;
         bPreDodgeReady = (ViewportOwner.Actor.Level.TimeSeconds-LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation >= 0.10 && !bPerformedDodge && bDodgePossible;
@@ -897,37 +897,20 @@ function Vector RenderDodgeReady( Canvas C, float drawY )
     local string s;
     local float xl, yl;
 
-    if( Options == none )
-    {
-        return vect(0,0,0);
-    }
-
-    if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+    if( !bPreDodgeReady )
     {
         s = string(LastPerformedDodgeTime/ViewportOwner.Actor.Level.TimeDilation)$"s";
     }
     else
     {
-        if( !Options.bShowDodgeReady )
-        {
-            return vect(0,0,0);
-        }
-
-        if( Options.bShowDodgeDelay )
-        {
-            s = (ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation$"s";
-        }
-        else
-        {
-            s = "Ready";
-        }
+        s = (ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime)/ViewportOwner.Actor.Level.TimeDilation$"s";
     }
 
     if( bDodgeReady )
     {
         C.DrawColor = class'HUD'.default.GreenColor;
     }
-    else if( Options.bShowDodgeDelay && (!bPreDodgeReady || !Options.bShowDodgeReady) )
+    else if( !bPreDodgeReady )
     {
         C.DrawColor = class'HUD'.default.CyanColor;
     }

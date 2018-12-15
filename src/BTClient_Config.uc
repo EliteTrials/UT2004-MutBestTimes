@@ -30,9 +30,7 @@ var() globalconfig
     bDisplayFullTime,
     bProfesionalMode,
     bAutoBehindView,
-    bNoTrailers,
-    bShowDodgeDelay,
-    bShowDodgeReady;
+    bNoTrailers;
 
 var() globalconfig
     sound
@@ -139,7 +137,7 @@ final function ResetSavedData()
     SaveConfig();
 }
 
-DefaultProperties
+defaultproperties
 {
     StoreFilter="Other"
 
@@ -154,9 +152,7 @@ DefaultProperties
     bUseAltTimer=False
     bShowZoneActors=False
     bFadeTextColors=True
-    bDisplayFullTime=True
-    bShowDodgeDelay=true
-    bShowDodgeReady=true
+    bDisplayFullTime=false
 
     bDisplayCompletingMessages=True
         bDisplayFail=True
