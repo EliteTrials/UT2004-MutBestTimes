@@ -1276,6 +1276,7 @@ function ModifyPlayer( Pawn other )
         CRI.myPlayerSlot = FindPlayerSlot( PlayerController(other.Controller).GetPlayerIDHash() );
     }
 
+    CRI.SpawnPing = other.PlayerReplicationInfo.Ping;
     CRI.myPawn = other;
     CRI.NetUpdateTime = Level.TimeSeconds - 1;
     CurMode.ModeModifyPlayer( other, other.Controller, CRI );
