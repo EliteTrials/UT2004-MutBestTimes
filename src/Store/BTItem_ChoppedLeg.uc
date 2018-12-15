@@ -1,32 +1,49 @@
 class BTItem_ChoppedLeg extends ReplicationInfo;
 
-var float BoneScale;
-var name BoneName;
+var() const float BoneScale;
+var() const name BoneName;
 
-simulated event PostNetBeginPlay()
+var protected Pawn Pawn;
+
+replication
 {
-    local xPawn Pawn;
-    local emitter fx;
+	reliable if (bNetInitial && (Role == ROLE_Authority))
+		Pawn;
+}
 
-    Pawn = xPawn(Owner);
+event PreBeginPlay()
+{
+	Pawn = Pawn(Owner);
+	NetUpdateTime = Level.TimeSeconds - 1;
+	if (Level.NetMode == NM_StandAlone)
+	{
+		PostNetReceive();
+	}
+}
+
+simulated event PostNetReceive()
+{
     if (Pawn == none) {
         Destroy();
         return;
     }
 
     if (Level.NetMode != NM_DedicatedServer) {
-        Pawn.SetBoneScale( 0, BoneScale, BoneName );
-        fx = Spawn(class'xEffects.Spiral', Owner,, Pawn.Location, Pawn.Rotation);
-        fx.AttachToBone(Owner, 'rcalf');
+        ClientInitialize();
         Destroy();
     }
 }
 
 event Tick( float deltaTime )
 {
-    if (Owner == none) {
+    if (Pawn == none) {
         Destroy();
     }
+}
+
+simulated function ClientInitialize()
+{
+    Pawn.SetBoneScale( 0, BoneScale, BoneName );
 }
 
 defaultproperties
@@ -34,6 +51,4 @@ defaultproperties
     BoneScale=0.0
     BoneName=rthigh
     bNetTemporary=true
-    bSkipActorPropertyReplication=false
-    bReplicateMovement=false
 }
