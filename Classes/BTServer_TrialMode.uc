@@ -209,6 +209,10 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
             Mutate( "clientspawn", sender );
             break;
 
+        case "setcp":
+            Mutate( "setclientspawn", sender );
+            break;
+
         case "nocp":
             Mutate( "deleteclientspawn", sender );
             break;
