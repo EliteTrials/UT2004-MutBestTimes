@@ -18,7 +18,7 @@ simulated function bool Accept( actor incoming, Actor source )
 			rep = class'BTClient_ClientReplication'.static.GetRep( PlayerController(other.Controller) );
 			if( rep != none ) // not a bt player
 			{
-				rep.SetActiveLevel( BTClient_LevelReplication(Owner) );
+				BTClient_LevelReplication(Owner).PlayerEnterLevel( rep );
 			}
 		}
 		return true;
