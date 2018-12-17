@@ -2,6 +2,7 @@ class BTGUI_RecordQueryDataPanel extends BTGUI_QueryDataPanel;
 
 var automated GUIButton ViewPlayerButton, ViewGhostButton;
 var private string PlayerId, MapId;
+var private int GhostId;
 
 final function string Format( coerce string value )
 {
@@ -21,10 +22,11 @@ function ApplyData( BTQueryDataReplicationInfo queryRI )
     DataRows[2].Value = Format(recordRI.BestDodgeTiming);
     DataRows[3].Value = Format(recordRI.WorstDodgeTiming);
 
-    if( recordRI.GhostId > 0 )
+    if( recordRI.GhostId > 0 && recordRI.bIsCurrentMap )
         ViewGhostButton.EnableMe();
     else ViewGhostButton.DisableMe();
 
+    GhostId = recordRI.GhostId;
     PlayerId = recordRI.PlayerId;
     MapId = recordRI.MapId;
     if( PlayerId == "" || PlayerId == "0" )
@@ -42,6 +44,7 @@ function bool InternalOnClick( GUIComponent sender )
             return true;
 
         case ViewGhostButton:
+            PlayerOwner().ConsoleCommand("say" @ "!"$"ghost" @ GhostId);
             return true;
     }
     return false;
@@ -73,7 +76,7 @@ defaultproperties
         WinLeft=0.51
         FontScale=FNS_Small
         StyleName="BTButton"
-        Caption="Watch Ghost"
+        Caption="Spawn Ghost"
         OnClick=InternalOnClick
     end object
     ViewGhostButton=oViewGhostButton

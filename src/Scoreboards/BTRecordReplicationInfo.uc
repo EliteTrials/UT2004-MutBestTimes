@@ -5,6 +5,7 @@ var string PlayerId, MapId;
 var int Completed;
 var float AverageDodgeTiming, BestDodgeTiming, WorstDodgeTiming;
 var int GhostId;
+var bool bIsCurrentMap;
 
 replication
 {
@@ -12,7 +13,7 @@ replication
 		PlayerId, MapId,
 		Completed,
 		AverageDodgeTiming, BestDodgeTiming, WorstDodgeTiming,
-		GhostId;
+		GhostId, bIsCurrentMap;
 }
 
 defaultproperties
