@@ -49,7 +49,7 @@ protected function InitializeSoloSupreme()
 {
     local int i, mapIndex;
     local BTClient_LevelReplication myLevel;
-    local string levelName;
+    local string levelMapName;
     local bool isSupremeMap;
 
     // Maps with zero(placeholder) objectives or more than one are considered hubs which are maps with multiple levels.
@@ -64,11 +64,11 @@ protected function InitializeSoloSupreme()
         myLevel = Spawn( class'BTClient_LevelReplication', Objectives[i] );
         MRI.AddLevelReplication( myLevel );
 
-        levelName = myLevel.GetFullName( CurrentMapName );
-        mapIndex = RDat.FindRecord( levelName );
+        levelMapName = myLevel.GetFullName( CurrentMapName );
+        mapIndex = RDat.FindRecord( levelMapName );
         if( mapIndex == -1 )
         {
-            mapIndex = RDat.CreateRecord( levelName, RDat.MakeCompactDate( Level ) );
+            mapIndex = RDat.CreateRecord( levelMapName, RDat.MakeCompactDate( Level ) );
         }
         if( isSupremeMap )
         {
@@ -149,9 +149,6 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
 
 function bool ChatCommandExecuted( PlayerController sender, string command, string value )
 {
-    local BTClient_ClientReplication CRI;
-    local BTClient_LevelReplication myLevel;
-
     switch( command )
     {
         case "wager":
@@ -159,24 +156,7 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
             return true;
 
         case "level":
-            if( Objectives.Length < 2 )
-                return false;
-
-            CRI = GetRep( sender );
-            if( value == "" )
-            {
-                CRI.SetActiveLevel( none );
-            }
-            else
-            {
-                myLevel = GetObjectiveLevelByName( value, true );
-                if( myLevel == none )
-                {
-                    return false;
-                }
-                CRI.SetActiveLevel( myLevel );
-            }
-            return true;
+            return CmdLevel( sender, value );
 
         case "ghost":
             return CmdGhost( sender, value );
@@ -184,12 +164,45 @@ function bool ChatCommandExecuted( PlayerController sender, string command, stri
     return super.ChatCommandExecuted( sender, command, value );
 }
 
+private function bool CmdLevel( PlayerController sender, string value )
+{
+    local BTClient_ClientReplication CRI;
+    local BTClient_LevelReplication myLevel;
+
+    if( Objectives.Length < 2 )
+        return false;
+
+    CRI = GetRep( sender );
+    if( value == "" )
+    {
+        if (CRI.PlayingLevel == none)
+        {
+            return false;
+        }
+
+        myLevel = CRI.PlayingLevel;
+        myLevel.PlayerLeaveLevel(CRI);
+    }
+    else
+    {
+        myLevel = GetObjectiveLevelByName( value, true );
+        if( myLevel == none )
+        {
+            return false;
+        }
+        myLevel.PlayerEnterLevel(CRI);
+    }
+    return true;
+}
+
 private function bool CmdGhost( PlayerController sender, string value )
 {
     local BTClient_ClientReplication CRI;
     local BTClient_LevelReplication myLevel;
-    local int ghostIndex;
-    local string mapName;
+    local string ghostId;
+    local int recordIndex;
+    local bool isSpectating;
+    local BTGhostPlayback playback;
 
     if( GhostManager == none )
         return false;
@@ -197,12 +210,6 @@ private function bool CmdGhost( PlayerController sender, string value )
     if( RDat.Rec[UsedSlot].TMGhostDisabled )
     {
         SendErrorMessage( sender, "Sorry! Ghosts are disabled for this map!, try again at another time." );
-        return true;
-    }
-
-    if( sender.PlayerReplicationInfo.bIsSpectator || sender.PlayerReplicationInfo.bOnlySpectator )
-    {
-        SendErrorMessage( sender, "Sorry! Spectators are not allowed to summon ghosts!" );
         return true;
     }
 
@@ -233,16 +240,32 @@ private function bool CmdGhost( PlayerController sender, string value )
         return true;
     }
 
-    mapName = myLevel.GetFullName( CurrentMapName );
-    ghostIndex = GhostManager.FindGhostByRank( mapName, int(value) );
-    if( ghostIndex == -1 )
+    recordIndex = int(value) - 1;
+
+    if (recordIndex >= RDat.Rec[myLevel.MapIndex].PSRL.Length
+        || (RDat.Rec[myLevel.MapIndex].PSRL[recordIndex].Flags & 0x08/*RFLAG_GHOST*/) == 0)
     {
         SendErrorMessage( sender, "Couldn't find a ghost with the rank that you are looking for! Try another rank!" );
         return true;
     }
+
+    ghostId = PDat.Player[RDat.Rec[myLevel.MapIndex].PSRL[recordIndex].PLs-1].PLID;
     GhostManager.KillGhostFor( sender ); // kill any previously owned ghosts.
-    GhostManager.SpawnGhostFor( ghostIndex, sender );
-    SendSucceedMessage( sender, "Your ghost is now ready and will activate when you respawn! You can use !ghost at any time to deactivate your ghost." );
+
+    playback = GhostManager.SpawnCustomGhostFor( RDat.Rec[myLevel.MapIndex].TMN, ghostId, sender );
+    if (playback != none) {
+        isSpectating = sender.PlayerReplicationInfo.bIsSpectator || sender.PlayerReplicationInfo.bOnlySpectator;
+        if (isSpectating) {
+            sender.SetViewTarget(playback.Controller.Pawn);
+            sender.ClientSetViewTarget(playback.Controller.Pawn);
+            SendSucceedMessage( sender, "You'r now watching" @ playback.GhostName$"!");
+        }
+        else {
+            SendSucceedMessage( sender, "Your ghost is now ready and will activate when you respawn! You can use !ghost at any time to deactivate your ghost." );
+        }
+    } else {
+        SendErrorMessage( sender, "Your ghost couldn't be spawned!" );
+    }
     return true;
 }
 

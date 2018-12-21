@@ -71,7 +71,7 @@ function PostRestartRound()
 }
 
 /**
- * Called when a player sets a new best or persoanl record.
+ * Called when a player sets a new best or personal record.
  * @rankUps not implemented!
  */
 function PlayerMadeRecord( PlayerController player, int rankSlot, int rankUps )
@@ -90,6 +90,11 @@ function PlayerCompletedMap( PlayerController player, int playerSlot, float play
 
 function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )
 {
+}
+
+function ProcessPlayerRecord( PlayerController player, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel, float playTime )
+{
+
 }
 
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )

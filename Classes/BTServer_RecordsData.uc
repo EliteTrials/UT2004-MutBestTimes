@@ -8,6 +8,11 @@ const VERSION = 3;
 const POINTS_VERSION = 1;
 
 const RFLAG_CP = 0x01;
+// ONLY USED DURING REPLICATION
+    const RFLAG_UNRANKED = 0x02;
+    const RFLAG_STAR = 0x04;
+// --End
+const RFLAG_GHOST = 0x08;
 
 struct sSoloRecord
 {
@@ -54,9 +59,6 @@ struct long sBTRecordInfo
 
     /** Amount of times this record was hijacked(beaten). */
     var int TMHijacks;
-
-    /** Amount of contributors this record had(anyone who did an objective is counted, goes beyond 4). */
-    var int TMContributors;
 
     /** Amount of times people have failed to beat this record, this includes revotes but not deaths. */
     var int TMFailures;
@@ -235,6 +237,7 @@ final function MergeDataFrom( BTServer_PlayersData PDat, BTServer_RecordsData ot
                     Rec[mapIdx].PSRL[recIdx].SRD[2] = other.Rec[i].PSRL[j].SRD[2];
                     Rec[mapIdx].PSRL[recIdx].ExtraPoints = other.Rec[i].PSRL[j].ExtraPoints;
                     Rec[mapIdx].PSRL[recIdx].ObjectivesCount = other.Rec[i].PSRL[j].ObjectivesCount;
+                    Rec[mapIdx].PSRL[recIdx].Flags = other.Rec[i].PSRL[j].Flags;
 
                     // Our first record time was improved.
                     if( recIdx == 0 )
@@ -249,8 +252,6 @@ final function MergeDataFrom( BTServer_PlayersData PDat, BTServer_RecordsData ot
             {
                 bBestReplaced = false;
 
-                // The top record was beaten by the old save file, copy over all of the records data.
-                Rec[mapIdx].TMContributors = other.Rec[i].TMContributors;
                 // Fails since the last hijack.
                 Rec[mapIdx].TMFailures = other.Rec[i].TMFailures;
             }

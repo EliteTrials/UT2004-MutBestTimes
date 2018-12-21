@@ -1022,6 +1022,7 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
 {
     local BTClient_LevelReplication myLevel;
     local bool isRestricted;
+    local array<string> inGhostIds;
 
     if( newLevel != none && newLevel.bRestrictAccess )
     {
@@ -1063,7 +1064,13 @@ final function bool InternalOnPlayerChangeLevel( Controller other,
     if( newLevel != none )
     {
         // Send a meessage "You are Attacck... err playing Level 1!"
+        // TODO: Use a localmessage announcement!
         PlayerController(other).ClientMessage( "You are playing" @ newLevel.GetLevelName()$"!" );
+        if( newLevel.IsActive )
+        {
+            RDatManager.GetTopPlayerGhostIds( newLevel.MapIndex, inGhostIds );
+            GhostManager.SpawnGhosts( newLevel, inGhostIds );
+        }
     }
     return true;
 }
@@ -1105,7 +1112,7 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
     if( mapId != "" && playerId != "" )
     {
         queryRI = Spawn( class'BTRecordReplicationInfo', requester );
-        if( BuildRecordData( BTRecordReplicationInfo(queryRI), mapId, playerId ) == none )
+        if( BuildRecordData( CRI, BTRecordReplicationInfo(queryRI), mapId, playerId ) == none )
         {
             queryRI.Destroy();
             queryRI = none;
@@ -1133,7 +1140,7 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
 }
 
 // Expects params to consist of: "record:mapIndex:playerIndex"
-final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo recordData, string mapId, string playerId )
+final function BTRecordReplicationInfo BuildRecordData( BTClient_ClientReplication CRI, BTRecordReplicationInfo recordData, string mapId, string playerId )
 {
     local int mapIndex, playerIndex, recordIndex;
 
@@ -1148,7 +1155,10 @@ final function BTRecordReplicationInfo BuildRecordData( BTRecordReplicationInfo 
 
     recordData.PlayerId = playerId;
     recordData.MapId = mapId;
-    // recordData.GhostId = recordIndex + 1;
+    if ((RDat.Rec[mapIndex].PSRL[recordIndex].Flags & 0x08) != 0/*RFLAG_GHOST*/) {
+        recordData.GhostId = recordIndex + 1;
+        recordData.bIsCurrentMap = mapIndex == UsedSlot || (CRI.PlayingLevel != none && mapIndex == CRI.PlayingLevel.MapIndex);
+    }
     recordData.Completed = RDat.Rec[mapIndex].PSRL[recordIndex].ObjectivesCount;
     recordData.AverageDodgeTiming = 0.00;
     recordData.BestDodgeTiming = 0.00;
@@ -3148,18 +3158,6 @@ final private function bool AdminExecuted( PlayerController sender, string comma
             }
             break;
 
-        case "deleteghost":
-            if( GhostManager != none )
-            {
-                GhostManager.ClearGhostsData( CurrentMapName, true );
-                sender.ClientMessage( Class'HUD'.default.GoldColor $ "Ghost data deleted!" );
-            }
-            else
-            {
-                sender.ClientMessage( Class'HUD'.default.RedColor $ "No ghost data found!" );
-            }
-            break;
-
         case "giveexp":
         case "giveexperience":
             Rep = GetRep( sender );
@@ -3367,7 +3365,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
 }
 
 // Note: Deletes all data belonging to @mapIndex, including its ghosts.
-final function DeleteRecordBySlot( int mapIndex )
+final function DeleteRecordBySlot( int mapIndex, optional bool cleanUpOnly )
 {
     local string mapName;
 
@@ -3380,6 +3378,10 @@ final function DeleteRecordBySlot( int mapIndex )
     if( GhostManager != none )
     {
         GhostManager.ClearGhostsData( mapName );
+    }
+
+    if (cleanUpOnly) {
+        return;
     }
 
     RDat.Rec.Remove( mapIndex, 1 );
@@ -3396,7 +3398,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     local int recordIndex;
     local BTClient_LevelReplication recordLevel;
     local string ghostId, mapName;
-    local BTGhostData data;
+    local bool hasGhost;
 
     recordIndex = RDat.FindRecordSlot( mapIndex, playerIndex + 1/*playerId*/ );
     if( recordIndex == -1 )
@@ -3404,6 +3406,7 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
         return false;
     }
 
+    hasGhost = (RDat.Rec[mapIndex].PSRL[recordIndex].Flags & 0x08/* RFLAG_GHOST */) != 0;
     recordLevel = GetObjectiveLevelByIndex( mapIndex );
     // Note: Notification must be instigated while we still have the record item.
     if( Notify != none )
@@ -3412,32 +3415,12 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
     }
     RDat.Rec[mapIndex].PSRL.Remove( recordIndex, 1 );
 
-    if( GhostManager != none )
+    if( GhostManager != none && hasGhost)
     {
         ghostId = PDat.Player[playerIndex].PLID;
         mapName = RDat.Rec[mapIndex].TMN;
-        data = GhostManager.GetGhostData( mapName, ghostId );
-        if( data != none )
-        {
-            // If the ghost is currently being played then we should just mark it for deletion instead.
-            if( recordLevel != none )
-            {
-                if( GhostManager.RemoveGhost( data ) )
-                {
-                    Log( "Removed(and marked for deletion) ghost on" @ mapName @ "belonging to" @ ghostId );
-                }
-                else
-                {
-                    Warn( "Found a ghost object for this record, but couldn't be removed?" );
-                }
-            }
-            // Not currently active, delete it immediately!
-            else
-            {
-                // Pass data.name for backwards compatibility, older ghosts were saved as BTGhost_<MapName>.
-                GhostManager.DeleteGhostData( mapName, string(data.Name) );
-                GhostManager.SaveGhostsPackage( mapName ); // to re-save it without the recently deleted data object.
-            }
+        if (GhostManager.DeleteGhostsPackage( mapName, ghostId )) {
+            // LOG?
         }
     }
 
@@ -3448,7 +3431,6 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
         {
             recordLevel.TopTime = RDat.Rec[mapIndex].PSRL[0].SRT;
         }
-        recordLevel.TopRanks = GetRecordTopHolders( mapIndex );
     }
 
     // Update map's points cache if the deleted record was influencing the map's difficulty rating.
@@ -3458,12 +3440,12 @@ final function bool DeletePlayerRecord( int mapIndex, int playerIndex )
         {
             Ranks.CalcRecordPoints( mapIndex );
             // Update all our clients state of this map's records.
-            ClientForcePacketUpdate( mapIndex );
+            UpdateLevelReplicationState( mapIndex );
         }
         else
         {
             // Only notify an update to the erased record.
-            ClientForcePacketUpdate( mapIndex, recordIndex + 1 );
+            UpdateLevelReplicationState( mapIndex, recordIndex + 1 );
         }
     }
     return true;
@@ -3485,16 +3467,9 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
                 sender.ClientMessage( Class'HUD'.default.RedColor $ "Sorry you cannot delete this record because there is no time set for it yet!" );
                 break;
             }
+
             AddHistory( "Record" @ CurrentMapName @ "was deleted by" @ sender.GetHumanReadableName() );
-
-            if( Notify != none )
-                Notify.NotifyRecordDeleted( UsedSlot );
-
-            if( GhostManager != none )
-            {
-                GhostManager.ClearGhostsData( CurrentMapName, true );
-            }
-
+            DeleteRecordBySlot(UsedSlot, true);
             if( MRI.MapLevel != none )
             {
                 MRI.MapLevel.NumRecords = 0;
@@ -3505,7 +3480,6 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
             // Reset record related data.
             RDat.Rec[UsedSlot].PSRL.Length = 0;
             RDat.Rec[UsedSlot].TMGhostDisabled = false;
-            RDat.Rec[UsedSlot].TMContributors = 0;
 
             if( MRI.EndMsg != "" )
             {
@@ -3514,7 +3488,7 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
                 MRI.PointsReward = "NULL";
             }
 
-            ClientForcePacketUpdate( UsedSlot );
+            UpdateLevelReplicationState( UsedSlot );
             sender.ClientMessage( class'HUD'.default.GoldColor $ "Deleted record! Modifications have not been saved yet, don't forget to save before exiting the server!" );
             break;
 
@@ -4806,6 +4780,7 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
     local int numFullHealths;
     local byte hasNewRecord;
     local float playTime;
+    local bool hasManagedHealthAchievement, isDirty;
 
     CR = GetRep( PC );
     if( CR == None )
@@ -4829,97 +4804,74 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
     if( bGroupMap )
     {
         groupindex = GroupManager.GetGroupIndexByPlayer( PC );
-        if( groupindex != -1 )
+        if( groupindex == -1 )
         {
-            GroupManager.GetMembersByGroupIndex( groupindex, GroupMembers );
-            for( i = 0; i < GroupMembers.Length; ++ i )
+            return;
+        }
+
+        GroupManager.GetMembersByGroupIndex( groupindex, GroupMembers );
+        for( i = 0; i < GroupMembers.Length; ++ i )
+        {
+            if( GroupMembers[i].Pawn != none
+                && GroupMembers[i].Pawn.Health >= GroupMembers[i].Pawn.HealthMax )
             {
-                if( GroupMembers[i].Pawn != none
-                    && GroupMembers[i].Pawn.Health >= GroupMembers[i].Pawn.HealthMax )
-                {
-                    ++ numFullHealths;
+                ++ numFullHealths;
+            }
+        }
+
+        hasManagedHealthAchievement = Level.Title ~= "EgyptianRush-Prelude" && numFullHealths == GroupMembers.Length;
+        xp = GetGroupTaskPoints( groupindex );
+        for( i = 0; i < GroupMembers.Length; ++ i )
+        {
+            CR = GetRep( PlayerController(GroupMembers[i]) );
+            if (SubmitPlayerTime( PlayerController(GroupMembers[i]), CR, myLevel, playTime, PlayerController(GroupMembers[i]) != PC, xp, hasNewRecord )) {
+                CurMode.ProcessPlayerRecord( PlayerController(GroupMembers[i]), CR, myLevel, playTime );
+                if (hasNewRecord == 1) {
+                    NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
                 }
+                isDirty = true;
             }
 
-            xp = GetGroupTaskPoints( groupindex );
-            // Set rec first for the instigator,
-            // then for members because members cannot not beat the first record therefor the instigator should be checked for first record first.
-            CheckPlayerRecord( PC, CR, myLevel, playTime, false, xp, hasNewRecord );
-
-            // DO NOT ADD THIS ABOVE CheckPlayerRecord
-            if( Level.Title ~= "EgyptianRush-Prelude"
-                && numFullHealths == GroupMembers.Length )
-            {
-                for( i = 0; i < GroupMembers.Length; ++ i )
-                {
-                    CR = GetRep( PlayerController(GroupMembers[i]) );
-                    if( CR != none )
-                    {
-                        PDatManager.ProgressAchievementByID( CR.myPlayerSlot, 'prelude_1' );
-                    }
-                }
-            }
-
-            for( i = 0; i < GroupMembers.Length; ++ i )
-            {
-                if( GroupMembers[i] != PC )
-                {
-                    CR = GetRep( PlayerController(GroupMembers[i]) );
-                    if( CR == None )
-                    {
-                        FullLog( "No ClientReplicationInfo found for player"
-                            @ PlayerController(GroupMembers[i]).GetHumanReadableName()
-                        );
-                        continue;
-                    }
-
-                    CheckPlayerRecord( PlayerController(GroupMembers[i]), CR, myLevel, playTime, true, xp );
-                }
-            }
-
-            if( hasNewRecord == 1 )
-            {
-                if( GhostManager != none && playTime <= 1800 )
-                {
-                    // Delete all existing ghosts first!
-                    GhostManager.SqueezeGhosts( false );
-                    for( i = 0; i < GroupMembers.Length; ++ i )
-                    {
-                        GhostManager.Saver.QueueGhost(
-                            PlayerController(GroupMembers[i]),
-                            FastFindPlayerSlot( PlayerController(GroupMembers[i]) )-1,
-                            myLevel.GetFullName( CurrentMapName )
-                        );
-                    }
-                }
-                NotifyNewRecord( FastFindPlayerSlot( PC )-1, myLevel.MapIndex, playTime );
+            if (hasManagedHealthAchievement) {
+                PDatManager.ProgressAchievementByID( CR.myPlayerSlot, 'prelude_1' );
             }
         }
     }
-    else
+    else if( SubmitPlayerTime( PC, CR, myLevel, playTime,,, hasNewRecord ) )
     {
-        if( CheckPlayerRecord( PC, CR, myLevel, playTime,,, hasNewRecord ) )
+        CurMode.ProcessPlayerRecord( PC, CR, myLevel, playTime );
+        if( hasNewRecord == 1 )
         {
-            if( hasNewRecord == 1 )
+            NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
+        }
+
+        isDirty = true;
+    }
+
+    if (isDirty) {
+        UpdateLevelReplicationState( myLevel.MapIndex );
+    }
+
+    if (hasNewRecord == 1)
+    {
+        if( !bDontEndGameOnRecord )
+        {
+            // End-Round if a new record!
+            if( PC.PlayerReplicationInfo.Team.TeamIndex == 0 )
             {
-                NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
+                GameEnd( ERER_AttackersWin, PC.Pawn, "Attackers Win!" );
+                RecordByTeam = RT_Red;
             }
-
-            if( GhostManager == none || CR.SoloRank > 3 || playTime > 1800 )
-                return;
-
-            // Erase all ghosts from deranked players (rank > MaxGhosts)
-            GhostManager.SqueezeGhosts( true );
-            GhostManager.Saver.QueueGhost(
-                PC, // PC.GetPlayerIdHash(), // RETURNS a random GUID but the real guid other times WTF?
-                CR.myPlayerSlot,
-                myLevel.GetFullName( CurrentMapName )
-            );
+            else
+            {
+                GameEnd( ERER_AttackersLose, PC.Pawn, "Defenders Win!" );
+                RecordByTeam = RT_Blue;
+            }
         }
     }
 }
 
-final private function bool CheckPlayerRecord(
+final private function bool SubmitPlayerTime(
     PlayerController PC,
     BTClient_ClientReplication CR,
     BTClient_LevelReplication myLevel,
@@ -4928,7 +4880,7 @@ final private function bool CheckPlayerRecord(
     optional int xp,
     optional out byte bNewTopRecord )
 {
-    local bool b, wasHijacked, isFirstTime, hasImprovised;
+    local bool wasHijacked, hasImprovised;
     local string finishMsg, finishTime;
     local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
     local float score, finishDiff;
@@ -4937,7 +4889,7 @@ final private function bool CheckPlayerRecord(
     local BTServer_RecordsData.sSoloRecord newSoloRecord;
     local int mapIndex;
 
-    FullLog( "Processing record for player" @ PC.GetHumanReadableName() @ playTime @ "bRecursive:" @ bRecursive @ myLevel.GetFullName( CurrentMapName ) );
+    FullLog( "Processing record for player" @ PC.GetHumanReadableName() @ playTime @ myLevel.GetFullName( CurrentMapName ) );
 
     // macro to playerslot.
     mapIndex = myLevel.MapIndex;
@@ -4986,7 +4938,7 @@ final private function bool CheckPlayerRecord(
             CR.ClientSetPersonalTime( playTime );
             // Broadcast success, on next if( b ).
             PDat.AddExperience( self, PLs-1, EXP_ImprovedRecord + numObjectives );
-            b = true;
+            hasImprovised = true;
         }
         // Player has failed to improve his/her record time
         else
@@ -5042,25 +4994,39 @@ final private function bool CheckPlayerRecord(
         SetSoloRecordTime( PC, mapIndex, PLi, playTime );
         CR.ClientSetPersonalTime( playTime );
         PDat.AddExperience( self, PLs-1, EXP_FirstRecord + numObjectives );
-        b = true;
-        isFirstTime = true;
 
-        // Update the total set of solo records here because ClientForcePacketUpdate() is only called for visible records.
+        hasImprovised = true;
+
+        // Update the total set of solo records here because UpdateLevelReplicationState() is only called for visible records.
         myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
+
+        if( myLevel.LockedLevel != none )
+        {
+            Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
+        }
     }
 
     // Somebody improved his or her time.
-    if( b )
+    if( hasImprovised )
     {
-        hasImprovised = true;
-        b = false;
-
         // Remove player's old time.
         oldPLi = PLi;
         newSoloRecord = RDat.Rec[mapIndex].PSRL[PLi];
         RDat.Rec[mapIndex].PSRL.Remove( PLi, 1 );
+
         PLi = RDat.OpenRecordSlot( RDat.Rec[mapIndex].PSRL, playTime );
         RDat.Rec[mapIndex].PSRL[PLi] = newSoloRecord;
+
+        if( GhostManager != none && playTime <= 1800 ) {
+            // FIXME: Set after saving's done?
+            RDat.Rec[mapIndex].PSRL[PLi].Flags = RDat.Rec[mapIndex].PSRL[PLi].Flags | 0x08/* RFLAG_GHOST */;
+            GhostManager.Saver.QueueGhost(
+                PC,
+                CR.myPlayerSlot,
+                myLevel.GetFullName( CurrentMapName )
+            );
+        }
+
         if( Ranks != none )
         {
             // Re-calculate the points, because points are time and position based, all RECORDS must be calculated.
@@ -5069,12 +5035,6 @@ final private function bool CheckPlayerRecord(
             newSoloRecord.Points = RDat.Rec[mapIndex].PSRL[PLi].Points;
 
             CR.SoloRank = PLi + 1;
-        }
-
-        // Tie or new record
-        if( (playTime == myLevel.TopTime || PLi == 0) && !bRecursive )
-        {
-            myLevel.TopRanks = GetRecordTopHolders( mapIndex );
         }
 
     	score = newSoloRecord.Points/RDat.Rec[mapIndex].PSRL[0].Points*10.00;
@@ -5100,29 +5060,9 @@ final private function bool CheckPlayerRecord(
         }
 
         AddRecentSetRecordToPlayer( PLs, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$finishTime );
-        // Don't spam force update for every group member :P
-        if( !bRecursive )
-        {
-            ClientForcePacketUpdate( mapIndex );
-        }
-
-        if( PLi == 0 && !bRecursive ) // This is the best one of all...
+        if( PLi == 0 ) // This is the best one of all...
         {
             bNewTopRecord = 1;
-            if( !bDontEndGameOnRecord && bSoloMap )
-            {
-                // End-Round if a new record!
-                if( PC.PlayerReplicationInfo.Team.TeamIndex == 0 )
-                {
-                    GameEnd( ERER_AttackersWin, PC.Pawn, "Attackers Win!" );
-                    RecordByTeam = RT_Red;
-                }
-                else
-                {
-                    GameEnd( ERER_AttackersLose, PC.Pawn, "Defenders Win!" );
-                    RecordByTeam = RT_Blue;
-                }
-            }
 
             FullLog( "*** New Best Solo Speed-Record ***" );
             if( myLevel.TopTime != 0 ) // Faster!
@@ -5175,15 +5115,6 @@ final private function bool CheckPlayerRecord(
                 BroadcastAnnouncement( AnnouncementRecordSet );
             }
 
-            if( GroupManager != none )
-                RDat.Rec[mapIndex].TMContributors = GroupManager.MaxGroupSize;
-            else if( bSoloMap )
-            {
-                RDat.Rec[mapIndex].TMContributors = 1;
-            }
-
-            //======================================================
-            // Update clients. .
             myLevel.TopTime = playTime;
             if( CR.BTWage > 0 )
             {
@@ -5197,25 +5128,12 @@ final private function bool CheckPlayerRecord(
                 MRI.RecordState = RS_Succeed;
                 MRI.PointsReward = string(score);
                 UpdateEndMsg( Repl( finishMsg, "%PLAYER% completed", "Completed" ) );
-                // Announce level unlock
-                if( isFirstTime && myLevel.LockedLevel != none )
-                {
-
-                    Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
-                }
                 return true;
             }
             else
             {
                 BroadcastFinishMessage( PC, finishMsg, 1 );
-                // Announce level unlock
-                if( isFirstTime && myLevel.LockedLevel != none )
-                {
-
-                    Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
-                }
             }
-            //======================================================
         }
         else
         {
@@ -5229,12 +5147,6 @@ final private function bool CheckPlayerRecord(
                 finishMsg @= "in" @ #0xFFFF00FF$finishTime$cEnd$", achieving best" @ #0xFFFF00FF$(PLi+1)$cEnd @ "out of" @ #0xFFFF00FF$RDat.Rec[mapIndex].PSRL.Length;
             }
             BroadcastFinishMessage( PC, finishMsg, 1 );
-            // Announce level unlock
-            if( isFirstTime && myLevel.LockedLevel != none )
-            {
-
-                Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
-            }
 
             if( CR.BTWage > 0 )
             {
@@ -5281,60 +5193,43 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
 {
     local int i;
     local array<BTStructs.sPlayerReference> contributors;
-    local name outTargetAchievementId;
     local BTClient_ClientReplication CR;
-    local byte hasNewRecord;
+    local byte inNewTopRecord;
+    local bool isDirty;
     local float playTime;
 
-    playTime = GetFixedTime( Level.TimeSeconds - MRI.MatchStartTime );
-    if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner != ERW_None ) // The game ended!.
+    if( ASGameReplicationInfo(AssaultGame.GameReplicationInfo).RoundWinner == ERW_None )
     {
-        // FullLog( "Processing instigator's record:" @ PC.GetHumanReadableName() );
-        CR = GetRep( PC );
-        CheckPlayerRecord( PC, CR, myLevel, playTime,,, hasNewRecord );
+        return;
+    }
 
-        // Calculate and return the best players.
-        contributors = GetBestPlayers();
-        // FullLog( "Contributors:" @ contributors.Length );
-        for( i = 0; i < contributors.Length; ++ i )
-        {
-            if( contributors[i].player != PC )
-            {
-                CR = GetRep( contributors[i].player );
-                CheckPlayerRecord( contributors[i].player, CR, myLevel, playTime, true );
-            }
-        }
+    playTime = GetFixedTime( Level.TimeSeconds - MRI.MatchStartTime );
 
-        if( hasNewRecord == 1 )
+    contributors = GetBestPlayers();
+    for( i = 0; i < contributors.Length; ++ i )
+    {
+        CR = GetRep( contributors[i].player );
+        if (SubmitPlayerTime( contributors[i].player, CR, myLevel, playTime, contributors[i].player != PC,, inNewTopRecord ))
         {
-            RDat.Rec[myLevel.MapIndex].TMContributors = contributors.Length;
-            NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
+            isDirty = true;
+            CurMode.ProcessPlayerRecord( contributors[i].player, CR, myLevel, playTime );
+        }
+    }
 
-            if( GhostManager != none && playTime <= 1800 )
-            {
-                // Delete all existing ghosts first!
-                GhostManager.SqueezeGhosts( false );
-                for( i = 0; i < contributors.Length; ++ i )
-                {
-                    GhostManager.Saver.QueueGhost(
-                        contributors[i].player,
-                        contributors[i].playerSlot-1,
-                        myLevel.GetFullName( CurrentMapName )
-                    );
-                }
-            }
-        }
-        else
-        {
-            MRI.RecordState = RS_Failure;
-            UpdateEndMsg( "Failed to beat the record, over by "
-                $ TimeToStr( playTime - myLevel.TopTime )
-                $ ", time " $ TimeToStr( playTime )
-            );
-            if( playTime < (myLevel.TopTime+90) )
-                BroadcastAnnouncement( AnnouncementRecordAlmost );
-            else BroadcastAnnouncement( AnnouncementRecordFailed );
-        }
+    if (isDirty) {
+        UpdateLevelReplicationState( myLevel.MapIndex );
+    }
+
+    if (inNewTopRecord == 0)
+    {
+        MRI.RecordState = RS_Failure;
+        UpdateEndMsg( "Failed to beat the record, over by "
+            $ TimeToStr( playTime - myLevel.TopTime )
+            $ ", time " $ TimeToStr( playTime )
+        );
+        if( playTime < (myLevel.TopTime+90) )
+            BroadcastAnnouncement( AnnouncementRecordAlmost );
+        else BroadcastAnnouncement( AnnouncementRecordFailed );
     }
 }
 
@@ -6510,9 +6405,7 @@ final function string MaskToDate( int date )
     return FixedDate$"/"$Right( year, 2 );
 }
 
-//==============================================================================
-// Update all the ClientReplication Packets
-final function ClientForcePacketUpdate( int mapIndex, optional int recordRank )
+final function UpdateLevelReplicationState( int mapIndex, optional int recordRank )
 {
     local Controller C;
     local BTClient_ClientReplication rep;
@@ -6521,6 +6414,7 @@ final function ClientForcePacketUpdate( int mapIndex, optional int recordRank )
     myLevel = GetObjectiveLevelByIndex( mapIndex );
     if( myLevel != none )
     {
+        myLevel.TopRanks = GetRecordTopHolders( mapIndex );
         myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
     }
     for( C = Level.ControllerList; C != none; C = C.NextController )
@@ -6608,19 +6502,10 @@ final function SavePlayers()
 
 final function SaveGhosts()
 {
-    local BTClient_LevelReplication myLevel;
-
     if( GhostManager == none )
         return;
 
-    for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
-    {
-        // Saves new, but deletes old unneeded ghosts!
-        if( GhostManager.SaveRelevantGhosts( myLevel.GetFullName( CurrentMapName ) ) )
-        {
-            Log( "Successfully saved ghosts for level" @ myLevel.GetFullName( CurrentMapName ) );
-        }
-    }
+    GhostManager.SaveDirtyPackages();
 }
 
 final function SaveAll()

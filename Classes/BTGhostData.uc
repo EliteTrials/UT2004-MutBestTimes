@@ -37,6 +37,7 @@ var float RelativeStartTime;
 
 var transient vector RelativeSpawnOffset;
 var transient rotator RelativeSpawnDir;
+var transient bool bIsDirty;
 
 final function vector GetStartLocation()
 {

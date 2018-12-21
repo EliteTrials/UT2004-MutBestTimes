@@ -9,11 +9,10 @@ var private array<struct sGhostInfo{
 	// Index to PDat.Player
 	var int PlayerIndex;
 
-	// Package's main name i.e. usually the map's name, e.g. BTGhost_<PackageId>.uvx
-	var string PackageId;
+	// Package's name e.g. BTGhost_<MapName>_<GhostId>.uvx
+	var string MapName;
 
-	// Player's GUID, used to set the ghost data's object name
-	// e.g. (package) BTGhost_<PackageId>.uvx -> (object) BTGhost_<GhostId>
+	// Player's GUID used to assemble a ghost package's name.
 	var string GhostId;
 }> SaveQueue;
 
@@ -86,7 +85,7 @@ final function EndRecording()
     Recorders.Length = 0;
 }
 
-final function QueueGhost( PlayerController player, int playerIndex, string packageId )
+final function bool QueueGhost( PlayerController player, int playerIndex, string MapName )
 {
 	local int i, j;
 	local BTGhostRecorder recorder;
@@ -105,7 +104,7 @@ final function QueueGhost( PlayerController player, int playerIndex, string pack
 	if( recorder == none )
 	{
 		Warn( "Tried to save a player's ghost with no recorder!" );
-		return;
+		return false;
 	}
 
 	// TODO: check existing queue for duplicates, and cancel the current queue if necessary!
@@ -115,7 +114,7 @@ final function QueueGhost( PlayerController player, int playerIndex, string pack
 	SaveQueue.Length = j + 1;
 	SaveQueue[j].Recorder = recorder;
 	SaveQueue[j].PlayerIndex = playerIndex;
-	SaveQueue[j].PackageId = packageId;
+	SaveQueue[j].MapName = MapName;
 	SaveQueue[j].GhostId = recorder.ghostId;
 
 	// First ghost reward!
@@ -126,6 +125,7 @@ final function QueueGhost( PlayerController player, int playerIndex, string pack
 		Level.Game.VotingHandler.SetTimer( 0.00, false );
 	}
 	Enable( 'Tick' );
+	return true;
 }
 
 event Tick( float deltaTime )
@@ -152,13 +152,13 @@ event Tick( float deltaTime )
 	data = SaveQueue[qIdx].Data;
 	if( data == none )
 	{
-		data = Manager.GetGhostData( SaveQueue[qIdx].PackageId, SaveQueue[qIdx].GhostId, true );
+		data = Manager.GetGhostData( SaveQueue[qIdx].MapName, SaveQueue[qIdx].GhostId );
 		if( data == none )
 		{
-			data = Manager.CreateGhostData( SaveQueue[qIdx].PackageId, "BTGhost_"$SaveQueue[qIdx].GhostId );
+			data = Manager.CreateGhostData( SaveQueue[qIdx].MapName, SaveQueue[qIdx].GhostId );
 			if( data == none )
 			{
-				Warn( "Couldn't create a new ghost data object for" @ SaveQueue[qIdx].PackageId @ SaveQueue[qIdx].GhostId );
+				Warn( "Couldn't create a new ghost data object for" @ SaveQueue[qIdx].MapName @ SaveQueue[qIdx].GhostId );
 				// Abort saving.
 				SaveQueue.Remove( qIdx, 1 );
 				return;
@@ -168,12 +168,13 @@ event Tick( float deltaTime )
 		{
 			data.Init(); // new version
 			data.MO.Length = 0;
-			Manager.DirtyGhostPackage( SaveQueue[qIdx].PackageId );
+			data.bIsDirty = true;
 		}
 
 		data.UsedGhostFPS = recorder.FramesPerSecond;
 		data.PLID = BT.PDat.Player[SaveQueue[qIdx].PlayerIndex].PLID;
 		data.RelativeStartTime = recorder.RelativeStartTime;
+		data.bIsDirty = true;
 		SaveQueue[qIdx].Data = data;
 
 		for( i = 0; i < Manager.Ghosts.Length; ++ i )
@@ -200,32 +201,11 @@ event Tick( float deltaTime )
 	if( numFrames == 0 || data.MO.Length == numFrames )
 	{
 		// BT.FullLog( "Saving complete!" @ data.MO.Length @ "frames have been saved!"
-		// 	@ "PackageId:" @ SaveQueue[qIdx].PackageId
+		// 	@ "MapName:" @ SaveQueue[qIdx].MapName
 		// 	@ "GhostId:" @ SaveQueue[qIdx].GhostId
 		// 	@ "Existing:" @ SaveQueue[qIdx].ExistingData
 		// );
-
-		if( SaveQueue[qIdx].ExistingData )
-		{
-			for( i = 0; i < Manager.Ghosts.Length; ++ i )
-			{
-				if( Manager.Ghosts[i].GhostData == data )
-				{
-					// Install our new markers
-					if( Manager.GetGhostRank( Manager.Ghosts[i] ) == 1 )
-					{
-						Manager.Ghosts[i].InstallMarkers( true );
-					}
-					Manager.Ghosts[i].RestartPlay();
-					break;
-				}
-			}
-		}
-		else
-		{
-			Manager.AddGhost( Manager.CreateGhostPlayback( data, SaveQueue[qIdx].PackageId, true ) );
-		}
-
+		Manager.OnGhostSaved( SaveQueue[qIdx] );
 		if( recorder != none )
 		{
 			recorder.Destroy();

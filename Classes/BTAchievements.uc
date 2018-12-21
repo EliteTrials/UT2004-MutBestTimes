@@ -193,7 +193,7 @@ final static function bool CmpWithAsterik(string a, string b)
 
 final function bool TestMapTrigger( out name target, string title, optional float recordTime, optional name eventStr )
 {
-    local int i, asterik;
+    local int i;
 
     if( eventStr != '' )
     {

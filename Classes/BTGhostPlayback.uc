@@ -4,7 +4,7 @@ var const class<BTClient_GhostMarker> GhostMarkerClass;
 var const class<BTGhostController> GhostControllerClass;
 
 /** The active player that controls this ghost's playback (GhostFollow). */
-var Controller          CustomController;
+var PlayerController    CustomController;
 var BTGhostController   Controller;
 var string              GhostName;
 var string              GhostChar;
@@ -183,16 +183,17 @@ private function PlayNextFrame()
     if( Level.TimeSeconds - BT.MRI.MatchStartTime < GhostData.RelativeStartTime )
     	return;
 
-    // Kill our ghost when our owner has became a spectator, nor play at all!
     if( CustomController != none
-        && (CustomController.PlayerReplicationInfo.bIsSpectator || CustomController.PlayerReplicationInfo.bOnlySpectator) )
+        && (CustomController.PlayerReplicationInfo.bIsSpectator || CustomController.PlayerReplicationInfo.bOnlySpectator)
+        && CustomController.ViewTarget != Controller.Pawn )
     {
-        if( Controller.Pawn != none )
-        {
-            Controller.Pawn.Destroy();
-        }
-        PausePlay();
-        return;
+        // Kill our ghost when our owner/spectator is no longer watching
+        // if( Controller.Pawn != none )
+        // {
+        //     Controller.Pawn.Destroy();
+        // }
+        // PausePlay();
+        // return;
     }
 
     p = Controller.Pawn;

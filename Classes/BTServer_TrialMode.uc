@@ -25,16 +25,17 @@ protected function InitializeMode()
 
 function ModeMatchStarting()
 {
-    local BTClient_LevelReplication myLevel;
+    local array<string> inGhostIds;
 
     super.ModeMatchStarting();
+
     if( bSpawnGhost && GhostManager == none )
     {
         FullLog( "Loading Ghost Playback data" );
         GhostManager = Spawn( class'BTGhostManager', Outer );
-        for( myLevel = MRI.BaseLevel; myLevel != none; myLevel = myLevel.NextLevel )
-        {
-            GhostManager.LoadGhosts( myLevel.GetFullName( CurrentMapName ) );
+        if (MRI.MapLevel != none) {
+            RDatManager.GetTopPlayerGhostIds( MRI.MapLevel.MapIndex, inGhostIds );
+            GhostManager.SpawnGhosts( MRI.MapLevel, inGhostIds );
         }
     }
 }
@@ -140,6 +141,13 @@ function PlayerCompletedObjective( PlayerController player, BTClient_ClientRepli
         PerformItemDrop( player, score/10 );
         LRI.LastDropChanceTime = Level.TimeSeconds;
     }
+}
+
+function ProcessPlayerRecord( PlayerController player, BTClient_ClientReplication CRI, BTClient_LevelReplication myLevel, float playTime )
+{
+    super.ProcessPlayerRecord( player, CRI, myLevel, playTime );
+
+    NotifyNewRecord( CRI.myPlayerSlot, myLevel.MapIndex, playTime );
 }
 
 function PerformItemDrop( PlayerController player, float bonus )
