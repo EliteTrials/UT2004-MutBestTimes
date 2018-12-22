@@ -120,8 +120,7 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
             if( PlayerController(Killed.Controller).Player == none )
                 return False;
 
-            if( (!BT.IsCompetitiveModeActive() && class<Suicided>(damageType) == none)
-                || Killed.Tag == 'IGNOREQUICKRESPAWN' )
+            if( (!BT.IsCompetitiveModeActive() && class<Suicided>(damageType) == none) )
                 return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 
             C = Killed.Controller;
@@ -168,17 +167,17 @@ function bool PreventDeath( Pawn Killed, Controller Killer, class<DamageType> da
     return super.PreventDeath(Killed,Killer,damageType,HitLocation);
 }
 
-final function RespawnPlayer( Pawn player )
+final function RespawnPlayer( Pawn other )
 {
-    Level.Game.RestartPlayer( player.Controller );
-    if( !player.Controller.IsInState('Dead') )
+    Level.Game.RestartPlayer( other.Controller );
+    if( !PlayerController(other.Controller).IsDead() )
     {
         // idk if this is causing any issues, disabled for now.
-        // player.GotoState('Dying');
-        player.Controller.PawnDied( player );
+        // other.GotoState('Dying');
+        other.Controller.PawnDied( other );
     }
-    if( player != none )
-        player.Destroy();
+    if( other != none )
+        other.Destroy();
 }
 
 function ScoreKill(Controller Killer, Controller Killed)

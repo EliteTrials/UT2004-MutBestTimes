@@ -4824,7 +4824,7 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
         for( i = 0; i < GroupMembers.Length; ++ i )
         {
             CR = GetRep( PlayerController(GroupMembers[i]) );
-            if (SubmitPlayerTime( PlayerController(GroupMembers[i]), CR, myLevel, playTime, PlayerController(GroupMembers[i]) != PC, xp, hasNewRecord )) {
+            if (SubmitPlayerTime( PlayerController(GroupMembers[i]), CR, myLevel, playTime, GroupMembers[i] != PC, xp, hasNewRecord )) {
                 CurMode.ProcessPlayerRecord( PlayerController(GroupMembers[i]), CR, myLevel, playTime );
                 if (hasNewRecord == 1) {
                     NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
@@ -4884,7 +4884,6 @@ final private function bool SubmitPlayerTime(
     local string finishMsg, finishTime;
     local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
     local float score, finishDiff;
-    local Pawn P;
     local int numObjectives;
     local BTServer_RecordsData.sSoloRecord newSoloRecord;
     local int mapIndex;
@@ -5170,15 +5169,16 @@ final private function bool SubmitPlayerTime(
 
     if( bSoloMap )
     {
-        // Kill player?
-        P = PC.Pawn;
-        if( P != None )
+        PC.ClientFlash( 0.10, vect(255, 255, 0));
+        if( xPawn(PC.Pawn) != none )
         {
-            P.SetCollision( False, False, False );
-            P.bCanUse = False;
-            P.Tag = 'IGNOREQUICKRESPAWN';
-            P.Died( None, Class'Suicided', P.Location );
+            PC.Pawn.bCanUse = false;
+            PC.Pawn.SetPhysics(PHYS_None);
+            PC.Pawn.SetCollision( false, false, false );
+            Spawn(class'BTLiftPawn', PC.Pawn,, PC.Pawn.Location, PC.Pawn.Rotation);
+            PC.PawnDied(PC.Pawn);
         }
+        PC.ClientGotoState('Dead', '');
 
         if( !bRecursive )
         {
