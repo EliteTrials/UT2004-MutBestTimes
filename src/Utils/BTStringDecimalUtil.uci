@@ -1,0 +1,15 @@
+final static function string Decimal( int number )
+{
+    local string s, ns;
+    local int i;
+    local byte l;
+
+    s = string(number);
+    ns = s;
+    l = Len( s );
+    for( i = 0; i < (l-1)/3; ++ i )
+    {
+        ns = Left( s, l - 3*(i+1) ) $ "," $ Right( ns, 3*(i+1)+i );
+    }
+    return ns;
+}
