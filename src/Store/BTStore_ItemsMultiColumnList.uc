@@ -7,17 +7,6 @@ var Texture PositiveIcon;
 
 var editconst noexport BTClient_ClientReplication CRI;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
 function UpdateList()
 {
     local int i;
@@ -146,3 +135,5 @@ defaultproperties
     SortColumn=0
     SortDescending=true
 }
+
+#include classes/BTColorHashUtil.uci

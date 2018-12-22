@@ -27,17 +27,6 @@ var() const name RarityTitle[7];
 var automated GUIButton b_ActivateKey, b_ColorDialog;
 var automated GUIEditBox eb_Key;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
 function InitComponent( GUIController InController, GUIComponent InOwner )
 {
     super.InitComponent( InController, InOwner );
@@ -422,3 +411,5 @@ defaultproperties
     end object
     b_ColorDialog=oColorDialog
 }
+
+#include classes/BTColorHashUtil.uci

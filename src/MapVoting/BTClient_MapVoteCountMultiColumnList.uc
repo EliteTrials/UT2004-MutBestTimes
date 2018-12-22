@@ -1,16 +1,5 @@
 class BTClient_MapVoteCountMultiColumnList extends MapVoteCountMultiColumnList;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
 event InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
     super.InitComponent( MyController, MyOwner );
@@ -97,3 +86,5 @@ defaultproperties
     ColumnHeadings(1)="Map Name"
     GetItemHeight=InternalGetItemHeight
 }
+
+#include classes/BTColorHashUtil.uci

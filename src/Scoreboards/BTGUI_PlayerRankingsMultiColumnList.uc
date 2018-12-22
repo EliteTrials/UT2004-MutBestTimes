@@ -9,17 +9,6 @@ var protected transient bool
     bItemIsSelected,
     bItemIsOwner;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
 function Free()
 {
     super.Free();
@@ -236,3 +225,5 @@ defaultproperties
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight
 }
+
+#include classes/BTColorHashUtil.uci

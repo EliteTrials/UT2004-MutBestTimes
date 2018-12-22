@@ -11,17 +11,6 @@ var private array<struct sMapKey
 	var string Value;
 }> MapKeys;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
 function InitComponent(GUIController MyController, GUIComponent MyOwner)
 {
 	super.Initcomponent(MyController, MyOwner);
@@ -201,3 +190,4 @@ defaultproperties
     MapData=oGUIMultiColumnListBox
 }
 
+#include classes/BTColorHashUtil.uci
