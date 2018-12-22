@@ -106,94 +106,6 @@ var bool bPromodeWasPerformed;
 var bool bTimeViewTarget;
 var PlayerInput PlayerInput;
 
-/** Returns int A as a color tag. */
-static final preoperator string $( int A )
-{
-    return Chr( 0x1B ) $ (Chr( Max(byte(A >> 16), 1)  ) $ Chr( Max(byte(A >> 8), 1) ) $ Chr( Max(byte(A & 0xFF), 1) ));
-}
-
-/** Returns color A as a color tag. */
-static final preoperator string $( Color A )
-{
-    return (Chr( 0x1B ) $ (Chr( Max( A.R, 1 )  ) $ Chr( Max( A.G, 1 ) ) $ Chr( Max( A.B, 1 ) )));
-}
-
-/** Adds B as a color tag to the end of A. */
-static final operator(40) string $( coerce string A, Color B )
-{
-    return A $ $B;
-}
-
-/** Adds A as a color tag to the begin of B. */
-static final operator(40) string $( Color A, coerce string B )
-{
-    return $A $ B;
-}
-
-/** Adds B as a color tag to the end of A with a space inbetween. */
-static final operator(40) string @( coerce string A, Color B )
-{
-    return A @ $B;
-}
-
-/** Adds A as a color tag to the begin of B with a space inbetween. */
-static final operator(40) string @( Color A, coerce string B )
-{
-    return $A @ B;
-}
-
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
-/** Strips all color tags from A. */
-static final preoperator string %( string A )
-{
-    local int i;
-
-    while( true )
-    {
-        i = InStr( A, Chr( 0x1B ) );
-        if( i != -1 )
-        {
-            A = Left( A, i ) $ Mid( A, i + 4 );
-            continue;
-        }
-        break;
-    }
-    return A;
-}
-
-final static function Color MakeColor( optional byte r, optional byte g, optional byte b, optional byte a )
-{
-    local Color c;
-
-    c.r = r;
-    c.g = g;
-    c.b = b;
-    c.a = a;
-    return c;
-}
-
-final static function Color Darken( Color c, float pct )
-{
-    pct = 1.0 - pct/100.0f;
-    return MakeColor( c.R*pct, c.G*pct, c.B*pct, c.A );
-}
-
-final static function Color Lighten( Color c, float pct )
-{
-    pct = 1.0 + pct/100.0f;
-    return MakeColor( c.R*pct, c.G*pct, c.B*pct, c.A );
-}
-
 final function SendConsoleMessage( string Msg )
 {
     ViewportOwner.Actor.Player.Console.Message( Msg, 1.0 );
@@ -1714,7 +1626,6 @@ function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> colum
 }
 
 const TABLE_PADDING = 4;
-const TAB_GUTTER = 4;
 const HEADER_GUTTER = 2;
 const COLUMN_MARGIN = 2;
 const COLUMN_PADDING_X = 4;
@@ -1730,14 +1641,14 @@ final static function DrawLayer( Canvas C, float x, float y, float width, float 
 
 final static function DrawHeaderTile( Canvas C, float x, float y, float width, float height )
 {
-    C.DrawColor = #0x99990066;
+    C.DrawColor = #0xEA200A78;
     DrawLayer( C, x, y, width, height );
 }
 
 final static function DrawHeaderText( Canvas C, float x, float y, string title )
 {
     C.SetPos( x + COLUMN_PADDING_X, y + COLUMN_PADDING_Y );
-    C.DrawColor = #0xFFFFFFFF;
+    C.DrawColor = #0xD4D4D4FF;
     C.DrawText( title, false );
     C.SetPos( x, y ); // Reset pushment from DrawText
 }
@@ -1939,7 +1850,7 @@ function RenderFooter( Canvas C )
     drawX = tableWidth - TABLE_PADDING - xl;
     drawY = tableY + tableHeight - height - TABLE_PADDING;
     C.DrawColor = #0x0072C688;
-    DrawHeaderTile( C, drawX, drawY, width, height );
+    DrawColumnTile( C, drawX, drawY, width, height );
     DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 }
 
@@ -2264,7 +2175,6 @@ function RenderHUDElements( Canvas C )
     if( Pawn(ViewportOwner.Actor.ViewTarget) != none )
     {
         drawY = C.ClipY*0.825f;
-        drawY += DrawElement( C, C.ClipX*0.5, drawY, "Test Version", "Hubs!", true, 200, 1.0, class'HUD'.default.PurpleColor ).Y*1.2;
         v = ViewportOwner.Actor.ViewTarget.Velocity;
         v.Z = 0;
         s = Decimal(VSize(v))@":"@Decimal(VSize(ViewportOwner.Actor.ViewTarget.Velocity*vect(0,0,1)))@"uu/s";
@@ -2276,21 +2186,7 @@ function RenderHUDElements( Canvas C )
     }
 }
 
-final static function string Decimal( int number )
-{
-    local string s, ns;
-    local int i;
-    local byte l;
 
-    s = string(number);
-    ns = s;
-    l = Len( s );
-    for( i = 0; i < (l-1)/3; ++ i )
-    {
-        ns = Left( s, l - 3*(i+1) ) $ "," $ Right( ns, 3*(i+1)+i );
-    }
-    return ns;
-}
 
 function DrawRecordWidget( Canvas C )
 {
@@ -2738,7 +2634,7 @@ static final function string FixDate( int Date[3] )
     return FixedDate$"/"$Right( Date[2], 2 );
 }
 
-DefaultProperties
+defaultproperties
 {
     YOffsetScale=0.6
     Orange=(R=255,G=255,B=0,A=255)
@@ -2760,3 +2656,8 @@ DefaultProperties
     RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
     AlphaLayer=Texture'BTScoreBoardBG'
 }
+
+#include classes/BTColorHashUtil.uci
+#include classes/BTColorStripUtil.uci
+#include classes/BTStringColorUtils.uci
+#include classes/BTStringDecimalUtil.uci

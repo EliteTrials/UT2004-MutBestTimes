@@ -1,24 +1,12 @@
-//==============================================================================
-// BTClient_TrialScoreBoard.uc (C) 2005-2009 Eliot and .:..:. All Rights Reserved
-/* Tasks:
-            Dynamic F1 Scoreboard
-*/
-//  Coded by Eliot
-//  Updated @ 14/09/2009
-//  Updated @ 18/09/2011
-//==============================================================================
-Class BTClient_TrialScoreBoard Extends ScoreBoard;
+class BTClient_TrialScoreBoard extends ScoreBoard;
 
-//Warning: BTClient_TrialScoreBoard STR-TechChallenge-11.BTClient_TrialScoreBoard (function ClientBTimesV3K.BTClient_TrialScoreBoard.UpdateScoreBoard:0233) Accessed None 'GRI'
-//Warning: BTClient_TrialScoreBoard STR-TechChallenge-11.BTClient_TrialScoreBoard (Function ClientBTimesV3K.BTClient_TrialScoreBoard.UpdateScoreBoard:1685) Accessed None 'A1233320'
-
-var() string
+var() const string
     Header_Rank,
     Header_Name,
     Header_Objectives,
     Header_Score,
     Header_Deaths,
-    Header_Time,
+    SubHeader_Time,
     Header_Ping,
     Header_PacketLoss,
     Header_Players,
@@ -31,8 +19,6 @@ var() float YClipOffset;
 var BTClient_Interaction myInter;
 
 var const color GrayColor;
-var const color BGColor;
-var const color OrangeColor;
 var const color PrimaryColor, SecondaryColor;
 var transient color TempColor;
 
@@ -54,34 +40,10 @@ var float       YOffset,
                 DXL,
                 TXL, OTHERX, OTHERXL;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
-
-/** Returns color A as a color tag. */
-static final preoperator string $( Color A )
-{
-    return (Chr( 0x1B ) $ (Chr( Max( A.R, 1 )  ) $ Chr( Max( A.G, 1 ) ) $ Chr( Max( A.B, 1 ) )));
-}
-
-/** Adds B as a color tag to the end of A. */
-static final operator(40) string $( coerce string A, Color B )
-{
-    return A $ $B;
-}
-
-/** Adds A as a color tag to the begin of B. */
-static final operator(40) string $( Color A, coerce string B )
-{
-    return $A $ B;
-}
+var private transient string
+    AdminSubText,
+    ReadySubText,
+    PremiumSubText;
 
 static function string GetCName( PlayerReplicationInfo PRI )
 {
@@ -130,7 +92,16 @@ simulated static function LinkedReplicationInfo GetGRI( PlayerReplicationInfo PR
     return none;
 }
 
-Simulated Function UpdateScoreBoard( Canvas C )
+simulated function Init()
+{
+    super.Init();
+
+    AdminSubText = #0xFF0000FF$"[Admin] "$SecondaryColor;
+    ReadySubText = #0xFF8800FF$"[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] "$SecondaryColor;
+    PremiumSubText = #0x00FFFFFF$"[Premium] "$SecondaryColor;
+}
+
+simulated function UpdateScoreBoard( Canvas C )
 {
     local float
                 X,
@@ -202,7 +173,7 @@ Simulated Function UpdateScoreBoard( Canvas C )
 
     C.Font = myInter.GetScreenFont( C );
     C.StrLen( "T", XL, YL );
-    rowMargin = 4;
+    rowMargin = 2;
     rowHeight = YL*2 + 4;
     rowSegmentHeight = YL;
 
@@ -238,10 +209,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
     myInter.DrawColumnTile( C, XClipOffset+4, YClipOffset - YL-4-4, XL + /**COLUMN_PADDING_X*/4*2, YL+4/**COLUMN_PADDING_Y*/ );
     myInter.DrawHeaderText( C, XClipOffset+4, YClipOffset - YL-4-4, s );
 
-    // C.DrawColor = HUDClass.Default.GoldColor;
-    // C.SetPos( XClipOffset+4, YClipOffset - YL-4 );
-    // C.DrawText( s );
-
     // Draw Level Author
     s = "Map by" @ Level.Author;
     C.StrLen( s, XL, YL );
@@ -258,38 +225,37 @@ Simulated Function UpdateScoreBoard( Canvas C )
     // Pre-Header
 
     // Calc Level
-    HX = XClipOffset+4+2;   // 4 = table offset, 2 = text X offset
+    HX = XClipOffset+4;   // 4 = table offset, 2 = text X offset
     LX = HX;
-    C.StrLen( "Team", LXL, YL );    // Level Width
-    LXL += 2;
+    C.StrLen( Header_Rank, LXL, YL );    // Level Width
 
     // Calc Name
-    HX += 18+LXL+4;
+    HX += 8+LXL;
     NX = HX;
     C.StrLen( "WWWWWWWWWWWWWWWWWWWW", NXL, YL );    // Name Width
 
     // Calc Objectives
-    HX += 20+NXL;
-    C.StrLen( class'ScoreBoardDeathMatch'.default.PointsText, XL, YL );
+    HX += 8+NXL;
+    // C.StrLen( class'ScoreBoardDeathMatch'.default.PointsText, XL, YL );
     OX = HX;
     C.StrLen( "000000000", OXL, YL );   // Obj Width
 
     // Calc Deaths
-    HX += 18+OXL;
-    C.StrLen( class'ScoreBoardDeathMatch'.default.DeathsText, XL, YL );
+    HX += 8+OXL;
+    // C.StrLen( class'ScoreBoardDeathMatch'.default.DeathsText, XL, YL );
     DX = HX;
 
     C.StrLen( "0000000", DXL, YL ); // Deaths Width
 
     // Calc Time
-    HX += 18+DXL;
-    C.StrLen( Header_Time, XL, YL );
+    HX += 8+DXL;
+    // C.StrLen( SubHeader_Time, XL, YL );
     TX = HX;
     C.StrLen( "00:00:00.00", TXL, YL ); // Time Width
 
     // Calc Other
-    HX += 40+TXL;
-    C.StrLen( "Other", XL, YL );
+    HX += 60+TXL;
+    // C.StrLen( "Other", XL, YL );
     OTHERX = HX;
     C.StrLen( "WWWWWWWWWWWWWWWWWWWW", OTHERXL, YL );
 
@@ -298,17 +264,6 @@ Simulated Function UpdateScoreBoard( Canvas C )
     {
         OTHERX = 0;
     }
-
-    // DrawHeaderTile( C, drawX + COLUMN_MARGIN, drawY, columns[columnIdx].W - COLUMN_MARGIN*2, columns[columnIdx].H );
-    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, PlayersRankingColumns[columnIdx].Title );
-
-    C.SetPos( TX, TY );
-    myInter.DrawHeaderTile( C, TX, TY, TXL+4, YL );
-    myInter.DrawHeaderText( C, TX, TY, Header_ElapsedTime );
-
-    C.SetPos( TX, TY+YL+2 );
-    C.DrawColor = SecondaryColor;
-    C.DrawText( "Personal Record" );
 
     C.SetPos( LX, TY );
     myInter.DrawHeaderTile( C, LX, TY, LXL+4, YL );
@@ -335,12 +290,20 @@ Simulated Function UpdateScoreBoard( Canvas C )
     myInter.DrawHeaderTile( C, DX, TY, DXL+4, YL );
     myInter.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
 
-    if( OTHERX != 0 )
-    {
-        C.SetPos( OTHERX, TY );
-        myInter.DrawHeaderTile( C, OTHERX, TY, OTHERXL+4, YL );
-        myInter.DrawHeaderText( C, OTHERX, TY, "Other" );
-    }
+    C.SetPos( TX, TY );
+    myInter.DrawHeaderTile( C, TX, TY, TXL+4, YL );
+    myInter.DrawHeaderText( C, TX, TY, Header_ElapsedTime );
+
+    C.SetPos( TX, TY+YL+2 );
+    C.DrawColor = SecondaryColor;
+    C.DrawText( SubHeader_Time );
+
+    // if( OTHERX != 0 )
+    // {
+    //     C.SetPos( OTHERX, TY );
+    //     myInter.DrawHeaderTile( C, OTHERX, TY, OTHERXL+4, YL );
+    //     myInter.DrawHeaderText( C, OTHERX, TY, "Other" );
+    // }
 
     // Header done
 
@@ -422,22 +385,15 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     CRI = GetCRI( player );
     // <BACKGROUND>
     if( player != PlayerController(Owner).PlayerReplicationInfo )
-        C.DrawColor = #0x22222244;
-    else C.DrawColor = #0x33333386;
-
-    // if( CRI != none && CRI.bIsPremiumMember )
-    // {
-    //     C.DrawColor.G = 200;
-    //     C.DrawColor.B = 200;
-    //     C.DrawColor.A -= 30;
-    // }
+        C.DrawColor = #0x22222282;
+    else C.DrawColor = #0x4E4E3382;
 
     if( player.bOutOfLives )
     {
         C.DrawColor.A = 20;
     }
 
-    C.DrawColor = C.DrawColor + (GetPlayerTeamColor( player )*0.05f);
+    // C.DrawColor = C.DrawColor + (GetPlayerTeamColor( player )*0.05f);
 
     C.SetPos( rowTileX, rowTileY );
     C.DrawTile( myInter.AlphaLayer, rowWidth, rowHeight, 0, 0, 256, 256 );
@@ -453,15 +409,15 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     s = "";
     if( player.bAdmin )
     {
-        s = #0xFF0000FF$"[Admin] "$SecondaryColor;
+        s = AdminSubText;
     }
     if( player.bReadyToPlay && !isSpectator )
     {
-        s $= #0xFF8800FF$"[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] "$SecondaryColor;
+        s $= ReadySubText;
     }
     if( CRI != none && CRI.bIsPremiumMember )
     {
-        s $= #0x00FFFFFF$"[Premium] "$SecondaryColor;
+        s $= PremiumSubText;
     }
 
     if( isSpectator )
@@ -480,7 +436,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     {
         C.SetPos( LX+4, rowTextY );
         C.DrawColor = PrimaryColor;
-        C.DrawText( CRI.Rank, True );
+        C.DrawText( Eval(CRI.Rank != 0, CRI.Rank, "N/A"), True );
     }
 
     // Draw Score
@@ -500,8 +456,8 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
 
             s = string(ASPlayerReplicationInfo(player).DisabledObjectivesCount+ASPlayerReplicationInfo(player).DisabledFinalObjective);
             C.StrLen( s, XL, YL );
-            C.SetPos( OX + OSize*0.5-5, rowTextY + rowSegmentHeight-1 );
-            C.DrawColor = #0x009900FF;
+            C.SetPos( OX + OSize*0.5-XL*0.5, rowTextY + rowSegmentHeight-1 );
+            C.DrawColor = HUDClass.default.GoldColor;
             C.DrawText( s );
         }
     }
@@ -595,23 +551,26 @@ final function Color GetPlayerTeamColor( PlayerReplicationInfo player )
     return c;
 }
 
-DefaultProperties
+defaultproperties
 {
     XClipOffset=64
     YClipOffset=64
 
-    Header_Rank="Rank"
-    Header_Name="NAME"
-    Header_Time="PERSONAL TIME"
     Header_Spectators="Spectators"
     Header_Players="Players"
+
+    Header_Rank="RANK"
+    Header_Name="NAME"
     Header_ElapsedTime="TIME"
+
+    SubHeader_Time="Record"
 
     HUDClass=Class'HudBase'
 
     GrayColor=(R=100,G=100,B=100,A=255)
-    BGColor=(R=0,G=0,B=0,A=150)
-    OrangeColor=(R=255,G=128,A=255)
     PrimaryColor=(R=255,G=255,B=255,A=255)
     SecondaryColor=(R=182,G=182,B=182,A=255)
 }
+
+#include classes/BTColorHashUtil.uci
+#include classes/BTStringColorUtils.uci
