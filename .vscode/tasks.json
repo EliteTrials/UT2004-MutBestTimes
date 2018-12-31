@@ -10,7 +10,16 @@
             },
             "windows": {
                 "command": "${workspaceFolder}/make.bat"
-            }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Play ServerBTimes",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}/play.bat"
+            },
+            "problemMatcher": []
         }
     ]
 }
