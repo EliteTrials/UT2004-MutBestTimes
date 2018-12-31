@@ -45,7 +45,10 @@ protected function InitializeMode()
 function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication CRI )
 {
     super.ModeModifyPlayer( other, c, CRI );
-    RecordGhostForPlayer( PlayerController(c) );
+
+    if (GhostManager != none) {
+        GhostManager.Saver.RecordPlayer( PlayerController(c) );
+    }
 }
 
 function PlayerCompletedObjective( PlayerController player, BTClient_ClientReplication LRI, float score )

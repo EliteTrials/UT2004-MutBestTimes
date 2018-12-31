@@ -120,7 +120,7 @@ final function ProgressAchievementByType( int playerSlot, name type, optional in
     }
 }
 
-final private function ProgressAchievementBySlot( int playerSlot, int achSlot, optional int count )
+private function ProgressAchievementBySlot( int playerSlot, int achSlot, optional int count )
 {
     local int req;
     local int preProgress, postProgress;
@@ -143,7 +143,7 @@ final private function ProgressAchievementBySlot( int playerSlot, int achSlot, o
     {
         preProgress = PDat.Player[playerSlot].Achievements[achSlot].Progress;
         PDat.Player[playerSlot].Achievements[achSlot].Progress += count;
-        postProgress = preProgress + count;;
+        postProgress = preProgress + count;
 
         /// Notify BT about this achievement completion, so that it can broadcast the achievement!
         if( postProgress >= req && preProgress < req ) // Make sure that it wasn't previously earned!
@@ -155,7 +155,6 @@ final private function ProgressAchievementBySlot( int playerSlot, int achSlot, o
             BT.AchievementProgressed( playerSlot, achievementId );
         }
     }
-
 }
 
 defaultproperties

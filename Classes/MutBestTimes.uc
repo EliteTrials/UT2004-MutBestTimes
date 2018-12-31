@@ -2966,7 +2966,7 @@ final private function bool AdminExecuted( PlayerController sender, string comma
                 sender.ClientMessage( Class'HUD'.Default.RedColor $ Commands[i].Cmd $ Class'HUD'.Default.WhiteColor $ " -" @ Commands[i].Help );
                 for( j = 0; j < Commands[i].Params.Length; ++ j )
                 {
-                    sender.ClientMessage( MakeColor( 128, 128, 0 ) $ "Param " $ Class'HUD'.Default.WhiteColor $ Commands[i].Params[j] );
+                    sender.ClientMessage( #0x888800FF $ "Param " $ Class'HUD'.Default.WhiteColor $ Commands[i].Params[j] );
                 }
             }
             break;
@@ -3642,7 +3642,6 @@ final function AddXfireKeywordFor( PlayerController PC, string keyword, string v
 // Check if the player typed one of our console commands
 function Mutate( string MutateString, PlayerController Sender )
 {
-    local int i;
     local BTServer_TeamPlayerStart X;
     local array<string> ss, ss2;
     local BTServer_NameUpdateDelay NUD;
@@ -3659,13 +3658,9 @@ function Mutate( string MutateString, PlayerController Sender )
         if( MessagingSpectator(Sender) != None )
             return;
 
-        i = FastFindPlayerSlot( Sender );
-        if( i != -1 )
-        {
-            // Catch utcomp color name change
-            NUD = Spawn( Class'BTServer_NameUpdateDelay', self );
-            NUD.Client = Sender;
-        }
+        // Catch utcomp color name change
+        NUD = Spawn( Class'BTServer_NameUpdateDelay', self );
+        NUD.Client = Sender;
         return;
     }
     if( MutateString == "BTClient_RequestTrophies" )
@@ -3763,7 +3758,7 @@ final function SendSucceedMessage( PlayerController PC, coerce string succeedMsg
     PC.ClientMessage( Class'HUD'.default.GoldColor $ succeedMsg );
 }
 
-final function bool IsValidClientSpawnLocation( PlayerController sender )
+private function bool IsValidClientSpawnLocation( PlayerController sender )
 {
     if( bQuickStart )
         return false;
@@ -3996,6 +3991,8 @@ final function bool EnableCompetitiveMode()
 
 private function ActivateCompetitiveMode()
 {
+    local Mutator m;
+
     MRI.bCompetitiveMode = true;
     FullLog( "CompetitiveMode has started!" );
 
@@ -4010,14 +4007,6 @@ private function ActivateCompetitiveMode()
     Spawn( class'BTObjectiveHandler', self,, Objectives[0].Location, Objectives[0].Rotation ).Initialize( Objectives[0] );
     Spawn( class'BTEndRoundHandler', self );
 
-    DisableTeamForcing();
-    Revoted();
-}
-
-final function DisableTeamForcing()
-{
-    local Mutator m;
-
     foreach AllActors( class'Mutator', m )
     {
         if( m.IsA('LevelConfigActor') )
@@ -4026,6 +4015,7 @@ final function DisableTeamForcing()
             break;
         }
     }
+    Revoted();
 }
 
 final function bool AllowCompetitiveMode()
@@ -4070,8 +4060,6 @@ final function KillAllPawns( optional bool bSkipState )
     }
 }
 
-//==============================================================================
-// The current map was revoted
 final function Revoted()
 {
     local Controller C;
@@ -4092,7 +4080,7 @@ final function Revoted()
         }
     }
 
-    StartCountDown();
+    GotoState( 'QuickStart' );
     if( AssaultGame != none )
     {
         // Add an extra round so the game won't auto end the next time.
@@ -4113,10 +4101,10 @@ final function Revoted()
 
     // Client actors destroy themself
     ClientPlayerStarts.Length = 0;
-    //ClearClientStarts();
 
-    // All pawns should be killed on revote!
-    KillGhostRecorders();
+    if (GhostManager != none) {
+        GhostManager.Saver.EndRecording();
+    }
     KillAllPawns();
     SaveAll();
 }
@@ -4126,8 +4114,6 @@ function ServerTraveling( string URL, bool bItems )
     local Controller c;
 
     FullLog( "*** ServerTraveling ***" );
-    super.ServerTraveling( URL, bItems );
-
     if( UsedSlot != -1 )
     {
         RDat.Rec[UsedSlot].PlayHours += Level.TimeSeconds/60 / 60;
@@ -4144,6 +4130,8 @@ function ServerTraveling( string URL, bool bItems )
     // Map is switching, save everything!
     SaveAll();
     Free();
+
+    super.ServerTraveling( URL, bItems );
 }
 
 function DebugObjects()
@@ -4173,56 +4161,17 @@ function DebugObjects()
 
 private final function Free()
 {
-    local int i;
-
     if( Notify != none )
     {
         Notify.Free();
-    }
-
-    if( PDat != none )
-    {
-        PDat.Free();
-        PDat = none;
-    }
-
-    if( RDat != none )
-    {
-        RDat.Free();
-        RDat = none;
     }
 
     if( Store != none )
     {
         Store.Free();
     }
-
-    if( AchievementsManager != none )
-    {
-        AchievementsManager.Free();
-        AchievementsManager = none;
-    }
-
-    if( ChallengesManager != none )
-    {
-        ChallengesManager.Free();
-        ChallengesManager = none;
-    }
-
-    if( GhostManager != none )
-    {
-        for( i = 0; i < GhostManager.Ghosts.Length; ++ i )
-        {
-            if( GhostManager.Ghosts[i].GhostData != none )
-            {
-                GhostManager.Ghosts[i].GhostData.Free();
-            }
-        }
-    }
 }
 
-//==============================================================================
-// Game is being reset
 function Reset()
 {
     FullLog( "*** Reset ***" );
@@ -4896,7 +4845,7 @@ final private function bool SubmitPlayerTime(
     finishMsg = "%PLAYER% completed" @ class'HUD_Assault'.static.GetTeamColor( 1 )$myLevel.GetLevelName()$cEnd;
 
     PLs = CR.myPlayerSlot + 1;
-    UpdatePlayerSlot( PC, PLs - 1, True );      // Update names etc
+    UpdatePlayerStand( PC, PLs - 1, True );      // Update names etc
     ++ PDat.Player[PLs - 1].PLSF;               // Amount of times this user finished a solo map.
     ++ RDat.Rec[mapIndex].TMFinish;
 
@@ -5346,8 +5295,6 @@ static final function int GetPlayerObjectives( PlayerController PC )
     return 0;
 }
 
-//==============================================================================
-// CheckReplacement
 function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
 {
     local BTServer_NotifyLogin NL;
@@ -5355,17 +5302,7 @@ function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
     local BTServer_NameUpdateDelay NUD;
     local int i;
 
-    if( PlayerController(Other) != none )
-    {
-        // Skip bots etc
-        if( !PlayerController(Other).bIsPlayer )
-            return true;
-
-        NL = Spawn( Class'BTServer_NotifyLogin', self );
-        NL.Player = PlayerController(Other);
-        return true;
-    }
-    else if( UTServerAdminSpectator(Other) != none )
+    if( UTServerAdminSpectator(Other) != none )
     {
         WebAdminActor = UTServerAdminSpectator(Other);
         if( WebAdminActor.PlayerReplicationInfo != none )
@@ -5374,6 +5311,16 @@ function bool CheckReplacement( Actor Other, out byte bSuperRelevant )
             WebAdminActor.PlayerReplicationInfo.bOnlySpectator = false;
             WebAdminActor.PlayerReplicationInfo.bAdmin = true;
         }
+        return true;
+    }
+    else if( PlayerController(Other) != none )
+    {
+        // Skip bots etc
+        if( !PlayerController(Other).bIsPlayer )
+            return true;
+
+        NL = Spawn( Class'BTServer_NotifyLogin', self );
+        NL.Player = PlayerController(Other);
         return true;
     }
     else if( PlayerReplicationInfo(Other) != none )
@@ -5503,9 +5450,7 @@ final function ProcessPlayerLogout( Controller player )
     }
 }
 
-//==============================================================================
-// NotifyLogout
-function NotifyLogout( Controller Exiting )                                         // .:..:, Eliot
+function NotifyLogout( Controller Exiting )
 {
     local int i;
 
@@ -5548,17 +5493,13 @@ function NotifyLogout( Controller Exiting )                                     
     }
 }
 
-//==============================================================================
-// ModifyLogin
-function ModifyLogin(out string Portal, out string Options)                     // .:..:
+function ModifyLogin(out string Portal, out string Options)
 {
     Super.ModifyLogin(Portal,Options);
     Level.Game.bWelcomePending = true;
 }
 
-//==============================================================================
-// RetriveScore
-private function RetrieveScore( PlayerController Other, string ClientID )       // .:..:, Eliot
+private function RetrieveScore( PlayerController Other, string ClientID )
 {
     local int i, j;
 
@@ -5592,8 +5533,6 @@ private function RetrieveScore( PlayerController Other, string ClientID )       
     KeepScoreTable[j].ClientFlesh = Other;
 }
 
-//==============================================================================
-// Macro for logging
 final function FullLog( coerce string Print )
 {
     // Suppress=MutBestTimes
@@ -5638,29 +5577,9 @@ final function int FastFindPlayerSlot( PlayerController PC )
 }
 
 //==============================================================================
-// Create player account by using a players GUID
-// Note to access the real Slot always cut the return value by -1
-// 0 and -1 are used as NONE
-final function int CreatePlayerSlot( PlayerController PC, string ClientID )
-{
-    local int j;
-
-    j = PDat.Player.Length;
-    PDat.Player.Length = j+1;
-    PDat.Player[j].PLID = ClientID;
-    if( PC.PlayerReplicationInfo != None )
-    {
-        PDat.Player[j].PLNAME = PC.PlayerReplicationInfo.PlayerName;
-        PDat.Player[j].PLCHAR = PC.PlayerReplicationInfo.CharacterName;
-    }
-    PDat.Player[j].RegisterDate = RDat.MakeCompactDate( Level );
-    return j+1;
-}
-
-//==============================================================================
 // Update player account Name and character
 // bUpdateScoreboard only set this to true after the BTClient_ClientReplication is initialized!
-final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional bool bUpdateScoreboard )
+final function UpdatePlayerStand( PlayerController PC, int playerIndex, Optional bool bUpdateScoreboard )
 {
     local LinkedReplicationInfo LRI;
     local string s;
@@ -5670,7 +5589,7 @@ final function UpdatePlayerSlot( PlayerController PC, int playerIndex, Optional 
 
     if( playerIndex >= PDat.Player.Length || playerIndex < 0 )
     {
-        FullLog( "UpdatePlayerSlot::playerIndex is not valid!" );
+        FullLog( "UpdatePlayerStand::playerIndex is not valid!" );
         return;
     }
 
@@ -5725,14 +5644,9 @@ function InternalOnCountryCodeReceived( BTHttpIpToCountry sender, string country
     }
 }
 
-// =============================================================================
-// Updates the name of PC for everyones local Rankings/Solo Scoreboard!
-// CR required!
-final function UpdateScoreboard( PlayerController PC )
+private function UpdateScoreboard( PlayerController PC )
 {
-    // local Controller C;
-    local BTClient_ClientReplication myCR;//, CR;
-    // local BTClient_ClientReplication.sSoloPacket NewTPacket;
+    local BTClient_ClientReplication myCR;
 
     if( !ModeIsTrials() )
     {
@@ -5743,7 +5657,7 @@ final function UpdateScoreboard( PlayerController PC )
     if( myCR == none || myCR.myPlayerSlot == -1 )
         return;
 
-    // Update regardless of which improved rank position.
+    // Update regardless of rank position.
     if( MRI.RecordState == RS_Active && RDat.Rec[UsedSlot].PSRL.Length > 0 )
     {
         UpdateRecordHoldersMessage();
@@ -5763,7 +5677,7 @@ final function UpdateScoreboard( PlayerController PC )
 // TD = Table Data      e.g. content
 // TH = Table Header    e.g. title
 //  Note:   This is called before GameReplicationInfo etc is initialized
-final function CreateWebBTimes()                                                        // .:..:, Eliot
+private function CreateWebBTimes()
 {
     local array<string> SS;
     local int Pos, i, j;
@@ -5966,9 +5880,7 @@ final function CreateWebBTimes()                                                
     }
 }
 
-//==============================================================================
-// Convert time value to string
-static final function string TimeToStr( float Value )                                       // .:..:, Epic Games
+private static function string TimeToStr( float Value )
 {
     // Rewroten for Milliseconds support by Eliot
     local int Minutes;
@@ -5996,7 +5908,7 @@ static final function string TimeToStr( float Value )                           
 }
 
 // Thx to: http://alcor.concordia.ca/~gpkatch/gdate-algorithm.html
-final function int DateToDays( int y, int m, int d )
+private static function int DateToDays( int y, int m, int d )
 {
     m = (m + 9) % 12;
     y -= m/10;
@@ -6008,32 +5920,6 @@ final function int GetDaysSince( int y, int m, int d )
     return DateToDays( Level.Year, Level.Month, Level.Day ) - DateToDays( y, m, d );
 }
 
-final function RecordGhostForPlayer( PlayerController other )
-{
-    if( GhostManager == none )
-        return;
-
-    GhostManager.Saver.RecordPlayer( other );
-}
-
-final function RestartGhostRecording( PlayerController other )
-{
-    if( GhostManager == none )
-        return;
-
-    GhostManager.Saver.RecordPlayer( other );
-}
-
-final function KillGhostRecorders()
-{
-    if( GhostManager == none )
-        return;
-
-    GhostManager.Saver.EndRecording();
-}
-
-//==============================================================================
-// Remove ghost from players list
 function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
 {
     if( bCountSpectatorsAsPlayers )
@@ -6043,8 +5929,6 @@ function GetServerPlayers( out GameInfo.ServerResponseLine ServerState )
     }
 }
 
-//==============================================================================
-// Add random stuff
 function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
 {
     if( CurMode != None )
@@ -6074,13 +5958,6 @@ function GetServerDetails( out GameInfo.ServerResponseLine ServerState )
     }
 }
 
-static final function string MakeColor( byte R, byte G, byte B, optional byte A )
-{
-    return Class'GameInfo'.Static.MakeColorCode( Class'Canvas'.Static.MakeColor( R, G, B, A ) );
-}
-
-//==============================================================================
-// Broadcast an announcement
 final function BroadcastAnnouncement( name soundName )
 {
     local Controller C;
@@ -6096,11 +5973,6 @@ final function BroadcastSound( sound Snd, optional Actor.ESoundSlot soundSlot )
 
     if( Snd == none )
         return;
-
-    if( soundSlot == SLOT_None )
-    {
-        soundSlot = SLOT_Misc;
-    }
 
     for( C = Level.ControllerList; C != None; C = C.NextController )
         if( PlayerController(C) != None )
@@ -6126,35 +5998,26 @@ private function UpdatePlayerCountry( PlayerController client, int playerIndex )
 final function NotifyPostLogin( PlayerController client, string guid )
 {
     local int playerSlot;
+    local int loginDate;
 
-    // Player joined while server traveling?
-    if( PDat == none )
-    {
-        Warn( "PDat == none @ NotifyPostLogin" @ guid );
-        return;
-    }
+    loginDate = RDat.MakeCompactDate( Level );
 
-    // Create one if none found.
     playerSlot = FindPlayerSlot( guid );
     if( playerSlot == -1 )
-        playerSlot = CreatePlayerSlot( client, guid );
+        playerSlot = PDat.CreatePlayer( guid, loginDate );
 
     -- playerSlot; // Real slot!
 
     // Update names, character etc
-    UpdatePlayerSlot( client, playerSlot, false );
+    UpdatePlayerStand( client, playerSlot, false );
     UpdatePlayerCountry( client, playerSlot );
 
     PDat.Player[playerSlot]._LastLoginTime = Level.TimeSeconds;
-    PDat.Player[playerSlot].LastPlayedDate = RDat.MakeCompactDate( Level );
+    PDat.Player[playerSlot].LastPlayedDate = loginDate;
     ++ PDat.Player[playerSlot].Played;
 
-    // Get his score from last time he logged on this current round
     RetrieveScore( client, guid );
-
-    // Start replicating rankings
-    FullLog( "initializing replication for:" @ %PDat.Player[playerSlot].PLName );
-    CreateReplication( client, guid, playerSlot );
+    InitClientReplication( client, playerSlot );
 }
 
 final function BroadcastLocalMessage( Controller instigator, class<BTClient_LocalMessage> messageClass, string message, optional int switch )
@@ -6201,11 +6064,11 @@ private function bool ReplicateLevelState( BTClient_ClientReplication CRI, BTCli
     return false;
 }
 
-//==============================================================================
-// Initialize the replication for this player
-private function CreateReplication( PlayerController PC, string SS, int playerIndex )
+private function InitClientReplication( PlayerController PC, int playerIndex )
 {
     local BTClient_ClientReplication CRI;
+
+    FullLog( "initializing replication for:" @ PC.GetHumanReadableName() );
 
     CRI = GetRep( PC );
     if( CRI == None )
@@ -6405,7 +6268,7 @@ final function string MaskToDate( int date )
     return FixedDate$"/"$Right( year, 2 );
 }
 
-final function UpdateLevelReplicationState( int mapIndex, optional int recordRank )
+private function UpdateLevelReplicationState( int mapIndex, optional int recordRank )
 {
     local Controller C;
     local BTClient_ClientReplication rep;
@@ -6449,7 +6312,7 @@ final function UpdateLevelReplicationState( int mapIndex, optional int recordRan
     }
 }
 
-final function float GetAverageRecordTime( int recordSlot )
+private function float GetAverageRecordTime( int recordSlot )
 {
     local int i;
     local float mean;
@@ -6466,22 +6329,7 @@ final function float GetAverageRecordTime( int recordSlot )
     return mean / i;
 }
 
-final protected function StartCountDown()
-{
-    GotoState( 'QuickStart' );
-}
-
-final private function ScanSpeedTest()
-{
-    local int i;
-
-    StopWatch( false );
-    i = FindPlayerSlot( "000000000000000000000000" );
-    StopWatch( True );
-}
-
-//==============================Data functions==================================
-final function LoadData()
+private function LoadData()
 {
     PDatManager = Spawn( class'BTPlayersDataManager', self );
     PDat = PDatManager.Init();
@@ -6500,22 +6348,17 @@ final function SavePlayers()
     PDatManager.Save();
 }
 
-final function SaveGhosts()
-{
-    if( GhostManager == none )
-        return;
-
-    GhostManager.SaveDirtyPackages();
-}
-
 final function SaveAll()
 {
     SaveRecords();
     SavePlayers();
-    SaveGhosts();
+
+    if (GhostManager != none) {
+        GhostManager.SaveDirtyPackages();
+    }
 }
 
-final function bool MergeRecordsData( string uvxFileName )
+private function bool MergeRecordsData( string uvxFileName )
 {
     local BTServer_RecordsData sourceRDat;
 
@@ -6536,9 +6379,8 @@ final function bool MergeRecordsData( string uvxFileName )
     return true;
 }
 
-//==============================================================================
 // Exports a record array element out of RDat into a new .uvx file
-final function bool ExportRecordData( string MapName )
+private function bool ExportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
     local int mapIdx;
@@ -6564,9 +6406,8 @@ final function bool ExportRecordData( string MapName )
     return false;
 }
 
-//==============================================================================
 // Imports a .uvx file into RDat
-final function bool ImportRecordData( string MapName )
+private function bool ImportRecordData( string MapName )
 {
     local BTServer_RecordObject tempRecObj;
     local int mapIdx;
@@ -6595,66 +6436,6 @@ final function bool ImportRecordData( string MapName )
         return true;
     }
     return false;
-}
-//==============================Data functions==================================
-
-//==============================================================================
-// Obsolete
-final function AutoTeam()
-{
-    //local Controller C;
-    //local UnrealTeamInfo NewTeam;
-
-    /*for( C = Level.ControllerList; C != None; C = C.NextController )
-    {
-        if( PlayerController(C) != None )
-        {
-            if( (C.PlayerReplicationInfo.bIsSpectator || C.PlayerReplicationInfo.bOnlySpectator) && !C.PlayerReplicationInfo.bWaitingPlayer )
-                continue;
-
-            if( Level.Game.IsOnTeam( C, AssaultGame.CurrentAttackingTeam-1 ) )
-                continue;
-
-            if( C.Pawn != None )
-                C.Pawn.Destroy();
-
-            NewTeam = AssaultGame.Teams[AssaultGame.PickTeam( AssaultGame.CurrentAttackingTeam-1, C )];
-            C.StartSpot = None;
-            C.PlayerReplicationInfo.Team.RemoveFromTeam( C );
-            NewTeam.AddToTeam( C );
-
-            //AssaultGame.ChangeTeam( C, AssaultGame.CurrentAttackingTeam-1, True );
-
-            if( C.Pawn != None )
-                C.Pawn.Destroy();
-        }
-    }*/
-}
-
-// Find out if there are mutliple people using one GUID( from PC ) that are currently in-game(not spectating if bNoSpec)
-final function bool FoundDuplicateID( PlayerController PC, optional bool bIgnoreSpectators )
-{
-    local Controller C;
-    local string ID;
-
-    if( PC == None )
-        return False;
-
-    ID = PC.GetPlayerIDHash();
-    for( C = Level.ControllerList; C != None; C = C.NextController )
-    {
-        if( PlayerController(C) == None || C.PlayerReplicationInfo == None || C == PC || MessagingSpectator(C) != None )
-            continue;
-
-        if( PlayerController(C).GetPlayerIDHash() == ID )
-        {
-            if( bIgnoreSpectators && IsSpectator( C.PlayerReplicationInfo ) )
-                continue;
-
-            return True;
-        }
-    }
-    return False;
 }
 
 static final function bool IsSpectator( PlayerReplicationInfo PRI )
@@ -6720,13 +6501,13 @@ Begin:
     GotoState( '' );
 }
 
-final function UpdateEndMsg( string endMsg )
+private function UpdateEndMsg( string endMsg )
 {
     MRI.EndMsg = endMsg;
     MRI.NetUpdateTime = Level.TimeSeconds - 1;
 }
 
-final function AddHistory( string NewLine )
+private function AddHistory( string NewLine )
 {
     if( History.Length >= MaxHistoryLength )
         History.Remove( 0, 1 );
@@ -6735,7 +6516,8 @@ final function AddHistory( string NewLine )
     History[History.Length] = NewLine;
 }
 
-final function AddRecentSetRecordToPlayer( int PlayerSlot, string Text )
+// TODO: Deprecate
+private function AddRecentSetRecordToPlayer( int PlayerSlot, string Text )
 {
     local int j;
 
@@ -6748,7 +6530,7 @@ final function AddRecentSetRecordToPlayer( int PlayerSlot, string Text )
     PDat.Player[PlayerSlot - 1].RecentSetRecords[j] = Text;
 }
 
-final function int GetGroupTaskPoints( int groupIndex )
+private function int GetGroupTaskPoints( int groupIndex )
 {
     local int i, points;
 

@@ -112,9 +112,8 @@ function ModePostBeginPlay()
 function ModeMatchStarting()
 {
     super.ModeMatchStarting();
-    if( MRI.MapLevel == none )
+    if( MRI.MapLevel == none ) // = Map with multiple levels
     {
-        DisableTeamForcing();
         Level.Game.GameReplicationInfo.bNoTeamSkins = true;
         Level.Game.GameReplicationInfo.bForceNoPlayerLights = true;
         Level.Game.GameReplicationInfo.bNoTeamChanges = true;
@@ -320,7 +319,7 @@ function ModeModifyPlayer( Pawn other, Controller c, BTClient_ClientReplication 
         if( GhostManager != none && (CRI.PlayingLevel != none || MRI.MapLevel != none) )
         {
             // Restart ghost recording!
-            RestartGhostRecording( PlayerController(c) );
+            GhostManager.Saver.RecordPlayer( PlayerController(c) );
 
             // Reset ghost, if wanted
             if( !RDat.Rec[UsedSlot].TMGhostDisabled )

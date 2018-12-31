@@ -126,10 +126,6 @@ var int DayTest;
 var transient int TotalActivePlayersCount;
 var transient bool bCachedData;
 
-final function Free()
-{
-}
-
 final function Init( MutBestTimes mut )
 {
 }
@@ -562,38 +558,6 @@ final function int CountCompletedAchievements( MutBestTimes BT, int playerSlot )
     return numAchievements;
 }
 
-/** Strips all color tags from A. */
-static final preoperator string %( string A )
-{
-    local int i;
-
-    while( true )
-    {
-        i = InStr( A, Chr( 0x1B ) );
-        if( i != -1 )
-        {
-            A = Left( A, i ) $ Mid( A, i + 4 );
-            continue;
-        }
-        break;
-    }
-    return A;
-}
-
-final function int FindPlayer( string playerName )
-{
-    local int i;
-
-    for( i = 0; i < Player.Length; ++ i )
-    {
-        if( %Player[i].PLNAME == playerName )
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-
 final function int FindPlayerByID( string playerID )
 {
     local int i;
@@ -606,6 +570,21 @@ final function int FindPlayerByID( string playerID )
         }
     }
     return -1;
+}
+
+//==============================================================================
+// Creates a player account on basis of a GUID.
+// Note to access the real index always cut the return value by -1
+// 0 and -1 are used as NONE
+final function int CreatePlayer( string guid, int loginDate )
+{
+    local int j;
+
+    j = Player.Length;
+    Player.Length = j+1;
+    Player[j].PLID = guid;
+    Player[j].RegisterDate = loginDate;
+    return j+1;
 }
 
 defaultproperties

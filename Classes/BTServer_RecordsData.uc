@@ -116,10 +116,6 @@ var int DataVersion;
 var int SavedPointsVersion;
 var transient bool bCachVerified;
 
-final function Free()
-{
-}
-
 final function Init( MutBestTimes mut )
 {
     ConvertData();

@@ -14,14 +14,14 @@ event PostBeginPlay();
 
 event Timer()
 {
-    local int playerSlot;
+    local int playerIndex;
 
     if( client != None )
     {
-        playerSlot = MutBestTimes(Owner).FastFindPlayerSlot( Client );
-        if( playerSlot != -1 )
+        playerIndex = MutBestTimes(Owner).FastFindPlayerSlot( Client )-1;
+        if( playerIndex != -1 )
         {
-            MutBestTimes(Owner).UpdatePlayerSlot( Client, playerSlot-1, true );
+            MutBestTimes(Owner).UpdatePlayerStand( Client, playerIndex, true );
         }
     }
     Destroy();

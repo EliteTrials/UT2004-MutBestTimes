@@ -70,8 +70,6 @@ struct sMapTrigger
 var() array<sMapTrigger> MapTriggers;
 var config array<sMapTrigger> CustomMapTriggers;
 
-final function Free();
-
 /** Necessary to load up the achievements collection. */
 final static function BTAchievements Load()
 {
