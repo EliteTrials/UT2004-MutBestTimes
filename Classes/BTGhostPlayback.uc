@@ -253,11 +253,6 @@ event Destroyed()
     OnGhostEndPlay = none;
 
     PausePlay();
-    if( GhostData != none )
-    {
-        GhostData.Free();
-        GhostData = none;
-    }
 }
 
 defaultproperties

@@ -15,6 +15,7 @@ var() const class<BTGhostPlayback> GhostPlaybackClass;
 // The ghosts that we are currently playing, if a ghost is missing from this array, then it will be deleted from the package on the next save.
 var array<BTGhostPlayback> Ghosts, CustomGhosts;
 var BTGhostSaver Saver;
+
 // Pending packages that have became dirty and need to be saved.
 var private array<string> DirtyPackageNames;
 var private MutBestTimes BT;
@@ -26,7 +27,7 @@ event PreBeginPlay()
     Saver.Manager = self;
 }
 
-final function string GetPackageNameFor( string mapName, optional string ghostId )
+private function string GetPackageNameFor( string mapName, optional string ghostId )
 {
     return Eval(ghostId != "", GhostDataPackagePrefix $ mapName $ "_" $ ghostId, GhostDataPackagePrefix $ mapName);
 }
@@ -55,7 +56,7 @@ final function SqueezeGhosts( optional bool byRank )
 }
 
 // 0 = no rank
-final function int GetGhostRank( BTGhostPlayback playback )
+private function int GetGhostRank( BTGhostPlayback playback )
 {
     local int ghostRank, mapIndex;
 
@@ -125,18 +126,21 @@ final function SpawnGhosts( BTClient_LevelReplication myLevel, array<string> gho
     local Manifest manifest;
 
     mapName = BT.RDat.Rec[myLevel.MapIndex].TMN;
-    // if (ghostNames.Length == 0) {
-        manifest = Level.Game.GetSavedGames();
-        if (manifest != none) {
-            ghostPackageName = GetPackageNameFor( mapName );
-            for (i = 0; i < manifest.ManifestEntries.Length; ++ i) {
-                if (manifest.ManifestEntries[i] ~= ghostPackageName) {
-                    ConvertGhosts(myLevel, ghostPackageName);
-                }
+    if (MapHasGhosts(mapName)) {
+        // Don't spawn the ghosts multiple times.
+        return;
+    }
+
+    // Lookup a manifest of old ghost files for conversion.
+    manifest = Level.Game.GetSavedGames();
+    if (manifest != none) {
+        ghostPackageName = GetPackageNameFor( mapName );
+        for (i = 0; i < manifest.ManifestEntries.Length; ++ i) {
+            if (manifest.ManifestEntries[i] ~= ghostPackageName) {
+                ConvertGhosts(myLevel, ghostPackageName);
             }
         }
-        // return;
-    // }
+    }
 
     for (i = 0; i < ghostNames.Length; ++ i) {
         ghostPackageName = GetPackageNameFor( mapName, ghostNames[i] );
@@ -145,12 +149,24 @@ final function SpawnGhosts( BTClient_LevelReplication myLevel, array<string> gho
     }
 }
 
-final function AddGhost( BTGhostPlayback playback )
+private function bool MapHasGhosts( string mapName )
+{
+    local int i;
+
+    for (i = 0; i < Ghosts.Length; ++ i) {
+        if (Ghosts[i].GhostMapName == mapName) {
+            return true;
+        }
+    }
+    return false;
+}
+
+private function AddGhost( BTGhostPlayback playback )
 {
     Ghosts[Ghosts.Length] = playback;
 }
 
-final function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay, optional bool isCustom )
+private function BTGhostPlayback CreateGhostPlayback( BTGhostData data, string mapName, optional bool instantPlay, optional bool isCustom )
 {
     local int playerSlot;
     local int ghostRank;
@@ -205,7 +221,7 @@ private function AddDirtyPackage( string packageName )
 }
 
 /** Returns an active BTGhostData object or will load one when not found. */
-final function BTGhostData GetGhostData( string mapName, string ghostId )
+final function BTGhostData GetGhostData( string mapName, string ghostId, optional bool bNew )
 {
     local int i;
     local BTGhostData ghostData;
@@ -223,10 +239,19 @@ final function BTGhostData GetGhostData( string mapName, string ghostId )
     }
 
     ghostData = Level.Game.LoadDataObject( GhostDataClass, GHOST_OBJECT_NAME, ghostPackageName );
+    if (bNew) {
+        if (ghostData == none) {
+            return CreateGhostData(mapName, ghostId);
+        } else {
+			ghostData.Init(); // new version
+			ghostData.MO.Length = 0;
+			ghostData.bIsDirty = true;
+        }
+    }
     return ghostData;
 }
 
-final function BTGhostData CreateGhostData( string mapName, string ghostId )
+private function BTGhostData CreateGhostData( string mapName, string ghostId )
 {
     local BTGhostData data;
     local string ghostPackageName;
@@ -303,32 +328,6 @@ final function ClearGhostsData( string mapName, optional bool bCurrentMap )
     }
 }
 
-final function GhostsRespawn()
-{
-    local int i;
-
-    // BT.FullLog( "Ghost::GhostsRespawn" );
-    for( i = 0; i < Ghosts.Length; ++ i )
-    {
-        Ghosts[i].RestartPlay();
-    }
-}
-
-final function int FindGhostByRank( string mapName, int ghostRank )
-{
-    local int i;
-
-    for( i = 0; i < Ghosts.Length; ++ i )
-    {
-        if( Ghosts[i].GhostMapName == mapName
-            && GetGhostRank( Ghosts[i] ) == ghostRank )
-        {
-            return i;
-        }
-    }
-    return -1;
-}
-
 final function BTGhostPlayback SpawnCustomGhostFor( string mapName, string ghostId, PlayerController c )
 {
     local int i;
@@ -385,24 +384,6 @@ final function bool KillGhostFor( Controller c )
         }
     }
     return false;
-}
-
-final function GhostsKill()
-{
-    local int i;
-
-    BT.FullLog( "Ghost::GhostsKill" );
-    for( i = 0; i < Ghosts.Length; ++ i )
-    {
-        Ghosts[i].Destroy();
-    }
-    Ghosts.Length = 0;
-
-    for( i = 0; i < CustomGhosts.Length; ++ i )
-    {
-        CustomGhosts[i].Destroy();
-    }
-    CustomGhosts.Length = 0;
 }
 
 // Respawn all ghosts once the ghosts have reached the end of their playback.
@@ -469,24 +450,17 @@ final function OnGhostSaved( BTGhostSaver.sGhostInfo ghostInfo )
     }
 }
 
-final function Pawn GetGhostPawn( int ghostIndex )
-{
-    if( Ghosts[ghostIndex].Controller == none )
-        return none;
-
-    return Ghosts[ghostIndex].Controller.Pawn;
-}
-
 function Reset()
 {
-    super.Reset();
-    GhostsRespawn();
-}
+    local int i;
 
-event Destroyed()
-{
-    super.Destroyed();
-    GhostsKill();
+    super.Reset();
+
+    // BT.FullLog( "Ghost::GhostsRespawn" );
+    for( i = 0; i < Ghosts.Length; ++ i )
+    {
+        Ghosts[i].RestartPlay();
+    }
 }
 
 defaultproperties

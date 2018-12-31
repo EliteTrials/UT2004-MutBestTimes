@@ -103,7 +103,3 @@ final function Init()
 {
     DataVersion = Version;
 }
-
-final function Free()
-{
-}
