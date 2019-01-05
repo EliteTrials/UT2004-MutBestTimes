@@ -186,49 +186,6 @@ exec function ActivateKey( string key )
     BT( "ActivateKey" @ key );
 }
 
-exec function BTCommands()
-{
-    if( ViewportOwner.Actor.PlayerReplicationInfo.bAdmin )
-    {
-        ViewportOwner.Actor.ServerMutate( "BTCommands" );
-    }
-    else
-    {
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "VoteMapSeq <Sequence>" );
-        SendConsoleMessage( "VoteMap <MapName>" );
-        SendConsoleMessage( "RevoteMap (Revotes the Current Map)" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "ToggleRanking (Opens the ranks scoreboard)" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "SpeedRun" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "StartTimer" );
-        SendConsoleMessage( "PauseTimer" );
-        SendConsoleMessage( "StopTimer" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "RecentRecords" );
-        SendConsoleMessage( "RecentHistory" );
-        SendConsoleMessage( "RecentMaps" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "ShowMapInfo <MapName>" );
-        SendConsoleMessage( "ShowPlayerInfo <PlayerName>" );
-        SendConsoleMessage( "ShowMissingRecords" );
-        SendConsoleMessage( "ShowBadRecords" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "SetClientSpawn" );
-        SendConsoleMessage( "DeleteClientSpawn" );
-        SendConsoleMessage( "..." );
-        SendConsoleMessage( "TrailerMenu" );
-        SendConsoleMessage( "SetTrailerColor 255 255 255 128 128 128 (Only if Ranked!)" );
-        SendConsoleMessage( "SetTrailerTexture <Package.Group.Name> (Only if Ranked!)" );
-        SendConsoleMessage( "..." );
-
-        if( MRI.RankingPage != "" )
-            SendConsoleMessage( "ShowBestTimes (Loads Website!)" );
-    }
-}
-
 exec function SetConfigProperty( string Property, string Value )
 {
     if( Options != None )
@@ -241,24 +198,6 @@ exec function SetConfigProperty( string Property, string Value )
 exec function CloseDialog()
 {
     MRI.CR.Text.Length = 0;
-}
-
-exec function SetTableColor( optional color tc )
-{
-    Options.CTable = tc;
-    Options.SaveConfig();
-}
-
-exec function SetTextColor( optional color tc )
-{
-    Options.CGoldText = tc;
-    Options.SaveConfig();
-}
-
-exec function SetPreferedColor( optional Color newPreferedColor )
-{
-    Options.PreferedColor = newPreferedColor;
-    UpdatePreferedColor();
 }
 
 exec function UpdatePreferedColor()
@@ -302,23 +241,6 @@ exec function ShowBestTimes()
         ConsoleCommand( "open"@FPage );
     }
     else SendConsoleMessage( "Sorry ShowBestTimes is not available on this server!" );
-}
-
-exec function ClearAttachments()
-{
-    local int i, j;
-    local Pawn P;
-
-    P = ViewportOwner.Actor.Pawn;
-    if( P != None )
-    {
-        j = P.Attached.Length;
-        for( i = 0; i < j; ++ i )
-        {
-            if( P.Attached[i] != None )
-                P.Attached[i].Destroy();
-        }
-    }
 }
 
 exec function edit_Trailer()
@@ -464,28 +386,8 @@ exec function SpeedRun()
     Options.SaveConfig();
 }
 
-exec function ToggleColorFade()
-{
-    Options.bFadeTextColors = !Options.bFadeTextColors;
-    SendConsoleMessage( "FadeTextColors:"$Options.bFadeTextColors );
-    Options.SaveConfig();
-}
-
-exec function TogglePersonalTimer()
-{
-    Options.bBaseTimeLeftOnPersonal = !Options.bBaseTimeLeftOnPersonal;
-    SendConsoleMessage( "Using PersonalTime:"$Options.bBaseTimeLeftOnPersonal );
-    Options.SaveConfig();
-}
-
 function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
 {
-    local string S;
-
-    S = Caps( ViewportOwner.Actor.ConsoleCommand( "KEYBINDING"@Chr( Key ) ) );
-    if( InStr( S, "SHOWALL" ) != -1 )
-        return true;        // Ignore Input!.
-
     // Wait until the game's state is completely replicated.
     if( MRI.CR == none )
         return false;
@@ -683,23 +585,6 @@ event Tick( float DeltaTime )
         {
             ++ ElapsedTime;
             LastTickTime = MRI.Level.TimeSeconds + 1.0;
-        }
-    }
-
-    /* Anti-ShowAll */
-    C = ViewportOwner.Actor.Player.Console;
-    if( C != none )
-    {
-        // Kick if player is attempting to use the illegal command Showall.
-        if( C.HistoryCur-1 > 16 || C.HistoryCur-1 < 0 )
-            return;
-
-        if( C.History[C.HistoryCur-1] ~= "ShowAll" || Left( C.History[C.HistoryCur-1] , 7 ) ~= "ShowAll" )
-        {
-            C.History[C.HistoryCur-1] = "";
-            SendConsoleMessage( "ShowAll is not allowed on this server, therefor you have been kicked" );
-            ConsoleCommand( "Disconnect" );
-            return;
         }
     }
 
