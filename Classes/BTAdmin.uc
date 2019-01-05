@@ -62,11 +62,11 @@ event Query( WebRequest request, WebResponse response )
     }
     else if( request.URI == "/playerspanel.htm" )
     {
-        response.SendText( "<table><tr><th>PlayerName</th><th>PlayerGUID</th><th>Play Hours</th></tr>" );
+        response.SendText( "<table><tr><th>Player GUID</th><th>Player Name</th><th>Play Hours</th></tr>" );
         for( i = 0; i < BT.PDat.Player.Length; ++ i )
         {
-            response.SendText( "<tr><td><a href='" $ BT.PDat.Player[i].PLID $ ".acc'>" $ %BT.PDat.Player[i].PLNAME $
-            "</td><td>" $ BT.PDat.Player[i].PLID $
+            response.SendText( "<tr><td><a href='" $ BT.PDat.Player[i].PLID $ ".acc'>" $ BT.PDat.Player[i].PLID $
+            "</td><td>" $ %BT.PDat.Player[i].PLNAME $
             "</td><td>" $ BT.PDat.Player[i].PlayHours $
             "</td></tr>" );
         }
@@ -181,7 +181,7 @@ function GenerateAcc( WebRequest request, WebResponse response )
     }
 
     playerName = %BT.PDat.Player[accSlot].PLNAME;
-    response.SendText( "<h1>" $ playerName $ "</h1>" );
+    response.SendText( "<h1>Player:" @ playerName $ "</h1>" );
 
     response.SendText( "<table><tr><th>Option</th><th>Value</th></tr>" );
     response.SendText( CreateTextBox( response, "Player GUID", "playerid", playerID ) );
@@ -195,7 +195,7 @@ function GenerateRec( WebRequest request, WebResponse response )
     local string mapName;
 
     mapName = Mid( Left( request.URI, InStr( request.URI, ".rec" ) ), 1 );
-    response.SendText( "<h1>" $ mapName $ "</h1>" );
+    response.SendText( "<h1>Map:" @ mapName $ "</h1>" );
 
     recSlot = BT.RDat.FindRecord( mapName );
     if( recSlot == -1 )
