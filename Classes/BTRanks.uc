@@ -381,12 +381,12 @@ final function CalcRecordPoints( int mapIndex )
         RDat.Rec[mapIndex].PSRL[i].Points = 1000.00 + FMax( times[i] + timeMedian, -1000.0);
     }
     RDat.Rec[mapIndex].AverageRecordTime = Exp( Exp( timeMean ) );
-    RDat.Rec[mapIndex].Rating = 1000.00 + timeStd;
+    RDat.Rec[mapIndex].Rating = 1000.00 + FMax( timeMean + timeMedian, -1000.0);
 }
 
 final function bool IsRankedMap( int mapIndex )
 {
-	return !(RDat.Rec[mapIndex].bIgnoreStats || RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS);
+	return !(RDat.Rec[mapIndex].bIgnoreStats || RDat.Rec[mapIndex].PSRL.Length < MIN_MAP_RECORDS || !RDat.Rec[mapIndex].bMapIsActive);
 }
 
 final function int GetMinMapRecords()
