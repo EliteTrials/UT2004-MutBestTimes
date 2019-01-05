@@ -74,7 +74,7 @@ private function AddMarkers( BTClient_LevelReplication ghostLevel )
             if( (marker == none && VSize( GhostData.MO[0].P - GhostData.MO[i].P ) > 512)
                 || (marker != none && VSize( marker.Location - GhostData.RelativeSpawnOffset - GhostData.MO[i].P ) > 512) )
             {
-                marker = Spawn( GhostMarkerClass, self,, GhostData.MO[i].P + GhostData.RelativeSpawnOffset );
+                marker = Spawn( GhostMarkerClass, self,, GhostData.MO[i].P + GhostData.RelativeSpawnOffset, GhostData.TinyRotToRot(GhostData.MO[i].R) );
                 marker.MoveIndex = i;
             }
         }
