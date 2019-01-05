@@ -92,6 +92,8 @@ var const
     AlphaLayer,
     RankBeacon;
 
+var const TexRotator MarkerArrow;
+
 // DODGEPERK DATA
 var Actor LastBase;
 var Actor.EPhysics LastPhysicsState;
@@ -878,7 +880,6 @@ static final function string ReverseString( string s )
     return ss;
 }
 
-// exec, cuz of lazyness, cba to find this inter from menu!
 function UpdateToggleKey()
 {
     local string Key;
@@ -1232,95 +1233,6 @@ final function RenderZoneActors( Canvas C )
     }
 }
 
-// Calculation done by Freon_HUD !.
-final function RenderRankIcon( Canvas C )
-{
-    local xPawn P;
-    local vector Scre, CamLoc, X, Y, Z, Dir;
-    local rotator CamRot;
-    local float Dist, XL, YL, Scale, ScaleDist;
-    local string S;
-    local BTClient_ClientReplication CRI;
-
-    ForEach ViewportOwner.Actor.DynamicActors( Class'xPawn', P )
-    {
-        if
-        (
-            P == ViewportOwner.Actor.ViewTarget
-            ||
-            P.IsA('Monster')
-            ||
-            P.bHidden
-            ||
-            P.bDeleteMe
-            ||
-            P.bDeRes
-        )
-        {
-            continue;
-        }
-
-        C.GetCameraLocation( CamLoc, CamRot );
-        Dir = P.Location - CamLoc;
-        Dist = VSize( Dir );
-        if( Dist > ViewportOwner.Actor.TeamBeaconMaxDist || !ViewportOwner.Actor.FastTrace( P.Location, CamLoc ) )
-        {
-            continue;
-        }
-
-        // Don't render pawns behind me!
-        GetAxes( ViewportOwner.Actor.ViewTarget.Rotation, X, Y, Z );
-        Dir /= Dist;
-        if( !((Dir Dot X) > 0.6) )
-        {
-            continue;
-        }
-
-        if( Dist < ViewportOwner.Actor.TeamBeaconPlayerInfoMaxDist )
-        {
-            // Looks for the CRI of this Pawn
-            ForEach ViewportOwner.Actor.DynamicActors( Class'BTClient_ClientReplication', CRI )
-            {
-                if( CRI.myPawn == P )
-                {
-                    break;
-                }
-            }
-
-            if( CRI == None )
-            {
-                continue;
-            }
-
-            if( CRI.Rank == 0 )
-            {
-                continue;
-            }
-
-            S = string( CRI.Rank );
-            if( CRI.Rank < 10 )
-            {
-                S = "0"$S;
-            }
-
-            C.TextSize( S, XL, YL );
-
-            Scre = C.WorldToScreen( P.Location + vect(0,0,1) * P.CollisionHeight );
-            ScaleDist = ViewportOwner.Actor.TeamBeaconMaxDist * FClamp( 0.04 * P.CollisionRadius, 1.0, 2.0 );
-            C.Style = 1;
-            Scale = FClamp( 0.28 * (ScaleDist - Dist) / ScaleDist, 0.1, 0.25 );
-
-            C.SetPos( (Scre.X - 0.125 * (RankBeacon.USize*0.5f)), (Scre.Y - (0.125 * RankBeacon.VSize) - 72) );
-            C.DrawColor = myHUD.WhiteColor;
-            C.DrawTile( RankBeacon, RankBeacon.USize * Scale, RankBeacon.VSize * Scale, 0.0, 0.0, RankBeacon.USize, RankBeacon.VSize );
-
-            C.SetPos( (Scre.X - 0.120 * (RankBeacon.USize*0.5f)) + XL*0.5, (Scre.Y - (0.120 * RankBeacon.VSize) - 72+(YL*0.5)) );
-            C.DrawColor = Options.CGoldText;
-            C.DrawTextClipped( S, False );
-        }
-    }
-}
-
 exec function SetFontSize( int NewSize )
 {
     Options.DrawFontSize = NewSize;
@@ -1412,42 +1324,69 @@ function RenderGhostMarkings( Canvas C )
     local float XL, YL;
     local float T, YT;
     local string S;
-    local vector Dir, X, Y, Z, CamPos;
+    local vector Dir, X, Y, Z, CamPos, mX, mY;
     local rotator CamRot;
-    local float Dist;
+    local float Dist, markDir;
     local float topTime;
+    local Color positiveColor, negativeColor;
+
+    const MAX_MARKING_DIST = 1024f;
 
     if( ActiveLevel == none )
         return;
 
     topTime = GetTopTime();
+    C.GetCameraLocation( CamPos, CamRot );
+    GetAxes( CamRot, X, Y, Z );
+
+    positiveColor = GetFadingColor(class'HUD'.default.GreenColor);
+    negativeColor = GetFadingColor(class'HUD'.default.RedColor);
+
+    C.Style = 5;
     foreach ViewportOwner.Actor.DynamicActors( class'BTClient_GhostMarker', Marking )
     {
-        C.GetCameraLocation( CamPos, CamRot );
-        GetAxes( ViewportOwner.Actor.ViewTarget.Rotation, X, Y, Z );
         Dir = Marking.Location - CamPos;
         Dist = VSize( Dir );
-        Dir /= Dist;
-        if( (Dir dot X) > 0.6 && Dist < 512 )   // only render if this location is not outside the player view.
+        if( Dist > MAX_MARKING_DIST )
         {
+            continue;
+        }
+
+        Dir /= Dist;
+        if( (Dir dot X) > 0.6 )   // only render if this location is not outside the player view.
+        {
+            markDir = (vector(Marking.Rotation) dot X);
+            if (markDir < 0.0) {
+                continue;
+            }
+
             T = topTime * (float(Marking.MoveIndex)/ActiveLevel.PrimaryGhostNumMoves);
             YT = T - (topTime - GetTimeLeft());
             if( YT >= 0 )
             {
-                C.DrawColor = class'HUD'.default.GreenColor;
                 S = "+"$FormatTimeCompact( YT );
+                C.DrawColor = positiveColor;
             }
             else
             {
-                C.DrawColor = class'HUD'.default.RedColor;
                 S = FormatTimeCompact( YT );
+                C.DrawColor = negativeColor;
             }
-            C.StrLen( S, XL, YL );
+            C.DrawColor.A = 255f - 255f * (Dist/MAX_MARKING_DIST);
+
             Scr = C.WorldToScreen( Marking.Location );
+
+            C.StrLen( S, XL, YL );
             C.SetPos( Scr.X - XL*0.5, Scr.Y - YL*0.5 );
             C.DrawText( S, false );
+
+            C.SetPos( Scr.X - 16, Scr.Y - YL*0.5 - 36 );
+            GetAxes(Marking.Rotation, mX, mY, z);
+            MarkerArrow.Rotation.Yaw = Atan(Normal(mX).X, Normal(mY).Y) * 32768 / PI;
+            C.DrawTile( MarkerArrow, 32, 32, 0.0, 0.0, 128, 128 );
         }
     }
+    C.Style = 1;
 }
 
 final function RenderTitle( Canvas C )
@@ -1868,7 +1807,6 @@ function PostRender( Canvas C )
         || ViewportOwner.Actor.PlayerReplicationInfo == None )
         return;
 
-    // C.Font = Font'UT2003Fonts.jFontSmallText800x600';
     C.Font = GetScreenFont( C );
     if( myHUD != none )
     {
@@ -2636,6 +2574,13 @@ static final function string FixDate( int Date[3] )
 
 defaultproperties
 {
+    begin object class=TexRotator name=oMarkerArrow
+        Material=Texture'AS_FX_TX.HUD.Objective_Primary_Indicator'
+        UOffset=64
+        VOffset=64
+    end object
+    MarkerArrow=oMarkerArrow
+
     YOffsetScale=0.6
     Orange=(R=255,G=255,B=0,A=255)
 
