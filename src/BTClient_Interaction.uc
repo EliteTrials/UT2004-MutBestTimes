@@ -66,14 +66,10 @@ var bool
     bTestRun,
     bPauseTest,
     bMenuModified,
-    bNoRenderZoneActors, bRenderAll, bRenderOnlyDynamic;
+    bRenderAll, bRenderOnlyDynamic;
 
 var name RenderTag;
 var byte RenderMode;
-
-// Table
-// Page 0 : Draw Best Ranked Players
-// Page 1 : Draw Best Top Records (current map)
 
 var int ElapsedTime;
 
@@ -82,8 +78,7 @@ var float
     Delay,
     YOffsetScale,                               // Offset scale for EndMap tables
     LastTime,
-    DrawnTimer,
-    LastShowAllCheck;
+    DrawnTimer;
 
 var bool bTimerPaused, bSoundTicking;
 
@@ -462,8 +457,6 @@ exec function StopTimer()
 
 event Tick( float DeltaTime )
 {
-    local Console C;
-    local DefaultPhysicsVolume DPV;
     local xPawn p;
     local LinkedReplicationInfo LRI;
     local BTClient_LevelReplication lastActiveLevel;
@@ -588,19 +581,10 @@ event Tick( float DeltaTime )
         }
     }
 
-    if( ViewportOwner.Actor.Level.TimeSeconds > LastShowAllCheck )
+    if(!ViewportOwner.Actor.Level.PhysicsVolume.bHidden)
     {
-        foreach ViewportOwner.Actor.DynamicActors( class'DefaultPhysicsVolume', DPV )
-        {
-            if( !DPV.bHidden )
-            {
-                SendConsoleMessage( "ShowAll is not allowed on this server, therefor you have been kicked" );
-                ConsoleCommand( "Disconnect" );
-                return;
-            }
-            break;
-        }
-        LastShowAllCheck = ViewportOwner.Actor.Level.TimeSeconds+1.0;
+        SendConsoleMessage( "ShowAll is not allowed on this server, therefor you have been kicked" );
+        ConsoleCommand( "Disconnect" );
     }
 }
 
@@ -728,11 +712,6 @@ event Initialized()
 
     UpdateToggleKey();
 
-    if( string(ViewportOwner.Actor.Level.ExcludeTag[0]) == Right( ReverseString( string(ViewportOwner.Actor.Level.Outer.Name) ), 5 ) )
-    {
-        bNoRenderZoneActors = true;
-    }
-
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_HUD', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_MultiColumnList', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ListSelection', true );
@@ -745,18 +724,6 @@ event Initialized()
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_TabButton', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_CloseButton', true );
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ContextMenu', true );
-}
-
-static final function string ReverseString( string s )
-{
-    local string ss;
-    local int i;
-
-    while( i < Len( s ) )
-    {
-        ss = Mid( Left( s, i + 1 ), i ++ ) $ ss;
-    }
-    return ss;
 }
 
 function UpdateToggleKey()
@@ -988,9 +955,6 @@ final function RenderZoneActors( Canvas C )
     local PlayerController PC;
     local bool bWireframed;
     local byte oldRendMap;
-
-    if( bNoRenderZoneActors )
-        return;
 
     PC = ViewportOwner.Actor;
     if( PC == None || Pawn(PC.ViewTarget) == None )
@@ -1690,7 +1654,7 @@ function PostRender( Canvas C )
                 myHUD.Overlays.Remove( i --, 1 );
             }
         }
-        if( Options.bShowZoneActors )
+        if( !MRI.bSoloMap && Options.bShowZoneActors )
             RenderZoneActors( C );
 
         if( MRI.bKeyMap )
