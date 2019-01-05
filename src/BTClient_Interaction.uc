@@ -283,12 +283,6 @@ exec function SetYOffsetScale( float newScale )
     YOffsetScale = newScale;
 }
 
-exec function SetGlobalSort( int sort )
-{
-    Options.GlobalSort = sort;
-    Options.SaveConfig();
-}
-
 exec function ShowBestTimes()
 {
     local string FPage;
@@ -1231,12 +1225,6 @@ final function RenderZoneActors( Canvas C )
             continue;
         }
     }
-}
-
-exec function SetFontSize( int NewSize )
-{
-    Options.DrawFontSize = NewSize;
-    Options.SaveConfig();
 }
 
 // As of LCA v3 ClientBTimes will no longer render keys, LCA v3 will now render the keys.
