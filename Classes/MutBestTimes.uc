@@ -1115,12 +1115,15 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
         if( BuildRecordData( CRI, BTRecordReplicationInfo(queryRI), mapId, playerId ) == none )
         {
             queryRI.Destroy();
-            queryRI = none;
         }
     }
     else if( mapId != "" )
     {
-
+        queryRI = Spawn( class'BTQueryMapDataReplicationInfo', requester );
+        if( BuildMapData( CRI, BTQueryMapDataReplicationInfo(queryRI), mapId ) == none )
+        {
+            queryRI.Destroy();
+        }
     }
     else if( playerId != "" )
     {
@@ -1128,7 +1131,6 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
         if( BuildPlayerProfileData( BTPlayerProfileReplicationInfo(queryRI), playerId ) == none )
         {
             queryRI.Destroy();
-            queryRI = none;
         }
     }
 
@@ -1137,6 +1139,30 @@ final function InternalOnServerQuery( PlayerController requester, BTClient_Clien
         Warn("Couldn't build query data");
         return;
     }
+}
+
+// Expects params to consist of: "map:mapIndex"
+final function BTQueryMapDataReplicationInfo BuildMapData( BTClient_ClientReplication CRI, BTQueryMapDataReplicationInfo mapData, string mapId )
+{
+    local int mapIndex;
+
+    mapIndex = QueryMapIndex( mapId );
+    if( mapIndex == -1 )
+        return none;
+
+    mapData.MapId = mapId;
+    mapData.AverageRecordTime = GetAverageRecordTime( mapIndex );
+    mapData.CompletedCount = RDat.Rec[mapIndex].TMFinish;
+    mapData.HijackedCount = RDat.Rec[mapIndex].TMHijacks;
+    mapData.FailedCount = RDat.Rec[mapIndex].TMFailures;
+    mapData.PlayHours = RDat.Rec[mapIndex].PlayHours;
+    mapData.bIsRanked = Ranks.IsRankedMap(mapIndex);
+    mapData.bMapIsActive = RDat.Rec[mapIndex].bMapIsActive;
+    mapData.RegisterDate = RDat.Rec[mapIndex].RegisterDate;
+    mapData.LastPlayedDate = RDat.Rec[mapIndex].LastPlayedDate;
+    mapData.Rating = RDat.Rec[mapIndex].Rating;
+
+    return mapData;
 }
 
 // Expects params to consist of: "record:mapIndex:playerIndex"
