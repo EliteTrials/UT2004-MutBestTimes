@@ -4,6 +4,7 @@ enum EFormating
 {
     F_Default,
     F_Numeric,
+    F_Bool,
     F_Date,
     F_Time,
     F_Hours
@@ -36,7 +37,7 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
     CreateDataRows();
 }
 
-function CreateDataRows()
+private function CreateDataRows()
 {
     local int i;
 
@@ -102,7 +103,7 @@ function InternalOnDrawRow( Canvas C, int i, float X, float Y, float W, float H,
     );
 }
 
-final function string Formatize( coerce string value, EFormating format )
+final protected function string Formatize( coerce string value, EFormating format )
 {
     switch( format )
     {
@@ -110,6 +111,9 @@ final function string Formatize( coerce string value, EFormating format )
             if( value == "" )
                 return "N/A";
             return value;
+
+        case F_Bool:
+            return Eval(bool(value), "Yes", "No");
 
         case F_Numeric:
             if( value == "" || float(value) == 0.00 )
@@ -130,6 +134,13 @@ final function string Formatize( coerce string value, EFormating format )
     return value;
 }
 
+final protected function string Format( coerce string value )
+{
+    if( value == "" || float(value) == 0.00 )
+        return "N/A";
+    return value;
+}
+
 function ApplyData( BTQueryDataReplicationInfo queryRI )
 {
     local int i;
@@ -140,6 +151,10 @@ function ApplyData( BTQueryDataReplicationInfo queryRI )
         {
             DataRows[i].Value = Formatize( queryRI.GetPropertyText( string(DataRows[i].Bind) ), DataRows[i].Format );
         }
+        else
+        {
+            DataRows[i].Value = Formatize( DataRows[i].Value, DataRows[i].Format );
+        }
     }
 }
 
@@ -149,7 +164,7 @@ defaultproperties
 
     Begin Object Class=GUIMultiColumnListBox Name=oRowsListBox
         WinTop=0.01
-        WinHeight=0.88
+        WinHeight=0.78
         WinWidth=0.98
         WinLeft=0.01
         StyleName="NoBackground"
