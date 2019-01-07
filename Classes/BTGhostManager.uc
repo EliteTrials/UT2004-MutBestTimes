@@ -243,8 +243,6 @@ final function BTGhostData GetGhostData( string mapName, string ghostId, optiona
         if (ghostData == none) {
             return CreateGhostData(mapName, ghostId);
         } else {
-			ghostData.Init(); // new version
-			ghostData.MO.Length = 0;
 			ghostData.bIsDirty = true;
         }
     }

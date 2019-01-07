@@ -14,6 +14,7 @@ var private array<struct sGhostInfo{
 
 	// Player's GUID used to assemble a ghost package's name.
 	var string GhostId;
+	var int SavedMovesCount;
 }> SaveQueue;
 
 var private MutBestTimes BT;
@@ -78,6 +79,8 @@ final function bool QueueGhost( PlayerController player, int playerIndex, string
 {
 	local int i, j;
 	local BTGhostRecorder recorder;
+	local BTGhostData data;
+	local sGhostInfo ghostInfo;
 
 	// Remove the existing recorder, because we don't want this recorder to get restarted when the owner respawns!
 	for( i = 0; i < Recorders.Length; ++ i )
@@ -96,30 +99,61 @@ final function bool QueueGhost( PlayerController player, int playerIndex, string
 		return false;
 	}
 
+	// First ghost reward!
+	BT.PDatManager.ProgressAchievementByID( playerIndex, 'ghost_0' );
+
 	// TODO: check existing queue for duplicates, and cancel the current queue if necessary!
 	recorder.StopGhostCapturing();
 
+	ghostInfo.Recorder = recorder;
+	ghostInfo.PlayerIndex = playerIndex;
+	ghostInfo.MapName = MapName;
+	ghostInfo.GhostId = recorder.ghostId;
+	ghostInfo.SavedMovesCount = 0;
+
+	data = Manager.GetGhostData( ghostInfo.MapName, ghostInfo.GhostId, true );
+	if( data == none )
+	{
+		Warn( "Couldn't create a new ghost data object for" @ ghostInfo.MapName @ ghostInfo.GhostId );
+		// Abort saving.
+		return false;
+	}
+
+	data.UsedGhostFPS = recorder.FramesPerSecond;
+	data.RelativeStartTime = recorder.RelativeStartTime;
+	data.PLID = recorder.GhostId;
+	data.MO.Length = recorder.Frames.Length;
+	ghostInfo.data = data;
+
 	j = SaveQueue.Length;
 	SaveQueue.Length = j + 1;
-	SaveQueue[j].Recorder = recorder;
-	SaveQueue[j].PlayerIndex = playerIndex;
-	SaveQueue[j].MapName = MapName;
-	SaveQueue[j].GhostId = recorder.ghostId;
+	SaveQueue[j] = ghostInfo;
 
-	// First ghost reward!
-	BT.PDatManager.ProgressAchievementByID( playerIndex, 'ghost_0' );
+	// Pause any active ghosts that are using the same data object!
+	for( i = 0; i < Manager.Ghosts.Length; ++ i )
+	{
+		if( Manager.Ghosts[i].GhostData == data )
+		{
+			// Manager.Ghosts[i].PausePlay();
+			SaveQueue[j].ExistingData = true;
+			break;
+		}
+	}
+
 	// Disable map traveling if possible.
 	if( Level.Game.VotingHandler != none )
 	{
 		Level.Game.VotingHandler.SetTimer( 0.00, false );
 	}
 	Enable( 'Tick' );
+
+	BT.FullLog( "Started saving progress for ghost" @ SaveQueue[j].GhostId @ "Existing:" @ SaveQueue[j].ExistingData);
 	return true;
 }
 
 event Tick( float deltaTime )
 {
-	local int i, qIdx, nextFrame, numFrames;
+	local int numFrames, savedMovesCount;
 	local BTGhostData data;
 	local BTGhostRecorder recorder;
 
@@ -130,65 +164,38 @@ event Tick( float deltaTime )
 		return;
 	}
 
-	qIdx = 0;
-	recorder = SaveQueue[qIdx].Recorder;
-
-	data = SaveQueue[qIdx].Data;
-	if( data == none )
-	{
-		data = Manager.GetGhostData( SaveQueue[qIdx].MapName, SaveQueue[qIdx].GhostId, true );
-		if( data == none )
-		{
-			Warn( "Couldn't create a new ghost data object for" @ SaveQueue[qIdx].MapName @ SaveQueue[qIdx].GhostId );
-			// Abort saving.
-			SaveQueue.Remove( qIdx, 1 );
-			return;
-		}
-
-		data.UsedGhostFPS = recorder.FramesPerSecond;
-		data.PLID = BT.PDat.Player[SaveQueue[qIdx].PlayerIndex].PLID;
-		data.RelativeStartTime = recorder.RelativeStartTime;
-		SaveQueue[qIdx].Data = data;
-
-		for( i = 0; i < Manager.Ghosts.Length; ++ i )
-		{
-			if( Manager.Ghosts[i].GhostData == data )
-			{
-				SaveQueue[qIdx].ExistingData = true;
-				Manager.Ghosts[i].PausePlay();
-				break;
-			}
-		}
-		// BT.FullLog( "Started saving progress for ghost" @ SaveQueue[qIdx].GhostId
-			// @ "Existing:" @ SaveQueue[qIdx].ExistingData
-		// );
-	}
+	data = SaveQueue[0].Data;
+	recorder = SaveQueue[0].Recorder;
 
 	numFrames = recorder.Frames.Length;
-	if( data.MO.Length < numFrames )
+	savedMovesCount = SaveQueue[0].SavedMovesCount;
+	// BT.FullLog("Save tick:" @ numFrames @ savedMovesCount @ data.PLID);
+	if( savedMovesCount < numFrames )
 	{
-		nextFrame = data.MO.Length;
-	 	data.MO.Length = nextFrame + 1;
-		data.MO[nextFrame] = recorder.Frames[nextFrame];
+		data.MO[savedMovesCount] = recorder.Frames[savedMovesCount];
+		++ SaveQueue[0].SavedMovesCount;
 	}
 
 	// Is the current queue finished?
-	if( numFrames == 0 || data.MO.Length == numFrames )
+	if( savedMovesCount == numFrames )
 	{
-		// BT.FullLog( "Saving complete!" @ data.MO.Length @ "frames have been saved!"
-		// 	@ "MapName:" @ SaveQueue[qIdx].MapName
-		// 	@ "GhostId:" @ SaveQueue[qIdx].GhostId
-		// 	@ "Existing:" @ SaveQueue[qIdx].ExistingData
-		// );
-		Manager.OnGhostSaved( SaveQueue[qIdx] );
+		BT.FullLog( "Saving complete!" @ data.MO.Length @ "frames have been saved!"
+			@ "MapName:" @ SaveQueue[0].MapName
+			@ "GhostId:" @ SaveQueue[0].GhostId
+			@ "Existing:" @ SaveQueue[0].ExistingData
+		);
+
+		Manager.OnGhostSaved( SaveQueue[0] );
 		if( recorder != none )
 		{
 			recorder.Destroy();
 		}
-		SaveQueue.Remove( qIdx, 1 );
 
+		SaveQueue.Remove( 0, 1 );
 		if( SaveQueue.Length == 0 )
 		{
+			Disable( 'Tick' );
+
 			// Restart map voting.
 			if( xVotingHandler(Level.Game.VotingHandler) != none
 				&& xVotingHandler(Level.Game.VotingHandler).ScoreBoardTime > 0 )
@@ -196,14 +203,7 @@ event Tick( float deltaTime )
 				// FIXME: causes voting menu to open.
 				Level.Game.VotingHandler.SetTimer( 1.00, true );
 			}
-			Disable( 'Tick' );
 			return;
 		}
-
-		// FIXME: Force view #1 ghost on the correct map
-		// if( !BT.bDontEndGameOnRecord )
-		// {
-		// 	Manager.ForceViewGhost();
-		// }
 	}
 }
