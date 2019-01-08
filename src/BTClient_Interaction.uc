@@ -1159,7 +1159,7 @@ function RenderGhostMarkings( Canvas C )
     local BTClient_GhostMarker Marking;
     local vector Scr;
     local float XL, YL;
-    local float T, YT;
+    local float T, YT, lastRenderTimePct;
     local string S;
     local vector Dir, X, Y, Z, CamPos, mX, mY;
     local rotator CamRot;
@@ -1209,18 +1209,31 @@ function RenderGhostMarkings( Canvas C )
                 S = FormatTimeCompact( YT );
                 C.DrawColor = negativeColor;
             }
-            C.DrawColor.A = 255f - 255f * (Dist/MAX_MARKING_DIST);
 
-            Scr = C.WorldToScreen( Marking.Location );
+            if (Dist < 512)
+            {
+                lastRenderTimePct = FMin((ViewportOwner.Actor.Level.TimeSeconds - Marking.LastRenderTime)/0.3f, 1.0f);
+                Scr.X = Marking.LastRenderScr.X*(1.0 - lastRenderTimePct) + (C.ClipX*0.5*lastRenderTimePct);
+                Scr.Y = Marking.LastRenderScr.Y*(1.0 - lastRenderTimePct) + (C.ClipY*0.75*lastRenderTimePct);
+                C.DrawColor.A = 255f*(Dist/512);
+            }
+            else
+            {
+                Scr = C.WorldToScreen( Marking.Location );
+                C.DrawColor.A = 255f - 255f * (Dist/MAX_MARKING_DIST);
+            }
 
             C.StrLen( S, XL, YL );
             C.SetPos( Scr.X - XL*0.5, Scr.Y - YL*0.5 );
             C.DrawText( S, false );
 
-            C.SetPos( Scr.X - 16, Scr.Y - YL*0.5 - 36 );
+            C.SetPos( Scr.X - YL*0.5, Scr.Y - YL*0.5 - YL - 4f );
             GetAxes(Marking.Rotation, mX, mY, z);
             MarkerArrow.Rotation.Yaw = Atan(Normal(mX).X, Normal(mY).Y) * 32768 / PI;
-            C.DrawTile( MarkerArrow, 32, 32, 0.0, 0.0, 128, 128 );
+            C.DrawTile( MarkerArrow, YL, YL, 0.0, 0.0, 128, 128 );
+
+            Marking.LastRenderScr = Scr;
+            Marking.LastRenderTime = ViewportOwner.Actor.Level.TimeSeconds;
         }
     }
     C.Style = 1;

@@ -1,6 +1,8 @@
 class BTClient_GhostMarker extends Actor;
 
 var int MoveIndex;
+var Vector LastRenderScr;
+// var float LastRenderTime;
 
 replication
 {
