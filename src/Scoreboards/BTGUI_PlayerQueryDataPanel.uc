@@ -31,14 +31,15 @@ defaultproperties
     DataRows(2)=(Caption="Country",Bind=CountryCode)
     DataRows(3)=(Caption="Played Time",Bind=PlayTime,Format=F_Hours)
     DataRows(4)=(Caption="Ranked ELO",Bind=RankedELORating,Format=F_Numeric)
-    DataRows(5)=(Caption="Ranked Stars",Bind=NumStars,Format=F_Numeric)
-    DataRows(6)=(Caption="Ranked Records",Bind=NumRankedRecords,Format=F_Numeric)
-    DataRows(7)=(Caption="Total Records",Bind=NumRecords,Format=F_Numeric)
-    DataRows(8)=(Caption="Objectives Completed",Bind=NumObjectives,Format=F_Numeric)
-    DataRows(9)=(Caption="Rounds Played",Bind=NumRounds,Format=F_Numeric)
-    DataRows(10)=(Caption="Records Hijacked",Bind=NumHijacks,Format=F_Numeric)
-    DataRows(11)=(Caption="Map Completions",Bind=NumFinishes,Format=F_Numeric)
-    DataRows(12)=(Caption="Achievement Points",Bind=AchievementPoints)
+    DataRows(5)=(Caption="Ranked ELO Change",Bind=RankedELORatingChange,Format=F_Numeric)
+    DataRows(6)=(Caption="Ranked Stars",Bind=NumStars,Format=F_Numeric)
+    DataRows(7)=(Caption="Ranked Records",Bind=NumRankedRecords,Format=F_Numeric)
+    DataRows(8)=(Caption="Total Records",Bind=NumRecords,Format=F_Numeric)
+    DataRows(9)=(Caption="Objectives Completed",Bind=NumObjectives,Format=F_Numeric)
+    DataRows(10)=(Caption="Rounds Played",Bind=NumRounds,Format=F_Numeric)
+    DataRows(11)=(Caption="Records Hijacked",Bind=NumHijacks,Format=F_Numeric)
+    DataRows(12)=(Caption="Map Completions",Bind=NumFinishes,Format=F_Numeric)
+    DataRows(13)=(Caption="Achievement Points",Bind=AchievementPoints)
 
     begin object class=GUIButton name=oViewRankedRecordsButton
         WinTop=0.9

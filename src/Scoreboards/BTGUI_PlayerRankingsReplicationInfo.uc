@@ -8,6 +8,7 @@ struct sPlayerRank
     var transient Texture CountryFlag;
     var string Name;
     var float Points;
+	var float PointsChange;
 
     var int AP;
     var int Hijacks; // Masked: Records/Stars
