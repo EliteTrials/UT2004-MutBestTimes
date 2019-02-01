@@ -1,35 +1,52 @@
 class BTLiftPawn extends ReplicationInfo;
 
+var xPawn PawnToLift;
+
+replication
+{
+    reliable if (bNetInitial && Role == ROLE_Authority)
+        PawnToLift;
+}
+
+event PreBeginPlay();
+
 event PostBeginPlay()
 {
-    Instigator = xPawn(Owner);
-    if (Instigator != none) {
-        Instigator.LifeSpan = xPawn(Instigator).DeResTime;
-    }
+    PawnToLift = xPawn(Owner);
 }
 
 simulated event PostNetBeginPlay()
 {
-    StartLifting(xPawn(Instigator));
-}
-
-private simulated function StartLifting(xPawn pawn)
-{
-    if (pawn == none) {
+    if (PawnToLift == none) {
         Destroy();
         return;
     }
-    Pawn.SetPhysics(PHYS_KarmaRagdoll);
-    Pawn.bSkeletized = true; // Set true so that PlayDying will not trigger a death sound.
-    Pawn.PlayDying(class'BTDamTypeLiftPawn', vect(0,0,0));
-    Pawn.StartDeRes();
-    Pawn.Gasp();
-    Destroy(); // I am no longer needed.
+
+    if (Level.NetMode != NM_DedicatedServer) {
+        StartLifting();
+    }
+}
+
+private simulated function StartLifting()
+{
+    local BodyEffect effect;
+
+    effect = Spawn(class'BodyEffect', PawnToLift,, Location, Rotation);
+    PawnToLift.Velocity = vect(0,0,64);
+    PawnToLift.SetPhysics(PHYS_KarmaRagdoll);
+    PawnToLift.bSkeletized = true; // Set true so that PlayDying will not trigger a death sound.
+    PawnToLift.StartDeRes();
+}
+
+simulated event Destroyed()
+{
+    if (PawnToLift != none) {
+        PawnToLift.PlayDying(class'BTDamTypeLiftPawn', vect(0,0,0));
+    }
 }
 
 defaultproperties
 {
-    LifeSpan=5
+    LifeSpan=0.64
     bNetTemporary=true
-    bReplicateInstigator=true
 }
