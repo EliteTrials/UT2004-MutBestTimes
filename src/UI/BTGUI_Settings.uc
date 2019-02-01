@@ -25,9 +25,6 @@ var automated GUIEditBox
     eb_SucceedSound,
     eb_ToggleKey;
 
-var automated AltSectionBackground
-    SB_Border;
-
 function InitPanel()
 {
     super.InitPanel();
@@ -117,15 +114,6 @@ private function SaveBTConfig()
 
 defaultproperties
 {
-    Begin Object class=AltSectionBackground name=border
-        WinTop      =   0.025000
-        WinLeft     =   0.025000
-        WinWidth    =   0.950000
-        WinHeight   =   0.900000
-        Caption="BTConfig"
-    End Object
-    SB_Border=border
-
     // Left Side
 
     Begin Object class=moCheckBox name=UseAltTimer

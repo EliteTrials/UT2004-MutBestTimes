@@ -361,10 +361,10 @@ defaultproperties
     // ItemsBackground=oItemsBackground
 
     begin object class=BTGUI_PlayerItemsListBox name=oItemsListBox
-        WinHeight=0.810000
-        WinLeft=0.325000
-        WinTop=0.060000
-        WinWidth=0.660000
+        WinHeight=0.870000
+        WinLeft=0.31000
+        WinTop=0.010000
+        WinWidth=0.690000
         bBoundToParent=true
         bScaleToParent=true
 
@@ -402,12 +402,13 @@ defaultproperties
 
     begin object Class=GUIButton Name=oColorDialog
         Caption="Preferred Color"
-        WinLeft=0.005
-        WinTop=0.83
-        WinWidth=0.29
+        WinLeft=0.01
+        WinTop=0.79
+        WinWidth=0.28
         WinHeight=0.05
         OnClick=InternalOnClick
         Hint="Edit your preferred color"
+        StyleName="LadderButtonHi"
     end object
     b_ColorDialog=oColorDialog
 }

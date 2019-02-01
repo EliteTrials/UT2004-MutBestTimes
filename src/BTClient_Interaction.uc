@@ -772,9 +772,7 @@ private function ModifyMenu()
 {
     local UT2K4PlayerLoginMenu Menu;
     local BTClient_Menu myMenu;
-    local BTGUI_PlayerInventory invMenu;
     local BTGUI_Store storeMenu;
-    local BTGUI_Rewards rewardsMenu;
 
     Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
     if( Menu != none )
@@ -783,18 +781,8 @@ private function ModifyMenu()
         Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_AdvancedButton', True );
         Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_StoreButton', True );
-        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_BuyButton', True );
-        Menu.c_Main.Controller.RegisterStyle( Class'BTClient_STY_SellButton', True );
 
-        invMenu = BTGUI_PlayerInventory(Menu.c_Main.AddTab( "Inventory", string(Class'BTGUI_PlayerInventory'),, "Manage your items" ));
-        if( invMenu != none )
-        {
-            invMenu.MyButton.StyleName = "StoreButton";
-            invMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", invMenu.FontScale );
-            invMenu.PostInitPanel();
-        }
-
-        storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Store", string(Class'BTGUI_Store'),, "Buy and manage items" ));
+        storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Item Shop", string(Class'BTGUI_Store'),, "Buy Items" ));
         if( storeMenu != none )
         {
             storeMenu.MyButton.StyleName = "StoreButton";
@@ -802,15 +790,7 @@ private function ModifyMenu()
             storeMenu.PostInitPanel();
         }
 
-        rewardsMenu = BTGUI_Rewards(Menu.c_Main.AddTab( "Rewards", string(Class'BTGUI_Rewards'),, "Exchange and collect trophies" ));
-        if( rewardsMenu != none )
-        {
-            rewardsMenu.MyButton.StyleName = "StoreButton";
-            rewardsMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", rewardsMenu.FontScale );
-            rewardsMenu.PostInitPanel();
-        }
-
-        myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
+        myMenu = BTClient_Menu(Menu.c_Main.AddTab( "My Profile", string(Class'BTClient_Menu'),, "Your BTimes Profile" ));
         if( myMenu != none )
         {
             myMenu.MyButton.StyleName = "AdvancedButton";
@@ -2271,7 +2251,7 @@ defaultproperties
 
     YOffsetScale=0.6
     OrangeColor=(R=255,G=255,B=0,A=255)
-    BackgroundTexture=Texture'BTScoreBoardBG'
+    BackgroundTexture=Texture'Engine.WhiteSquareTexture'
 
     bVisible=True
     bRequiresTick=True

@@ -14,11 +14,26 @@ event Free()
     CRI = none;
 }
 
+function float InternalGetItemHeight( Canvas C )
+{
+    local float xl, yl;
+
+    Style.TextSize( C, MenuState, "T", xl, yl, FontScale );
+    return yl + 8;
+}
+
+event InitComponent(GUIController MyController, GUIComponent MyOwner)
+{
+    super.InitComponent( MyController, MyOwner );
+    Style = Controller.GetStyle( "BTMultiColumnList", FontScale );
+}
+
 function UpdateList()
 {
     local int i;
     local int lastSelectedItemIndex;
 
+    CRI = class'BTClient_ClientReplication'.static.GetCRI(PlayerOwner().PlayerReplicationInfo);
     if( MyScrollBar != none && CRI != none )
     {
         lastSelectedItemIndex = Index;
@@ -28,7 +43,6 @@ function UpdateList()
             AddedItem();
         }
         SetIndex( lastSelectedItemIndex );
-        OnDrawItem  = DrawItem;
     }
 }
 
@@ -36,8 +50,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 {
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
-    local string price;
-    local Color priceColor;
+    local string priceText;
 
     if( CRI == none )
         return;
@@ -45,69 +58,63 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     if( CRI.Items.Length <= i )
         return;
 
-    // Draw the selection border
-    if( bSelected )
-    {
-        SelectedStyle.Draw( Canvas,MenuState, X, Y-2, W, H+2 );
-        DrawStyle = SelectedStyle;
-    }
-    else DrawStyle = Style;
+    Y += 2;
+    H -= 2;
+
+    Canvas.Style = 1;
+    Canvas.SetPos( X, Y );
 
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     Canvas.Style = 3;
     switch( CRI.Items[SortData[i].SortItem].Access )
     {
         case 0:
-            price = "$" $ class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost);
+            Canvas.DrawColor = #0x22222282;
+            priceText = "$" $ class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost);
             break;
 
         case 1:
-            price = "Free";
-            priceColor = #0xEEFFEEFF;
+            priceText = "Free";
             Canvas.SetDrawColor( 30, 45, 30, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
 
         case 2:
-            price = "Admin";
-            priceColor = #0xFF0000FF;
+            priceText = "Admin";
             Canvas.SetDrawColor( 45, 30, 30, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
 
         case 3:
-            price = "Premium";
-            priceColor = #0x00FFFFFF;
+            priceText = "Premium";
             Canvas.SetDrawColor( 30, 45, 45, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
 
         case 4:
-            price = "Private";
-            priceColor = #0x444455FF;
+            priceText = "Private";
             Canvas.SetDrawColor( 30, 30, 45, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
 
         case 5:
-            price = "Drop";
-            priceColor = #0x330088FF;
+            priceText = "Drop";
             Canvas.SetDrawColor( 64, 0, 128, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
     }
+
+    if( bSelected )
+    {
+        Canvas.DrawColor = #0x33333394;
+    }
+
+    Canvas.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
+
+    MenuState = MSAT_Blurry;
+    DrawStyle = Style;
 
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.Items[SortData[i].SortItem].Name, FontScale );
 
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    Canvas.DrawColor = priceColor;
-    DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, price, FontScale );
+    Canvas.SetDrawColor( 255, 255, 255 );
+    DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, priceText, FontScale );
 
     Canvas.SetPos( X, Y );
 }
@@ -119,6 +126,10 @@ function bool InternalOnRightClick( GUIComponent sender )
 
 defaultproperties
 {
+    StyleName="BTMultiColumnList"
+    SelectedStyleName="BTListSelection"
+    SelectedBKColor=(R=255,G=255,B=255,A=255)
+
     OnRightClick=InternalOnRightClick
 
     PositiveIcon=ItemChecked
@@ -134,6 +145,9 @@ defaultproperties
 
     SortColumn=0
     SortDescending=true
+
+    OnDrawItem=DrawItem
+    GetItemHeight=InternalGetItemHeight
 }
 
 #include classes/BTColorHashUtil.uci

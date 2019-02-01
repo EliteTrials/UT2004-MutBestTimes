@@ -3,7 +3,7 @@ class BTGUI_Trophies extends BTGUI_StatsTab
 
 #exec obj load file="SkaarjAnims.ukx"
 
-var Texture TrophyIcon;
+var const Texture TrophyIcon;
 
 var automated GUIButton b_Exchange;
 var automated GUIEditBox eb_Amount;
@@ -14,7 +14,7 @@ var automated GUIScrollTextBox eb_Description;
 var automated GUIImage i_Render;
 
 var() editinline SpinnyWeap SpinnyDude;
-var() vector SpinnyDudeOffset;
+var() const vector SpinnyDudeOffset;
 
 event Free()
 {
@@ -53,13 +53,12 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
     SpinnyDude.LoopAnim( 'Idle_Rest', 1.0 );
 }
 
-function LoadData()
+private function LoadData()
 {
-    //CRI.Trophies.Length = 0;
     PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestTrophies" );
 }
 
-function bool ExchangeTrophies()
+private function bool ExchangeTrophies()
 {
     PlayerOwner().ConsoleCommand( "Mutate ExchangeTrophies" @ eb_Amount.GetText() );
     LoadData();
@@ -74,7 +73,7 @@ function bool InternalOnClick( GUIComponent Sender )
     }
 }
 
-function bool DrawSpinnyDude( Canvas canvas )
+function bool InternalOnDrawSpinnyDude( Canvas canvas )
 {
     local vector CamPos, X, Y, Z;
     local rotator CamRot;
@@ -97,7 +96,6 @@ function bool InternalOnDraw( Canvas C )
     if( CRI == none )
         return false;
 
-    //C.Font = Font'UT2003Fonts.jFontMedium800x600';
     C.Font = Font'UT2003Fonts.jFontSmallText800x600';
     YPos = Region.ActualTop();
     C.StrLen( "T", XL, YL );
@@ -129,7 +127,7 @@ function bool InternalOnDraw( Canvas C )
     return true;
 }
 
-function bool OnKeyEvent( out byte Key, out byte State, float delta )
+function bool InternalOnKeyEvent( out byte Key, out byte State, float delta )
 {
     if( State == 0x01 )
     {
@@ -149,20 +147,20 @@ function bool OnKeyEvent( out byte Key, out byte State, float delta )
 
 defaultproperties
 {
-    OnKeyEvent=OnKeyEvent
+    OnKeyEvent=InternalOnKeyEvent
 
     TrophyIcon=Texture'itemChecked'
 
     SpinnyDudeOffset=(X=150,Y=77,Z=20)
 
     Begin Object class=GUIImage name=oRegion
-        bScaleToParent=True
-        bBoundToParent=True
+        bScaleToParent=true
+        bBoundToParent=true
         WinWidth=0.70
-        WinHeight=0.8
+        WinHeight=0.910000
         WinLeft=0.0
-        WinTop=0.06
-        Image=None
+        WinTop=0.01
+        Image=none
         ImageColor=(R=255,G=255,B=255,A=128)
         ImageRenderStyle=MSTY_Alpha
         ImageStyle=ISTY_Stretched
@@ -172,25 +170,25 @@ defaultproperties
 
     Begin Object class=GUISectionBackground name=render
         Caption="Currency Details"
-        WinHeight=0.79
+        WinHeight=0.910000
         WinLeft=0.71
-        WinTop=0.06
+        WinTop=0.01
         WinWidth=0.29
         HeaderBase=Material'2K4Menus.NewControls.Display99'
     End Object
     sb_Background=render
 
     Begin Object class=GUIImage name=oRender
-        bScaleToParent=True
-        bBoundToParent=True
+        bScaleToParent=true
+        bBoundToParent=true
         WinHeight=0.25
         WinLeft=0.73
-        WinTop=0.12
+        WinTop=0.07
         WinWidth=0.25
         ImageColor=(R=255,G=255,B=255,A=128)
         ImageRenderStyle=MSTY_Alpha
         ImageStyle=ISTY_Stretched
-        OnDraw=DrawSpinnyDude
+        OnDraw=InternalOnDrawSpinnyDude
     End Object
     i_Render=oRender
 
@@ -210,7 +208,7 @@ defaultproperties
         Caption="Exchange for Currency"
         WinLeft=0.11
         WinTop=0.87
-        WinWidth=0.89
+        WinWidth=0.30
         WinHeight=0.06
         OnClick=InternalOnClick
         Hint="Exchange all your trophies for Curreny points"
@@ -218,8 +216,8 @@ defaultproperties
     b_Exchange=oExchange
 
     Begin Object class=GUIEditBox name=oAmount
-        bScaleToParent=True
-        bBoundToParent=True
+        bScaleToParent=true
+        bBoundToParent=true
         TextStr="All"
         WinLeft=0.0
         WinTop=0.875

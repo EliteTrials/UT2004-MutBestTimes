@@ -11,7 +11,6 @@ var automated GUISectionBackground sb_ItemBackground;
 var automated GUIScrollTextBox eb_ItemDescription;
 var automated moComboBox cb_Filter;
 
-var protected editconst noexport class<BTStore_ItemsMultiColumnList> ColumnListClass;
 var() protected editinline BTClient_ClientReplication CRI;
 var protected bool bWaitingForResponse;
 
@@ -121,7 +120,6 @@ event Timer()
 function InitComponent( GUIController MyController, GUIComponent MyOwner )
 {
     super.InitComponent( MyController, MyOwner );
-    lb_ItemsListBox.InitListClass( string(ColumnListClass), CRI );
     lb_ItemsListBox.ContextMenu.OnSelect = InternalOnSelect;
     lb_ItemsListBox.List.OnDblClick = InternalOnDblClick;
 }
@@ -327,9 +325,9 @@ defaultproperties
 
     begin object Class=BTStore_ItemsMultiColumnListBox Name=oItemsListBox
         WinWidth=0.7
-        WinHeight=0.79
+        WinHeight=0.940000
         WinLeft=0.0
-        WinTop=0.06
+        WinTop=0.01
         bVisibleWhenEmpty=true
         bScaleToParent=true
         bBoundToParent=true
@@ -374,9 +372,9 @@ defaultproperties
     eb_ItemDescription=Desc
 
     Begin Object class=moComboBox Name=oFilter
-        WinLeft=0.40
+        WinLeft=0.710000
         WinTop=0.01
-        WinWidth=0.3
+        WinWidth=0.29
         WinHeight=0.08
 
         Caption="Filter"
@@ -390,8 +388,8 @@ defaultproperties
 
     begin object Class=GUIButton Name=oDonate
         Caption="Donate"
-        WinLeft=0.0
-        WinTop=0.855
+        WinLeft=0.880000
+        WinTop=0.875
         WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
@@ -401,14 +399,12 @@ defaultproperties
 
     begin object Class=GUIButton Name=oBuy
         Caption="Buy"
-        WinLeft=0.550000
-        WinTop=0.855
-        WinWidth=0.15
+        WinLeft=0.710000
+        WinTop=0.875
+        WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
         Hint="Buy the selected item"
     end object
     b_Buy=oBuy
-
-    ColumnListClass=Class'BTStore_ItemsMultiColumnList'
 }

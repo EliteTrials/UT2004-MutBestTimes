@@ -1,5 +1,5 @@
 //==============================================================================
-// BTClient_Menu.uc (C) 2005-2010 Eliot and .:..:. All Rights Reserved
+// BTClient_Menu.uc (C) 2005-2019 Eliot and .:..:. All Rights Reserved
 //==============================================================================
 class BTClient_Menu extends MidGamePanel
     config(ClientBTimes);
@@ -48,9 +48,10 @@ defaultproperties
     WinLeft=0.100000
     WinTop=0.100000
 
-    BTTabs(0)=(Caption="Account",TabClass=class'BTGUI_Account',Hint="")
-    BTTabs(1)=(Caption="Settings",TabClass=class'BTGUI_Settings',Hint="Edit your BestTimes settings!")
-    BTTabs(2)=(Caption="Commands",TabClass=class'BTGUI_Commands',Hint="Execute useful BestTimes commands!")
+    BTTabs(0)=(Caption="Settings",TabClass=class'BTGUI_Settings',Hint="Edit your BestTimes settings!")
+    BTTabs(1)=(Caption="Trophies",TabClass=class'BTGUI_Trophies',Hint="Claim your trophies!")
+    BTTabs(2)=(Caption="Achievements",TabClass=class'BTGUI_Achievements',Hint="View your achievements!")
+    BTTabs(3)=(Caption="Inventory",TabClass=class'BTGUI_PlayerInventory',Hint="Manage your items")
 
     Begin Object class=GUITabControl name=oPageTabs
         WinWidth=0.98
@@ -59,11 +60,12 @@ defaultproperties
         WinHeight=0.05
         TabHeight=0.04
         bFillBackground=true
-        bFillSpace=true
+        bFillSpace=false
         bAcceptsInput=true
         bDockPanels=true
         OnChange=InternalOnChange
         BackgroundStyleName="TabBackground"
+        BackgroundImage=FinalBlend'AW-2004Particles.Energy.BeamHitFinal'
     End Object
     c_Tabs=oPageTabs
 }
