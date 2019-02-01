@@ -4,21 +4,7 @@ class BTGUI_RankingsBase extends UT2K4TabPanel
 var protected BTClient_Interaction Inter;
 var protected editconst bool bIsQuerying;
 
-delegate OnQueryPlayer( coerce string playerId );
-
-simulated final function BTClient_Interaction GetInter()
-{
-    local int i;
-
-    for( i = 0; i < Controller.ViewportOwner.LocalInteractions.Length; ++ i )
-    {
-        if( Controller.ViewportOwner.LocalInteractions[i].Class == class'BTClient_Interaction' )
-            return BTClient_Interaction(Controller.ViewportOwner.LocalInteractions[i]);
-    }
-    return none;
-}
-
-simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
 {
     local LinkedReplicationInfo LRI;
 
@@ -31,6 +17,8 @@ simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationIn
     }
     return none;
 }
+
+delegate OnQueryPlayer( coerce string playerId );
 
 event Free()
 {
@@ -47,4 +35,18 @@ event InitComponent( GUIController myController, GUIComponent myOwner )
 function InitPanel()
 {
     MyButton.Style = Controller.GetStyle( "BTTabButton", MyButton.FontScale );
+}
+
+protected function BTClient_Interaction GetInter()
+{
+    local int i;
+    local Player player;
+
+    player = Controller.ViewportOwner;
+    for( i = 0; i < player.LocalInteractions.Length; ++ i )
+    {
+        if( player.LocalInteractions[i].Class == class'BTClient_Interaction' )
+            return BTClient_Interaction(player.LocalInteractions[i]);
+    }
+    return none;
 }

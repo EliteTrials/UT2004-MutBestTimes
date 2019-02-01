@@ -1,109 +1,80 @@
 //==============================================================================
-// BTClient_Interaction.uc (C) 2005-2010 Eliot and .:..:. All Rights Reserved
+// BTClient_Interaction.uc (C) 2005-2019 Eliot and .:..:. All Rights Reserved
 //
 // This class handles the widgets on the HUD, the F12 tables and any interaction with BTimes.
-//
-//  Most recent update: $wotgreal_dt: 28/02/2012 11:54:19 $
 //==============================================================================
 class BTClient_Interaction extends Interaction;
 
 #exec obj load file="UT2003Fonts.utx"
-#exec obj load file="MenuSounds.uax"
 #exec obj load file="ClientBTimes.utx" package="ClientBTimesV7b"
 #exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV7b" group="CountryFlags"
 
-struct sTableColumn
-{
-    var string Title;
-    var string Format;
-    var name id;
-};
-
-struct sCanvasColumn
-{
-    var float W, H;
-};
-
-/*const BorderSize = 2;
-const ExTileWidth = 10;
-const ExTextOffset = 1;*/
-
 // Not localized so that changes will take affect for everyone, if a new version changes these...
 // Besides i'm not gonna write them for all languages anyway?
-var const
+var private const
     string
     RecordTimeMsg,
     RecordHolderMsg,
     RecordTimeLeftMsg,
     RecordEmptyMsg,
     RecordHubMsg,
-    RecordPrevTimeMsg,
     RecordTimeElapsed,
-    RankingToggleMsg,
     RankingHideMsg;
 
-var const array<sTableColumn> PlayersRankingColumns;
-var const array<sTableColumn> RecordsRankingColumns;
-
-var string
+var private string
     RankingKeyMsg,
     OldKey;
 
-var BTClient_MutatorReplicationInfo         MRI;                                // Set by BTClient_MutatorReplicationInfo
-var HUD_Assault                             HU;                                 // Set by BTClient_MutatorReplicationInfo
-var HUD                                     myHUD;
-var BTClient_Config                         Options;                            // Object to Config, set on Initialized()
-var BTClient_ClientReplication              SpectatedClient;                    // Set by PostRender(), used for showing the record timer of other players...
-var BTClient_LevelReplication               ActiveLevel;
+var private BTClient_MutatorReplicationInfo     MRI;                                // Set by BTClient_MutatorReplicationInfo
+var private HUD                                 myHUD;
+var private BTClient_Config                     BTConfig;                            // Object to Config, set on Initialized()
+var private BTClient_ClientReplication          SpectatedClient;                    // Set by PostRender(), used for showing the record timer of other players...
+var private BTClient_LevelReplication           ActiveLevel;
 
-var array<Pickup> KeyPickupsList;
+var private array<Pickup> KeyPickupsList;
 
-var const
+var private const
     color
-    Orange;
+    OrangeColor;
 
-var bool
+var private bool
     bTestRun,
     bPauseTest,
     bMenuModified,
     bRenderAll, bRenderOnlyDynamic;
 
-var name RenderTag;
-var byte RenderMode;
+var private name RenderTag;
+var private byte RenderMode;
 
-var int ElapsedTime;
+var private int ElapsedTime;
 
-var float
+var private float
     LastTickTime,
     Delay,
     YOffsetScale,                               // Offset scale for EndMap tables
     LastTime,
     DrawnTimer;
 
-var bool bTimerPaused, bSoundTicking;
+var private bool bTimerPaused, bSoundTicking;
 
-var const
-    texture
-    AlphaLayer,
-    RankBeacon;
+var private const Texture BackgroundTexture;
 
-var const TexRotator MarkerArrow;
+var private const TexRotator MarkerArrow;
 
 // DODGEPERK DATA
-var Actor LastBase;
-var Actor.EPhysics LastPhysicsState;
-var Actor.EDoubleClickDir LastDoubleClickDir;
-var float LastDodgeTime;
-var float LastLandedTime;
-var float LastPerformedDodgeTime;
-var bool bPerformedDodge;
-var bool bPreDodgeReady;
-var bool bDodgeReady;
-var bool bPromodeWasPerformed;
-var bool bTimeViewTarget;
-var PlayerInput PlayerInput;
+var private Actor LastBase;
+var private Actor.EPhysics LastPhysicsState;
+var private Actor.EDoubleClickDir LastDoubleClickDir;
+var private float LastDodgeTime;
+var private float LastLandedTime;
+var private float LastPerformedDodgeTime;
+var private bool bPerformedDodge;
+var private bool bPreDodgeReady;
+var private bool bDodgeReady;
+var private bool bPromodeWasPerformed;
+var private bool bTimeViewTarget;
 
-final function SendConsoleMessage( string Msg )
+private function SendConsoleMessage( string Msg )
 {
     ViewportOwner.Actor.Player.Console.Message( Msg, 1.0 );
 }
@@ -183,10 +154,10 @@ exec function ActivateKey( string key )
 
 exec function SetConfigProperty( string Property, string Value )
 {
-    if( Options != None )
+    if( BTConfig != None )
     {
-        if( Options.SetPropertyText( Property, Value ) )
-            Options.SaveConfig();
+        if( BTConfig.SetPropertyText( Property, Value ) )
+            BTConfig.SaveConfig();
     }
 }
 
@@ -199,11 +170,11 @@ exec function UpdatePreferedColor()
 {
     local string colorText;
 
-    Options.SaveConfig();
+    BTConfig.SaveConfig();
 
-    MRI.CR.ServerSetPreferedColor( Options.PreferedColor );
+    MRI.CR.ServerSetPreferedColor( BTConfig.PreferedColor );
 
-    colorText = Options.PreferedColor.R @ Options.PreferedColor.G @ Options.PreferedColor.B;
+    colorText = BTConfig.PreferedColor.R @ BTConfig.PreferedColor.G @ BTConfig.PreferedColor.B;
     ConsoleCommand( "SetTrailerColor" @ colorText @ colorText );
 }
 
@@ -376,9 +347,9 @@ exec function ToggleRanking()
 
 exec function SpeedRun()
 {
-    Options.bUseAltTimer = !Options.bUseAltTimer;
-    SendConsoleMessage( "SpeedRun:"$Options.bUseAltTimer );
-    Options.SaveConfig();
+    BTConfig.bUseAltTimer = !BTConfig.bUseAltTimer;
+    SendConsoleMessage( "SpeedRun:"$BTConfig.bUseAltTimer );
+    BTConfig.SaveConfig();
 }
 
 function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta )
@@ -395,7 +366,7 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
             return false;
         }
 
-        if( Key == Options.RankingTableKey )
+        if( Key == BTConfig.RankingTableKey )
         {
             if( MRI.CR.Text.Length > 0 )
                 MRI.CR.Text.Length = 0;
@@ -415,12 +386,12 @@ function bool KeyEvent( out EInputKey Key, out EInputAction Action, float Delta 
 
         if( Key == IK_GreyPlus )
         {
-            Options.ScreenFontSize = Min( ++ Options.ScreenFontSize, 6 );
+            BTConfig.ScreenFontSize = Min( ++ BTConfig.ScreenFontSize, 6 );
             return true;
         }
         else if( Key == IK_GreyMinus )
         {
-            Options.ScreenFontSize = Max( -- Options.ScreenFontSize, -5 );
+            BTConfig.ScreenFontSize = Max( -- BTConfig.ScreenFontSize, -5 );
             return true;
         }
     }
@@ -464,7 +435,7 @@ event Tick( float DeltaTime )
     // Wait for replication
     if( ViewportOwner.Actor.PlayerReplicationInfo != none )
     {
-        if( Options != none && (Options.bProfesionalMode || bPromodeWasPerformed) )
+        if( BTConfig != none && (BTConfig.bProfesionalMode || bPromodeWasPerformed) )
         {
             foreach ViewportOwner.Actor.DynamicActors( class'xPawn', p )
             {
@@ -489,14 +460,14 @@ event Tick( float DeltaTime )
                     p.bHidden = true;
                     bPromodeWasPerformed = true;
                 }
-                else if( !Options.bProfesionalMode && bPromodeWasPerformed )
+                else if( !BTConfig.bProfesionalMode && bPromodeWasPerformed )
                 {
                     p.SoundVolume = p.default.SoundVolume;
                     p.bHidden = false;
                 }
             }
 
-            if( bPromodeWasPerformed && !Options.bProfesionalMode )
+            if( bPromodeWasPerformed && !BTConfig.bProfesionalMode )
             {
                 bPromodeWasPerformed = false;
             }
@@ -593,7 +564,7 @@ exec function TimeViewTarget()
     bTimeViewTarget = !bTimeViewTarget;
 }
 
-function PerformDodgePerk()
+private function PerformDodgePerk()
 {
     local Pawn p;
     local bool bDodgePossible;
@@ -652,14 +623,14 @@ function PerformDodgePerk()
     SpectatedClient.LastPawn = p;
 }
 
-function PerformedDodge( Pawn other )
+private function PerformedDodge( Pawn other )
 {
     bPerformedDodge = true;
     LastPerformedDodgeTime = ViewportOwner.Actor.Level.TimeSeconds - LastLandedTime;
     LastDodgeTime = ViewportOwner.Actor.Level.TimeSeconds;
 }
 
-function PerformedLanding( Pawn other )
+private function PerformedLanding( Pawn other )
 {
     if( bPerformedDodge )
     {
@@ -669,7 +640,7 @@ function PerformedLanding( Pawn other )
     LastDoubleClickDir = DCLICK_None;
 }
 
-function Vector RenderDodgeReady( Canvas C, float drawY )
+private function Vector RenderDodgeReady( Canvas C, float drawY )
 {
     local string s;
     local float xl, yl;
@@ -703,10 +674,12 @@ event Initialized()
 {
     local DefaultPhysicsVolume DPV;
 
-    Options = Class'BTClient_Config'.Static.FindSavedData();
-    ForEach ViewportOwner.Actor.DynamicActors( Class'DefaultPhysicsVolume', DPV )
+    BTConfig = class'BTClient_Config'.static.FindSavedData();
+
+    // Hide so that "ShowAll" will set bHidden to false, and if so, we can kick the player for using "ShowAll".
+    foreach ViewportOwner.Actor.DynamicActors( class'DefaultPhysicsVolume', DPV )
     {
-        DPV.bHidden = True;
+        DPV.bHidden = true;
         break;
     }
 
@@ -726,18 +699,18 @@ event Initialized()
     GUIController(ViewportOwner.GUIController).RegisterStyle( class'BTClient_STY_ContextMenu', true );
 }
 
-function UpdateToggleKey()
+exec function UpdateToggleKey()
 {
     local string Key;
 
-    Key = class'Interactions'.static.GetFriendlyName( Options.RankingTableKey );
+    Key = class'Interactions'.static.GetFriendlyName( BTConfig.RankingTableKey );
     if( Len( OldKey ) == 0 )
     {
-        RankingKeyMsg = Repl( RankingKeyMsg, "%KEY%", Options.CGoldText$Key$class'HUD'.default.WhiteColor );
+        RankingKeyMsg = Repl( RankingKeyMsg, "%KEY%", BTConfig.CGoldText$Key$class'HUD'.default.WhiteColor );
     }
     else
     {
-        RankingKeyMsg = Repl( RankingKeyMsg, OldKey, Options.CGoldText $Key$class'HUD'.default.WhiteColor );
+        RankingKeyMsg = Repl( RankingKeyMsg, OldKey, BTConfig.CGoldText $Key$class'HUD'.default.WhiteColor );
     }
     OldKey = Key;
 }
@@ -748,10 +721,6 @@ final function ObjectsInitialized( BTClient_MutatorReplicationInfo mutRep )
 
     MRI = mutRep;
     myHUD = ViewportOwner.Actor.myHUD;
-    HU = HUD_Assault(myHUD);
-
-    if( ViewportOwner.Actor.myHUD != none && BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard) != none )
-        BTClient_TrialScoreBoard(ViewportOwner.Actor.myHUD.ScoreBoard).myInter = self;
 
     if( MRI != None )
     {
@@ -808,7 +777,7 @@ private function ModifyMenu()
     local BTGUI_Rewards rewardsMenu;
 
     Menu = UT2K4PlayerLoginMenu(GUIController(ViewportOwner.Actor.Player.GUIController).FindPersistentMenuByName( UnrealPlayer(ViewportOwner.Actor).LoginMenuClass ));
-    if( Menu != None )
+    if( Menu != none )
     {
         Menu.BackgroundRStyle = MSTY_None;
         Menu.i_FrameBG.Image = Texture(DynamicLoadObject( "2k4Menus.NewControls.Display99", Class'Texture', True ));
@@ -820,7 +789,6 @@ private function ModifyMenu()
         invMenu = BTGUI_PlayerInventory(Menu.c_Main.AddTab( "Inventory", string(Class'BTGUI_PlayerInventory'),, "Manage your items" ));
         if( invMenu != none )
         {
-            // invMenu.MyInteraction = self;
             invMenu.MyButton.StyleName = "StoreButton";
             invMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", invMenu.FontScale );
             invMenu.PostInitPanel();
@@ -829,7 +797,6 @@ private function ModifyMenu()
         storeMenu = BTGUI_Store(Menu.c_Main.AddTab( "Store", string(Class'BTGUI_Store'),, "Buy and manage items" ));
         if( storeMenu != none )
         {
-            storeMenu.MyInteraction = self;
             storeMenu.MyButton.StyleName = "StoreButton";
             storeMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", storeMenu.FontScale );
             storeMenu.PostInitPanel();
@@ -838,22 +805,20 @@ private function ModifyMenu()
         rewardsMenu = BTGUI_Rewards(Menu.c_Main.AddTab( "Rewards", string(Class'BTGUI_Rewards'),, "Exchange and collect trophies" ));
         if( rewardsMenu != none )
         {
-            rewardsMenu.MyInteraction = self;
             rewardsMenu.MyButton.StyleName = "StoreButton";
             rewardsMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "StoreButton", rewardsMenu.FontScale );
             rewardsMenu.PostInitPanel();
         }
 
         myMenu = BTClient_Menu(Menu.c_Main.AddTab( "Advanced", string(Class'BTClient_Menu'),, "View and configure BestTimes features" ));
-        if( myMenu != None )
+        if( myMenu != none )
         {
-            myMenu.MyInteraction = self;
             myMenu.MyButton.StyleName = "AdvancedButton";
             myMenu.MyButton.Style = Menu.c_Main.Controller.GetStyle( "AdvancedButton", myMenu.FontScale );
             myMenu.PostInitPanel();
         }
 
-        bMenuModified = True;
+        bMenuModified = true;
     }
 }
 
@@ -861,9 +826,8 @@ event NotifyLevelChange()
 {
     super.NotifyLevelChange();
     MRI = none;
-    HU = none;
     myHUD = none;
-    Options = none;
+    BTConfig = none;
     SpectatedClient = none;
     ActiveLevel = none;
     KeyPickupsList.Length = 0;
@@ -877,7 +841,7 @@ event NotifyLevelChange()
 
 final function Color GetFadingColor( color FadingColor )
 {
-    if( Options.bFadeTextColors )
+    if( BTConfig.bFadeTextColors )
         return MRI.GetFadingColor( FadingColor );
 
     return FadingColor;
@@ -885,9 +849,9 @@ final function Color GetFadingColor( color FadingColor )
 
 exec function ShowZoneActors( optional bool bshowAll, optional bool bdynamicOnly, optional name tag, optional byte rm )
 {
-    Options.bShowZoneActors = !Options.bShowZoneActors || bshowAll;
-    SendConsoleMessage( "ShowZoneActors:"$Options.bShowZoneActors );
-    Options.SaveConfig();
+    BTConfig.bShowZoneActors = !BTConfig.bShowZoneActors || bshowAll;
+    SendConsoleMessage( "ShowZoneActors:"$BTConfig.bShowZoneActors );
+    BTConfig.SaveConfig();
 
     bRenderAll = bshowAll;
     bRenderOnlyDynamic = bdynamicOnly;
@@ -945,19 +909,17 @@ exec function ToggleMisc2( byte bit )
     else ViewPortOwner.Actor.Misc2 = ViewPortOwner.Actor.Misc2 | flag;
 }
 
-final function RenderZoneActors( Canvas C )
+final function RenderZoneActors( Canvas C, PlayerController player )
 {
     local Actor A;
     local Teleporter NextTP;
     local vector Scre, Scre2;
     local string S;
     local float Dist, XL, YL;
-    local PlayerController PC;
     local bool bWireframed;
     local byte oldRendMap;
 
-    PC = ViewportOwner.Actor;
-    if( PC == None || Pawn(PC.ViewTarget) == None )
+    if( Pawn(player.ViewTarget) == none )
         return;
 
     if( bRenderAll )
@@ -968,21 +930,21 @@ final function RenderZoneActors( Canvas C )
         }
         else
         {
-            oldRendMap = PC.RendMap;
-            PC.RendMap = RenderMode;
+            oldRendMap = player.RendMap;
+            player.RendMap = RenderMode;
         }
 
         C.SetPos( 0, 0 );
         if( bRenderOnlyDynamic )
         {
-            foreach PC.DynamicActors( class'Actor', A, RenderTag )
+            foreach player.DynamicActors( class'Actor', A, RenderTag )
             {
                 C.DrawActor( A, bWireframed );
             }
         }
         else
         {
-            foreach PC.AllActors( class'Actor', A, RenderTag )
+            foreach player.AllActors( class'Actor', A, RenderTag )
             {
                 C.DrawActor( A, bWireframed );
             }
@@ -990,12 +952,12 @@ final function RenderZoneActors( Canvas C )
 
         if( !bWireframed )
         {
-            PC.RendMap = oldRendMap;
+            player.RendMap = oldRendMap;
         }
         return;
     }
 
-    ForEach PC.Region.Zone.ZoneActors( Class'Actor', A )
+    foreach player.Region.Zone.ZoneActors( Class'Actor', A )
     {
         if( Mover(A) != None )
         {
@@ -1035,7 +997,7 @@ final function RenderZoneActors( Canvas C )
                 if( Teleporter(A).URL != "" )
                 {
                     S = Teleporter(A).URL;
-                    ForEach PC.AllActors( Class'Teleporter', NextTP )
+                    foreach player.AllActors( Class'Teleporter', NextTP )
                     {
                         if( string( NextTP.Tag ) == S )
                         {
@@ -1077,7 +1039,7 @@ final function RenderZoneActors( Canvas C )
 }
 
 // As of LCA v3 ClientBTimes will no longer render keys, LCA v3 will now render the keys.
-final function RenderKeys( Canvas C )
+final function RenderKeys( Canvas C, PlayerController player )
 {
     local int i, j;
     local string KeyName;
@@ -1101,9 +1063,9 @@ final function RenderKeys( Canvas C )
             KeyName = KeyPickupsList[i].GetPropertyText( "KeyName" );
             bHasThisKey = False;
             // Check if already have!
-            if( ViewportOwner.Actor.Pawn != None )
+            if( player.Pawn != None )
             {
-                for( Inv = ViewportOwner.Actor.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
+                for( Inv = player.Pawn.Inventory; Inv != None; Inv = Inv.Inventory )
                 {
                     if( Inv.IsA('LCAKeyInventory') && KeyName == Inv.GetPropertyText( "KeyName" ) )
                     {
@@ -1117,18 +1079,15 @@ final function RenderKeys( Canvas C )
                 continue;
 
             C.GetCameraLocation( CamPos, CamRot );
-            GetAxes( ViewportOwner.Actor.ViewTarget.Rotation, X, Y, Z );
+            GetAxes( player.ViewTarget.Rotation, X, Y, Z );
             Dir = KeyPickupsList[i].Location - CamPos;
             Dist = VSize( Dir );
             Dir /= Dist;
             if( (Dir Dot X) > 0.6 && Dist < 3000 )  // only render if this location is not outside the player view.
             {
-                C.Style = ViewportOwner.Actor.ERenderStyle.STY_Alpha;
+                C.Style = player.ERenderStyle.STY_Alpha;
                 C.DrawColor = Class'HUD'.Default.GoldColor;
-                if( HU != none )
-                {
-                    HUD_Assault(ViewportOwner.Actor.myHUD).Draw_2DCollisionBox( C, KeyPickupsList[i], C.WorldToScreen( KeyPickupsList[i].Location ), KeyName, KeyPickupsList[i].DrawScale, True );
-                }
+                class'HUD_Assault'.static.Draw_2DCollisionBox( C, KeyPickupsList[i], C.WorldToScreen( KeyPickupsList[i].Location ), KeyName, KeyPickupsList[i].DrawScale, True );
                 continue;
             }
         }
@@ -1154,7 +1113,7 @@ final static function Font GetScreenFont( Canvas C )
     return class'HUDBase'.static.LoadFontStatic( Min( 8, FontSize ) );
 }
 
-function RenderGhostMarkings( Canvas C )
+function RenderGhostMarkings( Canvas C, PlayerController player )
 {
     local BTClient_GhostMarker Marking;
     local vector Scr;
@@ -1180,7 +1139,7 @@ function RenderGhostMarkings( Canvas C )
     negativeColor = GetFadingColor(class'HUD'.default.RedColor);
 
     C.Style = 5;
-    foreach ViewportOwner.Actor.DynamicActors( class'BTClient_GhostMarker', Marking )
+    foreach player.DynamicActors( class'BTClient_GhostMarker', Marking )
     {
         Dir = Marking.Location - CamPos;
         Dist = VSize( Dir );
@@ -1212,7 +1171,7 @@ function RenderGhostMarkings( Canvas C )
 
             if (Dist < 512)
             {
-                lastRenderTimePct = FMin((ViewportOwner.Actor.Level.TimeSeconds - Marking.LastRenderTime)/0.3f, 1.0f);
+                lastRenderTimePct = FMin((player.Level.TimeSeconds - Marking.LastRenderTime)/0.3f, 1.0f);
                 Scr.X = Marking.LastRenderScr.X*(1.0 - lastRenderTimePct) + (C.ClipX*0.5*lastRenderTimePct);
                 Scr.Y = Marking.LastRenderScr.Y*(1.0 - lastRenderTimePct) + (C.ClipY*0.75*lastRenderTimePct);
                 C.DrawColor.A = 255f*(Dist/512);
@@ -1233,13 +1192,13 @@ function RenderGhostMarkings( Canvas C )
             C.DrawTile( MarkerArrow, YL, YL, 0.0, 0.0, 128, 128 );
 
             Marking.LastRenderScr = Scr;
-            Marking.LastRenderTime = ViewportOwner.Actor.Level.TimeSeconds;
+            Marking.LastRenderTime = player.Level.TimeSeconds;
         }
     }
     C.Style = 1;
 }
 
-final function RenderTitle( Canvas C )
+final function RenderTitle( Canvas C, PlayerController player )
 {
     local xPawn P;
     local vector Scre, CamLoc, X, Y, Z, Dir;
@@ -1248,11 +1207,11 @@ final function RenderTitle( Canvas C )
     local string s;
     local BTClient_ClientReplication CRI;
 
-    ForEach ViewportOwner.Actor.DynamicActors( Class'xPawn', P )
+    foreach player.DynamicActors( Class'xPawn', P )
     {
         if
         (
-            P == ViewportOwner.Actor.ViewTarget
+            P == player.ViewTarget
             ||
             P.IsA('Monster')
             ||
@@ -1269,23 +1228,23 @@ final function RenderTitle( Canvas C )
         C.GetCameraLocation( CamLoc, CamRot );
         Dir = P.Location - CamLoc;
         Dist = VSize( Dir );
-        if( Dist > ViewportOwner.Actor.TeamBeaconMaxDist || !ViewportOwner.Actor.FastTrace( P.Location, CamLoc ) )
+        if( Dist > player.TeamBeaconMaxDist || !player.FastTrace( P.Location, CamLoc ) )
         {
             continue;
         }
 
         // Don't render pawns behind me!
-        GetAxes( ViewportOwner.Actor.ViewTarget.Rotation, X, Y, Z );
+        GetAxes( player.ViewTarget.Rotation, X, Y, Z );
         Dir /= Dist;
         if( !((Dir Dot X) > 0.6) )
         {
             continue;
         }
 
-        if( Dist < (ViewportOwner.Actor.TeamBeaconPlayerInfoMaxDist * 0.4f) )
+        if( Dist < (player.TeamBeaconPlayerInfoMaxDist * 0.4f) )
         {
             // Looks for the CRI of this Pawn
-            foreach ViewportOwner.Actor.DynamicActors( Class'BTClient_ClientReplication', CRI )
+            foreach player.DynamicActors( Class'BTClient_ClientReplication', CRI )
             {
                 if( CRI.myPawn == P )
                 {
@@ -1327,9 +1286,9 @@ function RenderCompetitiveLayer( Canvas C )
     StartY = YL + YL;
 
     C.Style = 1;
-    C.DrawColor = myHUD.GreenColor;
+    C.DrawColor = class'HUD'.default.GreenColor;
     C.SetPos( StartX, StartY );
-    C.DrawTile( AlphaLayer, SizeX, YL, 0, 0, 256, 256 );
+    C.DrawTile( BackgroundTexture, SizeX, YL, 0, 0, 256, 256 );
 
     gameScore = MRI.Level.GRI.Teams[0].Score + MRI.Level.GRI.Teams[1].Score;
     if( gameScore >= 0f )
@@ -1340,78 +1299,44 @@ function RenderCompetitiveLayer( Canvas C )
         // Draw red's pct
         S = FormatTimeCompact( MRI.TeamTime[0] ) @ "-" @ string(int(MRI.Level.GRI.Teams[0].Score));
         C.TextSize( S, XL, YL );
-        C.DrawColor = HU.GetTeamColor( 0 );
+        C.DrawColor = class'HUD_Assault'.static.GetTeamColor( 0 );
         C.SetPos( StartX - XL - 8, StartY );
         C.Style = 3;
         C.DrawText( S );
 
         C.SetPos( StartX, StartY );
         C.Style = 1;
-        C.DrawTile( AlphaLayer, SizeX * (1f - bluePct), YL, 0, 0, 256, 256 );
+        C.DrawTile( BackgroundTexture, SizeX * (1f - bluePct), YL, 0, 0, 256, 256 );
 
         // Draw blue's pct
         S = string(int(MRI.Level.GRI.Teams[1].Score)) @ "-" @ FormatTimeCompact( MRI.TeamTime[1] );
         C.TextSize( S, XL, YL );
-        C.DrawColor = HU.GetTeamColor( 1 );
+        C.DrawColor = class'HUD_Assault'.static.GetTeamColor( 1 );
         C.SetPos( StartX + SizeX + 8, StartY );
         C.Style = 3;
         C.DrawText( S );
 
         C.SetPos( StartX + (SizeX - SizeX * (1f - redPct)), StartY );
         C.Style = 1;
-        C.DrawTile( AlphaLayer, SizeX * (1f - redPct), YL, 0, 0, 256, 256 );
+        C.DrawTile( BackgroundTexture, SizeX * (1f - redPct), YL, 0, 0, 256, 256 );
     }
 
     C.Style = 3;
     S = "Team Balance";
     C.TextSize( S, XL, YL );
     C.SetPos( StartX + SizeX * 0.5 - XL * 0.5, StartY );
-    C.DrawColor = myHUD.WhiteColor;
+    C.DrawColor = class'HUD'.default.WhiteColor;
     C.DrawText( S );
 
     // Draw border
     C.CurX = StartX;
-    C.DrawColor = Class'HUD'.Default.GrayColor;
+    C.DrawColor = class'HUD'.default.GrayColor;
     C.DrawColor.A = 100;
-    class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, StartY-2, SizeX );
-    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, StartY+YL, SizeX );
+    class'BTLevelCompletedMessage'.static.DrawHorizontal( C, StartY-2, SizeX );
+    class'BTLevelCompletedMessage'.static.DrawHorizontal( C, StartY+YL, SizeX );
     C.CurY -= 2;
-    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, StartX, YL+4 );
-    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, StartX+SizeX, YL+4 );
-}
-
-function array<sCanvasColumn> CreateColumns( Canvas C, array<sTableColumn> columns, optional out float totalWidth, optional out float totalHeight )
-{
-    local int i;
-    local float xl, yl, titleXL, titleYL;
-    local array<sCanvasColumn> canvasColumns;
-
-    canvasColumns.Length = columns.Length;
-    for( i = 0; i < columns.Length; ++ i )
-    {
-        C.StrLen( columns[i].Format, xl, yl );
-        C.StrLen( columns[i].Title, titleXL, titleYL );
-        if( titleXL > xl )
-        {
-            xl = titleXL;
-        }
-
-        if( titleYL > yl )
-        {
-            yl = titleYL;
-        }
-
-        canvasColumns[i].W = xl + COLUMN_PADDING_X*2;
-        canvasColumns[i].H = yl + COLUMN_PADDING_Y*2;
-
-        totalWidth += canvasColumns[i].W;
-        if( canvasColumns[i].H > totalHeight )
-        {
-            totalHeight = canvasColumns[i].H;
-        }
-
-    }
-    return canvasColumns;
+    class'BTLevelCompletedMessage'.static.DrawVertical( C, StartX, YL+4 );
+    class'BTLevelCompletedMessage'.static.DrawVertical( C, StartX+SizeX, YL+4 );
 }
 
 const TABLE_PADDING = 4;
@@ -1424,7 +1349,7 @@ const ROW_MARGIN = 2;
 final static function DrawLayer( Canvas C, float x, float y, float width, float height )
 {
     C.SetPos( x, y );
-    C.DrawTile( default.AlphaLayer, width, height, 0, 0, 256, 256 );
+    C.DrawTile( default.BackgroundTexture, width, height, 0, 0, 256, 256 );
     C.SetPos( x, y ); // Reset pushment from DrawTile
 }
 
@@ -1483,7 +1408,7 @@ final function Vector DrawElement( Canvas C, float x, float y, string title, opt
     xl = Max( xl, minWidth );
     if( tileColor.A == 0 )
     {
-        C.DrawColor = Options.CTable;
+        C.DrawColor = BTConfig.CTable;
     }
     else
     {
@@ -1541,7 +1466,7 @@ final function Vector DrawElement( Canvas C, float x, float y, string title, opt
 
 final function DrawElementTile( Canvas C, float x, float y, float width, float height )
 {
-    C.DrawColor = Options.CTable;
+    C.DrawColor = BTConfig.CTable;
     DrawLayer( C, x, y, width + COLUMN_PADDING_X*2, height + COLUMN_PADDING_Y*2 );
 }
 
@@ -1583,7 +1508,7 @@ final static function DrawElementValue( Canvas C, float x, float y, string title
     C.SetPos( x, y ); // Reset pushment from DrawText
 }
 
-function RenderFooter( Canvas C )
+private function RenderFooter( Canvas C )
 {
     // PRE-RENDERED
     local float tableX, tableY;
@@ -1605,31 +1530,8 @@ function RenderFooter( Canvas C )
     tableY = C.ClipY - tableHeight;
 
     // Progressing render position, starting from the absolute table's position.
-    drawX = tableX;
+    drawX = tableX + TABLE_PADDING;
     drawY = tableY;
-
-    // DRAW BACKGROUND
-    // C.DrawColor = Options.CTable;
-    // DrawLayer( C, drawX, drawY - TABLE_PADDING, tableWidth, tableHeight + TABLE_PADDING );
-
-    drawX += TABLE_PADDING;
-
-    // // Advertisement
-    // s = "MutBestTimes";
-    // C.StrLen( s, xl, yl );
-    // width = xl + TABLE_PADDING*2;
-    // height = (tableHeight - TABLE_PADDING*2)*0.5;
-    // C.DrawColor = #0x0072C688;
-    // DrawColumnTile( C, drawX, drawY, width, height );
-    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
-
-    // s = "www.EliotVU.com";
-    // C.StrLen( s, xl, yl );
-    // width = xl + TABLE_PADDING*2;
-    // drawY = tableY + tableHeight - height - TABLE_PADDING;
-    // C.DrawColor = #0x0072C688;
-    // DrawColumnTile( C, drawX, drawY, width, height );
-    // DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 
     // Press F12 or Escape to hide this.
     s = RankingKeyMsg @ RankingHideMsg;
@@ -1650,11 +1552,13 @@ function PostRender( Canvas C )
     local int i, j, YLength, FLength;
     local float YP, XP;
     local float XP1;
+    local PlayerController player;
 
-    if( ViewportOwner.Actor.myHUD.bShowScoreBoard
-        || ViewportOwner.Actor.myHUD.bHideHUD
+    player = ViewportOwner.Actor;
+    if( player.myHUD.bShowScoreBoard
+        || player.myHUD.bHideHUD
         || MRI == None
-        || ViewportOwner.Actor.PlayerReplicationInfo == None )
+        || player.PlayerReplicationInfo == None )
         return;
 
     C.Font = GetScreenFont( C );
@@ -1667,16 +1571,16 @@ function PostRender( Canvas C )
                 myHUD.Overlays.Remove( i --, 1 );
             }
         }
-        if( !MRI.bSoloMap && Options.bShowZoneActors )
-            RenderZoneActors( C );
+        if( !MRI.bSoloMap && BTConfig.bShowZoneActors )
+            RenderZoneActors( C, player );
 
         if( MRI.bKeyMap )
-            RenderKeys( C );
+            RenderKeys( C, player );
 
-        RenderGhostMarkings( C );
+        RenderGhostMarkings( C, player );
     }
 
-    RenderTitle( C );
+    RenderTitle( C, player );
     if( MRI.CR == none )
         return;
 
@@ -1700,11 +1604,10 @@ function PostRender( Canvas C )
         YP = FLength;
 
         XP1 = C.ClipX;
-        // C.ClipX *= 0.9;
         C.SetPos( XP, YP - TABLE_PADDING );
-        C.DrawColor = Options.CTable;
+        C.DrawColor = BTConfig.CTable;
         C.Style = 1;
-        C.DrawTile( AlphaLayer, C.ClipX*0.75, YLength + TABLE_PADDING, 0, 0, 256, 256 );
+        C.DrawTile( BackgroundTexture, C.ClipX*0.75, YLength + TABLE_PADDING, 0, 0, 256, 256 );
 
         // Draw the packets
         YP += TABLE_PADDING;
@@ -1731,57 +1634,59 @@ function PostRender( Canvas C )
         RenderFooter( C );
     }
 
+    if (InvasionGameReplicationInfo(player.Level.GRI) != none) {
+        return;
+    }
+
     if( MRI.RecordState == RS_Active )
     {
-        if( InvasionGameReplicationInfo(ViewportOwner.Actor.Level.GRI) == none )
+        bTimerPaused = (player.IsInState( 'GameEnded' ) || player.IsInState( 'RoundEnded' ));
+        if (!bTimerPaused && MRI.bSoloMap) {
+            bTimerPaused = player.IsInState( 'Dead' )
+                || player.ViewTarget == none
+                || (xPawn(player.ViewTarget) != none && (xPawn(player.ViewTarget).bPlayedDeath || xPawn(player.ViewTarget).IsInState('Dying')));
+        }
+
+        if( bTestRun )
         {
-            bTimerPaused = (ViewportOwner.Actor.IsInState( 'GameEnded' )
-                || ViewportOwner.Actor.IsInState( 'RoundEnded' )
-                || ((ViewportOwner.Actor.IsInState( 'Dead' )
-                || ViewportOwner.Actor.ViewTarget == none))
-            );
+            C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
 
-            if( bTestRun )
+            if( bPauseTest )
+                C.DrawColor = C.Default.DrawColor;
+            else C.DrawColor = class'HUD'.default.WhiteColor;
+
+            DrawTextWithBackground( C, FormatTime( ElapsedTime ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
+            return;
+        }
+
+        /* Simple drawing */
+        if( BTConfig.bUseAltTimer )
+        {
+            // Don't count if game ended etc
+            if( bTimerPaused )
             {
-                C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
-
-                if( bPauseTest )
-                    C.DrawColor = C.Default.DrawColor;
-                else C.DrawColor = class'HUD'.default.WhiteColor;
-
-                DrawTextWithBackground( C, FormatTime( ElapsedTime ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
-                return;
+                if( DrawnTimer == 0.0f )
+                    DrawnTimer = GetTopTime();
+            }
+            else
+            {
+                DrawnTimer = GetTimeLeft();
             }
 
-            /* Simple drawing */
-            if( Options.bUseAltTimer )
-            {
-                // Don't count if game ended etc
-                if( bTimerPaused )
-                {
-                    if( DrawnTimer == 0.0f )
-                        DrawnTimer = GetTopTime();
-                }
-                else
-                {
-                    DrawnTimer = GetTimeLeft();
-                }
+            if( DrawnTimer <= 0 )
+                C.DrawColor = class'HUD'.default.RedColor;
+            else C.DrawColor = class'HUD'.default.WhiteColor;
 
-                if( DrawnTimer <= 0 )
-                    C.DrawColor = class'HUD'.default.RedColor;
-                else C.DrawColor = class'HUD'.default.WhiteColor;
+            C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
+            DrawTextWithBackground( C, FormatTime( DrawnTimer ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
+            return;
+        }
 
-                C.Font = myHUD.GetMediumFont( C.ClipX * (myHUD.HUDScale*0.75) );
-                DrawTextWithBackground( C, FormatTime( DrawnTimer ), C.DrawColor, C.ClipX*0.5, C.ClipY*0.75 );
-                return;
-            }
-
-            // Draw record information!.
-            // Don't render anything when the objectives board is displayed.
-            if( HU == none || !HU.ShouldShowObjectiveBoard() )
-            {
-                DrawRecordWidget( C );
-            }
+        // Draw record information!.
+        // Don't render anything when the objectives board is displayed.
+        if( HUD_Assault(myHUD) == none || !HUD_Assault(myHUD).ShouldShowObjectiveBoard() )
+        {
+            DrawRecordWidget( C );
         }
         RenderHUDElements( C );
     }
@@ -1813,7 +1718,7 @@ function PostRender( Canvas C )
     }
 }
 
-function RenderHUDElements( Canvas C )
+private function RenderHUDElements( Canvas C )
 {
     // PRE-RENDERED
     local float drawX, drawY;
@@ -1831,11 +1736,11 @@ function RenderHUDElements( Canvas C )
     C.StrLen( "9", xl, yl );
     if( SpectatedClient.ClientSpawnPawn != none )
     {
-        backupColor = Options.CTable;
-        Options.CTable = #0xFB607FFF;
-        Options.CTable.A = 100;
+        backupColor = BTConfig.CTable;
+        BTConfig.CTable = #0xFB607FFF;
+        BTConfig.CTable.A = 100;
         v = DrawElement( C, drawX, drawY, "   Checkpoint" );
-        Options.CTable = backupColor;
+        BTConfig.CTable = backupColor;
 
         vXL = 54f/76f*yl;
         C.SetPos( drawX + COLUMN_PADDING_X, drawY );
@@ -1849,23 +1754,23 @@ function RenderHUDElements( Canvas C )
     {
         // Draw Level and percent
         S = "Boost";
-        backupColor = Options.CTable;
-        Options.CTable = class'HUD'.default.GreenColor;
-        Options.CTable.A = 100;
-        Options.CTable.G = 150;
+        backupColor = BTConfig.CTable;
+        BTConfig.CTable = class'HUD'.default.GreenColor;
+        BTConfig.CTable.A = 100;
+        BTConfig.CTable.G = 150;
         drawY += DrawElement( C, drawX, drawY, s ).y*1.2;
-        Options.CTable = backupColor;
+        BTConfig.CTable = backupColor;
     }
 
     if( SpectatedClient.BTWage > 0 )
     {
         // Draw Level and percent
         S = "Waging";
-        backupColor = Options.CTable;
-        Options.CTable = #0xFF00FFFF;
-        Options.CTable.A = 100;
+        backupColor = BTConfig.CTable;
+        BTConfig.CTable = #0xFF00FFFF;
+        BTConfig.CTable.A = 100;
         drawY += DrawElement( C, drawX, drawY, s, string(SpectatedClient.BTWage) ).y*1.2;
-        Options.CTable = backupColor;
+        BTConfig.CTable = backupColor;
     }
 
     if( ActiveLevel != none && ActiveLevel.NumRecords > 0 )
@@ -1974,9 +1879,7 @@ function RenderHUDElements( Canvas C )
     }
 }
 
-
-
-function DrawRecordWidget( Canvas C )
+private function DrawRecordWidget( Canvas C )
 {
     local string timeLeftF, bestTimeF;
     local float minWidth;
@@ -2021,7 +1924,7 @@ function DrawRecordWidget( Canvas C )
             if( MRI.Level.TimeSeconds-(LastTime-1.0) >= 0.25f )
                 bSoundTicking = false;
 
-            if( Options.bPlayTickSounds && MRI.Level.TimeSeconds >= LastTime && int(DrawnTimer) >= 0 && DrawnTimer <= 10 )
+            if( BTConfig.bPlayTickSounds && MRI.Level.TimeSeconds >= LastTime && int(DrawnTimer) >= 0 && DrawnTimer <= 10 )
             {
                 if( ViewportOwner.Actor.ViewTarget != None )
                 {
@@ -2031,14 +1934,14 @@ function DrawRecordWidget( Canvas C )
                         // Avoid a bug that cause the denied sound to be played twice(wtf?)
                         if( DrawnTimer > -0.91f )
                         {
-                            ViewportOwner.Actor.ViewTarget.PlayOwnedSound( Options.LastTickSound, SLOT_Interact, 255 );
+                            ViewportOwner.Actor.ViewTarget.PlayOwnedSound( BTConfig.LastTickSound, SLOT_Interact, 255 );
                             bSoundTicking = True;
                         }
                     }
                     else
                     {
                         LastTime = MRI.Level.TimeSeconds + 1.0f;
-                        ViewportOwner.Actor.ViewTarget.PlayOwnedSound( Options.TickSound, SLOT_Interact, 255 );
+                        ViewportOwner.Actor.ViewTarget.PlayOwnedSound( BTConfig.TickSound, SLOT_Interact, 255 );
                         bSoundTicking = True;
                     }
                 }
@@ -2060,7 +1963,7 @@ function DrawRecordWidget( Canvas C )
 
             s = FormatTime( ActiveLevel.TopTime );
             C.StrLen( s, xl, yl );
-            C.DrawColor = Options.CGoldText;
+            C.DrawColor = BTConfig.CGoldText;
             DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s );
             drawY += height + COLUMN_PADDING_Y*3;
         }
@@ -2120,7 +2023,7 @@ function DrawRecordWidget( Canvas C )
         s = timeLeftF;
         C.StrLen( s, xl3, yl3 );
         if( bSoundTicking )
-            C.DrawColor = Orange;
+            C.DrawColor = OrangeColor;
         else
         {
             if( DrawnTimer <= 0.0f )
@@ -2152,44 +2055,15 @@ function DrawRecordWidget( Canvas C )
     }
 
     // Press F12 or Escape to hide this.
-    s = "Leaderboards " $ Options.CGoldText $ "[" $ Class'Interactions'.Static.GetFriendlyName( Options.RankingTableKey ) $ "]";
+    s = "Leaderboards " $ BTConfig.CGoldText $ "[" $ Class'Interactions'.Static.GetFriendlyName( BTConfig.RankingTableKey ) $ "]";
     C.StrLen( s, width, height );
     C.DrawColor = #0x0088BBFF;
-    C.DrawColor.A = Options.CTable.A;
+    C.DrawColor.A = BTConfig.CTable.A;
     DrawColumnTile( C, drawX - width + COLUMN_PADDING_X, drawY, width+4, height+2 );
     DrawHeaderText( C, drawX - width + COLUMN_PADDING_X, drawY, s );
 }
 
-final static function DrawBorder( Canvas C, float X1, float Y1, float X2, float Y2 )
-{
-    local float width, height;
-    local float bak[2];
-
-    bak[0] = C.ClipX;
-    bak[1] = C.ClipY;
-
-    width = X2 - X1;
-    height = Y2 - Y1 + 4;   // 2 for top and 2 for bottom
-
-    C.DrawColor = class'HUD'.default.GrayColor;
-    C.DrawColor.A = 100;
-
-    C.SetPos( X1, Y1-2 );
-    C.DrawTile( texture'UCGeneric.SolidColours.Black', width, 2, 0, 0, 2, 2 );
-    C.SetPos( X1, Y2 );
-    C.DrawTile( texture'UCGeneric.SolidColours.Black', width, 2, 0, 0, 2, 2 );
-
-    C.SetPos( X1, Y1-2 );
-    C.DrawTile( texture'UCGeneric.SolidColours.Black', 2, height, 0, 0, 2, 2 );
-
-    C.SetPos( X2, Y1-2 );
-    C.DrawTile( texture'UCGeneric.SolidColours.Black', 2, height, 0, 0, 2, 2 );
-
-    C.ClipX = bak[0];
-    C.ClipY = bak[1];
-}
-
-final function BTClient_LevelReplication GetCurrentLevel()
+private function BTClient_LevelReplication GetCurrentLevel()
 {
     if( SpectatedClient == none )
     {
@@ -2203,7 +2077,7 @@ final function BTClient_LevelReplication GetCurrentLevel()
     return MRI.MapLevel;
 }
 
-final function float GetTopTime()
+private function float GetTopTime()
 {
     if( ActiveLevel == none )
         return 0.00;
@@ -2211,56 +2085,20 @@ final function float GetTopTime()
     return ActiveLevel.TopTime;
 }
 
-final function float GetTimeLeft()
+private function float GetTimeLeft()
 {
     if( MRI.bSoloMap )
     {
-        if( Options.bBaseTimeLeftOnPersonal && SpectatedClient.PersonalTime > 0.f )
+        if( BTConfig.bBaseTimeLeftOnPersonal && SpectatedClient.PersonalTime > 0.f )
             return SpectatedClient.PersonalTime - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
         else return GetTopTime() - (MRI.Level.TimeSeconds - SpectatedClient.LastSpawnTime);
     }
     else return GetTopTime() - (MRI.Level.TimeSeconds - (MRI.MatchStartTime - MRI.CR.ClientMatchStartTime));
 }
 
-/*final function DrawTextBox( Canvas C, float X, float Y, string Text, string Value, color ValueColor )
-{
-    local string S;
-    local float XL, YL;
-    local byte PreStyle;
-
-    PreStyle = C.Style;
-    C.Style = 1;
-
-    // Draw Box
-    C.StrLen( Text$":"@Value, XL, YL );
-    C.SetPos( (X - ((XL - ExTileWidth) - BorderSize)), (Y + YL) );
-    C.DrawColor = Options.CTable;
-    C.DrawTile( AlphaLayer, ((XL + ExTileWidth) + (BorderSize * 2)), YL, 0, 0, 256, 256 );
-
-    // Draw Border
-    C.DrawColor = Class'HUD'.Default.GrayColor;
-    C.DrawColor.A = 100;
-    C.CurX -= ((XL + ExTileWidth) + (BorderSize * 2));
-    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, (Y - BorderSize), ((XL + ExTileWidth) + (BorderSize * 2)) );
-    Class'BTLevelCompletedMessage'.Static.DrawHorizontal( C, (Y + YL), ((XL + ExTileWidth) + (BorderSize * 2)) );
-    C.CurY -= BorderSize;
-    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, (C.CurX - BorderSize), (YL + (BorderSize * 2)) );
-    Class'BTLevelCompletedMessage'.Static.DrawVertical( C, X, (YL + (BorderSize * 2)) );
-
-    // Draw Content
-    C.SetPos( (X - (XL - (BorderSize * 2))), ((YL + ExTileWidth) + BorderSize + ExTextOffset) );
-    C.DrawColor = Class'HUD'.Default.WhiteColor;
-    C.DrawText( Text$":", True );
-
-    C.StrLen( Value, XL, YL );
-    C.SetPos( (X - (XL - (BorderSize * 2))), ((YL + ExTileWidth) + BorderSize + ExTextOffset) );
-    C.DrawColor = ValueColor;
-    C.DrawText( Value, True );
-    C.Style = PreStyle;
-}*/
 
 // Enhanced copy of HUD_Assault.uc
-final function DrawTextWithBackground( Canvas C, String Text, Color TextColor, float XO, float YO )
+private function DrawTextWithBackground( Canvas C, String Text, Color TextColor, float XO, float YO )
 {
     local float XL, YL, XL2, YL2;
 
@@ -2269,9 +2107,9 @@ final function DrawTextWithBackground( Canvas C, String Text, Color TextColor, f
     XL2 = XL + 64 * myHUD.ResScaleX;
     YL2 = YL +  8 * myHUD.ResScaleY;
 
-    C.DrawColor = Options.CTable;
+    C.DrawColor = BTConfig.CTable;
     C.SetPos( XO - XL2*0.5, YO - YL2*0.5 );
-    C.DrawTile( AlphaLayer, XL2, YL2, 0, 0, 256, 256 );
+    C.DrawTile( BackgroundTexture, XL2, YL2, 0, 0, 256, 256 );
 
     C.DrawColor = TextColor;
     C.SetPos( XO - XL*0.5, YO - YL*0.5 );
@@ -2406,7 +2244,7 @@ static final function string CompactDateToString( int date )
     return FixDate( d );
 }
 
-static final function string FixDate( int Date[3] )
+private static function string FixDate( int Date[3] )
 {
     local string FixedDate;
 
@@ -2432,24 +2270,21 @@ defaultproperties
     MarkerArrow=oMarkerArrow
 
     YOffsetScale=0.6
-    Orange=(R=255,G=255,B=0,A=255)
+    OrangeColor=(R=255,G=255,B=0,A=255)
+    BackgroundTexture=Texture'BTScoreBoardBG'
 
     bVisible=True
     bRequiresTick=True
 
     RecordTimeMsg="Time"
-    RecordPrevTimeMsg="Previous Time"
     RecordHolderMsg="Holder"
     RecordTimeLeftMsg="Record"
     RecordEmptyMsg="No record available"
     RecordHubMsg="Choose a level!"
     RecordTimeElapsed="Time"
     RankingKeyMsg="Escape/%KEY%"
-    RankingToggleMsg="view next page"
     RankingHideMsg="to show/hide this"
 
-    RankBeacon=Texture'AS_FX_TX.Icons.ScoreBoard_Objective_Final'
-    AlphaLayer=Texture'BTScoreBoardBG'
 }
 
 #include classes/BTColorHashUtil.uci

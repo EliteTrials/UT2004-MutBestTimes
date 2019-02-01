@@ -1,11 +1,18 @@
 //=============================================================================
-// Copyright 2011-2018 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2011-2019 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTStore_ItemsMultiColumnList extends GUIMultiColumnList;
 
-var Texture PositiveIcon;
+var const Texture PositiveIcon;
 
+// Necessary to access the player's replicated items
 var editconst noexport BTClient_ClientReplication CRI;
+
+event Free()
+{
+    super.Free();
+    CRI = none;
+}
 
 function UpdateList()
 {
@@ -108,13 +115,6 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 function bool InternalOnRightClick( GUIComponent sender )
 {
     return OnClick( sender );
-}
-
-event Free()
-{
-    super.Free();
-    CRI = none;
-    PositiveIcon = none;
 }
 
 defaultproperties

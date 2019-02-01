@@ -30,6 +30,8 @@ var() globalconfig
     bAutoBehindView,
     bNoTrailers;
 
+#exec obj load file="MenuSounds.uax"
+
 var() globalconfig
     sound
     TickSound,

@@ -238,6 +238,20 @@ replication
         ServerPerformQuery;
 }
 
+static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+{
+    local LinkedReplicationInfo LRI;
+
+    for( LRI = PRI.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+    {
+        if( BTClient_ClientReplication(LRI) != none )
+        {
+            return BTClient_ClientReplication(LRI);
+        }
+    }
+    return none;
+}
+
 // Server hooks
 delegate OnRequestAchievementCategories( PlayerController requester, BTClient_ClientReplication CRI );
 delegate OnRequestAchievementsByCategory( PlayerController requester, BTClient_ClientReplication CRI, string catID );

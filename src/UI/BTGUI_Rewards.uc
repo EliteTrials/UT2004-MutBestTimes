@@ -4,8 +4,6 @@ class BTGUI_Rewards extends MidGamePanel
 var automated GUITabControl
     c_Tabs;
 
-var BTClient_Interaction MyInteraction;
-
 struct sBTTab
 {
     var() string Caption;
@@ -25,7 +23,6 @@ event Free()
         BTTabs[i].Style = none;
     }
 
-    MyInteraction = none;
     super.Free();
 }
 

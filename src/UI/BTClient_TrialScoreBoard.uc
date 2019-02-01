@@ -13,37 +13,33 @@ var() const string
     Header_Spectators,
     Header_ElapsedTime;
 
-var() float XClipOffset;
-var() float YClipOffset;
+var protected const Texture BackgroundTexture;
+var protected const color GrayColor;
+var protected const color PrimaryColor, SecondaryColor;
 
-var BTClient_Interaction myInter;
+var() protected const float XClipOffset;
+var() protected const float YClipOffset;
 
-var const color GrayColor;
-var const color PrimaryColor, SecondaryColor;
-var transient color TempColor;
+var protected BTClient_Config BTConfig; // Cached instance, see Init()
+var protected const class<BTClient_Interaction> BTInterClass;
 
-var int SavedElapsedTime;
-
-var float       YOffset,
-                NX,
-                OX,
-                OSize,
-                DX,
-                TX,
-                PX,
-                ETX,
-                HX,
-                LX,
-                LXL,
-                NXL,
-                OXL,
-                DXL,
-                TXL, OTHERX, OTHERXL;
-
-var private transient string
+var protected transient string
     AdminSubText,
     ReadySubText,
     PremiumSubText;
+
+var protected transient color TempColor;
+var protected int SavedElapsedTime;
+var protected float YOffset,
+                NX, NXL,
+                OX, OXL, OSize,
+                DX, DXL,
+                TX, TXL,
+                PX, ETX, HX,
+                LX, LXL,
+                OTHERX, OTHERXL;
+
+var protected array<PlayerReplicationInfo> SortedPlayers, SortedSpectators;
 
 static function string GetCName( PlayerReplicationInfo PRI )
 {
@@ -64,21 +60,7 @@ static function string GetCName( PlayerReplicationInfo PRI )
     return PRI.PlayerName;
 }
 
-simulated static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
-{
-    local LinkedReplicationInfo LRI;
-
-    for( LRI = PRI.CustomReplicationInfo; LRI != None; LRI = LRI.NextReplicationInfo )
-    {
-        if( BTClient_ClientReplication(LRI) != None )
-        {
-            return BTClient_ClientReplication(LRI);
-        }
-    }
-    return none;
-}
-
-simulated static function LinkedReplicationInfo GetGRI( PlayerReplicationInfo PRI )
+private static function LinkedReplicationInfo GetGRI( PlayerReplicationInfo PRI )
 {
     local LinkedReplicationInfo LRI;
 
@@ -99,28 +81,28 @@ simulated function Init()
     AdminSubText = #0xFF0000FF$"[Admin] "$SecondaryColor;
     ReadySubText = #0xFF8800FF$"[" $ class'ScoreBoardDeathMatch'.default.ReadyText $ "] "$SecondaryColor;
     PremiumSubText = #0x00FFFFFF$"[Premium] "$SecondaryColor;
+
+    BTConfig = class'BTClient_Config'.static.FindSavedData();
 }
 
-simulated function UpdateScoreBoard( Canvas C )
+simulated event DrawScoreboard(Canvas C)
 {
-    local float
-                X,
-                Y,
-                XL,
-                YL,
-                TY,
-                PredictedPY,
-                PredictedSY,
-                rowTileX, rowTextX,
-                rowWidth, rowHeight, rowMargin, rowSegmentHeight;
+	if(!UpdateGRI()) {
+        return;
+    }
+    UpdateScoreBoard(C);
+}
 
+function bool UpdateGRI()
+{
     local int i, j;
-    local array<PlayerReplicationInfo> SortedPlayers, SortedSpectators;
-    local bool bSkipSpectators;
-    local string s;
 
-    if( GRI == none || myInter == none )
-        return; // Still receiving server state...
+    if (!super.UpdateGRI()) {
+        return false;
+    }
+
+    SortedPlayers.Length = 0;
+    SortedSpectators.Length = 0;
 
     j = GRI.PRIArray.Length;
     // <Sort Players>
@@ -170,8 +152,22 @@ simulated function UpdateScoreBoard( Canvas C )
 
         SortedSpectators[SortedSpectators.Length] = GRI.PRIArray[i];
     }
+    return true;
+}
 
-    C.Font = myInter.GetScreenFont( C );
+simulated function UpdateScoreBoard(Canvas C)
+{
+    local int i, j;
+    local string s;
+
+    local float X, Y, XL, YL, TY;
+    local float PredictedPY, PredictedSY;
+    local float rowTileX, rowTextX, rowWidth, rowHeight, rowMargin, rowSegmentHeight;
+
+    if( GRI == none )
+        return; // Still receiving server state...
+
+    C.Font = BTInterClass.static.GetScreenFont( C );
     C.StrLen( "T", XL, YL );
     rowMargin = 2;
     rowHeight = YL*2 + 4;
@@ -195,30 +191,30 @@ simulated function UpdateScoreBoard( Canvas C )
     rowWidth = X - 8;
     Y = Min( PredictedPY + PredictedSY + 8, C.ClipY-(YClipOffset*2) + 4 ); // 4 = spacing
     C.SetPos( XClipOffset, YClipOffset );
-    C.DrawColor = myInter.Options.CTable;
-    C.DrawTile( myInter.AlphaLayer, X, Y, 0, 0, 256, 256 );
+    C.DrawColor = BTConfig.CTable;
+    C.DrawTile( BackgroundTexture, X, Y, 0, 0, 256, 256 );
 
     // Draw Level Title
     s = "Playing" @ Outer.Name;
     C.StrLen( s, XL, YL );
     C.SetPos( XClipOffset, YClipOffset - YL-8-4 );
-    C.DrawColor = myInter.Options.CTable;
-    C.DrawTile( myInter.AlphaLayer, XL+8+8, YL+8+4, 0, 0, 256, 256 );
+    C.DrawColor = BTConfig.CTable;
+    C.DrawTile( BackgroundTexture, XL+8+8, YL+8+4, 0, 0, 256, 256 );
 
     C.DrawColor = #0x0072C688;
-    myInter.DrawColumnTile( C, XClipOffset+4, YClipOffset - YL-4-4, XL + /**COLUMN_PADDING_X*/4*2, YL+4/**COLUMN_PADDING_Y*/ );
-    myInter.DrawHeaderText( C, XClipOffset+4, YClipOffset - YL-4-4, s );
+    BTInterClass.static.DrawColumnTile( C, XClipOffset+4, YClipOffset - YL-4-4, XL + /**COLUMN_PADDING_X*/4*2, YL+4/**COLUMN_PADDING_Y*/ );
+    BTInterClass.static.DrawHeaderText( C, XClipOffset+4, YClipOffset - YL-4-4, s );
 
     // Draw Level Author
     s = "Map by" @ Level.Author;
     C.StrLen( s, XL, YL );
     C.SetPos( XClipOffset+X-XL-4*2-8, YClipOffset + Y );
-    C.DrawColor = myInter.Options.CTable;
-    C.DrawTile( myInter.AlphaLayer, XL+8+8, YL+8+4, 0, 0, 256, 256 );
+    C.DrawColor = BTConfig.CTable;
+    C.DrawTile( BackgroundTexture, XL+8+8, YL+8+4, 0, 0, 256, 256 );
 
     C.DrawColor = #0x00529688;
-    myInter.DrawColumnTile( C, XClipOffset+X-XL-12, YClipOffset + Y+4, XL + /**COLUMN_PADDING_X*/4*2, YL+4/**COLUMN_PADDING_Y*/ );
-    myInter.DrawHeaderText( C, XClipOffset+X-XL-12, YClipOffset + Y+4, s );
+    BTInterClass.static.DrawColumnTile( C, XClipOffset+X-XL-12, YClipOffset + Y+4, XL + /**COLUMN_PADDING_X*/4*2, YL+4/**COLUMN_PADDING_Y*/ );
+    BTInterClass.static.DrawHeaderText( C, XClipOffset+X-XL-12, YClipOffset + Y+4, s );
 
     TY = YClipOffset+8;
 
@@ -266,33 +262,33 @@ simulated function UpdateScoreBoard( Canvas C )
     }
 
     C.SetPos( LX, TY );
-    myInter.DrawHeaderTile( C, LX, TY, LXL+4, YL );
-    myInter.DrawHeaderText( C, LX, TY, Header_Rank );
+    BTInterClass.static.DrawHeaderTile( C, LX, TY, LXL+4, YL );
+    BTInterClass.static.DrawHeaderText( C, LX, TY, Header_Rank );
 
     // Draw Players Info Header
     C.SetPos( NX, TY );
-    myInter.DrawHeaderTile( C, NX, TY, NXL+4, YL );
-    myInter.DrawHeaderText( C, NX, TY, Header_Name );
+    BTInterClass.static.DrawHeaderTile( C, NX, TY, NXL+4, YL );
+    BTInterClass.static.DrawHeaderText( C, NX, TY, Header_Name );
 
     C.SetPos( NX, TY+YL+2 );
     C.DrawColor = SecondaryColor;
     C.DrawText( "Region" );
 
     C.SetPos( OX, TY );
-    myInter.DrawHeaderTile( C, OX, TY, OXL+4, YL );
-    myInter.DrawHeaderText( C, OX, TY, class'ScoreBoardDeathMatch'.default.PointsText );
+    BTInterClass.static.DrawHeaderTile( C, OX, TY, OXL+4, YL );
+    BTInterClass.static.DrawHeaderText( C, OX, TY, class'ScoreBoardDeathMatch'.default.PointsText );
 
     C.SetPos( OX, TY+YL+2 );
     C.DrawColor = SecondaryColor;
     C.DrawText( "Objectives" );
 
     C.SetPos( DX, TY );
-    myInter.DrawHeaderTile( C, DX, TY, DXL+4, YL );
-    myInter.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
+    BTInterClass.static.DrawHeaderTile( C, DX, TY, DXL+4, YL );
+    BTInterClass.static.DrawHeaderText( C, DX, TY, class'ScoreBoardDeathMatch'.default.DeathsText );
 
     C.SetPos( TX, TY );
-    myInter.DrawHeaderTile( C, TX, TY, TXL+4, YL );
-    myInter.DrawHeaderText( C, TX, TY, Header_ElapsedTime );
+    BTInterClass.static.DrawHeaderTile( C, TX, TY, TXL+4, YL );
+    BTInterClass.static.DrawHeaderText( C, TX, TY, Header_ElapsedTime );
 
     C.SetPos( TX, TY+YL+2 );
     C.DrawColor = SecondaryColor;
@@ -301,8 +297,8 @@ simulated function UpdateScoreBoard( Canvas C )
     // if( OTHERX != 0 )
     // {
     //     C.SetPos( OTHERX, TY );
-    //     myInter.DrawHeaderTile( C, OTHERX, TY, OTHERXL+4, YL );
-    //     myInter.DrawHeaderText( C, OTHERX, TY, "Other" );
+    //     BTInterClass.static.DrawHeaderTile( C, OTHERX, TY, OTHERXL+4, YL );
+    //     BTInterClass.static.DrawHeaderText( C, OTHERX, TY, "Other" );
     // }
 
     // Header done
@@ -314,8 +310,8 @@ simulated function UpdateScoreBoard( Canvas C )
         PX = ((XClipOffset+X)-XL);
 
         C.SetPos( PX - 4, TY );
-        myInter.DrawHeaderTile( C, PX-8, TY, XL+4, YL );
-        myInter.DrawHeaderText( C, PX-8, TY, class'ScoreBoardDeathMatch'.default.NetText );
+        BTInterClass.static.DrawHeaderTile( C, PX-8, TY, XL+4, YL );
+        BTInterClass.static.DrawHeaderText( C, PX-8, TY, class'ScoreBoardDeathMatch'.default.NetText );
 
         C.SetPos( PX - 4, TY+YL+2 );
         C.DrawColor = SecondaryColor;
@@ -344,7 +340,7 @@ simulated function UpdateScoreBoard( Canvas C )
         RenderPlayerRow( C, SortedPlayers[i], rowTileX, YOffset, rowWidth, rowHeight );
     }
 
-    if( bSkipSpectators || SortedSpectators.Length == 0 )
+    if( SortedSpectators.Length == 0 )
         return;
 
     YOffset += 8;
@@ -364,7 +360,7 @@ simulated function UpdateScoreBoard( Canvas C )
     }
 }
 
-function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float y, float rowWidth, float rowHeight )
+protected function RenderPlayerRow(Canvas C, PlayerReplicationInfo player, float x, float y, float rowWidth, float rowHeight)
 {
     local float rowTileX, rowTileY, rowTextY, xl, yl;
     local float rowSegmentHeight;
@@ -382,9 +378,9 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     rowSegmentHeight = rowHeight*0.5;
     isSpectator = player.bIsSpectator || player.bOnlySpectator;
 
-    CRI = GetCRI( player );
+    CRI = class'BTClient_ClientReplication'.static.GetCRI( player );
     // <BACKGROUND>
-    if( player != PlayerController(Owner).PlayerReplicationInfo )
+    if( player != Controller(Owner).PlayerReplicationInfo )
         C.DrawColor = #0x22222282;
     else C.DrawColor = #0x4E4E3382;
 
@@ -396,7 +392,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     // C.DrawColor = C.DrawColor + (GetPlayerTeamColor( player )*0.05f);
 
     C.SetPos( rowTileX, rowTileY );
-    C.DrawTile( myInter.AlphaLayer, rowWidth, rowHeight, 0, 0, 256, 256 );
+    C.DrawTile( BackgroundTexture, rowWidth, rowHeight, 0, 0, 256, 256 );
     // </BACKGROUND>
 
     // Draw Player Name
@@ -436,7 +432,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     {
         C.SetPos( LX+4, rowTextY );
         C.DrawColor = PrimaryColor;
-        C.DrawText( Eval(CRI.Rank != 0, CRI.Rank, "N/A"), True );
+        C.DrawText( Eval(CRI.Rank != 0, CRI.Rank, "N/A"), true );
     }
 
     // Draw Score
@@ -444,7 +440,7 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     {
         C.SetPos( OX, rowTextY );
         C.DrawColor = PrimaryColor;
-        C.DrawText( string(Min( int(player.Score), 9999 )), True );
+        C.DrawText( string(Min( int(player.Score), 9999 )), true );
 
         if( ASPlayerReplicationInfo(player) != none && ASPlayerReplicationInfo(player).DisabledObjectivesCount+ASPlayerReplicationInfo(player).DisabledFinalObjective > 0 )
         {
@@ -475,15 +471,15 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     {
         C.SetPos( TX, rowTextY+rowSegmentHeight );
         C.DrawColor = SecondaryColor;
-        C.DrawText( Class'BTClient_Interaction'.Static.Strl( CRI.PersonalTime ) );
+        C.DrawText( class'BTClient_Interaction'.static.Strl( CRI.PersonalTime ) );
     }
 
-    if( (GRI.ElapsedTime > 0 && GRI.Winner == None) || SavedElapsedTime == 0 )
+    if( (GRI.ElapsedTime > 0 && GRI.Winner == none) || SavedElapsedTime == 0 )
         SavedElapsedTime = GRI.ElapsedTime;
 
     C.SetPos( TX, rowTextY+2 );
     C.DrawColor = PrimaryColor;
-    C.DrawText( Class'BTClient_Interaction'.Static.StrlNoMS( Max( 0, SavedElapsedTime-player.StartTime ) ) );
+    C.DrawText( class'BTClient_Interaction'.static.StrlNoMS( Max( 0, SavedElapsedTime-player.StartTime ) ) );
 
     if( OTHERX != 0 )
     {
@@ -528,25 +524,25 @@ function RenderPlayerRow( Canvas C, PlayerReplicationInfo player, float x, float
     }
 }
 
-final function Color GetPlayerTeamColor( PlayerReplicationInfo player )
+protected static function Color GetPlayerTeamColor(PlayerReplicationInfo player)
 {
     local Color c;
 
     if( player.Team != none )
     {
         if( player.Team.TeamIndex == 0 )
-            c = HUDClass.Default.RedColor;
+            c = default.HUDClass.default.RedColor;
         else if( player.Team.TeamIndex == 1 )
-            c = HUDClass.Default.BlueColor;
-        else c = HUDClass.Default.GreenColor;
+            c = default.HUDClass.default.BlueColor;
+        else c = default.HUDClass.default.GreenColor;
     }
     else if( player.bIsSpectator || player.bOnlySpectator )
     {
-        c = HUDClass.default.GoldColor;
+        c = default.HUDClass.default.GoldColor;
     }
     else
     {
-        c = HUDClass.Default.GreenColor;
+        c = default.HUDClass.default.GreenColor;
     }
     return c;
 }
@@ -565,7 +561,9 @@ defaultproperties
 
     SubHeader_Time="Record"
 
-    HUDClass=Class'HudBase'
+    HUDClass=class'HudBase'
+    BTInterClass=class'BTClient_Interaction'
+    BackgroundTexture=Texture'Engine.WhiteSquareTexture'
 
     GrayColor=(R=100,G=100,B=100,A=255)
     PrimaryColor=(R=255,G=255,B=255,A=255)

@@ -1,9 +1,7 @@
 //=============================================================================
-// Copyright 2011-2018 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2011-2019 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTGUI_Store extends MidGamePanel;
-
-var BTClient_Interaction MyInteraction;
 
 var automated GUIImage Stats;
 var automated BTStore_ItemsMultiColumnListBox lb_ItemsListBox;
@@ -14,33 +12,33 @@ var automated GUIScrollTextBox eb_ItemDescription;
 var automated moComboBox cb_Filter;
 
 var protected editconst noexport class<BTStore_ItemsMultiColumnList> ColumnListClass;
-var() editinline protected BTClient_ClientReplication CRI;
+var() protected editinline BTClient_ClientReplication CRI;
 var protected bool bWaitingForResponse;
 
-var int lastSelectedItemIndex;
-var transient int ItemsNum;
+var private int lastSelectedItemIndex;
+var private transient int ItemsNum;
 
 event Free()
 {
     CRI = none;
-    MyInteraction = none;
     super.Free();
 }
 
 function PostInitPanel()
 {
-    local BTClient_Config options;
+    local BTClient_Config config;
 
-    options = class'BTClient_Config'.static.FindSavedData();
-    cb_Filter.INIDefault = Eval( options.StoreFilter != "", options.StoreFilter, "Other" );
+    config = class'BTClient_Config'.static.FindSavedData();
+    cb_Filter.INIDefault = Eval( config.StoreFilter != "", config.StoreFilter, "Other" );
 }
 
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
-    if( CRI == none )
+
+    if( PlayerOwner().PlayerReplicationInfo != none && CRI == none )
     {
-        CRI = MyInteraction.MRI.CR;
+        CRI = class'BTClient_ClientReplication'.static.getCRI( PlayerOwner().PlayerReplicationInfo );
     }
 
     if( bShow && CRI != none )
@@ -50,7 +48,7 @@ function ShowPanel( bool bShow )
     }
 }
 
-function LoadData()
+protected function LoadData()
 {
     local string storeFilter;
 
@@ -76,7 +74,7 @@ function LoadData()
     }
 }
 
-function LoadComplete()
+protected function LoadComplete()
 {
     local int i;
 
@@ -143,7 +141,7 @@ function InternalOnSelect( GUIContextMenu sender, int clickIndex )
     }
 }
 
-final function bool BuySelectedItem()
+private function bool BuySelectedItem()
 {
     local int i;
 
@@ -185,7 +183,7 @@ function bool InternalOnClick( GUIComponent Sender )
     }
 }
 
-function BuyItemOnline( string itemName, string itemID )
+private function BuyItemOnline( string itemName, string itemID )
 {
     if( !PlatformIs64Bit() )
     {
@@ -254,7 +252,7 @@ function bool InternalOnDraw( Canvas C )
     return true;
 }
 
-final function UpdateItemDescription( int itemIndex )
+protected function UpdateItemDescription( int itemIndex )
 {
     eb_ItemDescription.MyScrollText.SetContent( CRI.Items[itemIndex].Desc );
     eb_ItemDescription.MyScrollBar.AlignThumb();
@@ -273,7 +271,7 @@ function FilterChanged( GUIComponent sender )
     LoadData();
 }
 
-final function CacheCategory( string categoryName )
+private function CacheCategory( string categoryName )
 {
     local int i;
 
@@ -287,7 +285,7 @@ final function CacheCategory( string categoryName )
     }
 }
 
-final function bool LoadCachedCategory( string categoryName )
+private function bool LoadCachedCategory( string categoryName )
 {
     local int i;
 

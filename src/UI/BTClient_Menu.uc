@@ -1,18 +1,10 @@
 //==============================================================================
 // BTClient_Menu.uc (C) 2005-2010 Eliot and .:..:. All Rights Reserved
-/* Tasks:
-            User-Friendly configuration menu for BTClient_Config
-*/
-//  Coded by Eliot
-//  Updated @ 24/08/2010
 //==============================================================================
 class BTClient_Menu extends MidGamePanel
     config(ClientBTimes);
 
-var automated GUITabControl
-    c_Tabs;
-
-var BTClient_Interaction MyInteraction;
+var automated GUITabControl c_Tabs;
 
 struct sBTTab
 {
@@ -22,7 +14,7 @@ struct sBTTab
     var() GUIStyles Style;
 };
 
-var array<sBTTab> BTTabs;
+var protected array<sBTTab> BTTabs;
 
 event Free()
 {
@@ -32,8 +24,6 @@ event Free()
     {
         BTTabs[i].Style = none;
     }
-
-    MyInteraction = none;
     super.Free();
 }
 
@@ -47,7 +37,6 @@ function PostInitPanel()
     for( i = 0; i < BTTabs.Length; ++ i )
     {
         tab = BTGUI_TabBase(c_Tabs.AddTab( BTTabs[i].Caption, string(BTTabs[i].TabClass),, BTTabs[i].Hint, true ));
-        tab.MyMenu = self;
         tab.PostInitPanel();
     }
 }
