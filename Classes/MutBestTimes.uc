@@ -151,6 +151,7 @@ var enum ERecordTeam
 
 var string CurrentMapName;
 var int UsedSlot;
+var private float LastServerTravelTime;
 
 var const noexport string RecordsDataFileName;
 
@@ -1206,6 +1207,7 @@ final function BTPlayerProfileReplicationInfo BuildPlayerProfileData( BTPlayerPr
     profileData.RegisterDate = PDat.Player[playerIndex].RegisterDate;
     profileData.LastPlayedDate = PDat.Player[playerIndex].LastPlayedDate;
     profileData.RankedELORating = PDat.Player[playerIndex].PLPoints[0];
+    profileData.RankedELORatingChange = profileData.RankedELORating - PDat.Player[playerIndex].LastknownPoints;
     profileData.NumStars = PDat.Player[playerIndex].PLTopRecords[0];
     profileData.NumRankedRecords = PDat.Player[playerIndex].RankedRecords.Length;
     profileData.NumRecords = PDat.Player[playerIndex].Records.Length;
@@ -4142,7 +4144,7 @@ function ServerTraveling( string URL, bool bItems )
     FullLog( "*** ServerTraveling ***" );
     if( UsedSlot != -1 )
     {
-        RDat.Rec[UsedSlot].PlayHours += Level.TimeSeconds/60 / 60;
+        RDat.Rec[UsedSlot].PlayHours += (Level.TimeSeconds - LastServerTravelTime)/60 / 60;
     }
 
     for( c = Level.ControllerList; c != none; c = c.NextController )
@@ -4152,6 +4154,8 @@ function ServerTraveling( string URL, bool bItems )
             ProcessPlayerLogout( c );
         }
     }
+
+    LastServerTravelTime = Level.TimeSeconds;
 
     // Map is switching, save everything!
     SaveAll();
@@ -4778,12 +4782,6 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
     playTime = GetFixedTime( Level.TimeSeconds - CR.LastSpawnTime );
     if( bGroupMap )
     {
-        groupindex = GroupManager.GetGroupIndexByPlayer( PC );
-        if( groupindex == -1 )
-        {
-            return;
-        }
-
         GroupManager.GetMembersByGroupIndex( groupindex, GroupMembers );
         for( i = 0; i < GroupMembers.Length; ++ i )
         {
@@ -4799,7 +4797,7 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
         for( i = 0; i < GroupMembers.Length; ++ i )
         {
             CR = GetRep( PlayerController(GroupMembers[i]) );
-            if (SubmitPlayerTime( PlayerController(GroupMembers[i]), CR, myLevel, playTime, GroupMembers[i] != PC, xp, hasNewRecord )) {
+            if (SubmitPlayerTime( PlayerController(GroupMembers[i]), CR, myLevel, playTime, xp, hasNewRecord )) {
                 CurMode.ProcessPlayerRecord( PlayerController(GroupMembers[i]), CR, myLevel, playTime );
                 if (hasNewRecord == 1) {
                     NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
@@ -4811,16 +4809,25 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
                 PDatManager.ProgressAchievementByID( CR.myPlayerSlot, 'prelude_1' );
             }
         }
-    }
-    else if( SubmitPlayerTime( PC, CR, myLevel, playTime,,, hasNewRecord ) )
-    {
-        CurMode.ProcessPlayerRecord( PC, CR, myLevel, playTime );
-        if( hasNewRecord == 1 )
-        {
-            NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
-        }
 
-        isDirty = true;
+        for( i = 0; i < GroupMembers.Length; ++ i )
+        {
+            LiftPlayer(PlayerController(GroupMembers[i]));
+        }
+    }
+    else
+    {
+        if( SubmitPlayerTime( PC, CR, myLevel, playTime,, hasNewRecord ) )
+        {
+            CurMode.ProcessPlayerRecord( PC, CR, myLevel, playTime );
+            if( hasNewRecord == 1 )
+            {
+                NotifyNewRecord( CR.myPlayerSlot, myLevel.MapIndex, playTime );
+            }
+
+            isDirty = true;
+        }
+        LiftPlayer(PC);
     }
 
     if (isDirty) {
@@ -4844,6 +4851,30 @@ final private function ProcessSoloEnd( PlayerController PC, BTClient_LevelReplic
             }
         }
     }
+
+    myLevel.ResetObjective();
+}
+
+private function LiftPlayer(PlayerController PC)
+{
+    PC.ClientFlash( 0.10, vect(255, 255, 0));
+    if (xPawn(PC.Pawn) == none)
+    {
+        return;
+    }
+
+    Spawn(class'BTLiftPawn', PC.Pawn,, PC.Pawn.Location, PC.Pawn.Rotation);
+    PC.Pawn.bCanUse = false;
+    PC.Pawn.bBlockZeroExtentTraces = false;
+    PC.Pawn.bBlockNonZeroExtentTraces = false;
+    PC.Pawn.SetCollision(false, false, false);
+    PC.Pawn.SetPhysics(PHYS_Falling);
+    PC.Pawn.Velocity = vect(0,0,64);
+    xPawn(PC.Pawn).bSkeletized = true; // Set true so that PlayDying will not trigger a death sound.
+    PC.PawnDied(PC.Pawn);
+
+    PC.GotoState('Dead', '');
+    PC.ClientGotoState('Dead', '');
 }
 
 final private function bool SubmitPlayerTime(
@@ -4851,13 +4882,12 @@ final private function bool SubmitPlayerTime(
     BTClient_ClientReplication CR,
     BTClient_LevelReplication myLevel,
     float playTime,
-    optional bool bRecursive,
     optional int xp,
     optional out byte bNewTopRecord )
 {
     local bool wasHijacked, hasImprovised;
     local string finishMsg, finishTime;
-    local int i, j, PLs, oldPLi, PLi, l, tmpSlot;
+    local int i, playerId, oldPLi, PLi, l, tmpSlot, playerIndex;
     local float score, finishDiff;
     local int numObjectives;
     local BTServer_RecordsData.sSoloRecord newSoloRecord;
@@ -4870,10 +4900,12 @@ final private function bool SubmitPlayerTime(
     finishTime = TimeToStr( playTime );
     finishMsg = "%PLAYER% completed" @ class'HUD_Assault'.static.GetTeamColor( 1 )$myLevel.GetLevelName()$cEnd;
 
-    PLs = CR.myPlayerSlot + 1;
-    UpdatePlayerStand( PC, PLs - 1, True );      // Update names etc
-    ++ PDat.Player[PLs - 1].PLSF;               // Amount of times this user finished a solo map.
+    playerIndex = CR.myPlayerSlot;
+    playerId = playerIndex + 1;
+    UpdatePlayerStand( PC, playerIndex, True );      // Update names etc
+    ++ PDat.Player[playerIndex].PLSF;               // Amount of times this user finished a solo map.
     ++ RDat.Rec[mapIndex].TMFinish;
+    CurMode.PlayerCompletedMap( PC, playerIndex, playTime );
 
     if( bSoloMap && !bKeyMap && !bGroupMap )
     {
@@ -4883,60 +4915,40 @@ final private function bool SubmitPlayerTime(
     {
         numObjectives = GetPlayerObjectives( PC );
     }
-    CurMode.PlayerCompletedMap( PC, PLs-1, playTime );
-    PLi = RDat.FindRecordSlot( mapIndex, PLs );
-    j = RDat.Rec[mapIndex].PSRL.Length;
+
+    PLi = RDat.FindRecordSlot( mapIndex, playerId );
     // Player was found!
     if( PLi != -1 )
     {
+        finishDiff = GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) - playTime;
+
         // Player has improved his/her existing record's time.
         if( GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) > playTime )
         {
-            //==============================================================
-            // Update solo record slot
-            RDat.Rec[mapIndex].PSRL[PLi].SRD[0] = Level.Day;
-            RDat.Rec[mapIndex].PSRL[PLi].SRD[1] = Level.Month;
-            RDat.Rec[mapIndex].PSRL[PLi].SRD[2] = Level.Year;
-            RDat.Rec[mapIndex].PSRL[PLi].ExtraPoints = xp;
-            RDat.Rec[mapIndex].PSRL[PLi].ObjectivesCount = numObjectives;
-            if( IsClientSpawnPlayer( PC.Pawn ) )
-            {
-                RDat.Rec[mapIndex].PSRL[PLi].Flags = RDat.Rec[mapIndex].PSRL[PLi].Flags | 0x01/**RFLAG_CP*/;
-            }
-            else
-            {
-                RDat.Rec[mapIndex].PSRL[PLi].Flags = RDat.Rec[mapIndex].PSRL[PLi].Flags & ~0x01/**RFLAG_CP*/;
-            }
-            finishDiff = RDat.Rec[mapIndex].PSRL[PLi].SRT - playTime;
-            SetSoloRecordTime( PC, mapIndex, PLi, playTime );
-            CR.ClientSetPersonalTime( playTime );
-            // Broadcast success, on next if( b ).
-            PDat.AddExperience( self, PLs-1, EXP_ImprovedRecord + numObjectives );
+            PDat.AddExperience( self, playerIndex, EXP_ImprovedRecord + numObjectives );
             hasImprovised = true;
         }
         // Player has failed to improve his/her record time
         else
         {
-            // Broadcast failure!
             ++ RDat.Rec[mapIndex].TMFailures;
-            finishDiff = RDat.Rec[mapIndex].PSRL[PLi].SRT - playTime;
-            // Tied his own position
+            // Tie?
             if( GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) == playTime )
             {
                 finishMsg @= "with a tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
-                PDat.AddExperience( self, PLs-1, EXP_TiedRecord + numObjectives );
-                PDatManager.ProgressAchievementByType( PLs-1, 'Tied', 1 );
+                PDat.AddExperience( self, playerIndex, EXP_TiedRecord + numObjectives );
+                PDatManager.ProgressAchievementByType( playerIndex, 'Tied', 1 );
             }
-            // Tied the best record
+            // Tie #1 time?
             else if( GetFixedTime( RDat.Rec[mapIndex].PSRL[0].SRT ) == playTime )
             {
                 finishMsg @= "with a record tie to" @ #0xFFFF00FF$finishTime;
                 BroadcastFinishMessage( PC, finishMsg, 2 );
 
-                PDat.AddExperience( self, PLs-1, EXP_TiedRecord + numObjectives );
-                PDatManager.ProgressAchievementByType( PLs-1, 'Tied', 1 );
+                PDat.AddExperience( self, playerIndex, EXP_TiedRecord + numObjectives );
+                PDatManager.ProgressAchievementByType( playerIndex, 'Tied', 1 );
             }
             // Failed record
             else
@@ -4955,29 +4967,16 @@ final private function bool SubmitPlayerTime(
     else
     {
         PLi = RDat.OpenRecordSlot( RDat.Rec[mapIndex].PSRL, playTime );
-        RDat.Rec[mapIndex].PSRL[PLi].PLs = PLs;
-        RDat.Rec[mapIndex].PSRL[PLi].SRD[0] = Level.Day;
-        RDat.Rec[mapIndex].PSRL[PLi].SRD[1] = Level.Month;
-        RDat.Rec[mapIndex].PSRL[PLi].SRD[2] = Level.Year;
-        RDat.Rec[mapIndex].PSRL[PLi].ExtraPoints = xp;
-        RDat.Rec[mapIndex].PSRL[PLi].ObjectivesCount = numObjectives;
-        if( IsClientSpawnPlayer( PC.Pawn ) )
-        {
-            RDat.Rec[mapIndex].PSRL[PLi].Flags = RDat.Rec[mapIndex].PSRL[PLi].Flags | 0x01/**RFLAG_CP*/;
-        }
-        SetSoloRecordTime( PC, mapIndex, PLi, playTime );
-        CR.ClientSetPersonalTime( playTime );
-        PDat.AddExperience( self, PLs-1, EXP_FirstRecord + numObjectives );
-
-        hasImprovised = true;
+        RDat.Rec[mapIndex].PSRL[PLi].PLs = playerId;
+        PDat.AddExperience( self, playerIndex, EXP_FirstRecord + numObjectives );
 
         // Update the total set of solo records here because UpdateLevelReplicationState() is only called for visible records.
         myLevel.NumRecords = RDat.Rec[mapIndex].PSRL.Length;
-
         if( myLevel.LockedLevel != none )
         {
             Level.Game.BroadcastLocalized( PC, class'BTLevelUnlockedMessage', 0, none, PC.PlayerReplicationInfo, myLevel.LockedLevel );
         }
+        hasImprovised = true;
     }
 
     // Somebody improved his or her time.
@@ -4986,10 +4985,27 @@ final private function bool SubmitPlayerTime(
         // Remove player's old time.
         oldPLi = PLi;
         newSoloRecord = RDat.Rec[mapIndex].PSRL[PLi];
-        RDat.Rec[mapIndex].PSRL.Remove( PLi, 1 );
+        newSoloRecord.SRD[0] = Level.Day;
+        newSoloRecord.SRD[1] = Level.Month;
+        newSoloRecord.SRD[2] = Level.Year;
+        newSoloRecord.ExtraPoints = xp;
+        newSoloRecord.ObjectivesCount = numObjectives;
+        if( IsClientSpawnPlayer( PC.Pawn ) )
+        {
+            newSoloRecord.Flags = newSoloRecord.Flags | 0x01/**RFLAG_CP*/;
+        }
+        else
+        {
+            newSoloRecord.Flags = newSoloRecord.Flags & ~0x01/**RFLAG_CP*/;
+        }
 
+        // Remove and insert record into its new index.
+        RDat.Rec[mapIndex].PSRL.Remove( PLi, 1 );
         PLi = RDat.OpenRecordSlot( RDat.Rec[mapIndex].PSRL, playTime );
         RDat.Rec[mapIndex].PSRL[PLi] = newSoloRecord;
+
+        SetSoloRecordTime( PC, mapIndex, PLi, playTime );
+        CR.ClientSetPersonalTime( playTime );
 
         if( GhostManager != none && playTime <= 1800 ) {
             // FIXME: Set after saving's done?
@@ -5011,6 +5027,7 @@ final private function bool SubmitPlayerTime(
             CR.SoloRank = PLi + 1;
         }
 
+        // FIXME: point units have changed.
     	score = newSoloRecord.Points/RDat.Rec[mapIndex].PSRL[0].Points*10.00;
         if( Store != none && Store.Teams.Length > 0 )
         {
@@ -5030,10 +5047,10 @@ final private function bool SubmitPlayerTime(
         // Earn 20 points from one record.
         if( score >= 20 )
         {
-            PDatManager.ProgressAchievementByID( PLs-1, 'points_0' );
+            PDatManager.ProgressAchievementByID( playerIndex, 'points_0' );
         }
 
-        AddRecentSetRecordToPlayer( PLs, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$finishTime );
+        AddRecentSetRecordToPlayer( playerIndex, myLevel.GetFullName( CurrentMapName ) @ cDarkGray$finishTime );
         if( PLi == 0 ) // This is the best one of all...
         {
             bNewTopRecord = 1;
@@ -5051,13 +5068,13 @@ final private function bool SubmitPlayerTime(
                 else BroadcastAnnouncement( AnnouncementRecordHijacked );
 
                 // Check avoids to print a message if the record owner beated his own record!
-                wasHijacked = j > 1 && PLs != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != i;
+                wasHijacked = RDat.Rec[mapIndex].PSRL.Length > 1 && playerId != RDat.Rec[mapIndex].PSRL[1].PLs && PLi != i;
                 if( wasHijacked )
                 {
                     BroadcastAnnouncement( AnnouncementRecordHijacked );
 
                     // Robin Hood
-                    PDatManager.ProgressAchievementByType( PLs-1, 'StealRecord', 1 );
+                    PDatManager.ProgressAchievementByType( playerIndex, 'StealRecord', 1 );
 
                     tmpSlot = RDat.Rec[mapIndex].PSRL[1].PLs-1;
                     PDat.Player[tmpSlot].RecentLostRecords[PDat.Player[tmpSlot].RecentLostRecords.Length] =
@@ -5066,7 +5083,7 @@ final private function bool SubmitPlayerTime(
 
                     RDat.Rec[mapIndex].TMFailures = 0;
                     ++ RDat.Rec[mapIndex].TMHijacks;    // Amount of times this record has been hijacked.
-                    ++ PDat.Player[PLs-1].PLHijacks;    // Amount of records this player has hijacked in total.
+                    ++ PDat.Player[playerIndex].PLHijacks;    // Amount of records this player has hijacked in total.
                 }
                 else
                 {
@@ -5079,7 +5096,7 @@ final private function bool SubmitPlayerTime(
                 if( RDat.Rec[mapIndex].TMFailures >= 50 )
                 {
                     // Failure immunity
-                    PDatManager.ProgressAchievementByID( PLs-1, 'records_2' );
+                    PDatManager.ProgressAchievementByID( playerIndex, 'records_2' );
                 }
             }
             else    // 1st time record
@@ -5141,25 +5158,6 @@ final private function bool SubmitPlayerTime(
     {
         CheckPointHandler.RemoveSavedCheckPoint( PC );
     }
-
-    if( bSoloMap )
-    {
-        PC.ClientFlash( 0.10, vect(255, 255, 0));
-        if( xPawn(PC.Pawn) != none )
-        {
-            PC.Pawn.bCanUse = false;
-            PC.Pawn.SetPhysics(PHYS_None);
-            PC.Pawn.SetCollision( false, false, false );
-            Spawn(class'BTLiftPawn', PC.Pawn,, PC.Pawn.Location, PC.Pawn.Rotation);
-            PC.PawnDied(PC.Pawn);
-        }
-        PC.ClientGotoState('Dead', '');
-
-        if( !bRecursive )
-        {
-            myLevel.ResetObjective();
-        }
-    }
     return hasImprovised;
 }
 
@@ -5184,7 +5182,7 @@ final private function ProcessRegularEnd( PlayerController PC, BTClient_LevelRep
     for( i = 0; i < contributors.Length; ++ i )
     {
         CR = GetRep( contributors[i].player );
-        if (SubmitPlayerTime( contributors[i].player, CR, myLevel, playTime, contributors[i].player != PC,, inNewTopRecord ))
+        if (SubmitPlayerTime( contributors[i].player, CR, myLevel, playTime,, inNewTopRecord ))
         {
             isDirty = true;
             CurMode.ProcessPlayerRecord( contributors[i].player, CR, myLevel, playTime );
@@ -5429,10 +5427,11 @@ final function ProcessPlayerLogout( Controller player )
     }
     -- playerSlot;
 
-    timeSpent = ((Level.TimeSeconds - PDat.Player[playerSlot]._LastLoginTime) / 60) / 60;
+    timeSpent = ((Level.TimeSeconds - LastServerTravelTime - PDat.Player[playerSlot]._LastLoginTime) / 60) / 60;
     PDat.Player[playerSlot].PlayHours += timeSpent;
     PDat.Player[playerSlot].LastKnownRank = PDat.Player[playerSlot].PLARank-1;
     PDat.Player[playerSlot].LastKnownPoints = PDat.Player[playerSlot].PLPoints[0]; // 0 = all time
+    PDat.Player[playerSlot]._LastLoginTime = LastServerTravelTime;
 
     if( PDat.HasItem( playerSlot, "exp_bonus_1", i ) )
     {
@@ -6480,15 +6479,9 @@ static final function bool IsAdmin( PlayerReplicationInfo PRI )
     return False;
 }
 
-//==============================================================================
-// Converts 000001.011000 to 000001.01000. So resets last 4 decimals.
-// Used for comparing, and to make Tie'ng records possible!
-static final function float GetFixedTime( float TimeToFix )
+static final function float GetFixedTime( float val )
 {
-    local string FixedTimeString;
-
-    FixedTimeString = Left( string( TimeToFix ), InStr( string( TimeToFix ), "." ) + 3 );
-    return float( FixedTimeString );
+    return int(val*100)/100.f;
 }
 
 state QuickStart
@@ -6543,17 +6536,17 @@ private function AddHistory( string NewLine )
 }
 
 // TODO: Deprecate
-private function AddRecentSetRecordToPlayer( int PlayerSlot, string Text )
+private function AddRecentSetRecordToPlayer( int playerIndex, string Text )
 {
     local int j;
 
-    j = PDat.Player[PlayerSlot - 1].RecentSetRecords.Length;
+    j = PDat.Player[playerIndex].RecentSetRecords.Length;
     if( j >= MaxPlayerRecentRecords )
     {
-        PDat.Player[PlayerSlot - 1].RecentSetRecords.Remove( 0, 1 );
+        PDat.Player[playerIndex].RecentSetRecords.Remove( 0, 1 );
         -- j;
     }
-    PDat.Player[PlayerSlot - 1].RecentSetRecords[j] = Text;
+    PDat.Player[playerIndex].RecentSetRecords[j] = Text;
 }
 
 private function int GetGroupTaskPoints( int groupIndex )

@@ -76,6 +76,9 @@ final function SendPlayerRank( int rankIndex )
     playerRank.CountryCode  = PlayersSource.Player[playerIndex].IpCountry;
     playerRank.Name         = PlayersSource.Player[playerIndex].PLName;
     playerRank.Points       = PlayersSource.Player[playerIndex].PLPoints[RanksList.RanksTable];
+    if (RanksList.RanksTable == 0) {
+        playerRank.PointsChange = playerRank.Points - PlayersSource.Player[playerIndex].LastKnownPoints;
+    }
     playerRank.AP           = PlayersSource.Player[playerIndex].PLAchiev;
     playerRank.Hijacks      = PlayersSource.Player[playerIndex].PLRankedRecords[RanksList.RanksTable] << 16 | PlayersSource.Player[playerIndex].PLTopRecords[RanksList.RanksTable];
 
