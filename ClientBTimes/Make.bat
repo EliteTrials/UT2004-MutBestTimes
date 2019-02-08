@@ -1,35 +1,31 @@
 @echo off
-set project_version=V7b
-for %%* in (.) do set "project_name=%%~n*"
-set "project_build_name=%project_name%%project_version%"
+set version=V7b
+set packageName=ClientBTimes
 
-title %project_build_name%
+title %packageName%
 color 0F
 
-cd..
-cd system
-del %project_build_name%.u
-del %project_build_name%.ucl
-del %project_build_name%.int
+cd ..\..\System
+del %packageName%.u /q
+del %packageName%.ucl /q
+del %packageName%.int /q
 
-cd..
-cd %project_name%
+cd ..
+cd MutBestTimes\%packageName%
 
-xcopy content "..\%project_build_name%\content" /i /y /q
-copy /y "ClientBTimes.utx" "..\%project_build_name%\ClientBTimes.utx"
-copy /y "CountryFlagsUT2K4.utx" "..\%project_build_name%\CountryFlagsUT2K4.utx"
+xcopy Resources "..\..\%packageName%%version%\Resources" /i /y /s /e /q /b
+xcopy Textures "..\..\%packageName%%version%\Textures" /i /y /s /e /q /b
 
-cd src
+cd Classes
 for /r %%i in (*.uc, *.uci) do (
-	copy /y "%%~fi" "..\..\%project_build_name%\Classes\%%~nxi"
+	copy /y "%%~fi" "..\..\..\%packageName%%version%\Classes\%%~nxi"
 )
 
-cd..
-cd..
-cd system
+cd ..\..\..\System
 :: Add editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_build_name%
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %packageName%%version%
 ucc.exe MakeCommandlet
 :: Remove editpackage
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %project_build_name%
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %packageName%%version%
+pause

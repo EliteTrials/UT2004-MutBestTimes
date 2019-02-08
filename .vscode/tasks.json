@@ -2,22 +2,28 @@
     "version": "2.0.0",
     "tasks": [
         {
-<<<<<<< HEAD
-            "label": "Compile ClientBTimes",
-=======
-            "label": "Compile ServerBTimes",
->>>>>>> origin/server-develop
+            "label": "Compile Server",
             "type": "shell",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "windows": {
-                "command": "${workspaceFolder}/make.bat"
+                "command": "${workspaceFolder}/ServerBTimes/make.bat"
             },
             "problemMatcher": []
-<<<<<<< HEAD
-=======
+        },
+        {
+            "label": "Compile Client",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "windows": {
+                "command": "${workspaceFolder}/ClientBTimes/make.bat"
+            },
+            "problemMatcher": []
         },
         {
             "label": "Play ServerBTimes",
@@ -26,7 +32,6 @@
                 "command": "${workspaceFolder}/play.bat STR-AbaddonTrials"
             },
             "problemMatcher": []
->>>>>>> origin/server-develop
         }
     ]
 }

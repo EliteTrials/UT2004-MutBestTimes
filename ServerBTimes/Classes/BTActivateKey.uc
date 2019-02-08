@@ -25,7 +25,7 @@ var struct sSerial
     var string Code;
 } Serial;
 
-#exec obj load file="LibHTTP4.u" package="ServerBTimes"
+#exec obj load file="System/LibHTTP4.u" package="ServerBTimes"
 
 var HttpSock Sock;
 

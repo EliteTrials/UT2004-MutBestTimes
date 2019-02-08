@@ -1,6 +1,6 @@
 class BTClient_CheckPointSetMessage extends CriticalEventPlus;
 
-#exec audio import file="content/checkpoint.WAV" name="CheckPoint" group="Sounds"
+#exec audio import file="Resources/checkpoint.WAV" name="CheckPoint" group="Sounds"
 
 var() const localized string ReceiveString;
 var() const Sound ReceiveSound;

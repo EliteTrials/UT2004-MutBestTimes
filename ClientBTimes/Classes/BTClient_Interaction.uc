@@ -6,8 +6,8 @@
 class BTClient_Interaction extends Interaction;
 
 #exec obj load file="UT2003Fonts.utx"
-#exec obj load file="ClientBTimes.utx" package="ClientBTimesV7b"
-#exec obj load file="CountryFlagsUT2K4.utx" package="ClientBTimesV7b" group="CountryFlags"
+#exec obj load file="Textures/ClientBTimes.utx" package="ClientBTimesV7b"
+#exec obj load file="Textures/CountryFlagsUT2K4.utx" package="ClientBTimesV7b" group="CountryFlags"
 
 // Not localized so that changes will take affect for everyone, if a new version changes these...
 // Besides i'm not gonna write them for all languages anyway?

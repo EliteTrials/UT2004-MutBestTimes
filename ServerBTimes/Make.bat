@@ -1,22 +1,27 @@
 @echo off
-
-set projn=ServerBTimes
+set packageName=ServerBTimes
 set inin=MutBestTimes
 
-title %projn%
+title %packageName%
 color 0F
 
-echo.
-echo Deleting compiled files %projn%
-echo.
-cd..
-cd system
-del %projn%.u
-del %projn%.ucl
-del %projn%.int
+cd ..\..\System
+del %packageName%.u /q
+del %packageName%.ucl /q
+del %packageName%.int /q
 
-cd..
-cd System
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %projn%
-ucc.exe editor.MakeCommandlet -EXPORTCACHE -SHOWDEP -SILENTBUILD -AUTO
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %projn%
+cd ..
+cd MutBestTimes\%packageName%
+
+xcopy System "..\..\%packageName%\System" /i /y /s /e /q /b
+
+cd Classes
+for /r %%i in (*.uc, *.uci) do (
+	copy /y "%%~fi" "..\..\..\%packageName%\Classes\%%~nxi"
+)
+
+cd ..\..\..\System
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %packageName%
+ucc.exe editor.MakeCommandlet -EXPORTCACHE -SILENTBUILD -AUTO
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %packageName%
+pause
