@@ -2,7 +2,11 @@
     "version": "2.0.0",
     "tasks": [
         {
+<<<<<<< HEAD
             "label": "Compile ClientBTimes",
+=======
+            "label": "Compile ServerBTimes",
+>>>>>>> origin/server-develop
             "type": "shell",
             "group": {
                 "kind": "build",
@@ -12,6 +16,17 @@
                 "command": "${workspaceFolder}/make.bat"
             },
             "problemMatcher": []
+<<<<<<< HEAD
+=======
+        },
+        {
+            "label": "Play ServerBTimes",
+            "type": "shell",
+            "windows": {
+                "command": "${workspaceFolder}/play.bat STR-AbaddonTrials"
+            },
+            "problemMatcher": []
+>>>>>>> origin/server-develop
         }
     ]
 }
