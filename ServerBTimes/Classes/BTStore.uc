@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2014 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
+// Copyright 2005-2019 Eliot Van Uytfanghe and Marco Hulden. All Rights Reserved.
 //=============================================================================
 class BTStore extends Object within MutBestTimes
     config(BTStore);
@@ -21,8 +21,11 @@ struct sItem
     var() int Cost;
     var() string Desc;
     var() string IMG;
+
+    /** Deprecated! Use "Access=Admin" instead */
     var() bool bAdminGiven;
     var() bool bPassive;
+
     var() string Conditions;
     var() array<string> Vars;
 
@@ -341,6 +344,10 @@ final function Cache()
     for( i = 0; i < Items.Length; ++ i )
     {
         Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
+        Items[i].CachedClass = class<Actor>(DynamicLoadObject( Items[i].ItemClass, class'Class', true ));
+        if (Items[i].CachedClass == none) {
+            Warn( "Failed to load ItemClass" @ Items[i].ItemClass @ "for" @ Items[i].ID );
+        }
         // Cache the cateogry in which each item resists.
         // (This operation is quite expensive, takes about 100ms per request(300+ items).
         for( j = 0; j < Categories.Length; ++ j )
@@ -631,31 +638,33 @@ private final function ApplyOwnedItems( Actor other, BTServer_PlayersData data, 
         }
 
         itemSlot = FindItemByID( data.Player[playerSlot].Inventory.BoughtItems[i].ID );
-        if( itemSlot != -1 && Items[itemSlot].ApplyOn == target )
+        if( itemSlot == -1 || Items[itemSlot].ApplyOn != target )
         {
-            if( Items[itemSlot].Type != "" )
-            {
-                for( curType = 0; curType < addedTypes.Length; ++ curType )
-                {
-                    if( addedTypes[curType] == Items[itemSlot].Type )
-                    {
-                        bIsKnown = true;
-                        break;
-                    }
-                }
+            continue;
+        }
 
-                if( bIsKnown )
+        if( Items[itemSlot].Type != "" )
+        {
+            for( curType = 0; curType < addedTypes.Length; ++ curType )
+            {
+                if( addedTypes[curType] == Items[itemSlot].Type )
                 {
-                    bIsKnown = false;
-                    continue;
+                    bIsKnown = true;
+                    break;
                 }
-                addedTypes[addedTypes.Length] = Items[itemSlot].Type;
             }
 
-            if( ActivateItem( other, itemSlot ) )
+            if( bIsKnown )
             {
-                ItemActivated( other, CRI, Items[itemSlot].ID );
+                bIsKnown = false;
+                continue;
             }
+            addedTypes[addedTypes.Length] = Items[itemSlot].Type;
+        }
+
+        if( ActivateItem( other, itemSlot ) )
+        {
+            ItemActivated( other, CRI, Items[itemSlot].ID );
         }
     }
 }
@@ -665,36 +674,33 @@ public final function bool ActivateItem( Actor other, int index )
     local class<Actor> itemClass;
     local Actor itemObject;
 
-    if( Items[index].ItemClass != "" )
+    // Items with no defined class should always return true e.g. Experience booster items.
+    if( Items[index].ItemClass == "" )
     {
-        if( Items[index].CachedClass == none )
-        {
-            Items[index].CachedClass = class<Actor>(DynamicLoadObject( Items[index].ItemClass, class'Class', true ));
-        }
+        return true;
+    }
 
-        itemClass = Items[index].CachedClass;
-        if( itemClass == none )
+    itemClass = Items[index].CachedClass;
+    if( itemClass == none )
+    {
+        return false;
+    }
+
+    // Apply the vars on the pawn's instance if the item's class equals the target(@other)
+    if( other.Class == itemClass || ClassIsChildOf( other.Class, itemClass ) )
+    {
+        itemObject = other;
+    }
+    else
+    {
+        itemObject = other.Spawn( itemClass, other,, other.Location, other.Rotation );
+        // Failed to spawn or it destroyed itself in BeginPlay.
+        if( itemObject == none )
         {
-            Log( "Failed to load ItemClass" @ Items[index].ItemClass @ "for" @ Items[index].ID );
             return false;
         }
-
-        // Apply the vars on the pawn's instance if the item's class equals the target(@other)
-        if( other.Class == itemClass || ClassIsChildOf( other.Class, itemClass ) )
-        {
-            itemObject = other;
-        }
-        else
-        {
-            itemObject = other.Spawn( itemClass, other,, other.Location, other.Rotation );
-            // Failed to spawn or it destroyed itself in BeginPlay.
-            if( itemObject == none )
-            {
-                return false;
-            }
-        }
-        ApplyVariablesOn( itemObject, Items[index].Vars );
     }
+    ApplyVariablesOn( itemObject, Items[index].Vars );
     return true;
 }
 
