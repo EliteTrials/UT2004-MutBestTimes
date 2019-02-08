@@ -285,58 +285,6 @@ final function RemoveItem( MutBestTimes BT, BTClient_ClientReplication CRI, stri
     }
 }
 
-final function ToggleItem( MutBestTimes BT, int playerSlot, string itemId )
-{
-    local int i, playerItemIndex, storeItemIndex;
-    local string type;
-    local bool isEnabled;
-
-    if( itemId ~= "all" )
-    {
-        for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
-        {
-            Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
-            BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
-        }
-        return;
-    }
-
-    if( HasItem( playerSlot, itemId, playerItemIndex ) )
-    {
-        isEnabled = !Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled;
-        Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled = isEnabled;
-        BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[playerItemIndex].ID, isEnabled );
-
-        // Disable all other items of the same Type!
-        if( isEnabled )
-        {
-            storeItemIndex = BT.Store.FindItemByID( itemId );
-            if( storeItemIndex == -1 )
-                return;
-
-            type = BT.Store.Items[storeItemIndex].Type;
-            if( type == "" )
-                return;
-
-            for( i = 0; i < Player[playerSlot].Inventory.BoughtItems.Length; ++ i )
-            {
-                if( i == playerItemIndex )
-                    continue;
-
-                storeItemIndex = BT.Store.FindItemByID( Player[playerSlot].Inventory.BoughtItems[i].ID );
-                if( storeItemIndex == -1 )
-                    continue;
-
-                if( BT.Store.Items[storeItemIndex].Type ~= type )
-                {
-                    Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
-                    BT.Store.ItemToggled( playerSlot, Player[playerSlot].Inventory.BoughtItems[i].ID, false );
-                }
-            }
-        }
-    }
-}
-
 final function GetItemState( int playerSlot, string itemId, out byte bBought, out byte bEnabled )
 {
     local int i;

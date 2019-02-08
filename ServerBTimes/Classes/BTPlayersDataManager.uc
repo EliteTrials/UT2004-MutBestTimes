@@ -55,7 +55,30 @@ final function GiveItem( BTClient_ClientReplication CRI, string itemId )
 
 final function ToggleItem( int playerSlot, string itemId )
 {
-    PDat.ToggleItem( BT, playerSlot, itemId );
+    local int i, playerItemIndex, storeItemIndex;
+    local string type;
+    local bool isEnabled;
+    local int j;
+
+    if( itemId ~= "all" )
+    {
+        j = PDat.Player[playerSlot].Inventory.BoughtItems.Length;
+        for( i = 0; i < j; ++ i )
+        {
+            PDat.Player[playerSlot].Inventory.BoughtItems[i].bEnabled = false;
+            BT.Store.ItemToggled( playerSlot, PDat.Player[playerSlot].Inventory.BoughtItems[i].ID, false );
+        }
+        return;
+    }
+
+    if( !PDat.HasItem( playerSlot, itemId, playerItemIndex ) )
+    {
+        return;
+    }
+
+    isEnabled = !PDat.Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled;
+    PDat.Player[playerSlot].Inventory.BoughtItems[playerItemIndex].bEnabled = isEnabled;
+    BT.Store.ItemToggled( playerSlot, PDat.Player[playerSlot].Inventory.BoughtItems[playerItemIndex].ID, isEnabled );
 }
 
 final function SilentRemoveItem( int playerSlot, string itemId )
