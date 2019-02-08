@@ -17,7 +17,7 @@
             "label": "Play ServerBTimes",
             "type": "shell",
             "windows": {
-                "command": "${workspaceFolder}/play.bat"
+                "command": "${workspaceFolder}/play.bat STR-AbaddonTrials"
             },
             "problemMatcher": []
         }
