@@ -3614,17 +3614,6 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
     return true;
 }
 
-final function SetXfireStatusFor( PlayerController PC, string status )
-{
-    status = Repl( status, " ", "%20" );
-    PC.ClientTravel( "xfire:status?text=" $ status, TRAVEL_Absolute, false );
-}
-
-final function AddXfireKeywordFor( PlayerController PC, string keyword, string value )
-{
-    PC.ClientTravel( "xfire:game_stats?game=ut2k4&" $ keyword $ ":=" $ value, TRAVEL_Absolute, false );
-}
-
 // Check if the player typed one of our console commands
 function Mutate( string MutateString, PlayerController Sender )
 {
