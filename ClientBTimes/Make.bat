@@ -1,31 +1,32 @@
 @echo off
 set version=V7b
 set packageName=ClientBTimes
+set compiledPackageName=ClientBTimes%version%
 
 title %packageName%
 color 0F
 
 cd ..\..\System
-del %packageName%.u /q
-del %packageName%.ucl /q
-del %packageName%.int /q
+del %compiledPackageName%.u /q
+del %compiledPackageName%.ucl /q
+del %compiledPackageName%.int /q
 
 cd ..
 cd MutBestTimes\%packageName%
 
-xcopy Resources "..\..\%packageName%%version%\Resources" /i /y /s /e /q /b
-xcopy Textures "..\..\%packageName%%version%\Textures" /i /y /s /e /q /b
+xcopy Resources "..\..\%compiledPackageName%\Resources" /i /y /s /e /q /b
+xcopy Textures "..\..\%compiledPackageName%\Textures" /i /y /s /e /q /b
 
 cd Classes
 for /r %%i in (*.uc, *.uci) do (
-	copy /y "%%~fi" "..\..\..\%packageName%%version%\Classes\%%~nxi"
+	copy /y "%%~fi" "..\..\..\%compiledPackageName%\Classes\%%~nxi"
 )
 
 cd ..\..\..\System
 :: Add editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %packageName%%version%
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %compiledPackageName%
 ucc.exe MakeCommandlet
 :: Remove editpackage
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %packageName%%version%
+ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %compiledPackageName%
 pause

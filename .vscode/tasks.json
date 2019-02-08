@@ -8,6 +8,7 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "options": {"cwd": "${workspaceFolder}/ServerBTimes/"},
             "windows": {
                 "command": "${workspaceFolder}/ServerBTimes/make.bat"
             },
@@ -20,6 +21,7 @@
                 "kind": "build",
                 "isDefault": true
             },
+            "options": {"cwd": "${workspaceFolder}/ClientBTimes/"},
             "windows": {
                 "command": "${workspaceFolder}/ClientBTimes/make.bat"
             },
@@ -29,8 +31,18 @@
             "label": "Play ServerBTimes",
             "type": "shell",
             "windows": {
-                "command": "${workspaceFolder}/play.bat STR-AbaddonTrials"
+                "command": "${workspaceFolder}/Scripts/play.bat"
             },
+            "args": [
+                {
+                    "quoting": "weak",
+                    "value": "STR-AbaddonTrials"
+                },
+                {
+                    "quoting": "weak",
+                    "value": "STR-TechChallenges"
+                }
+            ],
             "problemMatcher": []
         }
     ]
