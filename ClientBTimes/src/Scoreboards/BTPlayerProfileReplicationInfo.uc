@@ -6,7 +6,7 @@ var string CountryCode;
 var int RegisterDate, LastPlayedDate;
 
 // Record variables
-var float RankedELORating;
+var float RankedELORating, RankedELORatingChange;
 var int
 	NumStars, NumRankedRecords, NumRecords,
 	NumObjectives, NumRounds, NumHijacks, NumFinishes,
@@ -19,7 +19,7 @@ replication
 		PlayerId,
 		CountryCode,
 		RegisterDate, LastPlayedDate,
-		RankedELORating,
+		RankedELORating, RankedELORatingChange,
 		NumStars, NumRankedRecords, NumRecords,
 		NumObjectives, NumRounds,  NumHijacks, NumFinishes,
 		AchievementPoints,

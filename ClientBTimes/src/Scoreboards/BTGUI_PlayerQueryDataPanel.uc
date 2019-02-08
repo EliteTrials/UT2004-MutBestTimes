@@ -26,19 +26,20 @@ function bool InternalOnClick( GUIComponent sender )
 
 defaultproperties
 {
-    DataRows(0)=(Caption="Country",Bind=CountryCode)
-    DataRows(1)=(Caption="Hours",Bind=PlayTime,Format=F_Hours)
-    DataRows(2)=(Caption="Registeration Date",Bind=RegisterDate,Format=F_Date)
-    DataRows(3)=(Caption="Last Played On",Bind=LastPlayedDate,Format=F_Date)
-    DataRows(4)=(Caption="Total Records",Bind=NumRecords,Format=F_Numeric)
-    DataRows(5)=(Caption="Ranked Records",Bind=NumRankedRecords,Format=F_Numeric)
+    DataRows(0)=(Caption="First Played On",Bind=RegisterDate,Format=F_Date)
+    DataRows(1)=(Caption="Last Played On",Bind=LastPlayedDate,Format=F_Date)
+    DataRows(2)=(Caption="Country",Bind=CountryCode)
+    DataRows(3)=(Caption="Played Time",Bind=PlayTime,Format=F_Hours)
+    DataRows(4)=(Caption="Ranked ELO",Bind=RankedELORating,Format=F_Numeric)
+    DataRows(5)=(Caption="Ranked ELO Change",Bind=RankedELORatingChange,Format=F_Numeric)
     DataRows(6)=(Caption="Ranked Stars",Bind=NumStars,Format=F_Numeric)
-    DataRows(7)=(Caption="Ranked ELO",Bind=RankedELORating,Format=F_Numeric)
-    DataRows(8)=(Caption="Completed Objectives",Bind=NumObjectives,Format=F_Numeric)
-    DataRows(9)=(Caption="Played Rounds",Bind=NumRounds,Format=F_Numeric)
-    DataRows(10)=(Caption="Hijacks",Bind=NumHijacks,Format=F_Numeric)
-    DataRows(11)=(Caption="Map Completions",Bind=NumFinishes,Format=F_Numeric)
-    DataRows(12)=(Caption="Achievement Points",Bind=AchievementPoints)
+    DataRows(7)=(Caption="Ranked Records",Bind=NumRankedRecords,Format=F_Numeric)
+    DataRows(8)=(Caption="Total Records",Bind=NumRecords,Format=F_Numeric)
+    DataRows(9)=(Caption="Objectives Completed",Bind=NumObjectives,Format=F_Numeric)
+    DataRows(10)=(Caption="Rounds Played",Bind=NumRounds,Format=F_Numeric)
+    DataRows(11)=(Caption="Records Hijacked",Bind=NumHijacks,Format=F_Numeric)
+    DataRows(12)=(Caption="Map Completions",Bind=NumFinishes,Format=F_Numeric)
+    DataRows(13)=(Caption="Achievement Points",Bind=AchievementPoints)
 
     begin object class=GUIButton name=oViewRankedRecordsButton
         WinTop=0.9

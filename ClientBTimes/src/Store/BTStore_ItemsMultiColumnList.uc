@@ -1,19 +1,39 @@
-/**
- * A list of items the user can buy.
- *
- * Copyright 2011 Eliot Van Uytfanghe. All Rights Reserved.
- */
+//=============================================================================
+// Copyright 2011-2019 Eliot Van Uytfanghe. All Rights Reserved.
+//=============================================================================
 class BTStore_ItemsMultiColumnList extends GUIMultiColumnList;
 
-var Texture PositiveIcon;
+var const Texture PositiveIcon;
 
+// Necessary to access the player's replicated items
 var editconst noexport BTClient_ClientReplication CRI;
+
+event Free()
+{
+    super.Free();
+    CRI = none;
+}
+
+function float InternalGetItemHeight( Canvas C )
+{
+    local float xl, yl;
+
+    Style.TextSize( C, MenuState, "T", xl, yl, FontScale );
+    return yl + 8;
+}
+
+event InitComponent(GUIController MyController, GUIComponent MyOwner)
+{
+    super.InitComponent( MyController, MyOwner );
+    Style = Controller.GetStyle( "BTMultiColumnList", FontScale );
+}
 
 function UpdateList()
 {
     local int i;
     local int lastSelectedItemIndex;
 
+    CRI = class'BTClient_ClientReplication'.static.GetCRI(PlayerOwner().PlayerReplicationInfo);
     if( MyScrollBar != none && CRI != none )
     {
         lastSelectedItemIndex = Index;
@@ -23,7 +43,6 @@ function UpdateList()
             AddedItem();
         }
         SetIndex( lastSelectedItemIndex );
-        OnDrawItem  = DrawItem;
     }
 }
 
@@ -31,7 +50,7 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
 {
     local float CellLeft, CellWidth;
     local GUIStyles DrawStyle;
-    local string price;
+    local string priceText;
 
     if( CRI == none )
         return;
@@ -39,63 +58,63 @@ function DrawItem( Canvas Canvas, int i, float X, float Y, float W, float H, boo
     if( CRI.Items.Length <= i )
         return;
 
-    // Draw the selection border
-    if( bSelected )
-    {
-        SelectedStyle.Draw( Canvas,MenuState, X, Y-2, W, H+2 );
-        DrawStyle = SelectedStyle;
-    }
-    else DrawStyle = Style;
-    
+    Y += 2;
+    H -= 2;
+
+    Canvas.Style = 1;
+    Canvas.SetPos( X, Y );
+
     GetCellLeftWidth( 0, CellLeft, CellWidth );
     Canvas.Style = 3;
     switch( CRI.Items[SortData[i].SortItem].Access )
     {
         case 0:
-            price = class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost) $ "$";
+            Canvas.DrawColor = #0x22222282;
+            priceText = "$" $ class'BTClient_Interaction'.static.Decimal(CRI.Items[SortData[i].SortItem].Cost);
             break;
-            
+
         case 1:
-            price = "€Free";
+            priceText = "Free";
             Canvas.SetDrawColor( 30, 45, 30, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-        
+
         case 2:
-            price = "€Admin";
+            priceText = "Admin";
             Canvas.SetDrawColor( 45, 30, 30, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-            
+
         case 3:
-            price = "€€Premium";
+            priceText = "Premium";
             Canvas.SetDrawColor( 30, 45, 45, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
-            
+
         case 4:
-            price = "€€€Private";
+            priceText = "Private";
             Canvas.SetDrawColor( 30, 30, 45, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
-            break;      
+            break;
 
         case 5:
-            price = "ÿDrop";
+            priceText = "Drop";
             Canvas.SetDrawColor( 64, 0, 128, 40 );
-            Canvas.SetPos( CellLeft+2, Y+2 );
-            Canvas.DrawTileClipped( Texture'engine.WhiteSquareTexture', CellWidth-4, H-4, 0, 0, 2, 2);
             break;
     }
 
+    if( bSelected )
+    {
+        Canvas.DrawColor = #0x33333394;
+    }
+
+    Canvas.DrawTile( Texture'BTScoreBoardBG', W, H, 0, 0, 256, 256 );
+
+    MenuState = MSAT_Blurry;
+    DrawStyle = Style;
+
     DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         CRI.Items[SortData[i].SortItem].Name, FontScale );
-        
+
     GetCellLeftWidth( 1, CellLeft, CellWidth );
-    DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, price, FontScale );
+    Canvas.SetDrawColor( 255, 255, 255 );
+    DrawStyle.DrawText( Canvas, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left, priceText, FontScale );
 
     Canvas.SetPos( X, Y );
 }
@@ -105,15 +124,12 @@ function bool InternalOnRightClick( GUIComponent sender )
     return OnClick( sender );
 }
 
-event Free()
-{
-    super.Free();
-    CRI = none;
-    PositiveIcon = none;
-}
-
 defaultproperties
 {
+    StyleName="BTMultiColumnList"
+    SelectedStyleName="BTListSelection"
+    SelectedBKColor=(R=255,G=255,B=255,A=255)
+
     OnRightClick=InternalOnRightClick
 
     PositiveIcon=ItemChecked
@@ -129,4 +145,9 @@ defaultproperties
 
     SortColumn=0
     SortDescending=true
+
+    OnDrawItem=DrawItem
+    GetItemHeight=InternalGetItemHeight
 }
+
+#include classes/BTColorHashUtil.uci

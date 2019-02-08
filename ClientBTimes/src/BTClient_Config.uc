@@ -6,15 +6,13 @@ class BTClient_Config extends Object
     perobjectconfig;
 
 const CONFIG_NAME = "BTConfig";
-const CONFIG_VERSION = 1.0;
+const CONFIG_VERSION = 1.1;
 
 var globalconfig float SavedWithVersion;
 
 var() globalconfig
     int
-    DrawFontSize,
-    ScreenFontSize,
-    GlobalSort;
+    ScreenFontSize;
 
 var() globalconfig
     bool
@@ -30,9 +28,9 @@ var() globalconfig
     bDisplayFullTime,
     bProfesionalMode,
     bAutoBehindView,
-    bNoTrailers,
-    bShowDodgeDelay,
-    bShowDodgeReady;
+    bNoTrailers;
+
+#exec obj load file="MenuSounds.uax"
 
 var() globalconfig
     sound
@@ -88,6 +86,10 @@ private static function PatchSavedData( BTClient_Config cfg )
     {
         cfg.CTable = default.CTable;
     }
+
+    if (cfg.SavedWithVersion < 1.1) {
+        cfg.ScreenFontSize = default.ScreenFontSize;
+    }
 }
 
 // Thanks to Gugi(ClanManager), used with permission.
@@ -116,7 +118,6 @@ final static function Interactions.EInputKey ConvertToKey( string KeyStr ) // Co
 final function ResetSavedData()
 {
     RankingTableKey                 = default.RankingTableKey;
-    DrawFontSize                    = default.DrawFontSize;
     ScreenFontSize                  = default.ScreenFontSize;
     bPlayTickSounds                 = default.bPlayTickSounds;
     TickSound                       = default.TickSound;
@@ -139,13 +140,12 @@ final function ResetSavedData()
     SaveConfig();
 }
 
-DefaultProperties
+defaultproperties
 {
     StoreFilter="Other"
 
     RankingTableKey=IK_F12
-    DrawFontSize=-3
-    ScreenFontSize=2
+    ScreenFontSize=1
 
     bPlayTickSounds=True
     TickSound=Sound'MenuSounds.select3'
@@ -154,9 +154,7 @@ DefaultProperties
     bUseAltTimer=False
     bShowZoneActors=False
     bFadeTextColors=True
-    bDisplayFullTime=True
-    bShowDodgeDelay=true
-    bShowDodgeReady=true
+    bDisplayFullTime=false
 
     bDisplayCompletingMessages=True
         bDisplayFail=True

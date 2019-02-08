@@ -1,0 +1,17 @@
+/** Strips all color tags from A. */
+static final preoperator string %( string A )
+{
+    local int i;
+
+    while( true )
+    {
+        i = InStr( A, Chr( 0x1B ) );
+        if( i != -1 )
+        {
+            A = Left( A, i ) $ Mid( A, i + 4 );
+            continue;
+        }
+        break;
+    }
+    return A;
+}

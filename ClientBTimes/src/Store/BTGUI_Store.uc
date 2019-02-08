@@ -1,42 +1,43 @@
+//=============================================================================
+// Copyright 2011-2019 Eliot Van Uytfanghe. All Rights Reserved.
+//=============================================================================
 class BTGUI_Store extends MidGamePanel;
-
-var BTClient_Interaction MyInteraction;
 
 var automated GUIImage Stats;
 var automated BTStore_ItemsMultiColumnListBox lb_ItemsListBox;
-var automated GUIButton b_ColorDialog;
-var automated GUIButton b_Edit, b_Buy, b_Donate, b_DisableAll;
+var automated GUIButton b_Buy, b_Donate;
 var automated GUIImage i_ItemIcon;
 var automated GUISectionBackground sb_ItemBackground;
 var automated GUIScrollTextBox eb_ItemDescription;
 var automated moComboBox cb_Filter;
 
-var protected editconst noexport class<BTStore_ItemsMultiColumnList> ColumnListClass;
-var() editinline protected BTClient_ClientReplication CRI;
+var() protected editinline BTClient_ClientReplication CRI;
 var protected bool bWaitingForResponse;
 
-var int lastSelectedItemIndex;
-var transient int ItemsNum;
+var private int lastSelectedItemIndex;
+var private transient int ItemsNum;
 
 event Free()
 {
     CRI = none;
-    MyInteraction = none;
     super.Free();
 }
 
 function PostInitPanel()
 {
-    CRI = MyInteraction.MRI.CR;
-    cb_Filter.INIDefault = Eval( CRI.Options.StoreFilter != "", CRI.Options.StoreFilter, "Other" );
+    local BTClient_Config config;
+
+    config = class'BTClient_Config'.static.FindSavedData();
+    cb_Filter.INIDefault = Eval( config.StoreFilter != "", config.StoreFilter, "Other" );
 }
 
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
-    if( CRI == none )
+
+    if( PlayerOwner().PlayerReplicationInfo != none && CRI == none )
     {
-        CRI = MyInteraction.MRI.CR;
+        CRI = class'BTClient_ClientReplication'.static.getCRI( PlayerOwner().PlayerReplicationInfo );
     }
 
     if( bShow && CRI != none )
@@ -46,10 +47,13 @@ function ShowPanel( bool bShow )
     }
 }
 
-function LoadData()
+protected function LoadData()
 {
+    local string storeFilter;
+
     // No need to request the items for this category, because we've got it cached!
-    if( LoadCachedCategory( CRI.Options.StoreFilter ) )
+    storeFilter = class'BTClient_Config'.static.FindSavedData().StoreFilter;
+    if( LoadCachedCategory( storeFilter ) )
     {
         ItemsNum = CRI.Items.Length;
         BTStore_ItemsMultiColumnList(lb_ItemsListBox.List).UpdateList();
@@ -62,14 +66,14 @@ function LoadData()
         CRI.Items.Length = 0;
 
         bWaitingForResponse = true;
-        PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), CRI.Options.StoreFilter ) );
+        PlayerOwner().ConsoleCommand( "Mutate BTClient_RequestStoreItems" @ Eval( cb_Filter.GetText() != "", cb_Filter.GetText(), storeFilter ) );
 
         DisableComponent( cb_Filter );
         SetTimer( 0.2, true );
     }
 }
 
-function LoadComplete()
+protected function LoadComplete()
 {
     local int i;
 
@@ -86,7 +90,7 @@ function LoadComplete()
             cb_Filter.AddItem( CRI.Categories[i].Name );
         }
         cb_Filter.MyComboBox.List.OnChange = FilterChanged;
-        i = cb_Filter.FindIndex( CRI.Options.StoreFilter );
+        i = cb_Filter.FindIndex( class'BTClient_Config'.static.FindSavedData().StoreFilter );
         if( i != -1 )
         {
             cb_Filter.SetIndex( i );
@@ -116,7 +120,6 @@ event Timer()
 function InitComponent( GUIController MyController, GUIComponent MyOwner )
 {
     super.InitComponent( MyController, MyOwner );
-    lb_ItemsListBox.InitListClass( string(ColumnListClass), CRI );
     lb_ItemsListBox.ContextMenu.OnSelect = InternalOnSelect;
     lb_ItemsListBox.List.OnDblClick = InternalOnDblClick;
 }
@@ -126,11 +129,6 @@ function bool InternalOnDblClick( GUIComponent sender )
     return BuySelectedItem();
 }
 
-/**
-    ContextItems(0)="Buy this item"
-    ContextItems(1)="Toggle this item"
-    ContextItems(2)="Sell this item"
-*/
 function InternalOnSelect( GUIContextMenu sender, int clickIndex )
 {
     switch( clickIndex )
@@ -141,7 +139,7 @@ function InternalOnSelect( GUIContextMenu sender, int clickIndex )
     }
 }
 
-final function bool BuySelectedItem()
+private function bool BuySelectedItem()
 {
     local int i;
 
@@ -165,7 +163,6 @@ final function bool BuySelectedItem()
         }
 
         PlayerOwner().ConsoleCommand( "Store Buy" @ CRI.Items[i].ID );
-        //LoadData();
         return true;
     }
     return false;
@@ -173,40 +170,18 @@ final function bool BuySelectedItem()
 
 function bool InternalOnClick( GUIComponent Sender )
 {
-    local int i;
-
     if( Sender == b_Buy )
     {
         return BuySelectedItem();
-    }
-    else if( Sender == b_DisableAll )
-    {
-        PlayerOwner().ConsoleCommand( "Store ToggleItem all" );
-        LoadData();
-        return true;
-    }
-    else if( Sender == b_Edit )
-    {
-        i = lb_ItemsListBox.List.CurrentListId();
-        if( i != -1 )
-        {
-            PlayerOwner().ConsoleCommand( "Store Edit" @ CRI.Items[i].ID );
-        }
-        return true;
     }
     else if( Sender == b_Donate )
     {
         BuyItemOnline( "ItemDonation", "ItemRequest" );
         return true;
     }
-    else if( Sender == b_ColorDialog )
-    {
-        PlayerOwner().ConsoleCommand( "PreferedColorDialog" );
-        return true;
-    }
 }
 
-function BuyItemOnline( string itemName, string itemID )
+private function BuyItemOnline( string itemName, string itemID )
 {
     if( !PlatformIs64Bit() )
     {
@@ -275,7 +250,7 @@ function bool InternalOnDraw( Canvas C )
     return true;
 }
 
-final function UpdateItemDescription( int itemIndex )
+protected function UpdateItemDescription( int itemIndex )
 {
     eb_ItemDescription.MyScrollText.SetContent( CRI.Items[itemIndex].Desc );
     eb_ItemDescription.MyScrollBar.AlignThumb();
@@ -284,14 +259,17 @@ final function UpdateItemDescription( int itemIndex )
 
 function FilterChanged( GUIComponent sender )
 {
+    local BTClient_Config options;
+
+    options = class'BTClient_Config'.static.FindSavedData();
     cb_Filter.MyComboBox.ItemChanged( sender );
-    CacheCategory( CRI.Options.StoreFilter );
-    CRI.Options.StoreFilter = cb_Filter.GetText();
-    CRI.Options.SaveConfig();
+    CacheCategory( options.StoreFilter );
+    options.StoreFilter = cb_Filter.GetText();
+    options.SaveConfig();
     LoadData();
 }
 
-final function CacheCategory( string categoryName )
+private function CacheCategory( string categoryName )
 {
     local int i;
 
@@ -305,7 +283,7 @@ final function CacheCategory( string categoryName )
     }
 }
 
-final function bool LoadCachedCategory( string categoryName )
+private function bool LoadCachedCategory( string categoryName )
 {
     local int i;
 
@@ -347,26 +325,15 @@ defaultproperties
 
     begin object Class=BTStore_ItemsMultiColumnListBox Name=oItemsListBox
         WinWidth=0.7
-        WinHeight=0.79
+        WinHeight=0.940000
         WinLeft=0.0
-        WinTop=0.06
+        WinTop=0.01
         bVisibleWhenEmpty=true
         bScaleToParent=true
         bBoundToParent=true
         FontScale=FNS_Small
     end object
     lb_ItemsListBox=oitemsListBox
-
-    begin object Class=GUIButton Name=oColorDialog
-        Caption="Prefered Color"
-        WinLeft=0.71
-        WinTop=0.005
-        WinWidth=0.29
-        WinHeight=0.05
-        OnClick=InternalOnClick
-        Hint="Edit your prefered color"
-    end object
-    b_ColorDialog=oColorDialog
 
     Begin Object class=GUISectionBackground name=render
         Caption="Item Details"
@@ -404,32 +371,10 @@ defaultproperties
     End Object
     eb_ItemDescription=Desc
 
-    begin object Class=GUIButton Name=oEdit
-        Caption="Edit"
-        WinLeft=0.8
-        WinTop=0.795
-        WinWidth=0.12
-        WinHeight=0.05
-        OnClick=InternalOnClick
-        Hint="Edit the selected item if available"
-    end object
-    b_Edit=oEdit
-
-    begin object Class=GUIButton Name=oDisableAll
-        Caption="Disable All"
-        WinLeft=0.14
-        WinTop=0.855
-        WinWidth=0.24
-        WinHeight=0.08
-        OnClick=InternalOnClick
-        Hint="Deactivate all your items"
-    end object
-    b_DisableAll=oDisableAll
-
     Begin Object class=moComboBox Name=oFilter
-        WinLeft=0.40
+        WinLeft=0.710000
         WinTop=0.01
-        WinWidth=0.3
+        WinWidth=0.29
         WinHeight=0.08
 
         Caption="Filter"
@@ -443,8 +388,8 @@ defaultproperties
 
     begin object Class=GUIButton Name=oDonate
         Caption="Donate"
-        WinLeft=0.0
-        WinTop=0.855
+        WinLeft=0.880000
+        WinTop=0.875
         WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
@@ -454,14 +399,12 @@ defaultproperties
 
     begin object Class=GUIButton Name=oBuy
         Caption="Buy"
-        WinLeft=0.550000
-        WinTop=0.855
-        WinWidth=0.15
+        WinLeft=0.710000
+        WinTop=0.875
+        WinWidth=0.12
         WinHeight=0.08
         OnClick=InternalOnClick
         Hint="Buy the selected item"
     end object
     b_Buy=oBuy
-
-    ColumnListClass=Class'BTStore_ItemsMultiColumnList'
 }

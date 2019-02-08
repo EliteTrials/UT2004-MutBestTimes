@@ -8,18 +8,8 @@ var protected transient bool
     bItemIsOwner,
     bItemIsClientSpawn,
     bItemIsUnRanked,
-    bItemHasStar;
-
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
+    bItemHasStar,
+    bItemhasGhost;
 
 function Free()
 {
@@ -68,6 +58,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     bItemIsClientSpawn = (recordsPRI.RecordRanks[sortItem].Flags & 0x01/**RFLAG_CP*/) != 0;
     bItemIsUnRanked = (recordsPRI.RecordRanks[sortItem].Flags & 0x02/**RFLAG_UNRANKED*/) != 0;
     bItemHasStar = (recordsPRI.RecordRanks[sortItem].Flags & 0x04/**RFLAG_STAR*/) != 0;
+    bItemhasGhost = (recordsPRI.RecordRanks[sortItem].Flags & 0x08/**RFLAG_GHOST*/) != 0;
 
     Y += 2;
     H -= 2;
@@ -170,6 +161,19 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
         C.SetPos( CellLeft + (CellWidth - xl) - 2/**cellspacing*/, Y + H*0.5 - yl*0.5 );
         C.DrawColor = #0xFB607FFF;
         C.DrawTile( Texture'HudContent.Generic.Hud', xl, yl, 340, 130, 54, 76 );
+
+        // Shifts the next icon.
+        CellLeft -= H + 2;
+    }
+
+    if( bItemhasGhost )
+    {
+        DrawStyle.TextSize( C, MenuState, "T", xl, yl, FontScale );
+
+        xl = yl;
+        C.SetPos( CellLeft + (CellWidth - xl) - 2/**cellspacing*/, Y + H*0.5 - yl*0.5 );
+        C.DrawColor = #0x00107FFF;
+        C.DrawTile( Texture'AS_FX_TX.Icons.HoldObjective', xl, yl, 0, 0, 64, 64 );
     }
 
     GetCellLeftWidth( 4, CellLeft, CellWidth );
@@ -287,3 +291,5 @@ defaultproperties
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight
 }
+
+#include classes/BTColorHashUtil.uci

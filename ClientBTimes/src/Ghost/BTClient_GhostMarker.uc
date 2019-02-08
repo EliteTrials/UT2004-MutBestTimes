@@ -1,6 +1,8 @@
 class BTClient_GhostMarker extends Actor;
 
 var int MoveIndex;
+var Vector LastRenderScr;
+// var float LastRenderTime;
 
 replication
 {
@@ -14,6 +16,7 @@ defaultproperties
     bNoDelete=false
     Texture=none
     bReplicateMovement=true
+    bNetInitialRotation=true
     RemoteRole=ROLE_DumbProxy
     NetUpdateFrequency=0.3
     NetPriority=0.5

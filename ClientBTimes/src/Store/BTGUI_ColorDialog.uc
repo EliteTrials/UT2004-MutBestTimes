@@ -132,12 +132,12 @@ defaultproperties
     WinWidth=0.2
     WinHeight=0.2
 
-    WindowName="Prefered Color Dialog"
+    WindowName="Preferred Color Dialog"
     bAllowedAsLast=true
 
     // Text for colors...
     Begin Object class=GUILabel name=ColorTitle
-        Caption="Prefered Color"
+        Caption="Preferred Color"
         TextColor=(R=255,G=255,B=255,A=255)
         WinHeight=0.06
         Winleft=0.02

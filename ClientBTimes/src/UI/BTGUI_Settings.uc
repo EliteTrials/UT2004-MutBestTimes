@@ -16,9 +16,7 @@ var automated moCheckBox
     cb_PTS,
     cb_DFT,
     cb_PM,
-    cb_ABV,
-    cb_DodgeDelay,
-    cb_DodgeReady;
+    cb_ABV;
 
 var automated GUIEditBox
     eb_TickSound,
@@ -27,56 +25,10 @@ var automated GUIEditBox
     eb_SucceedSound,
     eb_ToggleKey;
 
-var automated AltSectionBackground
-    SB_Border;
-
-// Used for saving.
-var bool bCanSave;
-
-var BTClient_Config Options;
-
-event Free()
-{
-    Options = none;
-    super.Free();
-}
-
 function InitPanel()
 {
     super.InitPanel();
-
-    Options = Class'BTClient_Config'.static.FindSavedData();
-    if( Options == None )
-    {
-        Log( "BTClient_Config not found!", Name );
-        return;
-    }
-
-    CopyOptions();
-}
-
-function CopyOptions()
-{
-    cb_UseAltTimer.Checked( Options.bUseAltTimer );
-    cb_ShowZoneActors.Checked( Options.bShowZoneActors );
-    cb_FadeTextColors.Checked( Options.bFadeTextColors );
-    cb_DCM.Checked( Options.bDisplayCompletingMessages );
-    cb_OIF.Checked( Options.bDisplayFail );
-    cb_OIN.Checked( Options.bDisplayNew );
-    cb_PCS.Checked( Options.bPlayCompletingSounds );
-    cb_PT.Checked( Options.bBaseTimeLeftOnPersonal );
-    cb_PTS.Checked( Options.bPlayTickSounds );
-    cb_DFT.Checked( Options.bDisplayFullTime );
-    cb_PM.Checked( Options.bProfesionalMode );
-    cb_ABV.Checked( Options.bAutoBehindView );
-    cb_DodgeDelay.Checked( Options.bShowDodgeDelay );
-    cb_DodgeReady.Checked( Options.bShowDodgeReady );
-
-    eb_TickSound.SetText( string(Options.TickSound) );
-    eb_LastTickSound.SetText( string(Options.LastTickSound) );
-    eb_FailSound.SetText( string(Options.FailSound) );
-    eb_SucceedSound.SetText( string(Options.NewSound) );
-    eb_ToggleKey.SetText( Class'Interactions'.static.GetFriendlyName( Options.RankingTableKey ) );
+    LoadBTConfig();
 }
 
 function bool InternalOnClick( GUIComponent Sender )
@@ -84,16 +36,14 @@ function bool InternalOnClick( GUIComponent Sender )
     if( Sender == b_Save )
     {
         DisableComponent( b_Save );
-
-        SaveData();
+        SaveBTConfig();
         return true;
     }
     else if( Sender == b_Reset )
     {
         DisableComponent( b_Reset );
-
-        Options.ResetSavedData();
-        CopyOptions();
+        ResetBTConfig();
+        LoadBTConfig();
         return true;
     }
     return false;
@@ -105,51 +55,65 @@ function InternalOnChange( GUIComponent Sender )
     EnableComponent( b_Reset );
 }
 
-// Update ini config
-function SaveData()
+private function ResetBTConfig()
 {
-    Options.bUseAltTimer = cb_UseAltTimer.IsChecked();
-    Options.bShowZoneActors = cb_ShowZoneActors.IsChecked();
-    Options.bFadeTextColors = cb_FadeTextColors.IsChecked();
-    Options.bDisplayCompletingMessages = cb_DCM.IsChecked();
-    Options.bDisplayFail = cb_OIF.IsChecked();
-    Options.bDisplayNew = cb_OIN.IsChecked();
-    Options.bPlayCompletingSounds = cb_PCS.IsChecked();
-    Options.bBaseTimeLeftOnPersonal = cb_PT.IsChecked();
-    Options.bPlayTickSounds = cb_PTS.IsChecked();
-    Options.bDisplayFullTime = cb_DFT.IsChecked();
-    Options.bProfesionalMode = cb_PM.IsChecked();
-    Options.bAutoBehindView = cb_ABV.IsChecked();
-    Options.bShowDodgeDelay = cb_DodgeDelay.IsChecked();
-    Options.bShowDodgeReady = cb_DodgeReady.IsChecked();
+    class'BTClient_Config'.static.FindSavedData().ResetSavedData();
+}
 
-    Options.TickSound = Sound(DynamicLoadObject( eb_TickSound.GetText(), Class'Sound', True ));
-    Options.LastTickSound = Sound(DynamicLoadObject( eb_LastTickSound.GetText(), Class'Sound', True ));
-    Options.FailSound = Sound(DynamicLoadObject( eb_FailSound.GetText(), Class'Sound', True ));
-    Options.NewSound = Sound(DynamicLoadObject( eb_SucceedSound.GetText(), Class'Sound', True ));
+private function LoadBTConfig()
+{
+    local BTClient_Config btConfig;
 
-    Options.RankingTableKey = Options.static.ConvertToKey( eb_ToggleKey.GetText() );
+    btConfig = class'BTClient_Config'.static.FindSavedData();
+    cb_UseAltTimer.Checked( btConfig.bUseAltTimer );
+    cb_ShowZoneActors.Checked( btConfig.bShowZoneActors );
+    cb_FadeTextColors.Checked( btConfig.bFadeTextColors );
+    cb_DCM.Checked( btConfig.bDisplayCompletingMessages );
+    cb_OIF.Checked( btConfig.bDisplayFail );
+    cb_OIN.Checked( btConfig.bDisplayNew );
+    cb_PCS.Checked( btConfig.bPlayCompletingSounds );
+    cb_PT.Checked( btConfig.bBaseTimeLeftOnPersonal );
+    cb_PTS.Checked( btConfig.bPlayTickSounds );
+    cb_DFT.Checked( btConfig.bDisplayFullTime );
+    cb_PM.Checked( btConfig.bProfesionalMode );
+    cb_ABV.Checked( btConfig.bAutoBehindView );
 
-    Options.SaveConfig();
+    eb_TickSound.SetText( string(btConfig.TickSound) );
+    eb_LastTickSound.SetText( string(btConfig.LastTickSound) );
+    eb_FailSound.SetText( string(btConfig.FailSound) );
+    eb_SucceedSound.SetText( string(btConfig.NewSound) );
+    eb_ToggleKey.SetText( class'Interactions'.static.GetFriendlyName( btConfig.RankingTableKey ) );
+}
 
-    MyMenu.MyInteraction.UpdateToggleKey();
+private function SaveBTConfig()
+{
+    local BTClient_Config btConfig;
+
+    btConfig = class'BTClient_Config'.static.FindSavedData();
+    btConfig.bUseAltTimer = cb_UseAltTimer.IsChecked();
+    btConfig.bShowZoneActors = cb_ShowZoneActors.IsChecked();
+    btConfig.bFadeTextColors = cb_FadeTextColors.IsChecked();
+    btConfig.bDisplayCompletingMessages = cb_DCM.IsChecked();
+    btConfig.bDisplayFail = cb_OIF.IsChecked();
+    btConfig.bDisplayNew = cb_OIN.IsChecked();
+    btConfig.bPlayCompletingSounds = cb_PCS.IsChecked();
+    btConfig.bBaseTimeLeftOnPersonal = cb_PT.IsChecked();
+    btConfig.bPlayTickSounds = cb_PTS.IsChecked();
+    btConfig.bDisplayFullTime = cb_DFT.IsChecked();
+    btConfig.bProfesionalMode = cb_PM.IsChecked();
+    btConfig.bAutoBehindView = cb_ABV.IsChecked();
+    btConfig.TickSound = Sound(DynamicLoadObject( eb_TickSound.GetText(), Class'Sound', True ));
+    btConfig.LastTickSound = Sound(DynamicLoadObject( eb_LastTickSound.GetText(), Class'Sound', True ));
+    btConfig.FailSound = Sound(DynamicLoadObject( eb_FailSound.GetText(), Class'Sound', True ));
+    btConfig.NewSound = Sound(DynamicLoadObject( eb_SucceedSound.GetText(), Class'Sound', True ));
+    btConfig.RankingTableKey = btConfig.static.ConvertToKey( eb_ToggleKey.GetText() );
+    btConfig.SaveConfig();
+
+    PlayerOwner().ConsoleCommand("UpdateToggleKey");
 }
 
 defaultproperties
 {
-    bCanSave=true
-
-    Begin Object class=AltSectionBackground name=border
-        WinTop      =   0.025000
-        WinLeft     =   0.025000
-        WinWidth    =   0.950000
-        WinHeight   =   0.900000
-        Caption="Options"
-//      HeaderBar=None
-//      HeaderBase=Material'2K4Menus.NewControls.Display99'
-    End Object
-    SB_Border=border
-
     // Left Side
 
     Begin Object class=moCheckBox name=UseAltTimer
@@ -357,36 +321,6 @@ defaultproperties
         OnChange=InternalOnChange
     End Object
     eb_LastTickSound=LastTickSound
-
-    Begin Object class=moCheckBox name=oDodgeReady
-        bScaleToParent=True
-        bBoundToParent=True
-        WinTop=0.728
-        WinLeft=0.530000
-        WinWidth=0.195000
-        WinHeight=0.050000
-        Caption="Dodge Ready"
-        Hint="(Dodge Perk)Shows when you are able to dodge to again!"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_DodgeReady=oDodgeReady
-
-    Begin Object class=moCheckBox name=oDodgeDelay
-        bScaleToParent=True
-        bBoundToParent=True
-        WinTop=0.728
-        WinLeft=0.760000
-        WinWidth=0.195000
-        WinHeight=0.050000
-        Caption="Dodge Delay"
-        Hint="(Dodge Perk)Helps you research your dodge timing!"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_DodgeDelay=oDodgeDelay
-
-    // bottom
 
     Begin Object class=GUIButton name=ResetButton
         Caption="Reset"

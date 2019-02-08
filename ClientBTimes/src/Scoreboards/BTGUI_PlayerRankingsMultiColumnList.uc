@@ -9,16 +9,8 @@ var protected transient bool
     bItemIsSelected,
     bItemIsOwner;
 
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
-}
+var private const Texture UpTex;
+var private const TexRotator DownTex;
 
 function Free()
 {
@@ -45,6 +37,7 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     local int sortItem;
     local float xl, yl;
     local float CellLeft, CellWidth;
+    local float value;
     local GUIStyles DrawStyle;
 
     sortItem = SortData[i].SortItem;
@@ -85,9 +78,9 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     GetCellLeftWidth( 1, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 1 );
 
+    DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
     if( Rankings.PlayerRanks[sortItem].CountryCode != "" )
     {
-        DrawStyle.TextSize( C, MenuState, "M", xl, yl, FontScale );
         yl = yl*0.8 - 2.0;
         xl = 10f/8f*yl;
         C.DrawColor = class'HUD'.default.WhiteColor;
@@ -120,6 +113,19 @@ function DrawItem(Canvas C, int i, float X, float Y, float W, float H, bool bSel
     DrawStyle.FontColors[0] = GetColumnColor( 2 );
     DrawStyle.DrawText( C, MenuState, CellLeft, Y, CellWidth, H, TXTA_Left,
         string(Rankings.PlayerRanks[sortItem].Points), FontScale );
+
+    value = Rankings.PlayerRanks[sortItem].PointsChange;
+    if (value > 0) {
+        C.SetPos( CellLeft + CellWidth - YL - 8, Y + H*0.5 - yl*0.5 );
+        C.DrawColor = class'HUD'.default.GreenColor;
+        C.DrawColor.A = 180;
+        C.DrawTile( UpTex, yl, yl, 0, 0, 32, 32 );
+    } else if (value < 0) {
+        C.SetPos( CellLeft + CellWidth - YL - 8, Y + H*0.5 - yl*0.5 );
+        C.DrawColor = class'HUD'.default.RedColor;
+        C.DrawColor.A = 180;
+        C.DrawTile( DownTex, yl, yl, 0, 0, 32, 32 );
+    }
 
     GetCellLeftWidth( 3, CellLeft, CellWidth );
     DrawStyle.FontColors[0] = GetColumnColor( 3 );
@@ -235,4 +241,9 @@ defaultproperties
 
     OnDrawItem=DrawItem
     GetItemHeight=InternalGetItemHeight
+
+    UpTex=Texture'Icons.ArrowUp'
+    DownTex=TexRotator'Icons.ArrowDown'
 }
+
+#include classes/BTColorHashUtil.uci

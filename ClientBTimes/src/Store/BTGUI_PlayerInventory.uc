@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2011-2014 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2011-2018 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTGUI_PlayerInventory extends BTGUI_StatsTab
     dependson(BTClient_ClientReplication);
@@ -9,19 +9,23 @@ class BTGUI_PlayerInventory extends BTGUI_StatsTab
 #exec texture import name=itemUnChecked file=content/itemUnChecked.tga mips=off DXT=1 LODSet=5
 #exec texture import name=itemChecked file=content/itemChecked.tga mips=off DXT=1 LODSet=5
 
-var Texture TileMat;
-var Texture FooterTexture;
-var Texture CheckedTexture, UnCheckedTexture;
+var() const Texture TileMat;
+var() const Texture FooterTexture;
+var() const Texture CheckedTexture, UnCheckedTexture;
 
-var automated GUITreeListBox        CategoriesListBox;
-var automated GUISectionBackground  ItemsBackground, CategoriesBackground;
-var automated GUIVertImageListBox   ItemsListBox;
-var GUIContextMenu                  ItemsContextMenu;
+var automated GUITreeListBox            CategoriesListBox;
+var automated GUISectionBackground      ItemsBackground, CategoriesBackground;
+var automated BTGUI_PlayerItemsListBox  ItemsListBox;
+var GUIContextMenu                      ItemsContextMenu;
 
-var automated BTGUI_ComPetPanel     PetPanel;
+var automated AltSectionBackground          PreviewBackground;
+var automated BTGUI_PawnPreviewComponent    PawnPreview;
 
-var() Color RarityColor[7];
-var() name RarityTitle[7];
+var() const Color RarityColor[7];
+var() const name RarityTitle[7];
+
+var automated GUIButton b_ActivateKey, b_ColorDialog;
+var automated GUIEditBox eb_Key;
 
 function InitComponent( GUIController InController, GUIComponent InOwner )
 {
@@ -30,35 +34,34 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
     ItemsListBox.List.OnRightClick = InternalOnListRightClick;
     ItemsListBox.List.OnDblClick = InternalOnListDblClick;
     ItemsListBox.List.OnChange = InternalOnListChange;
-    PetPanel.mInv = self;
+    ItemsListBox.List.bAllowEmptyItems = true;
+    ItemsListBox.ContextMenu.OnSelect = InternalOnSelect;
 }
 
 function ShowPanel( bool bShow )
 {
     super.ShowPanel( bShow );
-    if( bShow && CRI != none && CRI.PlayerItems.Length == 0 )
-    {
-        CRI.OnPlayerItemReceived = InternalOnPlayerItemReceived;
-        CRI.ServerRequestPlayerItems();
 
-        CRI.OnPlayerItemRemoved = InternalOnPlayerItemRemoved;
-        CRI.OnPlayerItemUpdated = InternalOnPlayerItemUpdated;
+    if (bShow) {
+        PawnPreview.InitPawn3D();
+        if (CRI != none && CRI.PlayerItems.Length == 0)
+        {
+            CRI.OnPlayerItemReceived = InternalOnPlayerItemReceived;
+            CRI.ServerRequestPlayerItems();
+
+            CRI.OnPlayerItemRemoved = InternalOnPlayerItemRemoved;
+            CRI.OnPlayerItemUpdated = InternalOnPlayerItemUpdated;
+        }
+    }
+    else {
+        PawnPreview.DestroyPawn3D();
     }
 }
 
 function InternalOnPlayerItemReceived( int index )
 {
-    local BTClient_ClientReplication.sPlayerItemClient item;
-    local Material icon;
-
-    item = CRI.PlayerItems[index];
-    icon = item.IconTexture;
-    if( icon == none )
-    {
-        icon = class'BTUI_AchievementState'.default.AchievementDefaultIcon;
-    }
-
-    ItemsListBox.List.Add( icon, index, 0 );
+    // itemChecked is just a placeholder otherwise the list won't accept our item.
+    ItemsListBox.List.Add( Texture'itemChecked', index, 0 );
 }
 
 // Assuming the list represents that exact order of CRI.PlayerItems
@@ -75,17 +78,6 @@ function InternalOnPlayerItemRemoved( int index )
 
 function InternalOnPlayerItemUpdated( int index )
 {
-}
-
-final static preoperator Color #( int rgbInt )
-{
-    local Color c;
-
-    c.R = rgbInt >> 24;
-    c.G = rgbInt >> 16;
-    c.B = rgbInt >> 8;
-    c.A = (rgbInt & 255);
-    return c;
 }
 
 function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, float H, bool bSelected, bool bPending )
@@ -116,11 +108,7 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     footerHeight = YL*2 + 8*2;
 
     // RENDER: Background
-    if( bSelected || bPending )
-    {
-        C.DrawColor = #0x8E8EFEFF;
-    }
-    else C.DrawColor = #0xEEEEEE88;
+    C.DrawColor = #0xEEEEEE88;
     C.OrgX = int(X);
     C.OrgY = int(Y);
     C.SetPos( 0, 0 );
@@ -182,9 +170,15 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.ClipX = W;
     C.ClipY = H;
     C.SetPos( 0, 0 );
-    C.DrawColor = #0x222222FF;
+    if( bSelected || bPending )
+    {
+        C.DrawColor = #0x8E8EFEFF;
+    }
+    else
+    {
+        C.DrawColor = #0x222222FF;
+    }
     C.DrawBox( C, w, h );
-
     C.ClipX = oldClipX;
     C.ClipY = oldClipY;
     C.OrgX = X + W;
@@ -198,8 +192,7 @@ function InternalOnListChange( GUIComponent sender )
     i = ItemsListBox.List.GetItem();
     if( i != -1 )
     {
-        PetPanel.SpinnyDude.PlayNextAnim();
-        PetPanel.SpinnyDude.SetOverlayMaterial( CRI.PlayerItems[i].IconTexture, 999999, true );
+        PawnPreview.ApplyPlayerItem( CRI.PlayerItems[i] );
     }
 }
 
@@ -222,10 +215,14 @@ function InternalOnSelect( GUIContextMenu sender, int clickIndex )
             break;
 
         case 1:
-            SellSelectedItem();
+            EditSelectedItem();
             break;
 
         case 2:
+            SellSelectedItem();
+            break;
+
+        case 3:
             DestroySelectedItem();
             break;
     }
@@ -240,6 +237,19 @@ final function bool ToggleSelectedItem()
     if( i != -1 )
     {
         CRI.ServerToggleItem( CRI.PlayerItems[i].ID );
+        return true;
+    }
+    return false;
+}
+
+final function bool EditSelectedItem()
+{
+    local int i;
+
+    i = ItemsListBox.List.GetItem();
+    if( i != -1 )
+    {
+        PlayerOwner().ConsoleCommand( "Store Edit" @ CRI.PlayerItems[i].ID );
         return true;
     }
     return false;
@@ -271,6 +281,27 @@ final function bool DestroySelectedItem()
     return false;
 }
 
+function bool InternalOnClick( GUIComponent sender )
+{
+    if( sender == b_ActivateKey )
+    {
+        if( eb_Key.GetText() == "" )
+        {
+            PlayerOwner().ClientMessage( "Please input a valid key." );
+            return false;
+        }
+
+        PlayerOwner().ConsoleCommand( "ActivateKey" @ eb_Key.GetText() );
+        return true;
+    }
+    else if( Sender == b_ColorDialog )
+    {
+        PlayerOwner().ConsoleCommand( "PreferedColorDialog" );
+        return true;
+    }
+    return false;
+}
+
 defaultproperties
 {
     RarityColor[0]=(R=231,G=207,B=182,A=255)
@@ -295,39 +326,50 @@ defaultproperties
     CheckedTexture=ItemChecked
     UnCheckedTexture=ItemUnChecked
 
-    begin object class=BTGUI_ComPetPanel name=oPetPanel
+    begin object class=AltSectionBackground name=oPreviewBackground
         WinWidth=0.300000
-        WinHeight=0.41
+        WinHeight=0.88
         WinLeft=0.0
-        WinTop=0.48
-        bBoundToParent=true
-        bScaleToParent=true
-    end object
-    PetPanel=oPetPanel
-
-    begin object class=GUISectionBackground name=oItemsBackground
-        WinWidth=0.700000
-        WinHeight=0.92
-        WinLeft=0.300000
         WinTop=0.01
         bBoundToParent=true
         bScaleToParent=true
-        Caption="Your Items"
-        HeaderBar=none
-        HeaderBase=none
+        Caption="Preview"
     end object
-    ItemsBackground=oItemsBackground
+    PreviewBackground=oPreviewBackground
 
-    begin object class=GUIVertImageListBox name=oItemsListBox
+    begin object class=BTGUI_PawnPreviewComponent name=oPawnPreview
+        WinWidth=0.300000
+        WinHeight=0.88
+        WinLeft=0.0
+        WinTop=0.01
+        bBoundToParent=true
+        bScaleToParent=true
+    end object
+    PawnPreview=oPawnPreview
+
+    // begin object class=GUISectionBackground name=oItemsBackground
+    //     WinWidth=0.690000
+    //     WinHeight=0.88
+    //     WinLeft=0.310000
+    //     WinTop=0.01
+    //     bBoundToParent=true
+    //     bScaleToParent=true
+    //     Caption="Your Items"
+    //     HeaderBase=Texture'XInterface.S_UTClassic'
+    //     HeaderBar=Shader'Achievement_Effect'
+    // end object
+    // ItemsBackground=oItemsBackground
+
+    begin object class=BTGUI_PlayerItemsListBox name=oItemsListBox
+        WinHeight=0.870000
+        WinLeft=0.31000
+        WinTop=0.010000
         WinWidth=0.690000
-        WinHeight=0.820000
-        WinLeft=0.300000
-        WinTop=0.070000
         bBoundToParent=true
         bScaleToParent=true
 
         CellStyle=Cell_FixedCount
-        NoVisibleCols=5
+        NoVisibleCols=4
         NoVisibleRows=4
         TabOrder=0
 
@@ -336,11 +378,39 @@ defaultproperties
     end object
     ItemsListBox=oItemsListBox
 
-    begin object class=GUIContextMenu name=oContextMenu
-        ContextItems(0)="Equip/Unequip Item"
-        ContextItems(1)="Sell Item to Vendor"
-        ContextItems(2)="Destroy Item"
-        OnSelect=InternalOnSelect
+    begin object class=GUIButton name=oActivateKey
+        Caption="Activate Key"
+        WinTop=0.9
+        WinLeft=0.0
+        WinWidth=0.25
+        WinHeight=0.05
+        OnClick=InternalOnClick
+        Hint="Activate a BestTimes key"
     end object
-    ContextMenu=oContextMenu
+    b_ActivateKey=oActivateKey
+
+    begin object class=GUIEditBox name=oKey
+        bScaleToParent=True
+        bBoundToParent=True
+        WinTop=0.9
+        WinLeft=0.26
+        WinWidth=0.74
+        WinHeight=0.05
+        Hint="A BestTimes key"
+    end object
+    eb_Key=oKey
+
+    begin object Class=GUIButton Name=oColorDialog
+        Caption="Preferred Color"
+        WinLeft=0.01
+        WinTop=0.79
+        WinWidth=0.28
+        WinHeight=0.05
+        OnClick=InternalOnClick
+        Hint="Edit your preferred color"
+        StyleName="LadderButtonHi"
+    end object
+    b_ColorDialog=oColorDialog
 }
+
+#include classes/BTColorHashUtil.uci

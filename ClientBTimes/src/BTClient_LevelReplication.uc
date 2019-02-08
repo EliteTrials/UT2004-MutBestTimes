@@ -9,6 +9,7 @@ var private GameObjective MyObjective;
 /** The level's id without (map- or level-). */
 var private string LevelName;
 var private bool _IsSupremeLevel, _BoundByMap, _BoundByLevel;
+var bool IsActive;
 
 /** (Server) The level id(inc map- or level-) of the level that this level locks and unlocks. */
 var string LevelId, LockedLevelName;
@@ -79,6 +80,12 @@ simulated event PostNetBeginPlay()
 	}
 	_IsSupremeLevel = true;
 	LockedLevelName = ParseMapId( MyObjective.Event );
+}
+
+event Reset()
+{
+	super.Reset();
+	IsActive = false;
 }
 
 private static function string ParseMapId( coerce string s )
@@ -224,6 +231,17 @@ final simulated function string GetFullName( string mapName )
 final simulated function bool Represents( GameObjective obj )
 {
 	return MyObjective == obj;
+}
+
+final function PlayerEnterLevel( BTClient_ClientReplication CRI )
+{
+	IsActive = true;
+	CRI.SetActiveLevel( self );
+}
+
+final function PlayerLeaveLevel( BTClient_ClientReplication CRI )
+{
+	CRI.SetActiveLevel( none );
 }
 
 defaultproperties

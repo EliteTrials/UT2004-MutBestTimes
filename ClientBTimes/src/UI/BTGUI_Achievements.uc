@@ -4,7 +4,7 @@
 class BTGUI_Achievements extends BTGUI_StatsTab
     dependson(BTClient_ClientReplication);
 
-var Texture TileMat;
+var() const Texture TileMat;
 
 var automated GUITreeListBox        CategoriesListBox;
 var automated GUISectionBackground  AchievementsBackground, CategoriesBackground;

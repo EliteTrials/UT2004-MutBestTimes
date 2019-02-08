@@ -50,8 +50,8 @@ struct sStoreItemClient
     var string ID;
     var int Cost;
     var byte Access;
-    var string Desc;
-    var Material IconTexture;
+    var /**meta*/ string Desc;
+    var /**meta*/ Material IconTexture;
 
     var transient bool bSync;
     var transient bool bHasMeta;
@@ -70,14 +70,12 @@ struct sPlayerItemClient
 {
     var string Name;
     var string ID;
+    var string ItemClass;
     var bool bEnabled;
     var byte Access;
     var string Desc;
     var Material IconTexture;
     var byte Rarity;
-
-    var transient bool bSync;
-    var transient bool bHasMeta;
 
     var byte Count;
 };
@@ -171,6 +169,7 @@ var Pawn ClientSpawnPawn;
 var int EventTeamIndex;
 
 var BTClient_LevelReplication PlayingLevel;
+var byte SpawnPing;
 
 //==============================================================================
 
@@ -187,6 +186,7 @@ var bool bAutoPress;
 var bool bPermitBoosting;
 var bool bWantsToWage;
 var int AmountToWage;
+var transient float LastFlexTime;
 
 // SIMULATED, only relevant to owner and server
 var BTClient_MutatorReplicationInfo MRI;
@@ -202,6 +202,7 @@ replication
         PersonalTime, Rank, ClientFlags, SoloRank,
         BTLevel, BTExperience, BTPoints, APoints, BTWage,
         PreferedColor, bIsPremiumMember, Title, EventTeamIndex,
+        SpawnPing,
         PlayingLevel/**should only be replicated to spectators!*/;
 
     reliable if( bNetOwner && Role == ROLE_Authority )
@@ -235,6 +236,20 @@ replication
         ServerRequestPlayerItems,
         ServerRequestPlayerRanks, ServerRequestRecordRanks,
         ServerPerformQuery;
+}
+
+static function BTClient_ClientReplication GetCRI( PlayerReplicationInfo PRI )
+{
+    local LinkedReplicationInfo LRI;
+
+    for( LRI = PRI.CustomReplicationInfo; LRI != none; LRI = LRI.NextReplicationInfo )
+    {
+        if( BTClient_ClientReplication(LRI) != none )
+        {
+            return BTClient_ClientReplication(LRI);
+        }
+    }
+    return none;
 }
 
 // Server hooks
@@ -400,10 +415,15 @@ simulated function ClientSendMessage( class<BTClient_LocalMessage> messageClass,
     );
 }
 
+final function float GetPingCompensationInTime()
+{
+    return FMin(SpawnPing*4, 80.0)/1000.0;
+}
+
 // Call this on server instead of clientspawn!
 function PlayerSpawned()
 {
-    LastSpawnTime = Level.TimeSeconds;
+    LastSpawnTime = Level.TimeSeconds + GetPingCompensationInTime();
     // For newly connected clients.
     InitServerSpawnTime = LastSpawnTime;
     ClientSpawned();
@@ -417,7 +437,7 @@ function ClientSetPersonalTime( float CPT )
 // Client spawned, reset timer...
 simulated function ClientSpawned()
 {
-    LastSpawnTime = Level.TimeSeconds;
+    LastSpawnTime = Level.TimeSeconds + GetPingCompensationInTime();
 }
 
 simulated function ClientSendConsoleMessage( coerce string Msg )
@@ -635,7 +655,7 @@ simulated final function ClientSendItem( string itemName, string id, int data )
     Items[0].Access = access;
 }
 
-simulated final function ClientSendItemMeta( string id, string desc, Material image )
+simulated final function ClientSendItemMeta( string id, string desc, Material iconMat )
 {
     local int i;
 
@@ -643,7 +663,7 @@ simulated final function ClientSendItemMeta( string id, string desc, Material im
     {
         if( Items[i].id == id )
         {
-            Items[i].IconTexture = image;
+            Items[i].IconTexture = iconMat;
             Items[i].Desc = desc;
             Items[i].bSync = true;
             Items[i].bHasMeta = true;
