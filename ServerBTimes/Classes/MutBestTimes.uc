@@ -361,7 +361,6 @@ static final function ColorTagToColor( string A, out Color B )
     B.A = 0xFF;
 }
 
-//==============================================================================
 // Find out if I am in ServerPackages, if so, remove myself.
 private final static function bool IsInServerPackages()
 {
@@ -436,8 +435,6 @@ final function NotifyObjectiveAccomplished( PlayerController PC, float score )
     }
 }
 
-//==============================================================================
-// Achievements(etc) Region!
 final function PlayerController FindPCByPlayerSlot( int playerSlot, optional out BTClient_ClientReplication rep )
 {
     local Controller C;
@@ -1234,32 +1231,6 @@ final function int GetRecordIndexByPlayer( int mapIndex, int playerIndex )
     return -1;
 }
 
-//==============================================================================
-
-final function bool ValidateAccessFor( BTClient_ClientReplication CRI )
-{
-    local int i;
-
-    for( i = 0; i < Store.LockedMaps.Length; ++ i )
-    {
-        if( Store.LockedMaps[i].MapName ~= CurrentMapName )
-        {
-            if( PDat.IsUsingItemById( CRI.myPlayerSlot, Store.LockedMaps[i].ItemID ) )
-            {
-                return true;
-            }
-            else
-            {
-                CRI.ClientCleanText();
-                CRI.ClientSendText( $0xFF0000 $ "Sorry you are not permitted to play this map. Please buy the 'Unlock " $ CurrentMapName $ "' item in the Store." );
-                CRI.ClientSendText( $0xFF0000 $ "Or use the console command 'Store buy " $ Store.LockedMaps[i].ItemID $ "'" );
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 final function bool ModeIsTrials()
 {
     return CurMode != none && CurMode.IsA('BTServer_TrialMode');
@@ -1320,13 +1291,6 @@ function ModifyPlayer( Pawn other )
     CurMode.ModeModifyPlayer( other, other.Controller, CRI );
     if( Store != none )
     {
-        if( !ValidateAccessFor( CRI ) )
-        {
-            PlayerController(other.Controller).BecomeSpectator();
-            other.Destroy();
-            return;
-        }
-
         Store.ModifyPawn( other, PDat, CRI );
         if( PDat.IsUsingItemById( CRI.myPlayerSlot, "Trailer" ) )
         {
@@ -1424,8 +1388,6 @@ final function InvalidAccess()
     assert( bool(int(bool(string(intNumber)))) );
 }
 
-//==============================================================================
-// Initialize everything
 event PreBeginPlay()
 {
     local int i;
@@ -1562,8 +1524,6 @@ final function UpdateRecordHoldersMessage()
     MRI.PlayersBestTimes = GetRecordTopHolders( UsedSlot );
 }
 
-//==============================================================================
-// Initialize more stuff...
 event PostBeginPlay()
 {
     local BroadcastHandler Bch;
@@ -1651,7 +1611,6 @@ final function ResetCheckPoint( PlayerController PC )
     }
 }
 
-//==============================================================================
 // Return an array with info(i.e Record Time) about the requested map
 final function GetMapInfo( string MapName, out array<string> MapInfo )
 {
@@ -3666,7 +3625,6 @@ final function AddXfireKeywordFor( PlayerController PC, string keyword, string v
     PC.ClientTravel( "xfire:game_stats?game=ut2k4&" $ keyword $ ":=" $ value, TRAVEL_Absolute, false );
 }
 
-//==============================================================================
 // Check if the player typed one of our console commands
 function Mutate( string MutateString, PlayerController Sender )
 {
@@ -3801,7 +3759,6 @@ final function bool ClientSpawnCanCompleteMap()
     return bSoloMap && bClientSpawnPlayersCanCompleteMap;
 }
 
-//==============================================================================
 // Creates a clientspawn for PlayerController
 final function CreateClientSpawn( PlayerController Sender )                         // Eliot
 {
@@ -3914,7 +3871,6 @@ final function CreateClientSpawn( PlayerController Sender )                     
     ProcessClientSpawnAchievement( Sender );
 }
 
-//==============================================================================
 // Deletes clientspawn of PlayerController
 final function DeleteClientSpawn( Controller sender, optional bool noMessage )                         // Eliot
 {
@@ -5227,7 +5183,6 @@ final function NotifyNewRecord( int playerSlot, int mapIndex, float playTime )
     SaveConfig();
 }
 
-//==============================================================================
 // Team-Trial Method
 // Get the best players of the current game
 final function array<BTStructs.sPlayerReference> GetBestPlayers()                      // .:..:, Eliot
@@ -5298,7 +5253,6 @@ final function array<BTStructs.sPlayerReference> GetBestPlayers()               
     return S;
 }
 
-//==============================================================================
 // Objective score = 50 points, Final objective score = 20 points, DestroyedVehciles score = 30 points, W/e goals such as on britishbulldog = 10 points.
 static final function int GetPlayerScore( PlayerController C )                              // .:..:
 {
@@ -5569,7 +5523,6 @@ final function FullLog( coerce string Print )
         WebAdminActor.ClientMessage( Class'HUD'.Default.TurqColor$Print );
 }
 
-//==============================================================================
 // Find player account slot by using a players GUID
 //  Note:   to access the real Slot always cut the return value by -1
 // 0 and -1 are used as NONE
@@ -5586,7 +5539,6 @@ final function int FindPlayerSlot( string ClientID )
     return -1;
 }
 
-//==============================================================================
 //  Note:   to access the real Slot always cut the return value by -1
 // 0 and -1 are used as NONE
 final function int FastFindPlayerSlot( PlayerController PC )
@@ -5601,7 +5553,6 @@ final function int FastFindPlayerSlot( PlayerController PC )
     return FindPlayerSlot( PC.GetPlayerIDHash() );
 }
 
-//==============================================================================
 // Update player account Name and character
 // bUpdateScoreboard only set this to true after the BTClient_ClientReplication is initialized!
 final function UpdatePlayerStand( PlayerController PC, int playerIndex, Optional bool bUpdateScoreboard )
@@ -5695,7 +5646,6 @@ private function UpdateScoreboard( PlayerController PC )
     }
 }
 
-//==============================================================================
 // Generate a .html file containing records, players, etc, and attempt to upload to a remote server
 // SS Array with the .html Text tags
 // TR = Table Row       e.g. new line
@@ -6273,7 +6223,6 @@ private function SendEventDescription( BTClient_ClientReplication CR )
     }
 }
 
-//==============================================================================
 // Merge a numeric date to a string date DD/MM/YY
 final function string MaskToDate( int date )
 {

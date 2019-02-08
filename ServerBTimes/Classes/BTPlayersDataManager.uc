@@ -55,8 +55,7 @@ final function GiveItem( BTClient_ClientReplication CRI, string itemId )
 
 final function ToggleItem( int playerSlot, string itemId )
 {
-    local int i, playerItemIndex, storeItemIndex;
-    local string type;
+    local int i, playerItemIndex;
     local bool isEnabled;
     local int j;
 

@@ -86,14 +86,6 @@ struct sCategory
 
 var() globalconfig array<sCategory> Categories;
 
-struct sMapLocker
-{
-    var string ItemID;
-    var string MapName;
-};
-
-var() globalconfig array<sMapLocker> LockedMaps;
-
 /** A list of selectable teams, maximum is 3. */
 var() globalconfig array<struct sTeam{
     /** Name of the team. */
