@@ -563,7 +563,7 @@ defaultproperties
 
     HUDClass=class'HudBase'
     BTInterClass=class'BTClient_Interaction'
-    BackgroundTexture=Texture'Engine.WhiteSquareTexture'
+    BackgroundTexture=Texture'BTScoreBoardBG'
 
     GrayColor=(R=100,G=100,B=100,A=255)
     PrimaryColor=(R=255,G=255,B=255,A=255)

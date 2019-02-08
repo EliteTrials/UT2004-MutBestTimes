@@ -2251,7 +2251,7 @@ defaultproperties
 
     YOffsetScale=0.6
     OrangeColor=(R=255,G=255,B=0,A=255)
-    BackgroundTexture=Texture'Engine.WhiteSquareTexture'
+    BackgroundTexture=Texture'BTScoreBoardBG'
 
     bVisible=True
     bRequiresTick=True
