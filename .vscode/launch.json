@@ -1,0 +1,15 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Play MutBestTimes",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Scripts/play.bat",
+            "args": ["STR-CratesBase"],
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true
+        }
+    ]
+}
