@@ -33,9 +33,11 @@ var private BTClient_LevelReplication           ActiveLevel;
 
 var private array<Pickup> KeyPickupsList;
 
-var private const
-    color
-    OrangeColor;
+var private Color
+    TimePositiveColor,
+    TimeNegativeColor,
+    TimeCheckColor,
+    TimeTickColor;
 
 var private bool
     bTestRun,
@@ -660,7 +662,7 @@ private function Vector RenderDodgeReady( Canvas C, float drawY )
     }
     else if( !bPreDodgeReady )
     {
-        C.DrawColor = class'HUD'.default.CyanColor;
+        C.DrawColor = class'HUD'.default.TurqColor;
     }
     else
     {
@@ -889,7 +891,7 @@ exec function ToggleMisc2( byte bit )
     else ViewPortOwner.Actor.Misc2 = ViewPortOwner.Actor.Misc2 | flag;
 }
 
-final function RenderZoneActors( Canvas C, PlayerController player )
+private function RenderZoneActors( Canvas C, PlayerController player )
 {
     local Actor A;
     local Teleporter NextTP;
@@ -1019,7 +1021,7 @@ final function RenderZoneActors( Canvas C, PlayerController player )
 }
 
 // As of LCA v3 ClientBTimes will no longer render keys, LCA v3 will now render the keys.
-final function RenderKeys( Canvas C, PlayerController player )
+private function RenderKeys( Canvas C, PlayerController player )
 {
     local int i, j;
     local string KeyName;
@@ -1093,92 +1095,112 @@ final static function Font GetScreenFont( Canvas C )
     return class'HUDBase'.static.LoadFontStatic( Min( 8, FontSize ) );
 }
 
-function RenderGhostMarkings( Canvas C, PlayerController player )
+private function RenderPathTimers(Canvas C, PlayerController player)
 {
     local BTClient_GhostMarker Marking;
     local vector Scr;
-    local float XL, YL;
-    local float T, YT, lastRenderTimePct;
+    local float XL, YL, yPadding;
+    local float T, YT, lastRenderTimePct, lastRenderTimeDelta;
     local string S;
     local vector Dir, X, Y, Z, CamPos, mX, mY;
     local rotator CamRot;
     local float Dist, markDir;
     local float topTime;
-    local Color positiveColor, negativeColor;
 
     const MAX_MARKING_DIST = 1024f;
-
-    if( ActiveLevel == none )
-        return;
+    const MAX_MARKING_NEAR_DIST = 512f;
 
     topTime = GetTopTime();
-    C.GetCameraLocation( CamPos, CamRot );
-    GetAxes( CamRot, X, Y, Z );
-
-    positiveColor = GetFadingColor(class'HUD'.default.GreenColor);
-    negativeColor = GetFadingColor(class'HUD'.default.RedColor);
+    C.GetCameraLocation(CamPos, CamRot);
+    GetAxes(CamRot, X, Y, Z);
 
     C.Style = 5;
-    foreach player.DynamicActors( class'BTClient_GhostMarker', Marking )
-    {
+    foreach player.DynamicActors(class'BTClient_GhostMarker', Marking) {
         Dir = Marking.Location - CamPos;
         Dist = VSize( Dir );
-        if( Dist > MAX_MARKING_DIST )
-        {
+        if (Dist > MAX_MARKING_DIST) {
             continue;
         }
 
-        Dir /= Dist;
-        if( (Dir dot X) > 0.6 )   // only render if this location is not outside the player view.
-        {
-            markDir = (vector(Marking.Rotation) dot X);
-            if (markDir < 0.0) {
-                continue;
-            }
+        markDir = (vector(Marking.Rotation) dot X);
+        if (markDir < 0.0) {
+            continue;
+        }
 
+        lastRenderTimeDelta = player.Level.TimeSeconds - Marking.LastRenderTimeX;
+
+        Dir /= Dist;
+        // only render if this location is not outside the player view.
+        if ((Dir dot X) > 0.6) {
             T = topTime * (float(Marking.MoveIndex)/ActiveLevel.PrimaryGhostNumMoves);
             YT = T - (topTime - GetTimeLeft());
-            if( YT >= 0 )
-            {
-                S = "+"$FormatTimeCompact( YT );
-                C.DrawColor = positiveColor;
+            if (YT >= 0f) {
+                S = "+"$FormatTimeCompact(YT);
+                C.DrawColor = TimePositiveColor;
             }
-            else
-            {
-                S = FormatTimeCompact( YT );
-                C.DrawColor = negativeColor;
+            else {
+                S = FormatTimeCompact(YT);
+                C.DrawColor = TimeNegativeColor;
             }
 
-            if (Dist < 512)
-            {
-                lastRenderTimePct = FMin((player.Level.TimeSeconds - Marking.LastRenderTime)/0.3f, 1.0f);
+            if (BTConfig.bRenderPathTimerIndex) {
+                S @= "#" $ Marking.MoveIndex+1;
+            }
+
+            if (Dist < MAX_MARKING_NEAR_DIST) {
+                lastRenderTimePct = FMin(lastRenderTimeDelta/0.3f, 1.0f);
                 Scr.X = Marking.LastRenderScr.X*(1.0 - lastRenderTimePct) + (C.ClipX*0.5*lastRenderTimePct);
-                Scr.Y = Marking.LastRenderScr.Y*(1.0 - lastRenderTimePct) + (C.ClipY*0.75*lastRenderTimePct);
-                C.DrawColor.A = 255f*(Dist/512);
+                Scr.Y = Marking.LastRenderScr.Y*(1.0 - lastRenderTimePct) + (C.ClipY*0.4*lastRenderTimePct);
+                C.DrawColor.A = 255f*(Dist/MAX_MARKING_NEAR_DIST);
             }
-            else
-            {
-                Scr = C.WorldToScreen( Marking.Location );
-                C.DrawColor.A = 255f - 255f * (Dist/MAX_MARKING_DIST);
+            else {
+                Scr = C.WorldToScreen(Marking.Location);
+                C.DrawColor.A = 255f - 255f*(Dist/MAX_MARKING_DIST);
             }
 
-            C.StrLen( S, XL, YL );
-            C.SetPos( Scr.X - XL*0.5, Scr.Y - YL*0.5 );
-            C.DrawText( S, false );
+            C.StrLen(S, XL, YL);
+            C.SetPos(Scr.X - XL*0.5, Scr.Y - YL*0.5);
+            C.DrawText(S, false);
 
-            C.SetPos( Scr.X - YL*0.5, Scr.Y - YL*0.5 - YL - 4f );
             GetAxes(Marking.Rotation, mX, mY, z);
             MarkerArrow.Rotation.Yaw = Atan(Normal(mX).X, Normal(mY).Y) * 32768 / PI;
-            C.DrawTile( MarkerArrow, YL, YL, 0.0, 0.0, 128, 128 );
+            C.SetPos(Scr.X - YL*0.5, Scr.Y - YL*0.5 - YL - 4f);
+            C.DrawTile(MarkerArrow, YL, YL, 0.0, 0.0, 128f, 128f);
 
             Marking.LastRenderScr = Scr;
-            Marking.LastRenderTime = player.Level.TimeSeconds;
+            Marking.LastRenderTimeX = player.Level.TimeSeconds;
+            Marking.LastRecordTimeDelta = YT;
+        } else if (lastRenderTimeDelta <= 2.0) {
+            YT = Marking.LastRecordTimeDelta;
+            if (YT >= 0f) {
+                S = "+"$FormatTimeCompact(YT);
+                C.DrawColor = TimeCheckColor;
+            }
+            else {
+                S = FormatTimeCompact(YT);
+                C.DrawColor = TimeNegativeColor;
+            }
+
+            if (BTConfig.bRenderPathTimerIndex) {
+                S @= "#" $ Marking.MoveIndex+1;
+            }
+
+            lastRenderTimePct = FMin(lastRenderTimeDelta, 1.0f);
+            Scr.X = C.ClipX*0.5;
+            Scr.Y = C.ClipY*0.4*(1.0 - lastRenderTimePct) + (C.ClipY*0.35 - yPadding)*lastRenderTimePct;
+            C.DrawColor.A = 255f*FMin(Dist/MAX_MARKING_NEAR_DIST, 1.0 - lastRenderTimePct);
+
+            C.StrLen(S, XL, YL);
+            C.SetPos(Scr.X - XL*0.5, Scr.Y - YL*0.5);
+            C.DrawText(S, false);
+
+            yPadding += YL+8f;
         }
     }
     C.Style = 1;
 }
 
-final function RenderTitle( Canvas C, PlayerController player )
+private function RenderTitle( Canvas C, PlayerController player )
 {
     local xPawn P;
     local vector Scre, CamLoc, X, Y, Z, Dir;
@@ -1189,18 +1211,11 @@ final function RenderTitle( Canvas C, PlayerController player )
 
     foreach player.DynamicActors( Class'xPawn', P )
     {
-        if
-        (
-            P == player.ViewTarget
-            ||
-            P.IsA('Monster')
-            ||
-            P.bHidden
-            ||
-            P.bDeleteMe
-            ||
-            P.bDeRes
-        )
+        if( P == player.ViewTarget
+            || P.IsA('Monster')
+            || P.bHidden
+            || P.bDeleteMe
+            || P.bDeRes)
         {
             continue;
         }
@@ -1250,7 +1265,7 @@ final function RenderTitle( Canvas C, PlayerController player )
     }
 }
 
-function RenderCompetitiveLayer( Canvas C )
+private function RenderCompetitiveLayer( Canvas C )
 {
     local float XL, YL;
     local float gameScore, redPct, bluePct;
@@ -1525,6 +1540,13 @@ private function RenderFooter( Canvas C )
     DrawHeaderText( C, drawX, drawY + COLUMN_PADDING_Y, s );
 }
 
+function PreRender( Canvas C )
+{
+    TimePositiveColor = GetFadingColor(class'HUD'.default.GreenColor);
+    TimeNegativeColor = GetFadingColor(class'HUD'.default.RedColor);
+    TimeCheckColor = GetFadingColor(class'HUD'.default.TurqColor);
+}
+
 function PostRender( Canvas C )
 {
     local string S;
@@ -1542,22 +1564,24 @@ function PostRender( Canvas C )
         return;
 
     C.Font = GetScreenFont( C );
-    if( myHUD != none )
-    {
-        for( i = 0; i < myHUD.Overlays.Length; ++ i )
-        {
-            if( myHUD.Overlays[i] == none )
-            {
+    if( myHUD != none ) {
+        for( i = 0; i < myHUD.Overlays.Length; ++ i ) {
+            if( myHUD.Overlays[i] == none ) {
                 myHUD.Overlays.Remove( i --, 1 );
             }
         }
-        if( !MRI.bSoloMap && BTConfig.bShowZoneActors )
-            RenderZoneActors( C, player );
 
-        if( MRI.bKeyMap )
+        if( MRI.bKeyMap ) {
             RenderKeys( C, player );
+        }
 
-        RenderGhostMarkings( C, player );
+        if( !MRI.bSoloMap && BTConfig.bShowZoneActors ) {
+            RenderZoneActors( C, player );
+        }
+
+        if (BTConfig.bRenderPathTimers && ActiveLevel != none) {
+            RenderPathTimers( C, player );
+        }
     }
 
     RenderTitle( C, player );
@@ -2003,12 +2027,12 @@ private function DrawRecordWidget( Canvas C )
         s = timeLeftF;
         C.StrLen( s, xl3, yl3 );
         if( bSoundTicking )
-            C.DrawColor = OrangeColor;
+            C.DrawColor = TimeTickColor;
         else
         {
             if( DrawnTimer <= 0.0f )
-                C.DrawColor = GetFadingColor( class'HUD'.default.RedColor );
-            else C.DrawColor = GetFadingColor( class'HUD'.default.GreenColor );
+                C.DrawColor = TimeNegativeColor;
+            else C.DrawColor = TimePositiveColor;
         }
         DrawElementPart( C, drawX - xl - xl2 - xl3 + COLUMN_PADDING_X, drawY, s, C.DrawColor );
         drawY += height + COLUMN_PADDING_Y*3;
@@ -2030,7 +2054,7 @@ private function DrawRecordWidget( Canvas C )
 
         C.StrLen( s, xl, yl );
         DrawElementText( C, drawX - width, drawY, RecordTimeElapsed $ " " );
-        DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s, GetFadingColor( class'HUD'.default.GreenColor ) );
+        DrawElementValue( C, drawX - xl + COLUMN_PADDING_X*2, drawY, s, TimePositiveColor );
         drawY += height + COLUMN_PADDING_Y*3;
     }
 
@@ -2096,20 +2120,15 @@ private function DrawTextWithBackground( Canvas C, String Text, Color TextColor,
     C.DrawText( Text, false );
 }
 
-static final function string Strl( float Value )
-{
-    return FormatTime( Value );
-}
-
 /** Formats the given time in seconds.deci_centi.
     Outputs:[-][00:00:]00.00 */
-static final function string FormatTime( float value, optional bool forceFull )                          // Based upon epic's Time Format code
+static final function string FormatTime( float time, optional bool forceFull )                          // Based upon epic's Time Format code
 {
     local string hourString, minuteString, secondString, output;
     local int minutes, hours;
     local float seconds;
 
-    seconds = Abs( value );
+    seconds = Abs(int(time*100)/100.f);
     minutes = int(seconds) / 60;
     hours   = minutes / 60;
     seconds = seconds - (minutes * 60);
@@ -2121,7 +2140,7 @@ static final function string FormatTime( float value, optional bool forceFull ) 
 
     if( forceFull || Class'BTClient_Config'.static.FindSavedData().bDisplayFullTime )
     {
-        if( value < 0 )
+        if( time < 0 )
             return "-" $ hourString $ ":" $ minuteString $ ":" $ secondString;
         else return hourString $ ":" $ minuteString $ ":" $ secondString;
     }
@@ -2133,18 +2152,18 @@ static final function string FormatTime( float value, optional bool forceFull ) 
         if( minutes != 0 )
             output $= minuteString $ ":";
 
-        if( value < 0 )
+        if( time < 0 )
             return "-" $ output $ secondString;
         else return output $ secondString;
     }
 }
 
-static final function string StrlNoMS( int Value )
+static final function string StrlNoMS( int time )
 {
     local string HourString, MinuteString, SecondString, Output;
     local int Minutes, Hours, Seconds;
 
-    Seconds = Abs(Value);
+    Seconds = Abs(time);
     Minutes = Seconds / 60;
     Hours   = Minutes / 60;
     Seconds = Seconds - (Minutes * 60);
@@ -2165,9 +2184,9 @@ static final function string StrlNoMS( int Value )
     else
         HourString = string(Hours);
 
-    if( Class'BTClient_Config'.Static.FindSavedData().bDisplayFullTime )
+    if( Class'BTClient_Config'.static.FindSavedData().bDisplayFullTime )
     {
-        if( Value < 0 )
+        if( time < 0 )
             return "-"$HourString$":"$MinuteString$":"$SecondString;
         else return HourString$":"$MinuteString$":"$SecondString;
     }
@@ -2179,21 +2198,21 @@ static final function string StrlNoMS( int Value )
         if( Minutes != 0 )
             Output $= MinuteString$":";
 
-        if( Value < 0 )
+        if( time < 0 )
             return "-"$Output$SecondString;
         else return Output$SecondString;
     }
 }
 
 /** Formats the given time in seconds.deci_centi.
-    Outputs:[-][00:00:]00.00 but only if the units are greater than zero! */
-static final function string FormatTimeCompact( float value )
+    Outputs:[-][00:00:]00.00 but only if the units are greater than null! */
+static final function string FormatTimeCompact( float time )
 {
     local string hourString, minuteString, secondString, output;
     local int minutes, hours;
     local float seconds;
 
-    seconds = Abs( value );
+    seconds = Abs(int(time*100)/100.f);
     minutes = int(seconds) / 60;
     hours   = minutes / 60;
     seconds = seconds - (minutes * 60);
@@ -2209,7 +2228,7 @@ static final function string FormatTimeCompact( float value )
     if( minutes != 0 )
         output $= minuteString $ ":";
 
-    if( value < 0 )
+    if( time < 0 )
         return "-" $ output $ secondString;
     else return output $ secondString;
 }
@@ -2250,7 +2269,7 @@ defaultproperties
     MarkerArrow=oMarkerArrow
 
     YOffsetScale=0.6
-    OrangeColor=(R=255,G=255,B=0,A=255)
+    TimeTickColor=(R=255,G=255,B=0,A=255)
     BackgroundTexture=Texture'BTScoreBoardBG'
 
     bVisible=True

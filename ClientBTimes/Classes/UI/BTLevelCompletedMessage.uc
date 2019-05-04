@@ -99,12 +99,8 @@ static simulated function ClientReceive(
     local BTClient_Config options;
 
     super.ClientReceive( P, RecordState, MessageReceiver, MessageInstigator, ReceiverClientReplication );
-    options = class'BTClient_Config'.static.FindSavedData();
-    if( !options.bDisplayCompletingMessages || !options.bPlayCompletingSounds )
-    {
-        return;
-    }
 
+    options = class'BTClient_Config'.static.FindSavedData();
     if( (RecordState == 0 || RecordState == 2) && options.bDisplayFail )
     {
         P.ClientPlaySound( options.FailSound, true, 2.0, SLOT_Talk );

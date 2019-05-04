@@ -1,5 +1,5 @@
 //=============================================================================
-// Copyright 2005-2016 Eliot Van Uytfanghe. All Rights Reserved.
+// Copyright 2005-2019 Eliot Van Uytfanghe. All Rights Reserved.
 //=============================================================================
 class BTClient_Config extends Object
     config(ClientBTimes)
@@ -19,16 +19,16 @@ var() globalconfig
     bUseAltTimer,
     bShowZoneActors,
     bFadeTextColors,
-    bDisplayCompletingMessages,
-        bDisplayFail,
-        bDisplayNew,
-        bPlayCompletingSounds,
+    bDisplayFail,
+    bDisplayNew,
     bBaseTimeLeftOnPersonal,
     bPlayTickSounds,
     bDisplayFullTime,
     bProfesionalMode,
     bAutoBehindView,
-    bNoTrailers;
+    bNoTrailers,
+    bRenderPathTimers,
+    bRenderPathTimerIndex;
 
 #exec obj load file="MenuSounds.uax"
 
@@ -125,10 +125,8 @@ final function ResetSavedData()
     bUseAltTimer                    = default.bUseAltTimer;
     bShowZoneActors                 = default.bShowZoneActors;
     bFadeTextColors                 = default.bFadeTextColors;
-    bDisplayCompletingMessages      = default.bDisplayCompletingMessages;
     bDisplayFail                    = default.bDisplayFail;
     bDisplayNew                     = default.bDisplayNew;
-    bPlayCompletingSounds           = default.bPlayCompletingSounds;
     FailSound                       = default.FailSound;
     NewSound                        = default.NewSound;
     bBaseTimeLeftOnPersonal         = default.bBaseTimeLeftOnpersonal;
@@ -137,6 +135,8 @@ final function ResetSavedData()
     bAutoBehindView                 = default.bAutoBehindView;
     CTable                          = default.CTable;
     CGoldText                       = default.CGoldText;
+    bRenderPathTimers               = default.bRenderPathTimers;
+    bRenderPathTimerIndex         = default.bRenderPathTimerIndex;
     SaveConfig();
 }
 
@@ -147,25 +147,26 @@ defaultproperties
     RankingTableKey=IK_F12
     ScreenFontSize=1
 
-    bPlayTickSounds=True
+    bPlayTickSounds=true
     TickSound=Sound'MenuSounds.select3'
     LastTickSound=Sound'MenuSounds.denied1'
 
+    bBaseTimeLeftOnPersonal=false
     bUseAltTimer=False
     bShowZoneActors=False
-    bFadeTextColors=True
+    bFadeTextColors=true
     bDisplayFullTime=false
+    bRenderPathTimers=true
+    bRenderPathTimerIndex=false
 
-    bDisplayCompletingMessages=True
-        bDisplayFail=True
-        bDisplayNew=True
-        bPlayCompletingSounds=True
-            FailSound=Sound'GameSounds.LadderClosed'
-            NewSound=Sound'GameSounds.UT2K3Fanfare03'
+    bDisplayFail=true
+    FailSound=Sound'GameSounds.LadderClosed'
+
+    bDisplayNew=true
+    NewSound=Sound'GameSounds.UT2K3Fanfare03'
+
     AchievementSound=Sound'GameSounds.UT2K3Fanfare08'
     TrophySound=Sound'GameSounds.UT2K3Fanfare08'
-
-    bBaseTimeLeftOnPersonal=False
 
     CTable=(B=18,G=12,R=12,A=200)
     CGoldText=(R=255,G=255,B=0,A=255)

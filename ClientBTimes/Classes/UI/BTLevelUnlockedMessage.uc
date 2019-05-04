@@ -22,14 +22,8 @@ static simulated function ClientReceive(
     optional Object unlockedLevel
     )
 {
-    local BTClient_Config options;
-
     super.ClientReceive( P, switch, MessageReceiver, MessageInstigator, unlockedLevel );
-    options = class'BTClient_Config'.static.FindSavedData();
-    if( !options.bPlayCompletingSounds )
-    {
-        return;
-    }
+
     P.ClientPlaySound( Sound'GameSounds.Fanfares.UT2K3Fanfare04', true, 2.0, SLOT_Talk );
 }
 

@@ -8,15 +8,14 @@ var automated moCheckBox
     cb_UseAltTimer,
     cb_ShowZoneActors,
     cb_FadeTextColors,
-    cb_DCM,
     cb_OIF,
     cb_OIN,
-    cb_PCS,
     cb_PT,
     cb_PTS,
     cb_DFT,
     cb_PM,
-    cb_ABV;
+    cb_ABV,
+    cb_RenderPathTimers, cb_RenderPathTimerIndexes;
 
 var automated GUIEditBox
     eb_TickSound,
@@ -68,10 +67,8 @@ private function LoadBTConfig()
     cb_UseAltTimer.Checked( btConfig.bUseAltTimer );
     cb_ShowZoneActors.Checked( btConfig.bShowZoneActors );
     cb_FadeTextColors.Checked( btConfig.bFadeTextColors );
-    cb_DCM.Checked( btConfig.bDisplayCompletingMessages );
     cb_OIF.Checked( btConfig.bDisplayFail );
     cb_OIN.Checked( btConfig.bDisplayNew );
-    cb_PCS.Checked( btConfig.bPlayCompletingSounds );
     cb_PT.Checked( btConfig.bBaseTimeLeftOnPersonal );
     cb_PTS.Checked( btConfig.bPlayTickSounds );
     cb_DFT.Checked( btConfig.bDisplayFullTime );
@@ -83,6 +80,9 @@ private function LoadBTConfig()
     eb_FailSound.SetText( string(btConfig.FailSound) );
     eb_SucceedSound.SetText( string(btConfig.NewSound) );
     eb_ToggleKey.SetText( class'Interactions'.static.GetFriendlyName( btConfig.RankingTableKey ) );
+
+    cb_RenderPathTimers.Checked( btConfig.bRenderPathTimers );
+    cb_RenderPathTimerIndexes.Checked( btConfig.bRenderPathTimerIndex );
 }
 
 private function SaveBTConfig()
@@ -93,10 +93,8 @@ private function SaveBTConfig()
     btConfig.bUseAltTimer = cb_UseAltTimer.IsChecked();
     btConfig.bShowZoneActors = cb_ShowZoneActors.IsChecked();
     btConfig.bFadeTextColors = cb_FadeTextColors.IsChecked();
-    btConfig.bDisplayCompletingMessages = cb_DCM.IsChecked();
     btConfig.bDisplayFail = cb_OIF.IsChecked();
     btConfig.bDisplayNew = cb_OIN.IsChecked();
-    btConfig.bPlayCompletingSounds = cb_PCS.IsChecked();
     btConfig.bBaseTimeLeftOnPersonal = cb_PT.IsChecked();
     btConfig.bPlayTickSounds = cb_PTS.IsChecked();
     btConfig.bDisplayFullTime = cb_DFT.IsChecked();
@@ -107,6 +105,8 @@ private function SaveBTConfig()
     btConfig.FailSound = Sound(DynamicLoadObject( eb_FailSound.GetText(), Class'Sound', True ));
     btConfig.NewSound = Sound(DynamicLoadObject( eb_SucceedSound.GetText(), Class'Sound', True ));
     btConfig.RankingTableKey = btConfig.static.ConvertToKey( eb_ToggleKey.GetText() );
+    btConfig.bRenderPathTimers = cb_RenderPathTimers.IsChecked();
+    btConfig.bRenderPathTimerIndex = cb_RenderPathTimerIndexes.IsChecked();
     btConfig.SaveConfig();
 
     PlayerOwner().ConsoleCommand("UpdateToggleKey");
@@ -115,14 +115,13 @@ private function SaveBTConfig()
 defaultproperties
 {
     // Left Side
-
     Begin Object class=moCheckBox name=UseAltTimer
         WinTop      =   0.100000
         WinLeft     =   0.050000
         WinWidth    =   0.4200000
         WinHeight   =   0.048125
-        Caption="Use Alternative Timer"
-        Hint="If Checked: The record timer will be displayed at bottom center of your screen"
+        Caption="Draw Alternative Timer"
+        Hint="The record timer will be drawn at the bottom center of your screen"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -134,7 +133,7 @@ defaultproperties
         WinWidth=0.4200000
         WinHeight=0.048125
         Caption="Show Zone Actors"
-        Hint="If Checked: Common invisible actors within your zone will be drawn in wireframe or just an icon if no mesh is available"
+        Hint="Common invisible actors within your current zone will be drawn in wireframe or as an icon if no mesh is available"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -145,94 +144,93 @@ defaultproperties
         WinLeft=0.050000
         WinWidth=0.4200000
         WinHeight=0.048125
-        Caption="Fade Text Colors"
-        Hint="If Checked: Text colors will fade between white and their default Color"
+        Caption="Animate Timer Colors"
+        Hint="Timer colors will be animated"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
     cb_FadeTextColors=FadeTextColors
 
-    Begin Object class=moCheckBox name=DCM
-        WinTop=0.316000
+    Begin Object class=moCheckBox name=cbRenderPathTimers
+        WinTop=0.312000
         WinLeft=0.050000
-        WinWidth=0.4200000
+        WinWidth=0.420000
         WinHeight=0.048125
-        Caption="Display Completing Messages"
-        Hint="If Checked: Completing messages will be displayed(Solo Only)"
+        Caption="Draw Path Timers"
+        Hint="Path Timers of the #1 Ghost's path will be drawn"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
-    cb_DCM=DCM
+    cb_RenderPathTimers=cbRenderPathTimers
+
+    Begin Object class=moCheckBox name=cbRenderPathTimerIndex
+        WinTop=0.384000
+        WinLeft=0.050000
+        WinWidth=0.420000
+        WinHeight=0.048125
+        Caption="Draw Path Timer Index"
+        Hint="Path Timers will be drawn with their index number next to its time"
+        bAutoSizeCaption=True
+        OnChange=InternalOnChange
+    End Object
+    cb_RenderPathTimerIndexes=cbRenderPathTimerIndex
 
     Begin Object class=moCheckBox name=OIF
-        WinTop=0.3880000
-        WinLeft=0.100000
-        WinWidth=0.370000
+        WinTop=0.594000
+        WinLeft=0.050000
+        WinWidth=0.170000
         WinHeight=0.048125
-        Caption="Failed"
-        Hint="If Checked: Failures will be displayed(Solo Only)"
+        Caption="Play Sound"
+        Hint="Record failure notifications will play a sound"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
     cb_OIF=OIF
 
+    Begin Object class=GUIEditBox name=FailSound
+        bScaleToParent=True
+        bBoundToParent=True
+        WinTop=0.594
+        WinLeft=0.250000
+        WinWidth=0.220000
+        WinHeight=0.050000
+        Hint="Path to the sound to play on a record failure"
+        OnChange=InternalOnChange
+    End Object
+    eb_FailSound=FailSound
+
     Begin Object class=moCheckBox name=OIN
-        WinTop=0.460000
-        WinLeft=0.100000
-        WinWidth=0.370000
+        WinTop=0.662000
+        WinLeft=0.050000
+        WinWidth=0.170000
         WinHeight=0.048125
-        Caption="Succeed"
-        Hint="If Checked: Succeeds will be displayed(Solo Only)"
+        Caption="Play Sound"
+        Hint="New record notifications will play a sound"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
     cb_OIN=OIN
 
-    Begin Object class=moCheckBox name=PCS
-        WinTop=0.532
-        WinLeft=0.100000
-        WinWidth=0.370000
-        WinHeight=0.048125
-        Caption="Play Sounds"
-        Hint="If Checked: Completing messages will also play a sound(Solo Only)"
-        bAutoSizeCaption=True
-        OnChange=InternalOnChange
-    End Object
-    cb_PCS=PCS
-
-    Begin Object class=GUIEditBox name=FailSound
-        bScaleToParent=True
-        bBoundToParent=True
-        WinTop=0.594000
-        WinLeft=0.050000
-        WinWidth=0.420000
-        WinHeight=0.050000
-        Hint="Sound for the failure message"
-        OnChange=InternalOnChange
-    End Object
-    eb_FailSound=FailSound
-
     Begin Object class=GUIEditBox name=SucceedSound
         bScaleToParent=True
         bBoundToParent=True
-        WinTop=0.666
-        WinLeft=0.050000
-        WinWidth=0.420000
+        WinTop=0.662
+        WinLeft=0.250000
+        WinWidth=0.220000
         WinHeight=0.050000
-        Hint="Sound for the succeed message"
+        Hint="Path to the sound to play on a new record"
         OnChange=InternalOnChange
     End Object
     eb_SucceedSound=SucceedSound
 
     // Right Side
-
     Begin Object class=moCheckBox name=PT
         WinTop=0.100000
         WinLeft=0.530000
         WinWidth=0.425000
         WinHeight=0.048125
-        Caption="Personal Timer"
-        Hint="If Checked: Record timer will be based on your Personal Time(Solo Only)"
+        Caption="Relative Timer"
+        Hint="The record timer will start based off of your personal record time"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -243,8 +241,8 @@ defaultproperties
         WinLeft=0.530000
         WinWidth=0.425000
         WinHeight=0.048125
-        Caption="Display Full Time"
-        Hint="If UnChecked: Record timer will show (e.g. 00:00:10.41) only those who have actually a value, will be drawn (e.g. 10.41)"
+        Caption="Render Full Timer"
+        Hint="The record timer will render all decimals, even if they are null e.g. 00:00:10.41"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -257,7 +255,7 @@ defaultproperties
         WinLeft=0.530000
         WinWidth=0.425000
         WinHeight=0.050000
-        Hint="Key to toggle tables of BTimes"
+        Hint="Key to open the leaderboards"
         OnChange=InternalOnChange
     End Object
     eb_ToggleKey=ToggleKey
@@ -267,8 +265,8 @@ defaultproperties
         WinLeft=0.530000
         WinWidth=0.425000
         WinHeight=0.048125
-        Caption="Profesional Mode"
-        Hint="If Checked: All players will be invisible and make no sound(Online and Solo only)"
+        Caption="Professional Mode"
+        Hint="Hides all players and mute most player caused sounds"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -280,7 +278,7 @@ defaultproperties
         WinWidth=0.425000
         WinHeight=0.048125
         Caption="Auto BehindView"
-        Hint="If Checked: BehindView will be automatic enabled on spawn(Online and Solo only)"
+        Hint="Will automatically switch your camera to \"BehindView\" on spawn"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -292,7 +290,7 @@ defaultproperties
         WinWidth=0.425000
         WinHeight=0.048125
         Caption="Play Tick Sounds"
-        Hint="If Checked: Tick sounds are played"
+        Hint="Play a tick sound for every second of the last 10 seconds"
         bAutoSizeCaption=True
         OnChange=InternalOnChange
     End Object
@@ -303,9 +301,9 @@ defaultproperties
         bBoundToParent=True
         WinTop=0.594000
         WinLeft=0.530000
-        WinWidth=0.425000
+        WinWidth=0.225000
         WinHeight=0.050000
-        Hint="Sound for ticking timer"
+        Hint="Path to the sound to play for timer ticks"
         OnChange=InternalOnChange
     End Object
     eb_TickSound=TickSound
@@ -315,9 +313,9 @@ defaultproperties
         bBoundToParent=True
         WinTop=0.656000
         WinLeft=0.530000
-        WinWidth=0.425000
+        WinWidth=0.225000
         WinHeight=0.050000
-        Hint="Final sound for ticking timer"
+        Hint="Path to the final sound to play for timer ticks"
         OnChange=InternalOnChange
     End Object
     eb_LastTickSound=LastTickSound
@@ -330,7 +328,7 @@ defaultproperties
         WinHeight=0.050000
         OnClick=InternalOnClick
         OnChange=InternalOnChange
-        Hint="Reset all the changes you've done back to default"
+        Hint="Restore all settings back to their default values"
     End Object
     b_Reset=ResetButton
 
@@ -340,7 +338,7 @@ defaultproperties
         WinLeft=0.825000
         WinWidth=0.130000
         WinHeight=0.050000
-        Hint="Save all the changes you've done"
+        Hint="Save all settings"
         OnClick=InternalOnClick
     End Object
     b_Save=SaveButton

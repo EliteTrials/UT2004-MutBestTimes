@@ -471,7 +471,7 @@ protected function RenderPlayerRow(Canvas C, PlayerReplicationInfo player, float
     {
         C.SetPos( TX, rowTextY+rowSegmentHeight );
         C.DrawColor = SecondaryColor;
-        C.DrawText( class'BTClient_Interaction'.static.Strl( CRI.PersonalTime ) );
+        C.DrawText( class'BTClient_Interaction'.static.FormatTime( CRI.PersonalTime ) );
     }
 
     if( (GRI.ElapsedTime > 0 && GRI.Winner == none) || SavedElapsedTime == 0 )
