@@ -428,6 +428,17 @@ exec function StopTimer()
     LastTickTime = 0;
 }
 
+exec function GotoLevel(coerce string levelName)
+{
+    // TODO: Make a mutate call
+    ConsoleCommand("say"@"!level"@levelName);
+}
+
+exec function ShowLevelsMenu()
+{
+    GUIController(ViewportOwner.Actor.Player.GUIController).OpenMenu(string(class'BTGUI_LevelMenu'));
+}
+
 event Tick( float DeltaTime )
 {
     local xPawn p;

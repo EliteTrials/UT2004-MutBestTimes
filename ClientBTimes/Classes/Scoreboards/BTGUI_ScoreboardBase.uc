@@ -53,7 +53,7 @@ defaultproperties
         WinLeft=0.0
         WinWidth=1.0
         WinTop=0.0
-        WinHeight=0.04
+        WinHeight=0.038
         RenderWeight=0.1
         FontScale=FNS_Large
         Justification=TXTA_Left

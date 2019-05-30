@@ -3,7 +3,7 @@ class BTClient_LevelReplication extends ReplicationInfo;
 var BTClient_LevelReplication NextLevel;
 
 var private PlayerStart MyPlayerStart;
-var private BTLevelTeleporter MyTeleporter;
+var BTLevelTeleporter MyTeleporter;
 var private GameObjective MyObjective;
 
 /** The level's id without (map- or level-). */
@@ -30,7 +30,7 @@ var int MapIndex; // Index to RecordsData.Rec array.
 replication
 {
 	reliable if( bNetInitial )
-		NextLevel, MyObjective;
+		NextLevel, MyTeleporter, MyObjective;
 
 	reliable if( bNetDirty )
 		TopRanks, TopTime, NumRecords,
@@ -136,6 +136,8 @@ function InitializeLevel( BTClient_MutatorReplicationInfo MRI )
 		return;
 	}
 	MyTeleporter = Spawn( class'BTLevelTeleporter', self, MyPlayerStart.Tag, MyPlayerStart.Location, MyPlayerStart.Rotation );
+
+    Spawn(class'BTLevelPod', self,, MyPlayerStart.Location, MyPlayerStart.Rotation);
 }
 
 // Server only
