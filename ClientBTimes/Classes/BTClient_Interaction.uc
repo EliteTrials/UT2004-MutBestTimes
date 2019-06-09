@@ -1087,6 +1087,48 @@ private function RenderKeys( Canvas C, PlayerController player )
     }
 }
 
+private function RenderLevelActors( Canvas C, PlayerController player )
+{
+    local BTClient_LevelReplication level;
+
+    local vector CamPos;
+    local rotator CamRot;
+    local vector X, Y, Z;
+    local float Dist;
+    local vector Dir;
+
+    C.GetCameraLocation( CamPos, CamRot );
+    GetAxes( player.ViewTarget.Rotation, X, Y, Z );
+
+    for (level = MRI.BaseLevel; level != none; level = level.nextLevel) {
+        if (level.MyTeleporter == none) {
+            continue;
+        }
+
+        Dir = level.MyTeleporter.Location - CamPos;
+        Dist = VSize( Dir );
+        Dir /= Dist;
+        if( (Dir Dot X) <= 0.6 ) {
+            continue;
+        }
+
+        C.Style = player.ERenderStyle.STY_Alpha;
+        if (level != ActiveLevel) {
+            C.DrawColor = Class'HUD'.default.BlueColor;
+        } else {
+            C.DrawColor = Class'HUD'.default.GoldColor;
+        }
+        class'HUD_Assault'.static.Draw_2DCollisionBox(
+            C,
+            level.MyTeleporter,
+            C.WorldToScreen( level.MyTeleporter.Location ),
+            level.GetLevelName(),
+            level.MyTeleporter.DrawScale,
+            true
+        );
+    }
+}
+
 // Adapted code from HUD.uc->GetConsoleFont
 final static function Font GetScreenFont( Canvas C )
 {
@@ -1585,6 +1627,8 @@ function PostRender( Canvas C )
         if( MRI.bKeyMap ) {
             RenderKeys( C, player );
         }
+
+        RenderLevelActors( C, player );
 
         if( !MRI.bSoloMap && BTConfig.bShowZoneActors ) {
             RenderZoneActors( C, player );
