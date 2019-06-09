@@ -91,12 +91,15 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     // C.SetPos( 0, 0 );
     // C.DrawTileClipped( TileMat, int(w), int(h) - footerHeight, 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
 
-    C.DrawPortal(
-        X, Y,
-        int(w), int(h),
-        itemEl.LR.MyTeleporter,
-        itemEl.LR.MyTeleporter.Location, itemEL.LR.MyTeleporter.Rotation
-    );
+    if (itemEl.LR != none && itemEl.LR.MyTeleporter != none) {
+        C.DrawPortal(
+            X, Y,
+            int(w), int(h),
+            itemEl.LR.MyTeleporter,
+            itemEl.LR.MyTeleporter.Location, itemEL.LR.MyTeleporter.Rotation
+        );
+    }
+
 
     // RENDER: Name
     // Footer
