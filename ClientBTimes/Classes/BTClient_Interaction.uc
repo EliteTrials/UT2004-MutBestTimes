@@ -431,7 +431,7 @@ exec function StopTimer()
 exec function GotoLevel(coerce string levelName)
 {
     // TODO: Make a mutate call
-    ConsoleCommand("say"@"!level"@levelName);
+    BT("gotolevel"@levelName);
 }
 
 exec function ShowLevelsMenu()

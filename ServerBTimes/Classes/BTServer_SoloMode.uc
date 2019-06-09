@@ -134,6 +134,13 @@ function bool ClientExecuted( PlayerController sender, string command, array<str
             ResetCheckPoint( sender );
             break;
 
+        case "gotolevel":
+            if (params.length == 0) {
+                return true;
+            }
+            return CmdLevel( sender, params[0] );
+            break;
+
         default:
             bmissed = true;
             break;
