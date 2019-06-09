@@ -8,13 +8,19 @@ var() const Texture FooterTexture;
 
 var() private array<struct sLevel {
     var string Title;
-    var BTClient_LevelReplication LR;
+    var BTClient_LevelReplication LI;
 }> LevelItems;
 
 function Free()
 {
+    local int i;
+
     super.Free();
-    LevelItems.Length = 0;
+
+    for (i = 0; i < LevelItems.Length; ++ i) {
+        LevelItems[i].LI = none;
+    }
+    LevelItems.Length = 0; // does this properly unreference objects for garbage-collection? :/
 }
 
 function InitComponent( GUIController InController, GUIComponent InOwner )
@@ -33,11 +39,11 @@ private function BuildLevelItems()
 {
     local BTClient_LevelReplication LI;
     local BTClient_MutatorReplicationInfo MRI;
-    local BTClient_ClientReplication CRI;
-    local int j;
+    local int i;
+    local string title;
+    local bool wasSorted;
 
-    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
-    MRI = CRI.MRI;
+    MRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() ).MRI;
     if (MRI == none) {
         Warn("No MRI but we do have a CRI?");
         return;
@@ -47,13 +53,29 @@ private function BuildLevelItems()
     LevelItems.Length = 0;
 
     for (LI = MRI.BaseLevel; LI != none; LI = LI.NextLevel) {
-        j = LevelItems.Length;
-        LevelItems.Length = j + 1;
+        title = LI.GetLevelName();
 
-        LevelItems[j].Title = LI.GetLevelName();
-        LevelItems[j].LR = LI;
+        for (i = 0; i < LevelItems.Length; ++ i) {
+            if (StrCmp(title, LevelItems[i].Title) < 0) {
+                LevelItems.Insert(i, 1);
+                LevelItems[i].Title = title;
+                LevelItems[i].LI = LI;
+                wasSorted = true;
+                break;
+            }
+        }
 
-        ItemsListBox.List.Add( TileMat, j, 0 );
+        if (!wasSorted) {
+            i = LevelItems.Length;
+            LevelItems.Length = i + 1;
+            LevelItems[i].Title = title;
+            LevelItems[i].LI = LI;
+        }
+        wasSorted = false;
+    }
+
+    for (i = 0; i < LevelItems.Length; ++ i) {
+        ItemsListBox.List.Add( TileMat, i, 0 );
     }
 }
 
@@ -79,7 +101,6 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.ClipX = X + W;
     C.ClipY = Y + H;
     C.Font = Font'UT2003Fonts.jFontSmallText800x600';
-    C.Style = 1;
 
     C.StrLen( "T", XL, YL );
     footerHeight = YL*2 + 8*2;
@@ -91,15 +112,18 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     // C.SetPos( 0, 0 );
     // C.DrawTileClipped( TileMat, int(w), int(h) - footerHeight, 0, 0, TileMat.MaterialUSize(), TileMat.MaterialVSize() );
 
-    if (itemEl.LR != none && itemEl.LR.MyTeleporter != none) {
+    C.OrgX = 0;
+    C.OrgY = 0;
+
+    C.Style = 1;
+    if (itemEl.LI != none && itemEl.LI.MyTeleporter != none) {
         C.DrawPortal(
             X, Y,
             int(w), int(h),
-            itemEl.LR.MyTeleporter,
-            itemEl.LR.MyTeleporter.Location, itemEL.LR.MyTeleporter.Rotation
+            itemEl.LI.MyTeleporter,
+            itemEl.LI.MyTeleporter.Location, itemEL.LI.MyTeleporter.Rotation, 90, false
         );
     }
-
 
     // RENDER: Name
     // Footer
@@ -117,13 +141,13 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.SetPos( 0, 8 );
     C.DrawTextClipped( itemEl.Title );
 
-    s = class'BTClient_Interaction'.static.FormatTimeCompact(itemEL.LR.TopTime);
+    s = class'BTClient_Interaction'.static.FormatTimeCompact(itemEL.LI.TopTime);
     C.StrLen(s, XL, YL);
     C.SetPos(w - XL - 12, 8);
     C.DrawColor = class'HUD'.default.GoldColor;
     C.DrawTextClipped(s);
 
-    s = itemEl.LR.TopRanks;
+    s = itemEl.LI.TopRanks;
     C.StrLen(%s, XL, YL);
     C.SetPos(w - XL - 12, 8 + YL);
     C.DrawColor = class'HUD'.default.WhiteColor;
@@ -145,8 +169,8 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.DrawBox( C, w, h );
     C.ClipX = oldClipX;
     C.ClipY = oldClipY;
-    C.OrgX = X + W;
-    C.OrgY = Y + H;
+    C.OrgX = 0;
+    C.OrgY = 0;
 }
 
 function bool InternalOnListRightClick( GUIComponent sender )

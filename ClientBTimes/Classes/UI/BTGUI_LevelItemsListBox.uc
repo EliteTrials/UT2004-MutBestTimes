@@ -9,4 +9,7 @@ defaultproperties
 
     end object
     ContextMenu=oContextMenu
+
+    bVisibleWhenEmpty=true
+    bSorted=true
 }
