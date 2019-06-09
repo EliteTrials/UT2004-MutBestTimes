@@ -11,12 +11,15 @@ var() private array<struct sLevel {
     var BTClient_LevelReplication LI;
 }> LevelItems;
 
+var private RenderDevice RenderDevice;
+
 function Free()
 {
     local int i;
 
     super.Free();
 
+    RenderDevice = none;
     for (i = 0; i < LevelItems.Length; ++ i) {
         LevelItems[i].LI = none;
     }
@@ -81,12 +84,24 @@ private function BuildLevelItems()
 
 function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, float H, bool bSelected, bool bPending )
 {
+    local string SavedUseStencil;
+
     local float XL, YL;
     local GUIVertImageList list;
     local float oldClipX, oldClipY;
     local float footerHeight;
     local sLevel itemEl;
     local string s;
+
+    if (RenderDevice == none)
+    {
+        RenderDevice = GameEngine(FindObject("Package.GameEngine", class'GameEngine')).GRenDev;
+    }
+
+    if (RenderDevice != none) {
+        SavedUseStencil = RenderDevice.GetPropertyText("UseStencil");
+        RenderDevice.SetPropertyText("UseStencil", "false");
+    }
 
     list = ItemsListBox.List;
     X += int((float(Item - list.Top)%float(list.NoVisibleCols)))*(w+list.HorzBorder);
@@ -117,6 +132,7 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
 
     C.Style = 1;
     if (itemEl.LI != none && itemEl.LI.MyTeleporter != none) {
+        C.Clear(false, true);
         C.DrawPortal(
             X, Y,
             int(w), int(h),
@@ -171,6 +187,10 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.ClipY = oldClipY;
     C.OrgX = 0;
     C.OrgY = 0;
+
+    if (RenderDevice != none) {
+        RenderDevice.SetPropertyText("UseStencil", SavedUseStencil);
+    }
 }
 
 function bool InternalOnListRightClick( GUIComponent sender )
