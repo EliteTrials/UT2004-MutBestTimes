@@ -28,7 +28,12 @@ simulated function bool Accept( actor incoming, Actor source )
 
 defaultproperties
 {
+	bAlwaysRelevant=true
+    RemoteRole=ROLE_DumbProxy
 	bNoDelete=false
 	bStatic=false
 	bChangesYaw=false
+
+    bBlockZeroExtentTraces=false
+    bBlockNonZeroExtentTraces=false
 }
