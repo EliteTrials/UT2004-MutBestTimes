@@ -32,13 +32,16 @@ private simulated function StartLifting()
     local BodyEffect effect;
 
     effect = Spawn(class'BodyEffect', PawnToLift,, Location, Rotation);
+    effect.DamageType = class'BTDamTypeLiftPawn';
+    effect.LifeSpan = 0.3;
+
     PawnToLift.Velocity = vect(0,0,64);
     PawnToLift.SetPhysics(PHYS_KarmaRagdoll);
     PawnToLift.bSkeletized = true; // Set true so that PlayDying will not trigger a death sound.
     PawnToLift.StartDeRes();
 }
 
-simulated event Destroyed()
+event Destroyed()
 {
     if (PawnToLift != none) {
         PawnToLift.PlayDying(class'BTDamTypeLiftPawn', vect(0,0,0));
