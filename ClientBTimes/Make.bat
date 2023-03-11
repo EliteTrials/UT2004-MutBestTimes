@@ -26,7 +26,7 @@ cd ..\..\..\System
 :: Add editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %compiledPackageName%
-ucc.exe MakeCommandlet
+ucc.exe MakeCommandlet -DEBUG
 :: Remove editpackage
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %compiledPackageName%
 pause

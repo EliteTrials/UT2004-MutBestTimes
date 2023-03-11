@@ -22,6 +22,6 @@ for /r %%i in (*.uc, *.uci) do (
 
 cd ..\..\..\System
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %packageName%
-ucc.exe editor.MakeCommandlet -EXPORTCACHE -SILENTBUILD -AUTO
+ucc.exe editor.MakeCommandlet -SILENTBUILD -AUTO -DEBUG
 ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %packageName%
 pause
