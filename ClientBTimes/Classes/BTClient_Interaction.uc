@@ -60,8 +60,9 @@ var private float
 var private bool bTimerPaused, bSoundTicking;
 
 var private const Texture BackgroundTexture;
-
 var private const TexRotator MarkerArrow;
+
+var private bool bTimeViewTarget;
 
 // DODGEPERK DATA
 var private Actor LastBase;
@@ -74,7 +75,10 @@ var private bool bPerformedDodge;
 var private bool bPreDodgeReady;
 var private bool bDodgeReady;
 var private bool bPromodeWasPerformed;
-var private bool bTimeViewTarget;
+
+// SHOOTPERK DATA
+var private float PreFireTime, NextFireTime;
+var private bool bFireReady, bCanFire;
 
 private function SendConsoleMessage( string Msg )
 {
@@ -512,6 +516,22 @@ event Tick( float DeltaTime )
         {
             SpectatedClient = MRI.CR;
         }
+
+        if (MRI != none) 
+        {
+            if( MRI.CR.bAllowDodgePerk )
+            {
+                PerformDodgePerk();
+            }
+
+            if (true) 
+            {
+                PerformShootPerk();
+            }
+        }
+
+        SpectatedClient.LastPawn = p;
+
         lastActiveLevel = ActiveLevel;
         ActiveLevel = GetCurrentLevel();
         if( ActiveLevel != lastActiveLevel )
@@ -531,11 +551,6 @@ event Tick( float DeltaTime )
         if( ActiveLevel == none )
         {
             HUD_Assault(myHUD).CurrentObjective = none;
-        }
-
-        if( MRI.CR != none && MRI.CR.bAllowDodgePerk )
-        {
-            PerformDodgePerk();
         }
     }
 
@@ -622,7 +637,6 @@ private function PerformDodgePerk()
 
     LastPhysicsState = phy;
     LastBase = p.Base;
-    SpectatedClient.LastPawn = p;
 }
 
 private function PerformedDodge( Pawn other )
@@ -670,6 +684,46 @@ private function Vector RenderDodgeReady( Canvas C, float drawY )
     }
     C.StrLen( s, xl, yl );
     return DrawElement( C, C.ClipX*0.5, drawY, Mid(GetEnum( enum'EDoubleClickDir', ViewportOwner.Actor.DoubleClickDir ), 7), s, true, 200, 1.0, C.DrawColor );
+}
+
+private function PerformShootPerk()
+{
+    local Pawn p;
+    local Weapon weapon;
+
+    p = Pawn(ViewportOwner.Actor.ViewTarget);
+    if( p == none )
+        return;
+
+    weapon = p.Weapon;
+    bFireReady = weapon != none && weapon.ClientState == WS_ReadyToFire;
+    if (weapon != none) {
+        PreFireTime = weapon.GetFireMode(0).PreFireTime;
+        NextFireTime = weapon.GetFireMode(0).NextFireTime;
+    }
+    bCanFire = bFireReady && (NextFireTime - ViewportOwner.Actor.Level.TimeSeconds) <= 0;
+}
+
+private function Vector RenderFireReady( Canvas C, float drawY )
+{
+    local string s;
+    local float xl, yl;
+
+    if( bCanFire )
+    {
+        C.DrawColor = class'HUD'.default.GreenColor;
+    }
+    else if ( bFireReady ) 
+    {
+        C.DrawColor = class'HUD'.default.TurqColor;
+    }
+    else
+    {
+        C.DrawColor = class'HUD'.default.RedColor;
+    }
+    s = (NextFireTime - ViewportOwner.Actor.Level.TimeSeconds)/ViewportOwner.Actor.Level.TimeDilation$"s";
+    C.StrLen( s, xl, yl );
+    return DrawElement( C, C.ClipX*0.5, drawY, "Fire", s, true, 200, 1.0, C.DrawColor );
 }
 
 event Initialized()
@@ -1878,7 +1932,12 @@ private function RenderHUDElements( Canvas C )
         drawY += DrawElement( C, C.ClipX*0.5, drawY, "Speed", s, true, 200, 1.0, class'HUD'.default.GoldColor ).Y*1.2;
         if( MRI.CR.bAllowDodgePerk && (ViewportOwner.Actor.ViewTarget == ViewportOwner.Actor.Pawn || bTimeViewTarget) )
         {
-            RenderDodgeReady( C, drawY );
+            drawY += RenderDodgeReady( C, drawY ).Y;
+        }
+
+        if( true /* FIXME: placeholder */ )
+        {
+            drawY += RenderFireReady( C, drawY ).Y;
         }
     }
 }
@@ -2259,6 +2318,11 @@ private static function string FixDate( int Date[3] )
     return FixedDate$"/"$Right( Date[2], 2 );
 }
 
+#include classes/BTColorHashUtil.uci
+#include classes/BTColorStripUtil.uci
+#include classes/BTStringColorUtils.uci
+#include classes/BTStringDecimalUtil.uci
+
 defaultproperties
 {
     begin object class=TexRotator name=oMarkerArrow
@@ -2285,8 +2349,3 @@ defaultproperties
     RankingHideMsg="to show/hide this"
 
 }
-
-#include classes/BTColorHashUtil.uci
-#include classes/BTColorStripUtil.uci
-#include classes/BTStringColorUtils.uci
-#include classes/BTStringDecimalUtil.uci
