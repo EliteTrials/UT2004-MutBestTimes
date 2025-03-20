@@ -2,6 +2,55 @@
 
 Transforms the infamous Assault game mode of **Unreal Tournament 2004** into a highly competitive speed running mode.
 
+## Features
+
+### Leaderboards
+### Ghost playback
+### Store
+### Inventory
+### Achievements
+### Challenges
+### Leveling
+
+### Regular Trials
+
+* Regular Trials is the given name for the classic trial maps that arose from community made maps for the `Assault` game type, such as the first two maps ***AS-SkillTrials*** and ***AS-TempleOfTrials***.
+* Players must complete all the objectives to end the game, team work may be required, but is usually the best option to achieve the fastest time.
+* The map name must have more than one objective and must be prefixed either with `AS-` or `RTR-`
+
+### Solo Trials
+
+Powered by [TrialGroup](https://github.com/EliotVU/UT2004-TrialGroup)
+
+* Solo Trials is the given name for quick and short maps that are by design optimized for speed running, but designed one player in mind.
+* Players must complete one objective to complete the map, however this does not end the game, allowing anyone to repeatedly try to achieve the fastest time.
+* The map name must be prefixed with either `AS-Solo-` or `STR-` and must have only one objective; otherwise the map fallbacks to regular trials.
+
+#### Supreme
+
+A solo map is allowed to have more than one objective, when this is the case, the ***Supreme*** is activated, and each objective will be treated as a separate level.
+
+* Players can pick any level at any time for as long as the player has unlocked that level, a level can be unlocked by completing the previous level first.
+* Each level has its own top fastest time and set of 'ghosts', additionally a series of 'solo' maps can be converted to supreme and remain backwards compatible, meaning BestTimes will keep the records and ghosts cross-leveled.
+
+### Group Trials
+
+* Group Trials is the given name for maps that are designed with team work in mind, much like regular trials, but instead with player-defined groups that can run through the map independently.
+* Players must complete all the tasks in order to complete the final (and only) objective; the maps usually have specialized gameplay elements that are optimized for team-work.
+* The map name must be prefixed with either `AS-Group-` or `GTR-`, or have a GroupManager actor in the map.
+* Upon achieving a best time, all members of the group are rewarded the same completion time; each group run-through is recorded and can be played back as ghosts.
+
+### Bunny Trials
+
+* Bunny Trials is the given name for Capture the Flag maps designed for UT99's `BunnyTrack` and is automatically activated if the current game mode is a derivative of `CTFGame`
+* Players must capture a copy of the flag and return it to their base to complete a run. This mode can be played by two teams, competing for victory.
+
+### Invasion Extension
+
+* The mutator can used as an extension for the `Invasion` game type, and is automatically activated if the current game mode is a derivative of `Invasion`
+* The store, inventory, leveling, and achievements system will remain functioning.
+* Players can complete achievements, eliminate monsters to gain experience and earn 'currency' to buy items from the store.
+
 ## Pre-Requisites
 
 The following packages are necessary to run MutBestTimes:
@@ -22,5 +71,5 @@ The following packages are necessary to run MutBestTimes:
 
 ## Credits
 
-* [Marco](https://github.com/Marco888) a.k.a **.:..:** for developing the original `bTimesMute` circa 2005; single-top-time per RTR map, a leaderboard of most accumulated points (5 points for top record), and the ghost prototype.
+* [Marco](https://github.com/Marco888) a.k.a **.:..:** for developing the original `bTimesMute` circa 2005; single-top-time per RTR map, a message showdown leaderboard of players with the most accumulated points (5 points for top record), and the ghost prototype.
 * [elmuerte](https://github.com/elmuerte) for the [LibHTTP4.u](https://github.com/elmuerte/UE2-LibHTTP) package.
