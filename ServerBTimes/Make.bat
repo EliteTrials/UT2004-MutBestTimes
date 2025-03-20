@@ -11,7 +11,6 @@ cd ..\..\System
 
 if exist %packageName%.u (
     del %packageName%.u /q
-    del %packageName%.ucl /q
 )
 
 cd ..
@@ -33,4 +32,3 @@ for /r %%i in (*.uc, *.uci) do (
 cd ..\..\..\System
 
 ucc.exe editor.MakeCommandlet -SILENTBUILD -AUTO -ini="%project_dir%\make.ini"
-del %packageName%.ucl /q
