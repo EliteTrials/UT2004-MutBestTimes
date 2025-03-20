@@ -22,7 +22,7 @@ Transforms the infamous Assault game mode of **Unreal Tournament 2004** into a h
 
 Powered by [TrialGroup](https://github.com/EliotVU/UT2004-TrialGroup)
 
-* Solo Trials is the given name for quick and short maps that are by design optimized for speed running, but designed one player in mind.
+* Solo Trials is the given name for quick and short maps that are by design optimized for speed running, but designed for a single player.
 * Players must complete one objective to complete the map, however this does not end the game, allowing anyone to repeatedly try to achieve the fastest time.
 * The map name must be prefixed with either `AS-Solo-` or `STR-` and must have only one objective; otherwise the map fallbacks to regular trials.
 
