@@ -5,12 +5,50 @@ Transforms the infamous Assault game mode of **Unreal Tournament 2004** into a h
 ## Features
 
 ### Leaderboards
+
+#### Top Players - All Time
+
+![image](https://github.com/user-attachments/assets/fc612979-a43b-40f7-a2d3-c23222cd658c)
+
+#### Top Map Records
+
+![image](https://github.com/user-attachments/assets/8758bbb1-ecf5-4a77-a223-57464131e167)
+
+#### Top Player Records
+
+![image](https://github.com/user-attachments/assets/aa5c3fab-1323-4e2e-ae6a-cb18f2abf341)
+
 ### Ghost playback
-### Store
-### Inventory
-### Achievements
-### Challenges
+
+All time record runs are recorded for all players, and can be re-played at any time by any player that chooses to, any top record's ghost playback will also be running 24/7.
+Additionally, players also choose to race against any ghost, either through the GUI or by typing '!ghost 1' where 1 is the placement of the record.
+
 ### Leveling
+
+![image](https://github.com/user-attachments/assets/4e123579-5b7e-4e66-bdbb-c4283fc1ade0)
+
+Players can earn experience by completing objectives, setting new records, or by eliminating monsters.
+Achieving levels will earn the player in-game currency depicted with '$', this currency can then be used to buy items from the in-game store, such as cosmetics or utilities.
+
+### Store
+
+![image](https://github.com/user-attachments/assets/21b78168-1814-4f36-983b-a2ad19eaacee)
+
+### Inventory
+
+![image](https://github.com/user-attachments/assets/d3f7acf3-f088-4bcc-a322-a23b1cf4af71)
+
+### Achievements
+
+![image](https://github.com/user-attachments/assets/e3db4766-1c6f-4357-bce8-a0fbc2db9b47)
+
+### Scoreboard
+
+![image](https://github.com/user-attachments/assets/eeec4b4f-0c06-436d-9eba-1203e82a8fac)
+
+### Voting Menu
+
+![image](https://github.com/user-attachments/assets/563b710d-053c-4681-acb3-0ffe39df9ef0)
 
 ### Regular Trials
 
@@ -19,8 +57,6 @@ Transforms the infamous Assault game mode of **Unreal Tournament 2004** into a h
 * The map name must have more than one objective and must be prefixed either with `AS-` or `RTR-`
 
 ### Solo Trials
-
-Powered by [TrialGroup](https://github.com/EliotVU/UT2004-TrialGroup)
 
 * Solo Trials is the given name for quick and short maps that are by design optimized for speed running, but designed for a single player.
 * Players must complete one objective to complete the map, however this does not end the game, allowing anyone to repeatedly try to achieve the fastest time.
@@ -34,6 +70,8 @@ A solo map is allowed to have more than one objective, when this is the case, th
 * Each level has its own top fastest time and set of 'ghosts', additionally a series of 'solo' maps can be converted to supreme and remain backwards compatible, meaning BestTimes will keep the records and ghosts cross-leveled.
 
 ### Group Trials
+
+Powered by [TrialGroup](https://github.com/EliotVU/UT2004-TrialGroup)
 
 * Group Trials is the given name for maps that are designed with team work in mind, much like regular trials, but instead with player-defined groups that can run through the map independently.
 * Players must complete all the tasks in order to complete the final (and only) objective; the maps usually have specialized gameplay elements that are optimized for team-work.
