@@ -11,6 +11,7 @@ var() private array<struct sLevel {
     var BTClient_LevelReplication LI;
 }> LevelItems;
 
+var private BTClient_ClientReplication CRI;
 var private RenderDevice RenderDevice;
 
 function Free()
@@ -19,6 +20,7 @@ function Free()
 
     super.Free();
 
+    CRI = none;
     RenderDevice = none;
     for (i = 0; i < LevelItems.Length; ++ i) {
         LevelItems[i].LI = none;
@@ -35,27 +37,26 @@ function InitComponent( GUIController InController, GUIComponent InOwner )
     ItemsListBox.List.bAllowEmptyItems = true;
     ItemsListBox.ContextMenu.OnSelect = InternalOnSelect;
 
+    CRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() );
+    if (CRI == none || CRI.MRI == none) {
+        Warn("CRI or MRI not yet replicated.");
+        return;
+    }
+
     BuildLevelItems();
 }
 
 private function BuildLevelItems()
 {
     local BTClient_LevelReplication LI;
-    local BTClient_MutatorReplicationInfo MRI;
     local int i;
     local string title;
     local bool wasSorted;
 
-    MRI = class'BTClient_ClientReplication'.static.GetRep( PlayerOwner() ).MRI;
-    if (MRI == none) {
-        Warn("No MRI but we do have a CRI?");
-        return;
-    }
-
     ItemsListBox.List.Clear();
     LevelItems.Length = 0;
 
-    for (LI = MRI.BaseLevel; LI != none; LI = LI.NextLevel) {
+    for (LI = CRI.MRI.BaseLevel; LI != none; LI = LI.NextLevel) {
         title = LI.GetLevelName();
 
         for (i = 0; i < LevelItems.Length; ++ i) {
@@ -131,8 +132,10 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.OrgY = 0;
 
     C.Style = 1;
-    if (itemEl.LI != none && itemEl.LI.MyTeleporter != none) {
-        C.Clear(false, true);
+    if (itemEl.LI != none &&
+        itemEl.LI.MyTeleporter != none &&
+        bSelected/*|| itemEl.LI == CRI.PlayingLevel*/) {
+        C.Clear(true, true);
         C.DrawPortal(
             X, Y,
             int(w), int(h),
@@ -263,3 +266,5 @@ defaultproperties
 
 #include classes/BTColorHashUtil.uci
 #include classes/BTColorStripUtil.uci
+// Fx EOF bug in UC extension
+defaultproperties {}
