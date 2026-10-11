@@ -1141,6 +1141,42 @@ private function RenderKeys( Canvas C, PlayerController player )
     }
 }
 
+const MaxLevelInfoDistance = 128.0;
+
+private function RenderLevelUsage(Canvas C, BTClient_LevelReplication level, float dist)
+{
+    local float xl, yl;
+    local string s;
+
+    s = Eval(
+        ActiveLevel == none,
+        "Press [Use] to open the level selection menu",
+        "Level" @ level.GetLevelName()
+    );
+
+    // We need to draw alpha.
+    C.Style = ViewportOwner.Actor.ERenderStyle.STY_Alpha;
+
+    // Centered
+    C.StrLen( s, xl, yl );
+    C.SetPos( C.ClipX * 0.5 - xl * 0.5, C.ClipY * 0.60 - YL * 0.5 );
+
+    // Emphasize it if the player has no active level.
+    if (ActiveLevel == none) {
+        C.DrawColor = #0x22226248;
+    } else {
+        C.DrawColor = #0x22222248;
+    }
+
+    C.DrawColor.A = 255.0 * (1.0 - dist/MaxLevelInfoDistance);
+    DrawColumnTile( C, C.CurX, C.CurY, xl+4, yl+2 );
+
+    C.DrawColor.R = 255;
+    C.DrawColor.G = 255;
+    C.DrawColor.B = 255;
+    DrawColumnText( C, C.CurX, C.CurY, s );
+}
+
 private function RenderLevelActors( Canvas C, PlayerController player )
 {
     local BTClient_LevelReplication level;
@@ -1159,8 +1195,21 @@ private function RenderLevelActors( Canvas C, PlayerController player )
             continue;
         }
 
+        // Only render the active level if the player has an active level.
+        // a bit lazy here as not to repeat code :D
+        if (ActiveLevel != none && level != ActiveLevel)
+        {
+            continue;
+        }
+
         Dir = level.MyTeleporter.Location - CamPos;
         Dist = VSize( Dir );
+
+        // Render some tips if the player is close to the level
+        if (Dist <= MaxLevelInfoDistance) {
+            RenderLevelUsage(C, level, dist);
+        }
+
         Dir /= Dist;
         if( (Dir Dot X) <= 0.6 ) {
             continue;
