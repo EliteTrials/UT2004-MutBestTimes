@@ -321,7 +321,10 @@ final static function BTStore Load( MutBestTimes newOuter )
         for( i = 0; i < this.CustomItems.Length; ++ i )
         {
             this.Items[j + i] = this.CustomItems[i];
-            this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
+            if (this.Items[j + i].IMG != "")
+            {
+                this.Items[j + i].CachedIMG = Material(DynamicLoadObject( this.Items[j + i].IMG, class'Material', true ));
+            }
         }
     }
     this.Cache();
@@ -335,7 +338,11 @@ final function Cache()
 
     for( i = 0; i < Items.Length; ++ i )
     {
-        Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
+        if (Items[i].IMG != "")
+        {
+            Items[i].CachedIMG = Material(DynamicLoadObject( Items[i].IMG, class'Material', true ));
+        }
+
         Items[i].CachedClass = class<Actor>(DynamicLoadObject( Items[i].ItemClass, class'Class', true ));
         if (Items[i].CachedClass == none) {
             Warn( "Failed to load ItemClass" @ Items[i].ItemClass @ "for" @ Items[i].ID );
