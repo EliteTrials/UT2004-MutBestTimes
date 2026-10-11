@@ -43,3 +43,5 @@ ucc.exe MakeCommandlet -ini="%project_dir%\make.ini"
 del %packageName%%version%.u
 ren %compiledPackageName%.u %packageName%%version%.u
 del %compiledPackageName%.ucl
+
+cd %project_dir%

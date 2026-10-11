@@ -4,13 +4,13 @@ Transforms the infamous Assault game mode of **Unreal Tournament 2004** into a h
 
 ## Features
 
-### Leaderboards
-### Ghost playback
-### Store
-### Inventory
-### Achievements
-### Challenges
-### Leveling
+* Leaderboards
+* Ghost playback
+* Store
+* Inventory
+* Achievements
+* Challenges
+* Leveling
 
 ### Regular Trials
 
@@ -54,7 +54,8 @@ A solo map is allowed to have more than one objective, when this is the case, th
 ## Pre-Requisites
 
 The following packages are necessary to run MutBestTimes:
-- TrialGroup.u (https://github.com/EliotVU/UT2004-TrialGroup)
+
+1. [TrialGroup.u](https://github.com/EliotVU/UT2004-TrialGroup)
 
 ## Usage
 
@@ -68,6 +69,14 @@ The following packages are necessary to run MutBestTimes:
 2. Run `/MutBestTimes/Scripts/Install-dev.bat` at least once.
 3. Run `/MutBestTimes/ClientBTimes/make.bat` and `/MutBestTimes/ServerBTimes/make.bat` in that order, and repeat whenever you make any changes.
 4. Launch `/MutBestTimes/Scripts/Play.bat` to launch a quick-test.
+
+On Linux, use the native UT2004 compiler at `/UT2004Root/System/ucc-bin`. Run the development installer at least once, then build in client/server order. These scripts can be run from any working directory:
+
+```sh
+sh /UT2004Root/MutBestTimes/Scripts/Install-dev.sh
+sh /UT2004Root/MutBestTimes/ClientBTimes/Make.sh
+sh /UT2004Root/MutBestTimes/ServerBTimes/Make.sh
+```
 
 ## Credits
 
