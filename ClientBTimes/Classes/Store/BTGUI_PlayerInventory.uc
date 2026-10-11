@@ -97,10 +97,14 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     h -= list.VertBorder*list.VertBorder;
     playerItem = CRI.PlayerItems[Item];
 
+    C.OrgX = 0;
+    C.OrgY = 0;
+
     oldClipX = C.ClipX;
     oldClipY = C.ClipY;
     C.ClipX = X + W;
     C.ClipY = Y + H;
+
     C.Font = Font'UT2003Fonts.jFontSmallText800x600';
     C.Style = 1;
 
@@ -181,8 +185,9 @@ function InternalOnDrawItem( Canvas C, int Item, float X, float Y, float W, floa
     C.DrawBox( C, w, h );
     C.ClipX = oldClipX;
     C.ClipY = oldClipY;
-    C.OrgX = X + W;
-    C.OrgY = Y + H;
+
+    C.OrgX = 0;
+    C.OrgY = 0;
 }
 
 function InternalOnListChange( GUIComponent sender )
