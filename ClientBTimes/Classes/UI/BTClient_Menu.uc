@@ -52,6 +52,7 @@ defaultproperties
     BTTabs(1)=(Caption="Trophies",TabClass=class'BTGUI_Trophies',Hint="Claim your trophies!")
     BTTabs(2)=(Caption="Achievements",TabClass=class'BTGUI_Achievements',Hint="View your achievements!")
     BTTabs(3)=(Caption="Inventory",TabClass=class'BTGUI_PlayerInventory',Hint="Manage your items")
+    BTTabs(4)=(Caption="Account",TabClass=class'BTGUI_Account',Hint="Link your Discord account or trade money")
 
     Begin Object class=GUITabControl name=oPageTabs
         WinWidth=0.98

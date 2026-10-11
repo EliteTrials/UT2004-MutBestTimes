@@ -126,6 +126,56 @@ var int DayTest;
 var transient int TotalActivePlayersCount;
 var transient bool bCachedData;
 
+// Independent of player slots.
+struct sBTDiscordAccount
+{
+    var string Guid;
+    var BTClient_ClientReplication.sDiscordProfile Profile;
+};
+
+var array<sBTDiscordAccount> DiscordAccounts;
+
+final function int FindDiscordAccount(string guid)
+{
+    local int i;
+
+    for (i = 0; i < DiscordAccounts.Length; ++i)
+        if (DiscordAccounts[i].Guid ~= guid)
+            return i;
+
+    return -1;
+}
+
+final function bool SetDiscordAccount(string guid, BTClient_ClientReplication.sDiscordProfile profile)
+{
+    local int i;
+
+    i = FindDiscordAccount(guid);
+    if (i == -1)
+    {
+        i = DiscordAccounts.Length;
+        DiscordAccounts.Length = i + 1;
+        DiscordAccounts[i].Guid = Locs(guid);
+    }
+    else if (DiscordAccounts[i].Profile == profile)
+        return false;
+
+    DiscordAccounts[i].Profile = profile;
+    return true;
+}
+
+final function bool RemoveDiscordAccount(string guid)
+{
+    local int i;
+
+    i = FindDiscordAccount(guid);
+    if (i == -1)
+        return false;
+
+    DiscordAccounts.Remove(i, 1);
+    return true;
+}
+
 final function Init( MutBestTimes mut )
 {
 }

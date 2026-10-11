@@ -7,7 +7,7 @@
 //  Updated @ 10/11/2009.
 //  Updated @ 19/07/2011.
 //==============================================================================
-class BTClient_ClientReplication extends LinkedReplicationInfo;
+class BTClient_ClientReplication extends BTClient_DiscordLinkReplication;
 
 //==============================================================================
 // Structs

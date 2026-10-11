@@ -3614,6 +3614,12 @@ final private function bool DeveloperExecuted( PlayerController sender, string c
     return true;
 }
 
+// Need to wrap this in order to bind it to a delegate.
+private function InternalOnDiscordLogin(PlayerController player, string ticket)
+{
+    class'BTDiscordUtils'.static.OnLogin(self, player, ticket);
+}
+
 // Check if the player typed one of our console commands
 function Mutate( string MutateString, PlayerController Sender )
 {
@@ -3625,6 +3631,9 @@ function Mutate( string MutateString, PlayerController Sender )
 
     // lol this happens to be true sometimes...
     if( Sender == none )
+        return;
+
+    if (class'BTDiscordUtils'.static.HandleMutate(self, MutateString, Sender))
         return;
 
     // Name was changed( called by the unofficial UT2K4 server patch )
@@ -4270,7 +4279,8 @@ final function SetClientMatchStartingTime()
     }
 }
 
-private function SetSoloRecordTime( PlayerController player, int mapIndex, int recordIndex, float newTime )
+private function SetSoloRecordTime( PlayerController player, int mapIndex, int recordIndex, float newTime, float previousTime,
+    string previousOwnerGuid, float previousTopTime )
 {
     RDat.Rec[mapIndex].LastRecordedDate = RDat.MakeCompactDate( Level );
     RDat.Rec[mapIndex].PSRL[recordIndex].SRT = newTime;
@@ -4286,6 +4296,7 @@ private function SetSoloRecordTime( PlayerController player, int mapIndex, int r
 
     // Notify the current gamemode that a player has set a record. A mode may perform a dropchance for that player.
     CurMode.PlayerMadeRecord( player, recordIndex, 0 );
+    class'BTDiscordUtils'.static.NotifyRecord(self, player, mapIndex, recordIndex, newTime, previousTime, previousOwnerGuid, previousTopTime);
 }
 
 final function ObjectiveCompleted( PlayerReplicationInfo PRI, float score )
@@ -4831,9 +4842,9 @@ final private function bool SubmitPlayerTime(
     optional out byte bNewTopRecord )
 {
     local bool wasHijacked, hasImprovised;
-    local string finishMsg, finishTime;
+    local string finishMsg, finishTime, previousOwnerGuid;
     local int i, playerId, oldPLi, PLi, l, tmpSlot, playerIndex;
-    local float score, finishDiff;
+    local float score, finishDiff, previousTime, previousTopTime;
     local int numObjectives;
     local BTServer_RecordsData.sSoloRecord newSoloRecord;
     local int mapIndex;
@@ -4842,6 +4853,7 @@ final private function bool SubmitPlayerTime(
 
     // macro to playerslot.
     mapIndex = myLevel.MapIndex;
+    class'BTDiscordUtils'.static.GetPreviousRecordOwner(PDat, RDat, mapIndex, previousOwnerGuid, previousTopTime);
     finishTime = TimeToStr( playTime );
     finishMsg = "%PLAYER% completed" @ class'HUD_Assault'.static.GetTeamColor( 1 )$myLevel.GetLevelName()$cEnd;
 
@@ -4865,6 +4877,7 @@ final private function bool SubmitPlayerTime(
     // Player was found!
     if( PLi != -1 )
     {
+        previousTime = GetFixedTime(RDat.Rec[mapIndex].PSRL[PLi].SRT);
         finishDiff = GetFixedTime( RDat.Rec[mapIndex].PSRL[PLi].SRT ) - playTime;
 
         // Player has improved his/her existing record's time.
@@ -4949,7 +4962,7 @@ final private function bool SubmitPlayerTime(
         PLi = RDat.OpenRecordSlot( RDat.Rec[mapIndex].PSRL, playTime );
         RDat.Rec[mapIndex].PSRL[PLi] = newSoloRecord;
 
-        SetSoloRecordTime( PC, mapIndex, PLi, playTime );
+        SetSoloRecordTime( PC, mapIndex, PLi, playTime, previousTime, previousOwnerGuid, previousTopTime );
         CR.ClientSetPersonalTime( playTime );
 
         if( GhostManager != none && playTime <= 1800 ) {
@@ -5421,6 +5434,8 @@ final function ProcessPlayerLogout( Controller player )
 function NotifyLogout( Controller Exiting )
 {
     local int i;
+
+    class'BTDiscordUtils'.static.NotifyLogout(self, PlayerController(Exiting));
 
     super.NotifyLogout( exiting );
     if( Exiting.PlayerReplicationInfo != none && !Level.bLevelChange
@@ -6042,6 +6057,8 @@ private function InitClientReplication( PlayerController PC, int playerIndex )
     }
 
     CRI.myPlayerSlot = playerIndex;
+    CRI.OnDiscordLogin = InternalOnDiscordLogin;
+    class'BTDiscordUtils'.static.InitReplication(self, PC, CRI);
     CRI.PlayerId = playerIndex + 1;
     if( !bSoloMap )
     {

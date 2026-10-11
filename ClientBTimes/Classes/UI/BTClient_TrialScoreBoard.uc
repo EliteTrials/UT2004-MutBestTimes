@@ -324,7 +324,7 @@ simulated function UpdateScoreBoard(Canvas C)
     rowTileX = XClipOffset + 4;
     rowTextX = rowTileX + 4;
 
-    YOffset = TY-4;
+    YOffset = TY + YL*2 + 2;
 
     // Draw Players
     j = SortedPlayers.Length;
@@ -333,11 +333,11 @@ simulated function UpdateScoreBoard(Canvas C)
         if( SortedPlayers[i] == None )
             continue;
 
-        if( YOffset+YL*2+rowMargin+4 >= C.ClipY-YClipOffset )
+        if( YOffset + rowHeight >= C.ClipY-YClipOffset )
             break;
 
-        YOffset += YL*2+rowMargin+4;
         RenderPlayerRow( C, SortedPlayers[i], rowTileX, YOffset, rowWidth, rowHeight );
+        YOffset += rowHeight + rowMargin;
     }
 
     if( SortedSpectators.Length == 0 )
@@ -352,11 +352,11 @@ simulated function UpdateScoreBoard(Canvas C)
         if( SortedSpectators[i] == None )
             continue;
 
-        if( YOffset+YL*2+rowMargin+4 >= C.ClipY-YClipOffset )
+        if( YOffset + rowHeight >= C.ClipY-YClipOffset )
             break;
 
-        YOffset += YL*2+rowMargin+4;
         RenderPlayerRow( C, SortedSpectators[i], rowTileX, YOffset, rowWidth, rowHeight );
+        YOffset += rowHeight + rowMargin;
     }
 }
 
@@ -375,7 +375,8 @@ protected function RenderPlayerRow(Canvas C, PlayerReplicationInfo player, float
     rowTileX = x;
     rowTileY = y;
     rowTextY = rowTileY + 2;
-    rowSegmentHeight = rowHeight*0.5;
+    C.StrLen("A", XL, YL);
+    rowSegmentHeight = YL + 2;
     isSpectator = player.bIsSpectator || player.bOnlySpectator;
 
     CRI = class'BTClient_ClientReplication'.static.GetCRI( player );
@@ -403,9 +404,11 @@ protected function RenderPlayerRow(Canvas C, PlayerReplicationInfo player, float
     // Draw Player Region
     C.SetPos( NX, rowTextY+rowSegmentHeight );
     s = "";
+    if (CRI != none && CRI.bDiscordAuthenticated)
+        s = #0x9FAFFFFF $ "[@" $ CRI.DiscordProfile.DisplayName $ "] " $ SecondaryColor;
     if( player.bAdmin )
     {
-        s = AdminSubText;
+        s $= AdminSubText;
     }
     if( player.bReadyToPlay && !isSpectator )
     {
