@@ -1,4 +1,6 @@
 @echo off
+setlocal
+cd /d "%~dp0" || exit /b 1
 
 for %%* in (.) do set packageName=%%~n*
 set project_dir=%~dp0
@@ -14,7 +16,7 @@ if exist %packageName%.u (
 )
 
 cd ..
-cd MutBestTimes\%packageName%
+cd "MutBestTimes\%packageName%"
 
 xcopy System "..\..\%packageName%\System" /i /y /s /e /q /b >NUL
 
@@ -32,3 +34,4 @@ for /r %%i in (*.uc, *.uci) do (
 cd ..\..\..\System
 
 ucc.exe editor.MakeCommandlet -SILENTBUILD -AUTO -ini="%project_dir%\make.ini"
+exit /b %errorlevel%

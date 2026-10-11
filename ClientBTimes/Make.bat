@@ -1,4 +1,6 @@
 @echo off
+setlocal
+cd /d "%~dp0" || exit /b 1
 
 for %%* in (.) do set packageName=%%~n*
 set project_dir=%~dp0
@@ -18,7 +20,7 @@ if exist %compiledPackageName%.u (
 )
 
 cd ..
-cd MutBestTimes\%packageName%
+cd "MutBestTimes\%packageName%"
 
 if not exist "..\..\%compiledPackageName%\Resources" (
     xcopy Resources "..\..\%compiledPackageName%\Resources" /i /y /s /e /q /b >NUL
@@ -40,8 +42,10 @@ for /r %%i in (*.uc, *.uci) do (
 cd ..\..\..\System
 
 ucc.exe MakeCommandlet -ini="%project_dir%\make.ini"
-del %packageName%%version%.u
-ren %compiledPackageName%.u %packageName%%version%.u
-del %compiledPackageName%.ucl
+if errorlevel 1 exit /b %errorlevel%
+move /y "%compiledPackageName%.u" "%packageName%%version%.u" >nul
+if errorlevel 1 exit /b %errorlevel%
+if exist "%compiledPackageName%.ucl" del "%compiledPackageName%.ucl"
 
-cd %project_dir%
+cd /d "%project_dir%"
+exit /b 0

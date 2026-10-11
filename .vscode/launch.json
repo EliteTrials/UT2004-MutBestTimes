@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             "program": "${workspaceFolder}/../System/UT2004.exe",
-            "args": ["STR-Eliot'sTrial?Game=UT04TrialGame.UT04Trial_SoloGameInfo?Mutator=ServerBTimes.MutBestTimes?SpectatorOnly=0?NumBots=0?NoBots=1?QuickStart=1", "-norunaway"],
+            "args": ["STR-AbaddonTrials?Game=UT04TrialGame.UT04Trial_SoloGameInfo?Mutator=ServerBTimes.MutBestTimes?SpectatorOnly=0?NumBots=0?NoBots=1?QuickStart=1", "-norunaway"],
             "cwd": "${workspaceFolder}",
             "environment": [],
             "console": "internalConsole"
