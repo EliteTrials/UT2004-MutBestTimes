@@ -4,7 +4,7 @@ cd /d "%~dp0" || exit /b 1
 
 for %%* in (.) do set packageName=%%~n*
 set project_dir=%~dp0
-set version=V7b
+set version=V7c
 :: DO NOT CHANGE VX
 set compiledPackageName=%packageName%VX
 

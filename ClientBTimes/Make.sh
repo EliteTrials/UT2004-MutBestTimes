@@ -4,7 +4,7 @@ set -eu
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 ut2004_dir=$(CDPATH= cd -- "$project_dir/../.." && pwd)
 package_name=$(basename -- "$project_dir")
-version=V7b
+version=V7c
 # DO NOT CHANGE VX: make.ini and source references use this package name.
 compiled_package_name=${package_name}VX
 build_dir=$ut2004_dir/$compiled_package_name

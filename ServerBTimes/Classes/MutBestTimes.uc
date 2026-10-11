@@ -19,7 +19,7 @@ class MutBestTimes extends Mutator
 //  Minor Version  // minor new features
 //  Build Number // compile/test count, resets??
 //  Revision // quick fix
-const BTVersion                         = "4.1.0.0";
+const BTVersion                         = "4.2.0.0";
 const CREDITS                           = "Copyright 2005-2016 Eliot van Uytfanghe and .:..:";
 const MaxRecentRecords                  = 15;                                   // The max recent records that is saved.
 const MaxPlayerRecentRecords            = 5;                                    // The max recent records that are saved per player.
