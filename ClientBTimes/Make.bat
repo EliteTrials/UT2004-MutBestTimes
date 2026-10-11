@@ -1,41 +1,51 @@
 @echo off
-set project_version=V7
-for %%* in (.) do set "project_name=%%~n*"
-set "project_build_name=%project_name%%project_version%"
+setlocal
+cd /d "%~dp0" || exit /b 1
 
-title %project_build_name%
+for %%* in (.) do set packageName=%%~n*
+set project_dir=%~dp0
+set version=V7c
+:: DO NOT CHANGE VX
+set compiledPackageName=%packageName%VX
+
+title %packageName%
 color 0F
 
-cd..
-cd system
-del %project_build_name%.u
-del %project_build_name%.ucl
-del %project_build_name%.int
+cd ..\..\System
 
-cd..
-cd %project_name%
-
-xcopy content "..\%project_build_name%\content" /i /y /q
-copy /y "ClientBTimes.utx" "..\%project_build_name%\ClientBTimes.utx"
-copy /y "CountryFlagsUT2K4.utx" "..\%project_build_name%\CountryFlagsUT2K4.utx"
-
-cd src
-for /r %%i in (*.uc) do (
-	copy /y "%%~fi" "..\..\%project_build_name%\Classes\%%~nxi"
+if exist %compiledPackageName%.u (
+    del %compiledPackageName%.u /q
+    del %compiledPackageName%.ucl /q
+    del %compiledPackageName%.int /q
 )
 
-cd..
-cd..
-cd system
-:: Add editpackage
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 ServerBTimes
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %project_build_name%
-ucc.exe MakeCommandlet
-:: Remove editpackage
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %project_build_name%
-:: Work around the stripper, so that it cannot embed the current .ini settings.
-ren ClientBTimes.ini ClientBTimes_bak.ini
-ucc.exe Editor.StripSourceCommandlet %project_build_name%.u
-ren ClientBTimes_bak.ini ClientBTimes.ini
-pause
-goto compile
+cd ..
+cd "MutBestTimes\%packageName%"
+
+if not exist "..\..\%compiledPackageName%\Resources" (
+    xcopy Resources "..\..\%compiledPackageName%\Resources" /i /y /s /e /q /b >NUL
+    xcopy Textures "..\..\%compiledPackageName%\Textures" /i /y /s /e /q /b >NUL
+)
+
+if not exist "..\..\%compiledPackageName%\Classes" (
+    mkdir "..\..\%compiledPackageName%\Classes"
+) else (
+    del "..\..\%compiledPackageName%\Classes\*.uc"
+    del "..\..\%compiledPackageName%\Classes\*.uci"
+)
+
+cd Classes
+for /r %%i in (*.uc, *.uci) do (
+    copy /Y "%%~fi" "..\..\..\%compiledPackageName%\Classes\%%~nxi" >NUL
+)
+
+cd ..\..\..\System
+
+ucc.exe MakeCommandlet -ini="%project_dir%\make.ini"
+if errorlevel 1 exit /b %errorlevel%
+move /y "%compiledPackageName%.u" "%packageName%%version%.u" >nul
+if errorlevel 1 exit /b %errorlevel%
+if exist "%compiledPackageName%.ucl" del "%compiledPackageName%.ucl"
+
+cd /d "%project_dir%"
+exit /b 0

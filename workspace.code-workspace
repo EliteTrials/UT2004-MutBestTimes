@@ -1,0 +1,11 @@
+{
+    "folders": [
+        {
+            "name": "UT2004Root",
+            "path": "../"
+        }
+    ],
+    "settings": {
+        "[unrealscript]": {}
+    }
+}

@@ -1,78 +1,37 @@
 @echo off
+setlocal
+cd /d "%~dp0" || exit /b 1
 
-set projn=ServerBTimes
+for %%* in (.) do set packageName=%%~n*
+set project_dir=%~dp0
 set inin=MutBestTimes
 
-title %projn%
+title %packageName%
 color 0F
 
-echo.
-echo Deleting compiled files %projn%
-echo.
-cd..
-cd system
-del %projn%.u
-del %projn%.ucl
-del %projn%.int
+cd ..\..\System
 
-echo.
-echo Copying Development to Classes
-echo.
-cd..
-cd %projn%
-xcopy Development Classes /Y /Q  
-
-echo.
-echo Obfuscating classes
-echo.
-cd Development
-for %%F in (*.uc) do (
-    if NOT %%F == BTServer_RecordsData.uc if NOT %%F == BTServer_CheckPoint.uc if NOT %%F == BTServer_PlayersData.uc if NOT %%F == BTPerks.uc  ( 
-        ..\..\ClientBTimesV5\gema.exe -i -t -nobackup -w -f ..\Patterns.cfg -in %%F -out ..\Classes\%%F
-    )
+if exist %packageName%.u (
+    del %packageName%.u /q
 )
-cd..
 
-echo.
-echo Obfuscating done. Preprocessing and compiling!
-echo.
-cd..
-cd System
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 1 %projn%
-ucc.exe editor.MakeCommandlet -EXPORTCACHE -DEBUG -SHOWDEP -SILENTBUILD -AUTO
-ucc.exe MakeCommandletUtils.EditPackagesCommandlet 0 %projn%
-pause
+cd ..
+cd "MutBestTimes\%packageName%"
 
-echo.
-echo StripSource?
-echo.
-pause
+xcopy System "..\..\%packageName%\System" /i /y /s /e /q /b >NUL
 
-echo.
-echo Stripping source!
-echo.
-ren BTStore.ini BTStore_bak.ini
-ren %inin%.ini %inin%_bak.ini
-ren %inin%_Rewards.ini %inin%_Rewards_bak.ini
-ucc.exe editor.stripsourcecommandlet %projn%.u
-ren %inin%_bak.ini %inin%.ini
-ren %inin%_Rewards_bak.ini %inin%_Rewards.ini
-ren BTStore_bak.ini BTStore.ini
-echo.
-echo Successfuly stripped the source code
-echo.
+if not exist "..\..\%packageName%\Classes" (
+    mkdir "..\..\%packageName%\Classes"
+) else (
+    del "..\..\%packageName%\Classes\*.uc"
+)
 
-echo.
-echo Generate files?
-echo.
-pause
+cd Classes
+for /r %%i in (*.uc, *.uci) do (
+    copy /y "%%~fi" "..\..\..\%packageName%\Classes\%%~nxi" >NUL
+)
 
-echo.
-echo Generating cache files
-echo.
-ucc.exe dumpintCommandlet %projn%.u
+cd ..\..\..\System
 
-cd..
-cd %projn%
-del Classes
-pause
+ucc.exe editor.MakeCommandlet -SILENTBUILD -AUTO -ini="%project_dir%\make.ini"
+exit /b %errorlevel%
